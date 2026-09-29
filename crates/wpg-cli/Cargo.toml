@@ -33,6 +33,8 @@ tracing.workspace = true
 serde_json.workspace = true
 # Ctrl-C stops `wpg send` / `wpg bench` cleanly.
 ctrlc = "3"
+# `wpg config set-password`: read the password without echo.
+rpassword = "7"
 
 [dev-dependencies]
 # `tests/render_api.rs`: `wpg render` output == `POST /api/render`.

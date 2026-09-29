@@ -139,11 +139,7 @@ async fn dev_mode_allows_trunk_origin() {
     let state = wpg_server::AppState::new(common::config(&dir))
         .unwrap()
         .with_dev(true);
-    let app = TestApp {
-        app: wpg_server::app(state.clone()),
-        state,
-        dir,
-    };
+    let app = TestApp::from_state(dir, state);
     let r = app
         .send(
             Request::builder()
@@ -380,13 +376,18 @@ async fn template_crud() {
         .await
         .json();
     let found = j["templates"].as_array().unwrap();
-    assert_eq!(found.len(), 1);
-    assert!(found[0]["description"]
-        .as_str()
-        .unwrap()
-        .contains("スイープ"));
-    assert_eq!(found[0]["source"], "library");
-    assert_eq!(found[0]["protocols"], json!(["ethernet2", "arp"]));
+    // every hit matches the query; the bundled library may hold several
+    for t in found {
+        let tags = t["tags"].as_array().unwrap();
+        assert!(tags.contains(&json!("arp")), "{t}");
+    }
+    let arp = found
+        .iter()
+        .find(|t| t["id"] == "examples-arp-sweep")
+        .expect("examples-arp-sweep found");
+    assert!(arp["description"].as_str().unwrap().contains("スイープ"));
+    assert_eq!(arp["source"], "library");
+    assert_eq!(arp["protocols"], json!(["ethernet2", "arp"]));
 
     // library templates are read-only
     let lib = app.get("/api/templates/examples-arp-sweep").await.json();
@@ -536,11 +537,9 @@ async fn job_lifecycle_null_backend() {
     // history
     let h = app.get("/api/jobs/history").await.json();
     assert_eq!(h[0]["id"], id);
-    assert!(app
-        .dir
-        .path()
-        .join(format!("data/history/{id}.json"))
-        .is_file());
+    // persisted in the database
+    assert_eq!(app.state.db.jobs(10).unwrap()[0].id, id);
+    assert!(app.dir.path().join("data/wpg.sqlite").is_file());
     // a finished job cannot be paused / started again
     app.post(&format!("/api/jobs/{id}/pause"), json!(null))
         .await
@@ -806,6 +805,10 @@ async fn openapi_lists_every_route() {
     assert!(doc["openapi"].as_str().unwrap().starts_with("3."));
     let paths = doc["paths"].as_object().unwrap();
     let expected: &[(&str, &[&str])] = &[
+        ("/api/auth/status", &["get"]),
+        ("/api/auth/setup", &["post"]),
+        ("/api/auth/login", &["post"]),
+        ("/api/auth/logout", &["post"]),
         ("/api/health", &["get"]),
         ("/api/version", &["get"]),
         ("/api/system/ifaces", &["get"]),
@@ -843,7 +846,16 @@ async fn openapi_lists_every_route() {
     }
     assert_eq!(paths.len(), expected.len(), "{:?}", paths.keys());
     let schemas = doc["components"]["schemas"].as_object().unwrap();
+    // cookie authentication, with the public endpoints opted out
+    let schemes = &doc["components"]["securitySchemes"];
+    assert_eq!(schemes["cookieAuth"]["in"], "cookie");
+    assert_eq!(schemes["cookieAuth"]["name"], "wpg_session");
+    assert_eq!(schemes["csrfToken"]["name"], "X-CSRF-Token");
+    assert_eq!(doc["security"][0]["cookieAuth"], json!([]));
+    assert_eq!(paths["/api/health"]["get"]["security"], json!([{}]));
+    assert_eq!(paths["/api/auth/login"]["post"]["security"], json!([{}]));
     for s in [
+        "AuthStatus",
         "ErrorBody",
         "JobInfo",
         "JobSpec",

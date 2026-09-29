@@ -11,8 +11,13 @@
 //! 4. command line overrides ([`Overrides`]).
 //!
 //! Unknown keys are errors (typos in `wpg.toml` must not silently fall back to a
-//! default). The `auth` section is only stored for now; enforcement (argon2 password,
-//! sessions, localhost-only binding) lands with the authentication work.
+//! default).
+//!
+//! The admin password is not a regular key: `wpg serve --password`,
+//! `--password-file` and the `WPG_PASSWORD` environment variable (in that order)
+//! land in [`AuthConfig::password`], which is never serialised. Below them come
+//! `auth.password_hash`, `auth.password_file` and finally the user created on the
+//! first-run setup screen (see [`crate::auth`]).
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -30,6 +35,9 @@ pub const DEFAULT_CONFIG_FILE: &str = "wpg.toml";
 /// Environment variable prefix (`WPG_SERVER__BIND`, ...).
 pub const ENV_PREFIX: &str = "WPG_";
 
+/// Environment variable holding the admin password (plain text or argon2 hash).
+pub const PASSWORD_ENV: &str = "WPG_PASSWORD";
+
 /// Replacement text for secrets in [`Config::to_toml_redacted`].
 pub const REDACTED: &str = "<redacted>";
 
@@ -41,14 +49,15 @@ const ENV_SECTIONS: &[&str] = &["server", "auth", "templates", "data_dir", "tx",
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
-    /// Directory for server state: user templates, favourites, job history (and the
-    /// `SQLite` database once authentication lands). Default: the OS data directory
+    /// Directory for server state: user templates, favourites, the `SQLite`
+    /// database (`wpg.sqlite`: users, sessions, job history) and the
+    /// self-signed TLS certificate. Default: the OS data directory
     /// (`~/.local/share/wpg`, `%APPDATA%\wpg\data`, `~/Library/Application Support/wpg`)
     /// or `./data` when that cannot be determined.
     pub data_dir: PathBuf,
     /// HTTP listener.
     pub server: ServerConfig,
-    /// Authentication (stored only; enforced by a later milestone).
+    /// Authentication.
     pub auth: AuthConfig,
     /// Template library.
     pub templates: TemplatesConfig,
@@ -62,10 +71,14 @@ pub struct Config {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ServerConfig {
-    /// Listen address. Keep it on localhost unless a password is configured.
+    /// Listen address. Without a password (and no user created on the setup
+    /// screen) only loopback addresses are accepted (`--allow-insecure` overrides).
     pub bind: SocketAddr,
-    /// TLS certificate / key (placeholder: TLS is not served yet).
+    /// TLS certificate / key (PEM). Takes precedence over `self_signed_tls`.
     pub tls: Option<TlsConfig>,
+    /// Serve HTTPS with a self-signed certificate generated into
+    /// `<data_dir>/tls/` (reused on later starts). `wpg serve --tls` sets it.
+    pub self_signed_tls: bool,
     /// Public URL of the server when it sits behind a reverse proxy
     /// (`https://wpg.example.net`), used for absolute links.
     pub base_url: Option<String>,
@@ -85,12 +98,42 @@ pub struct TlsConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthConfig {
-    /// argon2id PHC string of the admin password (`$argon2id$v=19$...`).
+    /// argon2id PHC string of the admin password (`$argon2id$v=19$...`);
+    /// `wpg config set-password` writes it.
     pub password_hash: Option<String>,
-    /// File holding the password hash (alternative to `password_hash`).
+    /// File holding the admin password: an argon2 PHC string, or plain text that
+    /// is hashed at startup (alternative to `password_hash`).
     pub password_file: Option<PathBuf>,
-    /// Session lifetime in seconds.
+    /// Session lifetime in seconds (sliding: every request extends it).
     pub session_ttl_secs: u64,
+    /// Password from the command line / `WPG_PASSWORD` (plain text or argon2
+    /// hash). Never read from or written to `wpg.toml`.
+    #[serde(skip)]
+    pub password: Option<Secret>,
+}
+
+/// A secret string whose `Debug` output is redacted.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Secret(String);
+
+impl Secret {
+    /// Wraps `s`.
+    #[must_use]
+    pub fn new(s: impl Into<String>) -> Self {
+        Self(s.into())
+    }
+
+    /// The secret.
+    #[must_use]
+    pub fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for Secret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(REDACTED)
+    }
 }
 
 /// `[templates]`.
@@ -125,6 +168,7 @@ impl Default for ServerConfig {
         Self {
             bind: SocketAddr::from(([127, 0, 0, 1], 8080)),
             tls: None,
+            self_signed_tls: false,
             base_url: None,
         }
     }
@@ -136,6 +180,7 @@ impl Default for AuthConfig {
             password_hash: None,
             password_file: None,
             session_ttl_secs: 24 * 60 * 60,
+            password: None,
         }
     }
 }
@@ -172,6 +217,12 @@ pub fn default_data_dir() -> PathBuf {
 /// Command line overrides (highest precedence). `None` / empty = not given.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Overrides {
+    /// `--password` (visible in the process list: prefer the others).
+    pub password: Option<Secret>,
+    /// `--password-file`: plain text or argon2 hash.
+    pub password_file: Option<PathBuf>,
+    /// `--tls`: serve HTTPS with a self-signed certificate.
+    pub tls: bool,
     /// `--bind`.
     pub bind: Option<SocketAddr>,
     /// `--library-path` (repeatable; replaces the configured list).
@@ -268,15 +319,32 @@ impl Config {
         if let Some(dir) = &overrides.data_dir {
             fig = fig.merge(("data_dir", dir));
         }
+        if overrides.tls {
+            fig = fig.merge(("server.self_signed_tls", true));
+        }
         Ok(fig)
     }
 
-    /// Loads the configuration (see [`Config::figment`]).
+    /// Loads the configuration (see [`Config::figment`]) and resolves the
+    /// command line / environment password into [`AuthConfig::password`]:
+    /// `--password`, then `--password-file`, then `WPG_PASSWORD`.
     ///
     /// # Errors
-    /// Missing explicit file, TOML syntax errors, wrong types or unknown keys.
+    /// Missing explicit file, TOML syntax errors, wrong types or unknown keys, an
+    /// unreadable / empty `--password-file`.
     pub fn load(file: Option<&Path>, overrides: &Overrides) -> Result<Config, ConfigError> {
-        Ok(Self::figment(file, overrides)?.extract()?)
+        let mut c: Config = Self::figment(file, overrides)?.extract()?;
+        c.auth.password = if let Some(p) = &overrides.password {
+            Some(p.clone())
+        } else if let Some(path) = &overrides.password_file {
+            Some(Secret::new(read_secret_file(path)?))
+        } else {
+            std::env::var(PASSWORD_ENV)
+                .ok()
+                .filter(|p| !p.is_empty())
+                .map(Secret::new)
+        };
+        Ok(c)
     }
 
     /// Parses a TOML document on top of the defaults (no environment, no file).
@@ -298,7 +366,8 @@ impl Config {
             .unwrap_or_else(|| self.data_dir.join("templates"))
     }
 
-    /// Directory of persisted job records.
+    /// Directory of the JSON job records of wpg ≤ M3 (imported into the database
+    /// on first start, then renamed to `history.imported`).
     #[must_use]
     pub fn history_dir(&self) -> PathBuf {
         self.data_dir.join("history")
@@ -310,14 +379,29 @@ impl Config {
         self.data_dir.join("captures")
     }
 
-    /// Whether an admin password is configured.
+    /// Whether an admin password is configured outside the database (command
+    /// line, environment, `auth.password_hash` / `auth.password_file`).
     #[must_use]
     pub fn has_password(&self) -> bool {
-        self.auth
-            .password_hash
-            .as_deref()
-            .is_some_and(|h| !h.is_empty())
+        self.auth.password.is_some()
+            || self
+                .auth
+                .password_hash
+                .as_deref()
+                .is_some_and(|h| !h.is_empty())
             || self.auth.password_file.is_some()
+    }
+
+    /// The `SQLite` database (users, sessions, login attempts, job history).
+    #[must_use]
+    pub fn db_path(&self) -> PathBuf {
+        self.data_dir.join("wpg.sqlite")
+    }
+
+    /// Directory of the generated self-signed certificate.
+    #[must_use]
+    pub fn tls_dir(&self) -> PathBuf {
+        self.data_dir.join("tls")
     }
 
     /// Default backend name (configured or the build's default).
@@ -360,12 +444,6 @@ impl Config {
                     ));
                 }
             }
-            out.push(ConfigIssue::new(
-                Warning,
-                "server.tls",
-                "config-issue-tls-not-implemented",
-                "",
-            ));
         }
         if let Some(url) = &self.server.base_url {
             if !(url.starts_with("http://") || url.starts_with("https://")) {
@@ -488,6 +566,60 @@ impl Config {
     }
 }
 
+/// Sets `auth.password_hash` in the TOML file `path` (created from
+/// [`Config::example_toml`] when missing), keeping the rest of the file and its
+/// comments. The result is checked to still parse.
+///
+/// # Errors
+/// I/O errors, a file that is not valid TOML / configuration.
+pub fn write_password_hash(path: &Path, hash: &str) -> Result<(), ConfigError> {
+    let io = |source| ConfigError::Io {
+        path: path.display().to_string(),
+        source,
+    };
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => EXAMPLE_TOML.to_owned(),
+        Err(e) => return Err(io(e)),
+    };
+    let mut doc: toml_edit::DocumentMut = text.parse().map_err(|e: toml_edit::TomlError| {
+        io(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            e.to_string(),
+        ))
+    })?;
+    if !doc.contains_table("auth") {
+        doc["auth"] = toml_edit::table();
+    }
+    doc["auth"]["password_hash"] = toml_edit::value(hash);
+    let out = doc.to_string();
+    Config::from_toml_str(&out)?;
+    if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
+        std::fs::create_dir_all(dir).map_err(io)?;
+    }
+    std::fs::write(path, out).map_err(io)
+}
+
+/// Reads a password file: trimmed, must not be empty.
+///
+/// # Errors
+/// [`ConfigError::Io`] when unreadable or empty.
+pub fn read_secret_file(path: &Path) -> Result<String, ConfigError> {
+    let io = |source| ConfigError::Io {
+        path: path.display().to_string(),
+        source,
+    };
+    let text = std::fs::read_to_string(path).map_err(io)?;
+    let text = text.trim();
+    if text.is_empty() {
+        return Err(io(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "empty password file",
+        )));
+    }
+    Ok(text.to_owned())
+}
+
 fn env_provider() -> Env {
     Env::prefixed(ENV_PREFIX).split("__").filter(|k| {
         let k = k.as_str();
@@ -513,18 +645,25 @@ const EXAMPLE_TOML: &str = r#"# wpg.toml — Web Packet Generator configuration.
 bind = "127.0.0.1:8080"
 # Public URL when running behind a reverse proxy.
 # base_url = "https://wpg.example.net"
+# Serve HTTPS with a self-signed certificate generated into <data_dir>/tls/
+# (same as `wpg serve --tls`). Ignored when [server.tls] is set.
+self_signed_tls = false
 
-# TLS certificate and key (PEM). Not served yet: use a reverse proxy for now.
+# TLS certificate chain and private key (PEM) to serve HTTPS with.
 # [server.tls]
 # cert = "/etc/wpg/cert.pem"
 # key = "/etc/wpg/key.pem"
 
 [auth]
-# argon2id hash of the admin password (enforced in a later release).
+# Admin password. Without one (and without a user created on the first-run
+# setup screen) the server only listens on localhost. Sources, highest first:
+# `wpg serve --password`, `--password-file`, $WPG_PASSWORD, password_hash,
+# password_file, the setup screen.
+# argon2id hash of the admin password (`wpg config set-password` writes it):
 # password_hash = "$argon2id$v=19$m=19456,t=2,p=1$..."
-# Or read the hash from a file:
+# Or a file holding the hash or the plain-text password:
 # password_file = "/etc/wpg/password"
-# Session lifetime in seconds.
+# Session lifetime in seconds (extended by every request).
 session_ttl_secs = 86400
 
 [templates]
@@ -670,6 +809,8 @@ mod tests {
                 bind: Some("127.0.0.1:3333".parse().unwrap()),
                 library_paths: vec!["/lib/a".into(), "/lib/b".into()],
                 data_dir: Some("/from/cli".into()),
+                tls: true,
+                ..Overrides::default()
             };
             let c = Config::load(None, &o).unwrap();
             assert_eq!(c.server.bind, "127.0.0.1:3333".parse().unwrap());
@@ -678,6 +819,7 @@ mod tests {
                 vec![PathBuf::from("/lib/a"), PathBuf::from("/lib/b")]
             );
             assert_eq!(c.data_dir, PathBuf::from("/from/cli"));
+            assert!(c.server.self_signed_tls);
             assert_eq!(c.user_template_dir(), PathBuf::from("/from/cli/templates"));
             // untouched keys keep their file / default values
             assert_eq!(c.tx.max_rate.as_deref(), Some("2kpps"));
@@ -711,5 +853,84 @@ mod tests {
         assert!(keys.contains(&(IssueLevel::Error, "tx.default_backend".into())));
         assert!(keys.contains(&(IssueLevel::Warning, "server.bind".into())));
         assert!(keys.contains(&(IssueLevel::Error, "log.level".into())));
+    }
+}
+
+#[cfg(test)]
+mod password_source_tests {
+    use super::*;
+
+    #[test]
+    fn write_password_hash_keeps_comments() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("sub/wpg.toml");
+        write_password_hash(&path, "$argon2id$v=19$m=8,t=1,p=1$c2FsdHNhbHQ$aGFzaA").unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("# wpg.toml"), "comments kept");
+        let c = Config::from_toml_str(&text).unwrap();
+        assert!(c.auth.password_hash.unwrap().starts_with("$argon2id$"));
+        // replaced, not duplicated
+        write_password_hash(&path, "$argon2id$second").unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(
+            text.lines()
+                .filter(|l| l.starts_with("password_hash ="))
+                .count(),
+            1,
+            "{text}"
+        );
+        assert!(text.contains("$argon2id$second"));
+        // a file without [auth]
+        let p2 = dir.path().join("min.toml");
+        std::fs::write(&p2, "[server]\nbind = \"127.0.0.1:1\"\n").unwrap();
+        write_password_hash(&p2, "$argon2id$x").unwrap();
+        let c = Config::from_toml_str(&std::fs::read_to_string(&p2).unwrap()).unwrap();
+        assert_eq!(c.auth.password_hash.as_deref(), Some("$argon2id$x"));
+        assert_eq!(c.server.bind, "127.0.0.1:1".parse().unwrap());
+    }
+
+    #[test]
+    #[allow(clippy::result_large_err)] // figment's Jail API
+    fn password_sources_in_priority_order() {
+        figment::Jail::expect_with(|jail| {
+            jail.create_file("pw.txt", "  from-file \n")?;
+            jail.create_file("empty.txt", " \n")?;
+            let c = Config::load(None, &Overrides::default()).unwrap();
+            assert!(c.auth.password.is_none());
+            assert!(!c.has_password());
+
+            jail.set_env(PASSWORD_ENV, "from-env");
+            let c = Config::load(None, &Overrides::default()).unwrap();
+            assert_eq!(c.auth.password.as_ref().unwrap().expose(), "from-env");
+            assert!(c.has_password());
+            // never shown
+            assert!(!format!("{c:?}").contains("from-env"));
+            assert!(!c.to_toml_redacted().unwrap().contains("from-env"));
+
+            let o = Overrides {
+                password_file: Some("pw.txt".into()),
+                ..Overrides::default()
+            };
+            let c = Config::load(None, &o).unwrap();
+            assert_eq!(c.auth.password.as_ref().unwrap().expose(), "from-file");
+
+            let o = Overrides {
+                password: Some(Secret::new("from-cli")),
+                password_file: Some("pw.txt".into()),
+                ..Overrides::default()
+            };
+            let c = Config::load(None, &o).unwrap();
+            assert_eq!(c.auth.password.as_ref().unwrap().expose(), "from-cli");
+
+            let o = Overrides {
+                password_file: Some("empty.txt".into()),
+                ..Overrides::default()
+            };
+            assert!(matches!(
+                Config::load(None, &o),
+                Err(ConfigError::Io { .. })
+            ));
+            Ok(())
+        });
     }
 }

@@ -7,7 +7,9 @@ use tokio::sync::{broadcast, watch};
 use wpg_protocols::Catalog;
 use wpg_sys::ifaces::Iface;
 
+use crate::auth::{Auth, AuthError};
 use crate::config::Config;
+use crate::db::{Db, DbError};
 use crate::events::{bus, EventBus, ServerEvent};
 use crate::jobs::JobManager;
 use crate::store::{StoreError, TemplateStore};
@@ -33,6 +35,26 @@ struct IfaceCache {
     error: Option<String>,
 }
 
+/// Errors of [`AppState::new`].
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum StateError {
+    /// Data / template directories.
+    #[error(transparent)]
+    Store(#[from] StoreError),
+    /// The database.
+    #[error("{path}: {source}")]
+    Db {
+        /// Database file.
+        path: String,
+        /// Underlying error.
+        source: DbError,
+    },
+    /// The configured password.
+    #[error(transparent)]
+    Auth(#[from] AuthError),
+}
+
 /// Everything the handlers share (cheap to clone).
 #[derive(Clone)]
 pub struct AppState {
@@ -44,6 +66,10 @@ pub struct AppState {
     pub templates: TemplateStore,
     /// Job manager.
     pub jobs: JobManager,
+    /// The `SQLite` database.
+    pub db: Db,
+    /// Authentication.
+    pub auth: Auth,
     /// Server start time.
     pub started_at: Instant,
     /// Job / template events for WebSocket clients.
@@ -70,13 +96,15 @@ impl std::fmt::Debug for AppState {
 }
 
 impl AppState {
-    /// Builds the state: creates the data directories, scans the template
-    /// libraries and loads the job history. Call [`AppState::watch_templates`] to
-    /// enable hot reload.
+    /// Builds the state: creates the data directories, opens the database
+    /// (`<data_dir>/wpg.sqlite`), applies the configured password, scans the
+    /// template libraries and loads the job history. Call
+    /// [`AppState::watch_templates`] to enable hot reload.
     ///
     /// # Errors
-    /// If the data / user template directory cannot be created.
-    pub fn new(config: Config) -> Result<Self, StoreError> {
+    /// If the data / user template directory cannot be created, the database
+    /// cannot be opened or the configured password is invalid.
+    pub fn new(config: Config) -> Result<Self, StateError> {
         let config = Arc::new(config);
         let events = bus();
         let catalog = wpg_protocols::catalog();
@@ -84,6 +112,12 @@ impl AppState {
             path: config.data_dir.display().to_string(),
             source,
         })?;
+        let db_path = config.db_path();
+        let db = Db::open(&db_path).map_err(|source| StateError::Db {
+            path: db_path.display().to_string(),
+            source,
+        })?;
+        let auth = Auth::new(&config, db.clone())?;
         let templates = TemplateStore::open(
             &config.user_template_dir(),
             &config.templates.library_paths,
@@ -95,6 +129,7 @@ impl AppState {
             templates.clone(),
             catalog,
             events.clone(),
+            db.clone(),
         );
         let (shutdown_tx, shutdown) = watch::channel(false);
         Ok(Self {
@@ -102,6 +137,8 @@ impl AppState {
             catalog,
             templates,
             jobs,
+            db,
+            auth,
             started_at: Instant::now(),
             events,
             logs: log_channel().clone(),

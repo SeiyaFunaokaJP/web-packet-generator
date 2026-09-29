@@ -33,7 +33,7 @@ pub struct Health {
 }
 
 /// Liveness probe.
-#[utoipa::path(get, path = "/api/health", tag = "system",
+#[utoipa::path(get, path = "/api/health", tag = "system", security(()),
     responses((status = 200, description = "The server is up", body = Health)))]
 pub async fn health(State(st): State<AppState>, headers: HeaderMap) -> Json<Health> {
     let locale = request_locale(&headers);
@@ -64,7 +64,7 @@ pub struct VersionInfo {
 }
 
 /// Build information.
-#[utoipa::path(get, path = "/api/version", tag = "system",
+#[utoipa::path(get, path = "/api/version", tag = "system", security(()),
     responses((status = 200, description = "Version and build info", body = VersionInfo)))]
 pub async fn version() -> Json<VersionInfo> {
     let mut features = Vec::new();

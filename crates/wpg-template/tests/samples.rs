@@ -81,8 +81,8 @@ fn every_template_compiles_and_renders() {
     for f in all_files() {
         let name = rel(&f);
         let t = load(&f);
-        let c = compile(&t, &VarOverrides::new(), catalog())
-            .unwrap_or_else(|e| panic!("{name}: {e}"));
+        let c =
+            compile(&t, &VarOverrides::new(), catalog()).unwrap_or_else(|e| panic!("{name}: {e}"));
         let mut n = 0;
         render_with(&c, catalog(), Some(3), &mut |_, bytes| {
             assert!(!bytes.is_empty(), "{name}: empty frame");
@@ -137,7 +137,7 @@ fn metadata_is_complete_and_names_are_unique() {
             assert!(d.len() >= 10, "{name}: missing meta.descriptions.{lang}");
         }
         assert!(
-            t.meta.descriptions["ja"].chars().any(|c| !c.is_ascii()),
+            !t.meta.descriptions["ja"].is_ascii(),
             "{name}: ja description has no Japanese text"
         );
         assert!(!t.meta.tags.is_empty(), "{name}: no tags");
@@ -181,7 +181,11 @@ fn tags_match_the_layer_stack() {
             );
         }
         let layer_tags = tag_values(&t, "layer:");
-        assert_eq!(layer_tags.len(), 1, "{name}: exactly one layer:<l2|l3|l4> tag");
+        assert_eq!(
+            layer_tags.len(),
+            1,
+            "{name}: exactly one layer:<l2|l3|l4> tag"
+        );
         assert!(
             ["l2", "l3", "l4"].contains(layer_tags.iter().next().unwrap()),
             "{name}: {layer_tags:?}"
@@ -241,7 +245,14 @@ fn well_formed_protocol_samples_parse_back_to_their_stack() {
             v
         };
         let want = norm(t.layers.iter().map(|l| l.protocol.clone()).collect());
-        let got = norm(parsed.packet.layers.iter().map(|l| l.protocol.clone()).collect());
+        let got = norm(
+            parsed
+                .packet
+                .layers
+                .iter()
+                .map(|l| l.protocol.clone())
+                .collect(),
+        );
         assert_eq!(got, want, "{name}");
     }
 }

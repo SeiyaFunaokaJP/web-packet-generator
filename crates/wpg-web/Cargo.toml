@@ -12,8 +12,35 @@ publish.workspace = true
 [dependencies]
 wpg-i18n.workspace = true
 leptos.workspace = true
+leptos_router = "0.8"
 console_error_panic_hook.workspace = true
-web-sys.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# HTTP (fetch) + WebSocket with futures; works with Leptos' `spawn_local`.
+gloo-net = { version = "0.6", default-features = false, features = ["http", "json", "websocket"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { workspace = true, features = [
+    "Blob",
+    "BlobPropertyBag",
+    "Document",
+    "DomTokenList",
+    "Element",
+    "File",
+    "FileList",
+    "HtmlAnchorElement",
+    "HtmlDocument",
+    "HtmlElement",
+    "HtmlInputElement",
+    "KeyboardEvent",
+    "Location",
+    "MediaQueryList",
+    "Storage",
+    "Url",
+] }
 
 [lints]
 workspace = true

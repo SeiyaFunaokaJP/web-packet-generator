@@ -31,6 +31,7 @@
 - [DPDK / AF_XDP のセットアップ](operations/dpdk-afxdp.md)
 - [CML2 での注意点](operations/cml2.md)
 - [性能チューニング](operations/tuning.md)
+- [認証と TLS](operations/security.md)
 
 # 開発者ガイド
 

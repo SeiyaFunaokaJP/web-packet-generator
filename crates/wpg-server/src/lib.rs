@@ -7,13 +7,15 @@
 //! `/` with SPA fallback.
 //!
 //! * [`config`]: `wpg.toml` + `WPG_*` environment + CLI overrides;
+//! * [`db`]: the `SQLite` database (users, sessions, login attempts, job history);
+//! * [`auth`]: argon2id password, cookie sessions + CSRF, login rate limit,
+//!   first-run setup, audit events; [`auth::require`] guards the API router
+//!   ([`api::router`]) while the static assets stay public;
+//! * [`security`]: CSP and the other security headers;
+//! * [`tls`]: HTTPS with given or self-signed certificates (rustls);
 //! * [`store`]: file-backed template library with hot reload;
 //! * [`jobs`]: job manager on top of `wpg-tx` with the transmit policy;
 //! * [`state::AppState`]: what the handlers share.
-//!
-//! Authentication / TLS are not enforced yet (the `auth` config section is stored
-//! for the upcoming work); the API router is built by [`api::router`] so that an
-//! auth layer can wrap it without touching the static assets.
 
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -30,13 +32,17 @@ use tower_http::trace::TraceLayer;
 use wpg_i18n::{t, Locale};
 
 pub mod api;
+pub mod auth;
 pub mod config;
+pub mod db;
 pub mod error;
 pub mod events;
 pub mod jobs;
 pub mod localize;
+pub mod security;
 pub mod state;
 pub mod store;
+pub mod tls;
 
 pub use config::{Config, ConfigError, Overrides};
 pub use state::AppState;
@@ -66,15 +72,16 @@ pub fn init_tracing(cfg: &config::LogConfig) -> Result<wpg_log::LogGuard, wpg_lo
     wpg_log::init_with_sink(cfg, Some(state::log_channel().clone()))
 }
 
-/// Builds the whole application: API, OpenAPI / Swagger UI, static assets and the
-/// middleware stack (request id, tracing, compression, error localisation, CORS
-/// in dev mode).
+/// Builds the whole application: API (behind authentication), OpenAPI / Swagger
+/// UI, static assets and the middleware stack (request id, tracing, security
+/// headers, compression, error localisation, CORS in dev mode).
 pub fn app(state: AppState) -> Router {
     let dev = state.dev;
     let x_request_id = HeaderName::from_static("x-request-id");
     let mut router = api::router(state)
         .fallback(static_asset)
         .layer(axum::middleware::from_fn(error::localize))
+        .layer(axum::middleware::from_fn(security::headers))
         .layer(CompressionLayer::new());
     if dev {
         router = router.layer(dev_cors());
@@ -105,6 +112,7 @@ fn dev_cors() -> CorsLayer {
             header::ACCEPT,
             header::ACCEPT_LANGUAGE,
             header::AUTHORIZATION,
+            HeaderName::from_static(auth::session::CSRF_HEADER),
         ])
         .allow_credentials(true)
         .max_age(Duration::from_secs(600))
@@ -117,6 +125,27 @@ pub struct ServeOptions {
     pub dev: bool,
     /// Watch the template libraries for changes.
     pub watch: bool,
+    /// `--allow-insecure`: bind a non-loopback address although no password is
+    /// configured (and accept the first-run setup from remote clients).
+    pub allow_insecure: bool,
+}
+
+/// Errors of [`Server::bind`].
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum BindError {
+    /// No password and a non-loopback address without `--allow-insecure`.
+    #[error("refusing to listen on {0} without a password (use a loopback address, set a password or pass --allow-insecure)")]
+    Insecure(SocketAddr),
+    /// State (data directory, database, password).
+    #[error(transparent)]
+    State(#[from] state::StateError),
+    /// TLS certificate / key.
+    #[error(transparent)]
+    Tls(#[from] tls::TlsError),
+    /// Socket.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
 /// A bound, not yet running server.
@@ -124,23 +153,53 @@ pub struct ServeOptions {
 pub struct Server {
     listener: tokio::net::TcpListener,
     state: AppState,
+    tls: Option<tls::TlsSetup>,
 }
 
 impl Server {
-    /// Creates the state and binds `config.server.bind`.
+    /// Creates the state, sets up TLS and binds `config.server.bind`.
+    ///
+    /// Without any password (none configured, no user created on the setup
+    /// screen) only loopback addresses are accepted unless
+    /// [`ServeOptions::allow_insecure`] is set (TODO §2.6 "未設定なら localhost
+    /// のみ bind").
     ///
     /// # Errors
-    /// Data directory / bind errors.
-    pub async fn bind(config: Config, opts: ServeOptions) -> std::io::Result<Self> {
+    /// [`BindError::Insecure`], data directory / database / password / TLS /
+    /// bind errors.
+    pub async fn bind(config: Config, opts: ServeOptions) -> Result<Self, BindError> {
         let bind = config.server.bind;
-        let state = AppState::new(config)
-            .map_err(std::io::Error::other)?
-            .with_dev(opts.dev);
+        let tls = tls::setup(&config)?;
+        let state = AppState::new(config)?.with_dev(opts.dev);
+        if state.auth.setup_required() && !bind.ip().is_loopback() {
+            if !opts.allow_insecure {
+                return Err(BindError::Insecure(bind));
+            }
+            tracing::warn!(
+                "no password configured and listening on {bind} (--allow-insecure): \
+                 anyone who reaches it can set the admin password"
+            );
+        }
+        state.auth.set_secure(tls.is_some());
+        state.auth.set_allow_insecure(opts.allow_insecure);
+        if let Some(t) = &tls {
+            tracing::info!(
+                cert = %t.cert_path.display(),
+                self_signed = t.self_signed,
+                generated = t.generated,
+                "TLS certificate SHA-256 fingerprint {}",
+                t.fingerprint
+            );
+        }
         if opts.watch {
             state.watch_templates();
         }
         let listener = tokio::net::TcpListener::bind(bind).await?;
-        Ok(Self { listener, state })
+        Ok(Self {
+            listener,
+            state,
+            tls,
+        })
     }
 
     /// The bound address (the real port when binding port 0).
@@ -157,6 +216,12 @@ impl Server {
         &self.state
     }
 
+    /// The TLS setup (`None`: plain HTTP).
+    #[must_use]
+    pub fn tls(&self) -> Option<&tls::TlsSetup> {
+        self.tls.as_ref()
+    }
+
     /// Serves until `shutdown` completes, then stops all jobs (their reports go to
     /// the history) and closes the WebSocket sessions.
     ///
@@ -168,14 +233,35 @@ impl Server {
     ) -> std::io::Result<()> {
         let state = self.state.clone();
         let signal_state = self.state.clone();
-        let res = axum::serve(self.listener, app(self.state))
-            .with_graceful_shutdown(async move {
-                shutdown.await;
-                tracing::info!("shutting down: stopping jobs");
-                signal_state.begin_shutdown();
-                signal_state.jobs.shutdown().await;
-            })
-            .await;
+        let make_service = app(self.state).into_make_service_with_connect_info::<SocketAddr>();
+        let stop = async move {
+            shutdown.await;
+            tracing::info!("shutting down: stopping jobs");
+            signal_state.begin_shutdown();
+            signal_state.jobs.shutdown().await;
+        };
+        let res = match self.tls {
+            None => {
+                axum::serve(self.listener, make_service)
+                    .with_graceful_shutdown(stop)
+                    .await
+            }
+            Some(tls) => {
+                let handle = axum_server::Handle::new();
+                let h = handle.clone();
+                let stopper = tokio::spawn(async move {
+                    stop.await;
+                    h.graceful_shutdown(Some(Duration::from_secs(5)));
+                });
+                let rustls = axum_server::tls_rustls::RustlsConfig::from_config(tls.config);
+                let res = axum_server::from_tcp_rustls(self.listener.into_std()?, rustls)
+                    .handle(handle)
+                    .serve(make_service)
+                    .await;
+                stopper.abort();
+                res
+            }
+        };
         state.jobs.shutdown().await;
         res
     }
@@ -219,16 +305,27 @@ async fn static_asset(uri: Uri, req: Request) -> Response {
     let path = uri.path().trim_start_matches('/');
     let path = if path.is_empty() { "index.html" } else { path };
 
-    if let Some(file) = WebAssets::get(path) {
-        let mime = file.metadata.mimetype();
-        let mut resp = file.data.into_owned().into_response();
-        if let Ok(value) = HeaderValue::from_str(mime) {
-            resp.headers_mut().insert(header::CONTENT_TYPE, value);
+    if path != "index.html" {
+        if let Some(file) = WebAssets::get(path) {
+            let mime = file.metadata.mimetype();
+            let mut resp = file.data.into_owned().into_response();
+            if let Ok(value) = HeaderValue::from_str(mime) {
+                resp.headers_mut().insert(header::CONTENT_TYPE, value);
+            }
+            return resp;
         }
-        return resp;
     }
     if let Some(index) = WebAssets::get("index.html") {
-        return Html(index.data.into_owned()).into_response();
+        let html = String::from_utf8_lossy(&index.data).into_owned();
+        let csp = security::index_csp(&html);
+        let mut resp = Html(html).into_response();
+        if let Ok(v) = HeaderValue::from_str(&csp) {
+            resp.headers_mut()
+                .insert(header::CONTENT_SECURITY_POLICY, v);
+        }
+        resp.headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+        return resp;
     }
     placeholder_page(localize::request_locale(req.headers())).into_response()
 }

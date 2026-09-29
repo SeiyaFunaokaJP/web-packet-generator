@@ -30,6 +30,29 @@ fn pcapng_packets(path: &Path) -> Vec<Vec<u8>> {
     out
 }
 
+/// A session of the admin user: (`Cookie` header value, CSRF token).
+fn session(state: &wpg_server::AppState) -> (String, String) {
+    let user = state.db.user_by_name("admin").unwrap().unwrap();
+    let headers = state
+        .auth
+        .start_session(
+            &user,
+            wpg_server::auth::ClientAddr(None),
+            &axum::http::HeaderMap::new(),
+        )
+        .unwrap();
+    let mut cookie = Vec::new();
+    let mut csrf = String::new();
+    for v in headers.get_all(header::SET_COOKIE) {
+        let kv = v.to_str().unwrap().split(';').next().unwrap().to_owned();
+        if let Some(t) = kv.strip_prefix("wpg_csrf=") {
+            csrf = t.to_owned();
+        }
+        cookie.push(kv);
+    }
+    (cookie.join("; "), csrf)
+}
+
 #[tokio::test]
 async fn cli_render_matches_api_render() {
     let dir = tempfile::tempdir().unwrap();
@@ -61,7 +84,10 @@ async fn cli_render_matches_api_render() {
             ..wpg_server::Config::default()
         };
         config.templates.library_paths = vec![];
-        let app = wpg_server::app(wpg_server::AppState::new(config).unwrap());
+        config.auth.password = Some(wpg_server::config::Secret::new("render-test-password"));
+        let state = wpg_server::AppState::new(config).unwrap();
+        let (cookie, csrf) = session(&state);
+        let app = wpg_server::app(state);
         let body = json!({
             "template": std::fs::read_to_string(&template).unwrap(),
             "vars": vars,
@@ -71,6 +97,8 @@ async fn cli_render_matches_api_render() {
             .oneshot(
                 Request::post("/api/render")
                     .header(header::CONTENT_TYPE, "application/json")
+                    .header(header::COOKIE, &cookie)
+                    .header("x-csrf-token", &csrf)
                     .body(Body::from(body.to_string()))
                     .unwrap(),
             )

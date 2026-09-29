@@ -321,8 +321,8 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] REST API: templates CRUD / protocols catalog / render(preview) / jobs (create/start/stop/pause) / ifaces / stats / auth
 - [x] WebSocket: ジョブ進捗・統計・ログ配信
 - [x] `utoipa` OpenAPI + Swagger UI
-- [ ] 認証: パスワード (argon2id)、セッション、レート制限、未設定時 localhost 限定
-- [ ] TLS (`rustls`、自己署名自動生成)
+- [x] 認証: パスワード (argon2id)、セッション、レート制限、未設定時 localhost 限定
+- [x] TLS (`rustls`、自己署名自動生成)
 - [x] 設定 (`wpg.toml` + env + CLI)、`wpg config init`
 - [x] ジョブマネージャ (複数ストリーム混合、スケジュール、キャンセル安全性)
 - [x] 送出制限ポリシー (許可インタフェース、最大レート)
@@ -330,17 +330,17 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] `tracing` ログ設定 (JSON / ローテーション)
 
 ### M4: GUI MVP（4–6 週）
-- [ ] Leptos プロジェクト、Tailwind、ルーティング、i18n、テーマ
-- [ ] 認証画面・セッション処理
+- [x] Leptos プロジェクト、Tailwind、ルーティング、i18n、テーマ
+- [x] 認証画面・セッション処理
 - [ ] ビルダー: プロトコルパレット / レイヤスタック D&D / フィールドエディタ (型別 UI) / Auto-Manual トグル
 - [ ] Hex ダンプ + ツリーの双方向ハイライト、Hex 直接編集
 - [ ] ブラウザ内 WASM プレビュー (`wpg-core`)、サーバ結果との一致テスト
 - [ ] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示
-- [ ] ジョブ画面: ストリーム混合、レート設定、開始/停止、リアルタイム統計グラフ
-- [ ] テンプレート画面: 一覧 / 検索 / タグ / import / export / 複製
-- [ ] 設定画面
-- [ ] Undo/Redo、ショートカット、自動保存 (draft)
-- [ ] キーボードのみで D&D 相当操作、aria
+- [x] ジョブ画面: ストリーム混合、レート設定、開始/停止、リアルタイム統計グラフ
+- [x] テンプレート画面: 一覧 / 検索 / タグ / import / export / 複製
+- [x] 設定画面
+- [x] Undo/Redo、ショートカット、自動保存 (draft)
+- [x] キーボードのみで D&D 相当操作、aria
 - [ ] E2E テスト (Playwright)
 
 ### M5: テンプレート形式 & 共有（1–2 週）

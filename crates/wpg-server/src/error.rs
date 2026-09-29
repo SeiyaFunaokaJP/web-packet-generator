@@ -36,8 +36,19 @@ pub mod codes {
     pub const INVALID_STATE: &str = "invalid_state";
     /// Opening / driving the transmit backend failed.
     pub const BACKEND_ERROR: &str = "backend_error";
-    /// Authentication required (reserved for the auth layer).
+    /// Not logged in / wrong password.
     pub const UNAUTHORIZED: &str = "unauthorized";
+    /// No password exists yet: complete `POST /api/auth/setup` first.
+    pub const SETUP_REQUIRED: &str = "setup_required";
+    /// Too many failed logins; `details.retry_after_secs`.
+    pub const RATE_LIMITED: &str = "rate_limited";
+    /// Missing / wrong `X-CSRF-Token`.
+    pub const CSRF_FAILED: &str = "csrf_failed";
+    /// Not allowed from this client (setup from a remote address, foreign
+    /// WebSocket origin).
+    pub const FORBIDDEN: &str = "forbidden";
+    /// The setup screen was already completed.
+    pub const ALREADY_CONFIGURED: &str = "already_configured";
     /// Anything else.
     pub const INTERNAL: &str = "internal";
 }
@@ -78,7 +89,8 @@ pub struct ErrorBody {
 pub struct ErrorInfo {
     /// Stable machine code: `not_found`, `bad_request`, `invalid_template`,
     /// `policy_violation`, `read_only`, `invalid_state`, `backend_error`,
-    /// `unauthorized`, `internal`.
+    /// `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`,
+    /// `forbidden`, `already_configured`, `internal`.
     pub code: String,
     /// Human readable message in the language of `Accept-Language`.
     pub message: String,

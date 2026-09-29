@@ -317,6 +317,10 @@ mod tests {
                     "version",
                     "list",
                     "origins",
+                    // authentication / TLS (wpg-server, wpg serve)
+                    "url",
+                    "fingerprint",
+                    "min",
                 ] {
                     args.set(name, "1");
                 }

@@ -38,8 +38,13 @@ async fn job_events_over_websocket() {
     }));
     let base = format!("http://{addr}");
     let http = |path: &str| format!("{base}{path}");
+    let (_client, csrf, cookie) = common::http_login(&base).await;
+    let auth = Auth {
+        cookie: &cookie,
+        csrf: &csrf,
+    };
 
-    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/ws"))
+    let (mut ws, _) = tokio_tungstenite::connect_async(ws_request(addr, Some(&cookie)))
         .await
         .unwrap();
     ws.send(Message::Text(
@@ -60,7 +65,7 @@ async fn job_events_over_websocket() {
         "count": 100_000_000,
     })
     .to_string();
-    let resp = raw_http(addr, "POST", "/api/jobs", Some(&body)).await;
+    let resp = raw_http(addr, &auth, "POST", "/api/jobs", Some(&body)).await;
     assert!(resp.starts_with("HTTP/1.1 201"), "{resp}");
     let job: Value = serde_json::from_str(resp.split("\r\n\r\n").nth(1).unwrap()).unwrap();
     let id = job["id"].as_str().unwrap().to_owned();
@@ -81,7 +86,7 @@ async fn job_events_over_websocket() {
     assert!(last_packets > 0);
 
     // stop → job_state finished/stopped
-    let resp = raw_http(addr, "POST", &format!("/api/jobs/{id}/stop"), None).await;
+    let resp = raw_http(addr, &auth, "POST", &format!("/api/jobs/{id}/stop"), None).await;
     assert!(resp.starts_with("HTTP/1.1 200"), "{resp}");
     loop {
         let ev = next_json(&mut ws).await;
@@ -91,7 +96,7 @@ async fn job_events_over_websocket() {
             break;
         }
     }
-    let resp = raw_http(addr, "GET", "/api/jobs/history", None).await;
+    let resp = raw_http(addr, &auth, "GET", "/api/jobs/history", None).await;
     assert!(resp.contains(&id), "{resp}");
 
     // template changes are announced
@@ -102,6 +107,7 @@ async fn job_events_over_websocket() {
     .unwrap();
     let resp = raw_http(
         addr,
+        &auth,
         "POST",
         "/api/templates/import",
         Some("schema: 1\nmeta:\n  name: via api\n"),
@@ -142,7 +148,8 @@ async fn log_lines_reach_websocket_clients() {
     let addr = server.local_addr().unwrap();
     let logs = server.state().logs.clone();
     let serving = tokio::spawn(server.run_until(std::future::pending()));
-    let (mut ws, _) = tokio_tungstenite::connect_async(format!("ws://{addr}/api/ws"))
+    let (_client, _csrf, cookie) = common::http_login(&format!("http://{addr}")).await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(ws_request(addr, Some(&cookie)))
         .await
         .unwrap();
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -167,9 +174,65 @@ async fn log_lines_reach_websocket_clients() {
     serving.abort();
 }
 
-/// Minimal HTTP/1.1 client (keeps the dev-dependencies small).
+/// Session cookie + CSRF token for [`raw_http`].
+struct Auth<'a> {
+    cookie: &'a str,
+    csrf: &'a str,
+}
+
+/// `GET /api/ws` upgrade request, with the session cookie when given.
+fn ws_request(
+    addr: std::net::SocketAddr,
+    cookie: Option<&str>,
+) -> tokio_tungstenite::tungstenite::handshake::client::Request {
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    let mut req = format!("ws://{addr}/api/ws").into_client_request().unwrap();
+    if let Some(c) = cookie {
+        req.headers_mut().insert("cookie", c.parse().unwrap());
+    }
+    req
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn websocket_requires_a_session_and_same_origin() {
+    let dir = tempfile::tempdir().unwrap();
+    let server = Server::bind(common::config(&dir), ServeOptions::default())
+        .await
+        .unwrap();
+    let addr = server.local_addr().unwrap();
+    let serving = tokio::spawn(server.run_until(std::future::pending()));
+    // before setup
+    let e = tokio_tungstenite::connect_async(ws_request(addr, None))
+        .await
+        .unwrap_err();
+    assert!(e.to_string().contains("401"), "{e}");
+    let (_client, _csrf, cookie) = common::http_login(&format!("http://{addr}")).await;
+    // no cookie / a wrong cookie
+    for c in [None, Some("wpg_session=0000")] {
+        let e = tokio_tungstenite::connect_async(ws_request(addr, c))
+            .await
+            .unwrap_err();
+        assert!(e.to_string().contains("401"), "{e}");
+    }
+    // cross-site origin
+    let mut req = ws_request(addr, Some(&cookie));
+    req.headers_mut()
+        .insert("origin", "https://evil.example".parse().unwrap());
+    let e = tokio_tungstenite::connect_async(req).await.unwrap_err();
+    assert!(e.to_string().contains("403"), "{e}");
+    // same origin with the cookie
+    let mut req = ws_request(addr, Some(&cookie));
+    req.headers_mut()
+        .insert("origin", format!("http://{addr}").parse().unwrap());
+    let (mut ws, _) = tokio_tungstenite::connect_async(req).await.unwrap();
+    ws.close(None).await.unwrap();
+    serving.abort();
+}
+
+/// Minimal HTTP/1.1 client over a raw socket.
 async fn raw_http(
     addr: std::net::SocketAddr,
+    auth: &Auth<'_>,
     method: &str,
     path: &str,
     body: Option<&str>,
@@ -183,7 +246,9 @@ async fn raw_http(
         "text/yaml"
     };
     let req = format!(
-        "{method} {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\nContent-Type: {ctype}\r\nContent-Length: {}\r\n\r\n{body}",
+        "{method} {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\nCookie: {}\r\nX-CSRF-Token: {}\r\nContent-Type: {ctype}\r\nContent-Length: {}\r\n\r\n{body}",
+        auth.cookie,
+        auth.csrf,
         body.len()
     );
     s.write_all(req.as_bytes()).await.unwrap();

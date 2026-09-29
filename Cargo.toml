@@ -101,6 +101,12 @@ uninlined_format_args = "warn"
 dbg_macro = "warn"
 todo = "warn"
 
+# argon2 is unusably slow unoptimised (every login / test setup hashes 19 MiB).
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
+
 [profile.release]
 lto = "thin"
 codegen-units = 1

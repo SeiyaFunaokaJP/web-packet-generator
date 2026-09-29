@@ -3,8 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>Web Packet Generator</title>
-    <link data-trunk rel="rust" data-bin="wpg-web" data-wasm-opt="z" />
+    <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
+    <!-- Release: the size-optimised `wasm-release` profile (workspace Cargo.toml) + wasm-opt -Oz.
+         The feature flags match what rustc enables by default for wasm32 (Rust >= 1.82);
+         Trunk's bundled wasm-opt would otherwise reject bulk-memory instructions. -->
+    <link
+      data-trunk
+      rel="rust"
+      data-bin="wpg-web"
+      data-cargo-profile-release="wasm-release"
+      data-wasm-opt="z"
+      data-wasm-opt-params="--enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals --enable-reference-types --enable-multivalue"
+    />
   </head>
-  <body></body>
+  <body class="h-full bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100"></body>
 </html>

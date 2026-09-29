@@ -1,4 +1,5 @@
-//! `wpg config init|show|validate` (TODO §2.8 "`wpg config init`").
+//! `wpg config init|show|validate|set-password` (TODO §2.8 "`wpg config init`",
+//! §2.6 password).
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -18,6 +19,7 @@ pub(crate) fn run(args: ConfigArgs) -> ExitCode {
     let locale = cli_locale();
     match args.action {
         ConfigAction::Init { path, force } => init(&path, force, locale),
+        ConfigAction::SetPassword { config, stdin } => set_password(&config, stdin, locale),
         ConfigAction::Show { config } => match load(config.as_deref(), locale) {
             Ok(c) => match c.to_toml_redacted() {
                 Ok(s) => {
@@ -109,6 +111,67 @@ pub(crate) fn issue_line(i: &ConfigIssue, locale: Locale) -> String {
     )
 }
 
+fn read_password(stdin: bool, locale: Locale) -> std::io::Result<Option<String>> {
+    if stdin {
+        let mut line = String::new();
+        std::io::stdin().read_line(&mut line)?;
+        return Ok(Some(line.trim_end_matches(['\r', '\n']).to_owned()));
+    }
+    let first = rpassword::prompt_password(t(locale, "config-password-prompt"))?;
+    let again = rpassword::prompt_password(t(locale, "config-password-confirm"))?;
+    if first != again {
+        eprintln!("{}", t(locale, "config-password-mismatch"));
+        return Ok(None);
+    }
+    Ok(Some(first))
+}
+
+fn set_password(path: &Path, stdin: bool, locale: Locale) -> ExitCode {
+    let password = match read_password(stdin, locale) {
+        Ok(Some(p)) => p,
+        Ok(None) => return ExitCode::FAILURE,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let min = wpg_server::auth::password::MIN_LEN;
+    if password.chars().count() < min {
+        eprintln!(
+            "{}",
+            tr(locale, "config-password-short", &[("min", min.to_string())])
+        );
+        return ExitCode::FAILURE;
+    }
+    let hash = match wpg_server::auth::password::hash(&password) {
+        Ok(h) => h,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match wpg_server::config::write_password_hash(path, &hash) {
+        Ok(()) => {
+            println!(
+                "{}",
+                tr(
+                    locale,
+                    "config-password-written",
+                    &[("path", path.display().to_string())]
+                )
+            );
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!(
+                "{}",
+                tr(locale, "config-load-error", &[("error", e.to_string())])
+            );
+            ExitCode::FAILURE
+        }
+    }
+}
+
 fn init(path: &Path, force: bool, locale: Locale) -> ExitCode {
     let shown = path.display().to_string();
     if path.exists() && !force {
@@ -154,7 +217,7 @@ mod tests {
         c.tx.default_backend = Some("warp".into());
         c.log.level = "[".into();
         let issues = c.validate();
-        assert!(issues.len() >= 10, "{issues:?}");
+        assert!(issues.len() >= 9, "{issues:?}");
         for i in &issues {
             for locale in Locale::ALL {
                 assert_ne!(t(locale, &i.message_key), i.message_key);

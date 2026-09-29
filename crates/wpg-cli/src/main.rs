@@ -48,10 +48,25 @@ enum Command {
 /// Arguments of `wpg serve`.
 #[derive(Debug, Args)]
 pub(crate) struct ServeArgs {
-    /// Address to listen on (default from the config: 127.0.0.1:8080). Keep it on
-    /// localhost until authentication lands.
+    /// Address to listen on (default from the config: 127.0.0.1:8080). Without a
+    /// password only loopback addresses are accepted (see --allow-insecure).
     #[arg(long, env = "WPG_BIND")]
     pub(crate) bind: Option<SocketAddr>,
+    /// Admin password (plain text or argon2 hash). Visible in the process list:
+    /// prefer --password-file, `WPG_PASSWORD` or `wpg config set-password`.
+    #[arg(long, value_name = "PASSWORD")]
+    pub(crate) password: Option<String>,
+    /// File holding the admin password (plain text or argon2 hash).
+    #[arg(long, value_name = "FILE")]
+    pub(crate) password_file: Option<PathBuf>,
+    /// Serve HTTPS; without `[server.tls]` a self-signed certificate is generated
+    /// into `<data_dir>/tls/`.
+    #[arg(long)]
+    pub(crate) tls: bool,
+    /// Listen on a non-loopback address even though no password is configured
+    /// (anyone reaching the server can then set it on the setup screen).
+    #[arg(long)]
+    pub(crate) allow_insecure: bool,
     /// Configuration file (default: `wpg.toml` in the working directory, if any).
     #[arg(long, env = "WPG_CONFIG", value_name = "FILE")]
     pub(crate) config: Option<PathBuf>,
@@ -97,6 +112,21 @@ pub(crate) enum ConfigAction {
         /// Configuration file (default: `wpg.toml` if present).
         #[arg(long, env = "WPG_CONFIG", value_name = "FILE")]
         config: Option<PathBuf>,
+    },
+    /// Prompt for the admin password and store its argon2id hash as
+    /// `auth.password_hash` (the file is created from the example if missing).
+    SetPassword {
+        /// Configuration file to update.
+        #[arg(
+            long,
+            env = "WPG_CONFIG",
+            default_value = "wpg.toml",
+            value_name = "FILE"
+        )]
+        config: PathBuf,
+        /// Read the password from the first line of standard input (no prompt).
+        #[arg(long)]
+        stdin: bool,
     },
 }
 
@@ -364,6 +394,18 @@ mod tests {
                 "b",
                 "--data-dir",
                 "d",
+                "--password-file",
+                "p.txt",
+                "--tls",
+                "--allow-insecure",
+            ],
+            &[
+                "wpg",
+                "config",
+                "set-password",
+                "--config",
+                "w.toml",
+                "--stdin",
             ],
             &["wpg", "config", "init", "--path", "w.toml", "--force"],
             &["wpg", "config", "show", "--config", "w.toml"],

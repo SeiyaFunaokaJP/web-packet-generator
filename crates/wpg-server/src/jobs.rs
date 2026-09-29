@@ -9,7 +9,7 @@
 //! job samples [`JobHandle::stats`] every 100 ms and publishes
 //! [`ServerEvent::Stats`] / [`ServerEvent::JobState`]; when the job ends its
 //! [`JobReport`] is stored, kept in a ring of the last [`HISTORY_MAX`] finished
-//! jobs and persisted as JSON under `<data_dir>/history`.
+//! jobs and persisted in the `job_history` table of the database ([`Db`]).
 //!
 //! Cancel safety: the manager owns every [`JobHandle`]; deleting a job, calling
 //! [`JobManager::shutdown`] or dropping the last clone of the manager stops the
@@ -33,6 +33,7 @@ use wpg_tx::source::{FrameSource, MixMode, Mixer, PreRendered, Rendered};
 use wpg_tx::TxOptions;
 
 use crate::config::Config;
+use crate::db::Db;
 use crate::error::{codes, ApiError};
 use crate::events::{EventBus, ServerEvent};
 use crate::store::{StoreError, TemplateStore};
@@ -275,6 +276,7 @@ struct JobEntry {
 struct Inner {
     jobs: Mutex<BTreeMap<String, JobEntry>>,
     history: Mutex<VecDeque<JobInfo>>,
+    db: Db,
     events: EventBus,
     config: Arc<Config>,
     store: TemplateStore,
@@ -640,14 +642,8 @@ impl Inner {
             h.push_front(info.clone());
             h.truncate(HISTORY_MAX);
         }
-        let dir = self.config.history_dir();
-        let file = dir.join(format!("{}.json", info.id));
-        let res = std::fs::create_dir_all(&dir).and_then(|()| {
-            let bytes = serde_json::to_vec_pretty(info).map_err(std::io::Error::other)?;
-            std::fs::write(&file, bytes)
-        });
-        if let Err(e) = res {
-            tracing::warn!("cannot persist job history {}: {e}", file.display());
+        if let Err(e) = self.db.save_job(info) {
+            tracing::warn!("cannot persist job {} in the history: {e}", info.id);
         }
     }
 
@@ -753,15 +749,17 @@ pub struct JobTotals {
 }
 
 impl JobManager {
-    /// Creates the manager and loads the persisted history.
+    /// Creates the manager and loads the persisted history from `db` (importing
+    /// the JSON records of older versions from `<data_dir>/history` once).
     #[must_use]
     pub fn new(
         config: Arc<Config>,
         store: TemplateStore,
         catalog: &'static Catalog,
         events: EventBus,
+        db: Db,
     ) -> Self {
-        Self::with_interval(config, store, catalog, events, SNAPSHOT_INTERVAL)
+        Self::with_interval(config, store, catalog, events, db, SNAPSHOT_INTERVAL)
     }
 
     /// [`Self::new`] with a custom statistics cadence.
@@ -771,13 +769,26 @@ impl JobManager {
         store: TemplateStore,
         catalog: &'static Catalog,
         events: EventBus,
+        db: Db,
         interval: Duration,
     ) -> Self {
-        let history = load_history(&config.history_dir());
+        match db.import_legacy_history(&config.history_dir()) {
+            Ok(0) => {}
+            Ok(n) => tracing::info!("imported {n} job records into the database"),
+            Err(e) => tracing::warn!("cannot import the old job history: {e}"),
+        }
+        let history: VecDeque<JobInfo> = db
+            .jobs(HISTORY_MAX)
+            .unwrap_or_else(|e| {
+                tracing::warn!("cannot load the job history: {e}");
+                Vec::new()
+            })
+            .into();
         Self {
             inner: Arc::new(Inner {
                 jobs: Mutex::new(BTreeMap::new()),
                 history: Mutex::new(history),
+                db,
                 events,
                 config,
                 store,
@@ -1071,20 +1082,6 @@ impl JobManager {
             self.inner.finish(&id, report);
         }
     }
-}
-
-fn load_history(dir: &Path) -> VecDeque<JobInfo> {
-    let mut v: Vec<JobInfo> = std::fs::read_dir(dir)
-        .into_iter()
-        .flatten()
-        .filter_map(Result::ok)
-        .filter(|e| e.path().extension().is_some_and(|x| x == "json"))
-        .filter_map(|e| std::fs::read(e.path()).ok())
-        .filter_map(|b| serde_json::from_slice::<JobInfo>(&b).ok())
-        .collect();
-    v.sort_by(|a, b| b.finished.cmp(&a.finished));
-    v.truncate(HISTORY_MAX);
-    v.into()
 }
 
 #[cfg(test)]
