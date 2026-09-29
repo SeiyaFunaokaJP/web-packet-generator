@@ -1,0 +1,25 @@
+[package]
+name = "wpg-tx"
+description = "Transmit backends (null, pcap, AF_PACKET, AF_XDP, DPDK) behind the TxBackend trait"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# Backends land in M2 / M8; the flags are declared now so that CI / scripts can refer
+# to them. Each will pull in its own optional dependencies.
+pcap = []
+afpacket = []
+afxdp = []
+dpdk = []
+
+[dependencies]
+thiserror.workspace = true
+
+[lints]
+workspace = true

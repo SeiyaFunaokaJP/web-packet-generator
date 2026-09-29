@@ -1,0 +1,25 @@
+[package]
+name = "wpg-cli"
+description = "wpg command line: server, headless send, render, import, template tools, diagnostics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+default-run = "wpg"
+
+[[bin]]
+name = "wpg"
+path = "src/main.rs"
+
+[dependencies]
+wpg-i18n.workspace = true
+wpg-server.workspace = true
+clap.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

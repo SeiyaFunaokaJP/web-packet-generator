@@ -1,0 +1,22 @@
+[package]
+name = "wpg-core"
+description = "Protocol definition IR, packet build/parse and field generators for wpg (OS independent, builds for WASM)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Keep this crate free of OS / networking / async dependencies: it must build for
+# `wasm32-unknown-unknown` so the browser can preview packets with the same code.
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true
