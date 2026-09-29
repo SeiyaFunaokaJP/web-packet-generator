@@ -1,6 +1,54 @@
 //! Layer 4 protocol definitions.
 
-use wpg_core::{protocol, ProtocolDef};
+use wpg_core::{
+    protocol, FieldDef, FieldType, ItemDef, Length, LengthUnit, ProtocolDef, TlvDef, TlvVariant,
+};
+
+fn u(name: &str, bits: u8) -> FieldDef {
+    FieldDef::new(name, FieldType::UInt { bits })
+}
+
+/// TCP options (RFC 9293 and friends) as a TLV sequence: EOL (0), NOP (1),
+/// MSS (2, `value`), window scale (3, `shift`), SACK permitted (4), SACK (5,
+/// `blocks`: list of `{left, right}`) and timestamps (8, `tsval`, `tsecr`).
+/// Unknown kinds keep their value octets (`data`). The option length counts the
+/// kind and length octets. The region is `data_offset * 4 - 20` octets.
+#[must_use]
+pub fn tcp_options() -> FieldType {
+    FieldType::Tlv(TlvDef {
+        type_bits: 8,
+        len_bits: 8,
+        len_includes_header: true,
+        len_unit: LengthUnit::Bytes,
+        variants: vec![
+            TlvVariant::type_only(0, "eol"),
+            TlvVariant::type_only(1, "nop"),
+            TlvVariant::new(2, "mss", vec![u("value", 16)]),
+            TlvVariant::new(3, "ws", vec![u("shift", 8)]),
+            TlvVariant::new(4, "sack_permitted", Vec::new()),
+            TlvVariant::new(
+                5,
+                "sack",
+                vec![FieldDef::new(
+                    "blocks",
+                    FieldType::List {
+                        item: ItemDef::Struct {
+                            fields: vec![u("left", 32), u("right", 32)],
+                        },
+                        length: Length::ToEnd,
+                    },
+                )],
+            ),
+            TlvVariant::new(8, "timestamps", vec![u("tsval", 32), u("tsecr", 32)]),
+        ],
+        unknown_as_raw: true,
+        length: Length::FromField {
+            field: "data_offset".into(),
+            unit: 4,
+            adjust: -20,
+        },
+    })
+}
 
 /// UDP (RFC 768): `length` and `checksum` (with IPv4/IPv6 pseudo header) are Auto.
 /// A computed checksum of zero is sent as `0xffff`.
@@ -22,9 +70,9 @@ pub fn udp() -> ProtocolDef {
     }
 }
 
-/// TCP (RFC 9293) with options as raw octets (typed options come with the P0
-/// protocol phase). `data_offset` (including options and automatic zero padding)
-/// and `checksum` (with pseudo header) are Auto.
+/// TCP (RFC 9293) with typed options ([`tcp_options`]). `data_offset` (including
+/// options and automatic zero padding to 32 bits) and `checksum` (with pseudo
+/// header) are Auto.
 #[must_use]
 pub fn tcp() -> ProtocolDef {
     protocol! {
@@ -51,7 +99,7 @@ pub fn tcp() -> ProtocolDef {
             window: uint(16) = 65535;
             checksum: uint(16), auto = checksum(internet_pseudo, header_payload);
             urgent_ptr: uint(16) = 0;
-            options: bytes(from = data_offset, unit = 4, adjust = -20);
+            options: ty(tcp_options());
             padding: padding(4);
         },
         constraints: {

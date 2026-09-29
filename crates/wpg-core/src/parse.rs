@@ -7,7 +7,17 @@
 //!
 //! Every decoded field is recorded as *Manual* so that building the parsed packet
 //! reproduces the input byte for byte (including wrong checksums / lengths, which
-//! then show up as warnings). Auto padding that is all zeros is left on Auto.
+//! then show up as warnings). Auto padding that is all zeros is left on Auto, and
+//! so are TLV item lengths that match their content.
+//!
+//! TLV and list fields are decoded into typed items where possible; every decoded
+//! composite value is verified by re-encoding it, and falls back to raw items /
+//! verbatim octets when that would not reproduce the input.
+//!
+//! Zero padding up to the minimum frame length of the outermost protocol (Ethernet:
+//! 60 octets) is recognised and mapped to [`Packet::pad_to_min`]. The FCS is not
+//! expected (capture backends usually strip it); use [`parse_with_fcs`] for frames
+//! that carry one.
 //!
 //! [`Binding`]: crate::ir::Binding
 
@@ -16,14 +26,16 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use serde::{Deserialize, Serialize};
 
-use crate::bits::get_bits;
-use crate::build::{resolve, LayerLayout};
+use crate::bits::{get_bits, BitWriter};
+use crate::build::{encode_tlv_item, encode_value, resolve, LayerLayout, TrailerLayout};
+use crate::checksum::crc32;
 use crate::diag::{keys, DiagLevel, Diagnostic};
 use crate::error::{CoreError, Result};
 use crate::ir::{
-    raw_protocol, AutoCompute, FieldType, Length, LengthOf, ProtocolDef, Resolve, RAW_PROTOCOL_ID,
+    raw_protocol, AutoCompute, FieldDef, FieldType, ItemDef, Length, LengthOf, ProtocolDef,
+    Resolve, TlvDef, RAW_PROTOCOL_ID,
 };
-use crate::packet::{FieldValue, Layer, Packet};
+use crate::packet::{FcsMode, FieldValue, Layer, Packet, TlvItem};
 
 /// Output of [`parse`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,6 +46,9 @@ pub struct Parsed {
     pub layout: Vec<LayerLayout>,
     /// Parse problems followed by the builder's diagnostics for the packet.
     pub diagnostics: Vec<Diagnostic>,
+    /// Padding / FCS after the layers (from rebuilding [`Parsed::packet`]).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trailers: Vec<TrailerLayout>,
 }
 
 impl Parsed {
@@ -49,17 +64,25 @@ struct Header {
     len: usize,
 }
 
-fn short(def: &ProtocolDef, layer: usize, offset: usize) -> Diagnostic {
+/// The protocol a field group belongs to (for diagnostics).
+#[derive(Clone, Copy)]
+struct Who<'a> {
+    name: &'a str,
+    id: &'a str,
+    layer: usize,
+}
+
+fn short(who: Who<'_>, offset: usize) -> Diagnostic {
     Diagnostic::new(
         DiagLevel::Error,
         keys::SHORT_HEADER,
         format!(
             "input ends inside the {} header at offset {offset}",
-            def.name
+            who.name
         ),
     )
-    .at_layer(layer)
-    .arg("protocol", &def.id)
+    .at_layer(who.layer)
+    .arg("protocol", who.id)
     .arg("offset", offset)
 }
 
@@ -71,31 +94,88 @@ fn take(data: &[u8], bit: usize, n: usize) -> Option<&[u8]> {
     data.get(start..start.checked_add(n)?)
 }
 
-/// Decodes one header from `data` (which starts at packet offset `base`).
-fn decode_header(
-    def: &ProtocolDef,
+/// Octets a `Length` announces, clamped to `remaining` (with a diagnostic).
+#[allow(clippy::too_many_arguments)]
+fn region_len(
+    len: &Length,
+    fd: &FieldDef,
+    fields: &BTreeMap<String, FieldValue>,
+    remaining: usize,
+    who: Who<'_>,
+    at: usize,
+    diags: &mut Vec<Diagnostic>,
+) -> Result<usize, Diagnostic> {
+    match len {
+        Length::Fixed { octets } => {
+            let n = *octets as usize;
+            if n > remaining {
+                Err(short(who, at))
+            } else {
+                Ok(n)
+            }
+        }
+        Length::ToEnd => Ok(remaining),
+        Length::FromField {
+            field,
+            unit,
+            adjust,
+        } => {
+            let v = fields.get(field).and_then(FieldValue::as_u64).unwrap_or(0);
+            let want = i128::from(v) * i128::from(*unit) + i128::from(*adjust);
+            let want = usize::try_from(want.max(0)).unwrap_or(usize::MAX);
+            if want > remaining {
+                diags.push(
+                    Diagnostic::new(
+                        DiagLevel::Error,
+                        keys::LENGTH_EXCEEDS_DATA,
+                        format!(
+                            "`{field}` announces {want} octets of `{}` but only {remaining} are present",
+                            fd.name
+                        ),
+                    )
+                    .at_layer(who.layer)
+                    .on_field(field.clone())
+                    .arg("len", want)
+                    .arg("available", remaining),
+                );
+                Ok(remaining)
+            } else {
+                Ok(want)
+            }
+        }
+    }
+}
+
+/// Re-encodes `value` for `fd`; `true` when that reproduces `bytes` exactly.
+fn reproduces(fd: &FieldDef, value: &FieldValue, bytes: &[u8]) -> bool {
+    let mut w = BitWriter::default();
+    encode_value(&mut w, fd, value, &mut Vec::new()).is_ok() && w.buf == bytes
+}
+
+/// Decodes a group of fields from `data` (which starts at packet offset `base`).
+fn decode_fields(
+    who: Who<'_>,
+    defs: &[FieldDef],
     data: &[u8],
     base: usize,
-    layer: usize,
     diags: &mut Vec<Diagnostic>,
 ) -> Result<Header, Diagnostic> {
     let mut fields = BTreeMap::new();
     let mut bit = 0usize;
-    for fd in &def.fields {
+    for fd in defs {
         let at = base + bit / 8;
         let remaining = data.len().saturating_sub(bit.div_ceil(8));
         let value = match &fd.ty {
             FieldType::UInt { bits }
             | FieldType::Enum { bits, .. }
             | FieldType::Flags { bits, .. } => {
-                let v =
-                    get_bits(data, bit, u32::from(*bits)).ok_or_else(|| short(def, layer, at))?;
+                let v = get_bits(data, bit, u32::from(*bits)).ok_or_else(|| short(who, at))?;
                 bit += usize::from(*bits);
                 FieldValue::UInt(v)
             }
             FieldType::Int { bits } => {
                 let w = u32::from(*bits);
-                let v = get_bits(data, bit, w).ok_or_else(|| short(def, layer, at))?;
+                let v = get_bits(data, bit, w).ok_or_else(|| short(who, at))?;
                 bit += usize::from(*bits);
                 // Sign-extend from `w` bits.
                 let shift = 64 - w;
@@ -110,7 +190,7 @@ fn decode_header(
                 len: Length::Fixed { .. },
             } => {
                 let n = fd.ty.fixed_bits().unwrap_or(0) as usize / 8;
-                let b = take(data, bit, n).ok_or_else(|| short(def, layer, at))?;
+                let b = take(data, bit, n).ok_or_else(|| short(who, at))?;
                 bit += n * 8;
                 match &fd.ty {
                     FieldType::Mac => {
@@ -131,42 +211,14 @@ fn decode_header(
                     _ => FieldValue::Bytes(b.to_vec()),
                 }
             }
-            FieldType::Bytes {
-                len:
-                    Length::FromField {
-                        field,
-                        unit,
-                        adjust,
-                    },
-            } => {
-                let v = fields.get(field).and_then(FieldValue::as_u64).unwrap_or(0);
-                let want = i128::from(v) * i128::from(*unit) + i128::from(*adjust);
-                let want = usize::try_from(want.max(0)).unwrap_or(usize::MAX);
-                let n = if want > remaining {
-                    diags.push(
-                        Diagnostic::new(
-                            DiagLevel::Error,
-                            keys::LENGTH_EXCEEDS_DATA,
-                            format!(
-                                "`{field}` announces {want} octets of `{}` but only {remaining} are present",
-                                fd.name
-                            ),
-                        )
-                        .at_layer(layer)
-                        .on_field(field.clone())
-                        .arg("len", want)
-                        .arg("available", remaining),
-                    );
-                    remaining
-                } else {
-                    want
-                };
-                let b = take(data, bit, n).ok_or_else(|| short(def, layer, at))?;
+            FieldType::Bytes { len } => {
+                let n = region_len(len, fd, &fields, remaining, who, at, diags)?;
+                let b = take(data, bit, n).ok_or_else(|| short(who, at))?;
                 bit += n * 8;
                 FieldValue::Bytes(b.to_vec())
             }
-            FieldType::Bytes { len: Length::ToEnd } | FieldType::Raw => {
-                let b = take(data, bit, remaining).ok_or_else(|| short(def, layer, at))?;
+            FieldType::Raw => {
+                let b = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
                 bit += remaining * 8;
                 FieldValue::Bytes(b.to_vec())
             }
@@ -177,33 +229,259 @@ fn decode_header(
                 } else {
                     (align - (bit / 8) % align) % align
                 };
-                let b = take(data, bit, pad.min(remaining)).ok_or_else(|| short(def, layer, at))?;
+                let b = take(data, bit, pad.min(remaining)).ok_or_else(|| short(who, at))?;
                 bit += b.len() * 8;
                 if b.len() == pad && b.iter().all(|x| *x == 0) {
                     continue; // identical to Auto
                 }
                 FieldValue::Bytes(b.to_vec())
             }
-            FieldType::Nsap | FieldType::Tlv { .. } | FieldType::List { .. } => {
+            FieldType::Tlv(t) => {
+                let n = region_len(&t.length, fd, &fields, remaining, who, at, diags)?;
+                let region = take(data, bit, n).ok_or_else(|| short(who, at))?;
+                bit += n * 8;
+                let items = decode_tlv(fd, t, region, Some((who, at, &mut *diags)));
+                let v = FieldValue::Tlv(items);
+                if reproduces(fd, &v, region) {
+                    v
+                } else {
+                    FieldValue::Bytes(region.to_vec())
+                }
+            }
+            FieldType::List { item, length } => {
+                let n = region_len(length, fd, &fields, remaining, who, at, diags)?;
+                let region = take(data, bit, n).ok_or_else(|| short(who, at))?;
+                bit += n * 8;
+                match decode_list(who, fd, item, region, at).map(FieldValue::List) {
+                    Some(v) if reproduces(fd, &v, region) => v,
+                    _ => FieldValue::Bytes(region.to_vec()),
+                }
+            }
+            FieldType::Nsap => {
                 return Err(Diagnostic::new(
                     DiagLevel::Error,
                     keys::UNSUPPORTED_FIELD,
-                    format!("cannot decode field `{}` of {} yet", fd.name, def.name),
+                    format!("cannot decode field `{}` of {} yet", fd.name, who.name),
                 )
-                .at_layer(layer)
+                .at_layer(who.layer)
                 .on_field(fd.name.clone())
-                .arg("protocol", &def.id));
+                .arg("protocol", who.id));
             }
         };
         fields.insert(fd.name.clone(), value);
     }
     if !bit.is_multiple_of(8) {
-        return Err(short(def, layer, base + bit / 8));
+        return Err(short(who, base + bit / 8));
     }
     Ok(Header {
         fields,
         len: bit / 8,
     })
+}
+
+/// Decodes list elements until `region` is used up; `None` if an element does not
+/// decode completely.
+fn decode_list(
+    who: Who<'_>,
+    fd: &FieldDef,
+    item: &ItemDef,
+    region: &[u8],
+    base: usize,
+) -> Option<Vec<FieldValue>> {
+    let mut out = Vec::new();
+    let mut pos = 0;
+    let scratch = &mut Vec::new();
+    while pos < region.len() {
+        let hdr = match item {
+            ItemDef::Field { ty } => {
+                let efd = [FieldDef::new(fd.name.clone(), (**ty).clone())];
+                let n = ty.fixed_bits()? as usize / 8;
+                let h = decode_fields(who, &efd, region.get(pos..pos + n)?, base + pos, scratch)
+                    .ok()?;
+                out.push(h.fields.into_values().next()?);
+                h.len
+            }
+            ItemDef::Struct { fields } => {
+                let h = decode_fields(who, fields, &region[pos..], base + pos, scratch).ok()?;
+                out.push(FieldValue::Struct(h.fields));
+                h.len
+            }
+        };
+        if hdr == 0 {
+            return None;
+        }
+        pos += hdr;
+    }
+    Some(out)
+}
+
+/// Reads a big-endian unsigned value of `octets` octets.
+fn be(data: &[u8]) -> u64 {
+    data.iter().fold(0u64, |acc, b| (acc << 8) | u64::from(*b))
+}
+
+/// Decodes a TLV region into items. Never fails: whatever cannot be framed becomes
+/// one trailing raw item (with a warning when `top` is given).
+fn decode_tlv(
+    fd: &FieldDef,
+    t: &TlvDef,
+    region: &[u8],
+    mut top: Option<(Who<'_>, usize, &mut Vec<Diagnostic>)>,
+) -> Vec<TlvItem> {
+    let tb = usize::from(t.type_bits / 8);
+    let hl = tb + usize::from(t.len_bits / 8);
+    let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
+    let mut items = Vec::new();
+    let mut pos = 0;
+    // `want`: octets the item needs, or `None` when its length value is invalid.
+    let mut malformed = |pos: usize, want: Option<usize>, items: &mut Vec<TlvItem>| {
+        if let Some((who, at, diags)) = top.as_mut() {
+            let left = region.len() - pos;
+            let msg = match want {
+                Some(n) => format!(
+                    "item at offset {} of `{}` needs {n} octets but only {left} are left",
+                    *at + pos,
+                    fd.name
+                ),
+                None => format!(
+                    "item at offset {} of `{}` has an invalid length",
+                    *at + pos,
+                    fd.name
+                ),
+            };
+            diags.push(
+                Diagnostic::new(DiagLevel::Warning, keys::LENGTH_EXCEEDS_DATA, msg)
+                    .at_layer(who.layer)
+                    .on_field(fd.name.clone())
+                    .arg("len", want.unwrap_or(0))
+                    .arg("available", left),
+            );
+        }
+        items.push(TlvItem::raw(&region[pos..]));
+    };
+    while pos < region.len() {
+        let rest = &region[pos..];
+        if rest.len() < tb {
+            malformed(pos, Some(tb), &mut items);
+            break;
+        }
+        let ty = be(&rest[..tb]);
+        let variant = t.variant_by_type(ty);
+        if variant.is_some_and(|v| v.type_only) {
+            items.push(TlvItem {
+                ty: Some(ty),
+                name: variant.map(|v| v.name.clone()),
+                ..TlvItem::default()
+            });
+            pos += tb;
+            continue;
+        }
+        if variant.is_none() && !t.unknown_as_raw {
+            items.push(TlvItem::raw(rest));
+            break;
+        }
+        if rest.len() < hl {
+            malformed(pos, Some(hl), &mut items);
+            break;
+        }
+        let len = be(&rest[tb..hl]);
+        let total = usize::try_from(len)
+            .ok()
+            .and_then(|l| l.checked_mul(unit))
+            .and_then(|l| {
+                if t.len_includes_header {
+                    (l >= hl).then_some(l)
+                } else {
+                    l.checked_add(hl)
+                }
+            });
+        let Some(total) = total.filter(|n| *n <= rest.len()) else {
+            malformed(pos, total, &mut items);
+            break;
+        };
+        let bytes = &rest[..total];
+        items.push(decode_item(fd, t, ty, len, variant, bytes, hl));
+        pos += total;
+    }
+    items
+}
+
+/// Typed decoding of one framed item, verified by re-encoding it.
+fn decode_item(
+    fd: &FieldDef,
+    t: &TlvDef,
+    ty: u64,
+    len: u64,
+    variant: Option<&crate::ir::TlvVariant>,
+    bytes: &[u8],
+    hl: usize,
+) -> TlvItem {
+    let value = &bytes[hl..];
+    let same = |item: &TlvItem| {
+        encode_tlv_item(fd, t, 0, item, &mut Vec::new()).is_ok_and(|(b, _)| b == bytes)
+    };
+    let with_length = |mut item: TlvItem| {
+        if same(&item) {
+            return Some(item);
+        }
+        item.length = Some(len);
+        same(&item).then_some(item)
+    };
+    if let Some(v) = variant {
+        let who = Who {
+            name: &v.name,
+            id: &v.name,
+            layer: 0,
+        };
+        if let Ok(h) = decode_fields(who, &v.fields, value, 0, &mut Vec::new()) {
+            let item = TlvItem {
+                ty: Some(ty),
+                name: Some(v.name.clone()),
+                fields: h.fields,
+                ..TlvItem::default()
+            };
+            if let Some(item) = with_length(item) {
+                return item;
+            }
+        }
+    }
+    let item = TlvItem {
+        ty: Some(ty),
+        name: variant.map(|v| v.name.clone()),
+        data: Some(value.to_vec()),
+        ..TlvItem::default()
+    };
+    with_length(item.clone()).unwrap_or(TlvItem {
+        length: Some(len),
+        ..item
+    })
+}
+
+/// Decodes one header from `data` (which starts at packet offset `base`).
+fn decode_header(
+    def: &ProtocolDef,
+    data: &[u8],
+    base: usize,
+    layer: usize,
+    diags: &mut Vec<Diagnostic>,
+) -> Result<Header, Diagnostic> {
+    let who = Who {
+        name: &def.name,
+        id: &def.id,
+        layer,
+    };
+    if def.synth.is_some() {
+        // Generator protocols: the octets map to `fixed` mode with `data`.
+        let mut fields = BTreeMap::new();
+        if def.field("data").is_some() {
+            fields.insert("data".to_owned(), FieldValue::Bytes(data.to_vec()));
+        }
+        return Ok(Header {
+            fields,
+            len: data.len(),
+        });
+    }
+    decode_fields(who, &def.fields, data, base, diags)
 }
 
 /// End of the PDU announced by a total / payload length field, if the protocol has
@@ -231,6 +509,8 @@ fn announced_end(
 
 /// Upper bound on decoded layers (defends against self-referencing bindings).
 const MAX_LAYERS: usize = 64;
+/// Upper bound on re-parse bindings followed for one layer.
+const MAX_REPARSE: usize = 4;
 
 fn raw_layer(bytes: &[u8]) -> Layer {
     Layer::new(RAW_PROTOCOL_ID).with("data", bytes.to_vec())
@@ -250,17 +530,28 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
     let mut pos = 0usize;
     let mut limit = bytes.len();
     let mut next = Some(first);
+    let mut reparses = 0usize;
+    let mut outer: Option<&ProtocolDef> = None;
 
     while let Some(def) = next.take() {
         if pos >= limit && !layers.is_empty() {
             // The layer below announced `def`, but nothing is left for it.
-            diags.push(short(def, layers.len(), pos));
+            diags.push(short(
+                Who {
+                    name: &def.name,
+                    id: &def.id,
+                    layer: layers.len(),
+                },
+                pos,
+            ));
             break;
         }
         let idx = layers.len();
-        let hdr = match decode_header(def, &bytes[pos..limit], pos, idx, &mut diags) {
+        let mut layer_diags = Vec::new();
+        let hdr = match decode_header(def, &bytes[pos..limit], pos, idx, &mut layer_diags) {
             Ok(h) => h,
             Err(d) => {
+                diags.extend(layer_diags);
                 diags.push(d);
                 if pos < limit {
                     layers.push(raw_layer(&bytes[pos..limit]));
@@ -269,6 +560,27 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
                 break;
             }
         };
+        let selected = def.next.as_ref().and_then(|b| {
+            let v = hdr.fields.get(&b.field)?.as_u64()?;
+            let (proto, reparse) = match b.entry_for(v) {
+                Some(e) => (e.protocol.as_str(), e.reparse),
+                None => (b.default.as_deref()?, false),
+            };
+            Some((resolve(catalog, &raw, proto)?, reparse))
+        });
+        if let Some((again, true)) = selected {
+            if reparses < MAX_REPARSE {
+                // Re-decode this layer as `again` (e.g. Ethernet II → 802.3).
+                reparses += 1;
+                next = Some(again);
+                continue;
+            }
+        }
+        reparses = 0;
+        diags.extend(layer_diags);
+        if idx == 0 {
+            outer = Some(def);
+        }
         let start = pos;
         pos += hdr.len;
         if let Some((field, end)) = announced_end(def, &hdr, start, pos) {
@@ -290,10 +602,7 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
                 limit = usize::try_from(end).unwrap_or(limit);
             }
         }
-        next = def.next.as_ref().and_then(|b| {
-            let v = hdr.fields.get(&b.field)?.as_u64()?;
-            resolve(catalog, &raw, b.protocol_for(v)?)
-        });
+        next = selected.map(|(d, _)| d);
         if hdr.len == 0 || layers.len() + 1 >= MAX_LAYERS {
             next = None; // guard against definitions that would loop forever
         }
@@ -307,33 +616,52 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
             pos = limit;
         }
     }
+
+    let min_frame = outer.and_then(|d| d.min_frame_len).map(|m| m as usize);
+    let mut pad_to_min = min_frame.is_none_or(|m| bytes.len() >= m);
     if pos < bytes.len() {
-        let n = bytes.len() - pos;
-        diags.push(
-            Diagnostic::new(
-                DiagLevel::Info,
-                keys::TRAILING_BYTES,
-                format!("{n} octets after the end of the innermost PDU"),
-            )
-            .at_layer(layers.len())
-            .arg("len", n),
-        );
-        layers.push(raw_layer(&bytes[pos..]));
+        let is_padding =
+            min_frame.is_some_and(|m| bytes.len() == m && bytes[pos..].iter().all(|b| *b == 0));
+        if is_padding {
+            pad_to_min = true;
+        } else {
+            let n = bytes.len() - pos;
+            diags.push(
+                Diagnostic::new(
+                    DiagLevel::Info,
+                    keys::TRAILING_BYTES,
+                    format!("{n} octets after the end of the innermost PDU"),
+                )
+                .at_layer(layers.len())
+                .arg("len", n),
+            );
+            layers.push(raw_layer(&bytes[pos..]));
+        }
     }
 
-    let mut packet = Packet { layers };
+    let mut packet = Packet {
+        layers,
+        pad_to_min,
+        fcs: None,
+    };
     let built = match packet.build(catalog) {
-        Ok(b) => b,
-        Err(e) => {
-            // Should not happen (decoded values always fit); degrade to raw bytes.
-            diags.push(Diagnostic::new(
-                DiagLevel::Error,
-                keys::UNSUPPORTED_FIELD,
-                format!("could not rebuild the decoded packet: {e}"),
-            ));
-            packet = Packet {
-                layers: vec![raw_layer(bytes)],
+        Ok(b) if b.bytes == bytes => b,
+        other => {
+            // Should not happen (decoded values always re-encode); degrade to raw.
+            let why = match other {
+                Ok(_) => "different octets".to_owned(),
+                Err(e) => e.to_string(),
             };
+            diags.push(
+                Diagnostic::new(
+                    DiagLevel::Error,
+                    keys::UNSUPPORTED_FIELD,
+                    format!("could not rebuild the decoded packet: {why}"),
+                )
+                .on_field("*")
+                .arg("protocol", first_protocol),
+            );
+            packet = Packet::from_layers(vec![raw_layer(bytes)]).unpadded();
             packet.build(catalog)?
         }
     };
@@ -342,13 +670,65 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
         packet,
         layout: built.layout,
         diagnostics: diags,
+        trailers: built.trailers,
     })
+}
+
+/// Parses a frame that ends with a 4-octet IEEE 802.3 FCS: the FCS is verified,
+/// stripped and recorded in [`Packet::fcs`] (`Auto` when correct, `Bad` when it is
+/// the complement of the correct value, `Manual` otherwise, with a checksum
+/// mismatch warning).
+///
+/// # Errors
+/// As [`parse`].
+pub fn parse_with_fcs(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Result<Parsed> {
+    if bytes.len() < 4 {
+        let mut p = parse(bytes, first_protocol, catalog)?;
+        p.diagnostics.push(
+            Diagnostic::new(
+                DiagLevel::Error,
+                keys::SHORT_HEADER,
+                "frame too short for an FCS",
+            )
+            .arg("protocol", "fcs")
+            .arg("offset", bytes.len()),
+        );
+        return Ok(p);
+    }
+    let (frame, tail) = bytes.split_at(bytes.len() - 4);
+    let got = u32::from_le_bytes([tail[0], tail[1], tail[2], tail[3]]);
+    let want = crc32(frame);
+    let mut p = parse(frame, first_protocol, catalog)?;
+    p.packet.fcs = Some(if got == want {
+        FcsMode::Auto
+    } else if got == !want {
+        FcsMode::Bad
+    } else {
+        FcsMode::Manual(got)
+    });
+    if got != want {
+        p.diagnostics.push(
+            Diagnostic::new(
+                DiagLevel::Warning,
+                keys::CHECKSUM_MISMATCH,
+                format!("FCS is {got:#010x} but the correct CRC-32 is {want:#010x}"),
+            )
+            .on_field("fcs")
+            .arg("value", format!("{got:#x}"))
+            .arg("expected", format!("{want:#x}")),
+        );
+    }
+    let rebuilt = p.packet.build(catalog)?;
+    p.trailers = rebuilt.trailers;
+    Ok(p)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{Binding, BindingEntry, FieldDef, LengthUnit, ProtocolLayer};
+    use crate::ir::{
+        Binding, BindingEntry, FieldDef, LengthUnit, ProtocolLayer, TlvDef, TlvVariant,
+    };
     use proptest::prelude::*;
 
     fn defs() -> Vec<ProtocolDef> {
@@ -379,28 +759,20 @@ mod tests {
             ),
             FieldDef::new("pad", FieldType::Padding { align: 4 }),
         ];
-        outer.next = Some(Binding {
-            field: "proto".into(),
-            table: vec![BindingEntry {
-                value: 1,
-                protocol: "outer".into(),
-            }],
-        });
+        outer.next = Some(Binding::new("proto", vec![BindingEntry::new(1, "outer")]));
         outer.validate().unwrap();
         vec![outer]
     }
 
     #[test]
     fn nested_with_trailer() {
-        let pkt = Packet {
-            layers: vec![
-                Layer::new("outer")
-                    .with("opts", vec![9u8, 9, 9])
-                    .with("sig", -2i8),
-                Layer::new("outer"),
-                Layer::new("raw").with("data", vec![7u8; 5]),
-            ],
-        };
+        let pkt = Packet::from_layers(vec![
+            Layer::new("outer")
+                .with("opts", vec![9u8, 9, 9])
+                .with("sig", -2i8),
+            Layer::new("outer"),
+            Layer::new("raw").with("data", vec![7u8; 5]),
+        ]);
         let mut bytes = pkt.build(&defs()).unwrap().bytes;
         assert_eq!(bytes.len(), 8 + 4 + 5);
         bytes.extend_from_slice(&[0xee, 0xee]); // trailer beyond `total`
@@ -458,5 +830,209 @@ mod tests {
             let p = parse(&bytes, "outer", &defs()).unwrap();
             prop_assert_eq!(p.packet.build(&defs()).unwrap().bytes, bytes);
         }
+    }
+
+    /// IS-IS-like container: 8-bit type / length (not counting the header), with a
+    /// nested sub-TLV sequence (NDP-like: 8-octet units, length includes header)
+    /// and a list of IPv4 addresses; preceded by a 16-bit count-free length.
+    fn tlv_defs() -> Vec<ProtocolDef> {
+        let sub = TlvDef {
+            type_bits: 8,
+            len_bits: 8,
+            len_includes_header: true,
+            len_unit: LengthUnit::Words64,
+            variants: vec![TlvVariant::new(
+                1,
+                "mac",
+                vec![FieldDef::new("addr", FieldType::Mac)],
+            )],
+            unknown_as_raw: true,
+            length: Length::ToEnd,
+        };
+        let outer = TlvDef {
+            type_bits: 8,
+            len_bits: 8,
+            len_includes_header: false,
+            len_unit: LengthUnit::Bytes,
+            variants: vec![
+                TlvVariant::type_only(0, "pad"),
+                TlvVariant::new(
+                    1,
+                    "addrs",
+                    vec![FieldDef::new(
+                        "list",
+                        FieldType::List {
+                            item: ItemDef::Field {
+                                ty: Box::new(FieldType::Ipv4),
+                            },
+                            length: Length::ToEnd,
+                        },
+                    )],
+                ),
+                TlvVariant::new(
+                    2,
+                    "nested",
+                    vec![
+                        FieldDef::new("flags", FieldType::UInt { bits: 8 }),
+                        FieldDef::new("subs", FieldType::Tlv(sub)),
+                    ],
+                ),
+            ],
+            unknown_as_raw: true,
+            length: Length::FromField {
+                field: "len".into(),
+                unit: 1,
+                adjust: 0,
+            },
+        };
+        let mut p = ProtocolDef::new("tlvs", "TLVs", ProtocolLayer::L7);
+        p.fields = vec![
+            FieldDef::new("len", FieldType::UInt { bits: 16 }).with_auto(AutoCompute::Length {
+                of: LengthOf::Header,
+                unit: LengthUnit::Bytes,
+                adjust: -2,
+            }),
+            FieldDef::new("items", FieldType::Tlv(outer)),
+        ];
+        p.validate().unwrap();
+        vec![p]
+    }
+
+    #[test]
+    fn nested_tlvs_and_lists_roundtrip() {
+        let items = vec![
+            TlvItem::named("addrs").with(
+                "list",
+                vec![
+                    FieldValue::Ipv4(Ipv4Addr::new(192, 0, 2, 1)),
+                    FieldValue::Ipv4(Ipv4Addr::new(192, 0, 2, 2)),
+                ],
+            ),
+            TlvItem::named("pad"),
+            TlvItem::named("nested").with("flags", 0x80u8).with(
+                "subs",
+                vec![
+                    TlvItem::named("mac").with("addr", FieldValue::Mac([1, 2, 3, 4, 5, 6])),
+                    TlvItem::with_type(9, vec![0xee; 3]),
+                ],
+            ),
+            TlvItem::with_type(7, vec![1, 2]),
+        ];
+        let pkt = Packet::from_layers(vec![Layer::new("tlvs").with("items", items.clone())]);
+        let built = pkt.build(&tlv_defs()).unwrap();
+        assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+        #[rustfmt::skip]
+        let want = [
+            0, 34,                                  // len (auto)
+            1, 8, 192, 0, 2, 1, 192, 0, 2, 2,       // addrs, length excludes header
+            0,                                      // pad (type only)
+            2, 17, 0x80,                            // nested: 1 + 8 + 8
+            1, 1, 1, 2, 3, 4, 5, 6,                 // mac sub-TLV: 1 unit of 8
+            9, 1, 0xee, 0xee, 0xee, 0, 0, 0,        // unknown sub-TLV, zero padded
+            7, 2, 1, 2,                             // unknown, raw value
+        ];
+        assert_eq!(built.bytes, want);
+        // Layout children: nested → subs → mac → addr.
+        let f = &built.layout[0].fields[1];
+        let nested = &f.children[2];
+        assert_eq!(nested.name, "nested");
+        let subs = nested.children.iter().find(|c| c.name == "subs").unwrap();
+        let mac = &subs.children[0];
+        assert_eq!(mac.bit_offset, (2 + 10 + 1 + 3) * 8);
+        let addr = mac.children.iter().find(|c| c.name == "addr").unwrap();
+        assert_eq!((addr.bit_offset, addr.bit_len), ((16 + 2) * 8, 48));
+        let list = &f.children[0].children[2];
+        assert_eq!(list.name, "list");
+        assert_eq!(list.children[1].name, "[1]");
+        assert_eq!(list.children[1].bit_offset, (4 + 4) * 8);
+
+        let parsed = parse(&built.bytes, "tlvs", &tlv_defs()).unwrap();
+        assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+        let FieldValue::Tlv(got) = &parsed.packet.layers[0].fields["items"] else {
+            panic!("untyped");
+        };
+        assert_eq!(got.len(), 4);
+        assert_eq!(got[0].fields, items[0].fields);
+        let FieldValue::Tlv(subs) = &got[2].fields["subs"] else {
+            panic!("untyped subs");
+        };
+        assert_eq!(subs[0].fields["addr"], FieldValue::Mac([1, 2, 3, 4, 5, 6]));
+        // The padded unknown sub-TLV keeps its padding in `data`.
+        assert_eq!(
+            subs[1].data.as_deref(),
+            Some(&[0xee, 0xee, 0xee, 0, 0, 0][..])
+        );
+        assert_eq!(got[3].data.as_deref(), Some(&[1, 2][..]));
+        let rebuilt = parsed.packet.build(&tlv_defs()).unwrap();
+        assert_eq!(rebuilt.bytes, built.bytes);
+        assert_eq!(rebuilt.layout, parsed.layout);
+    }
+
+    #[test]
+    fn composite_values_are_checked() {
+        let bad = |v: FieldValue| {
+            Packet::from_layers(vec![Layer::new("tlvs").with("items", v)])
+                .build(&tlv_defs())
+                .is_err()
+        };
+        assert!(bad(FieldValue::Tlv(vec![TlvItem::named("nope")])));
+        assert!(bad(FieldValue::Tlv(vec![TlvItem::default()])));
+        assert!(bad(FieldValue::Tlv(vec![
+            TlvItem::named("pad").with("x", 1u8)
+        ])));
+        assert!(bad(FieldValue::Tlv(vec![
+            TlvItem::named("nested").with("bogus", 1u8)
+        ])));
+        assert!(bad(FieldValue::Tlv(vec![TlvItem::with_type(300, vec![])])));
+        assert!(bad(FieldValue::Tlv(vec![
+            TlvItem::named("addrs").with("list", vec![FieldValue::UInt(1)])
+        ])));
+        assert!(bad(FieldValue::UInt(1)));
+        assert!(
+            !bad(FieldValue::Bytes(vec![1, 2, 3])),
+            "verbatim octets are allowed"
+        );
+    }
+
+    #[test]
+    fn reparse_and_default_bindings() {
+        let mut a = ProtocolDef::new("a", "A", ProtocolLayer::L2);
+        a.fields = vec![FieldDef::new("t", FieldType::UInt { bits: 8 })];
+        let mut b = Binding::new(
+            "t",
+            vec![
+                BindingEntry::new(5, "raw"),
+                BindingEntry::range(0, 9, "b").reparsing(),
+            ],
+        );
+        a.next = Some(b.clone());
+        let mut bdef = ProtocolDef::new("b", "B", ProtocolLayer::L2);
+        bdef.fields = vec![
+            FieldDef::new("t", FieldType::UInt { bits: 8 }),
+            FieldDef::new("u", FieldType::UInt { bits: 8 }),
+        ];
+        b.table.clear();
+        b.default = Some("raw".into());
+        bdef.next = Some(b);
+        let defs = vec![a, bdef];
+        let p = parse(&[3, 4, 5], "a", &defs).unwrap();
+        let names: Vec<_> = p
+            .packet
+            .layers
+            .iter()
+            .map(|l| l.protocol.as_str())
+            .collect();
+        assert_eq!(names, ["b", "raw"], "range → re-parse as b, default → raw");
+        assert!(p.diagnostics.is_empty(), "{:?}", p.diagnostics);
+        let p = parse(&[5, 4], "a", &defs).unwrap();
+        let names: Vec<_> = p
+            .packet
+            .layers
+            .iter()
+            .map(|l| l.protocol.as_str())
+            .collect();
+        assert_eq!(names, ["a", "raw"], "exact entries win over ranges");
+        let p = parse(&[42, 4], "a", &defs).unwrap();
+        assert_eq!(p.packet.layers[0].protocol, "a");
     }
 }

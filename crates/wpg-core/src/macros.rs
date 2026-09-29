@@ -41,10 +41,13 @@
 /// * types: `uint(N)`, `int(N)`, `enum(N) { v => name, .. }`,
 ///   `flags(N) { bit => name, .. }`, `mac`, `ipv4`, `ipv6`, `nsap`, `raw`,
 ///   `bytes(N)`, `bytes(to_end)`, `bytes(from = field[, unit = U][, adjust = A])`,
-///   `padding(ALIGN)`
+///   `padding(ALIGN)`, and `ty(expr)` for any [`FieldType`](crate::FieldType)
+///   expression (TLV / list fields, whose defaults are `FieldValue::from(..)`)
 /// * defaults are typed by the field: integers for `uint`/`enum`/`flags`/`int`,
 ///   `[u8; 6]` for `mac`, anything `Ipv4Addr::from` / `Ipv6Addr::from` accepts for
 ///   addresses, anything `Vec::<u8>::from` accepts for byte types
+/// * binding entries are single values; ranges / defaults / re-parse entries are
+///   added to `def.next` afterwards ([`BindingEntry::range`](crate::BindingEntry::range))
 /// * auto rules: `next_protocol`, `counter`,
 ///   `length(header|payload|total[, unit = bytes|words16|words32|words64][, adjust = A])`,
 ///   `checksum(internet|internet_pseudo|fletcher|crc32c|crc32, header|header_payload[, nonzero])`
@@ -84,15 +87,10 @@ macro_rules! protocol {
             ),*
         ];
         $(
-            def.next = ::std::option::Option::Some($crate::Binding {
-                field: ::std::string::String::from(stringify!($bfield)),
-                table: ::std::vec![
-                    $( $crate::BindingEntry {
-                        value: $bval,
-                        protocol: ::std::string::String::from($bproto),
-                    } ),*
-                ],
-            });
+            def.next = ::std::option::Option::Some($crate::Binding::new(
+                stringify!($bfield),
+                ::std::vec![ $( $crate::BindingEntry::new($bval, $bproto) ),* ],
+            ));
         )?
         $(
             def.pseudo_header = ::std::option::Option::Some($crate::PseudoHeader {
@@ -146,6 +144,9 @@ macro_rules! __wpg_field_type {
     };
     (raw) => {
         $crate::FieldType::Raw
+    };
+    (ty ($t:expr)) => {
+        $t
     };
     (padding ($a:expr)) => {
         $crate::FieldType::Padding { align: $a }
@@ -225,6 +226,9 @@ macro_rules! __wpg_default {
     };
     (ipv6, $v:expr) => {
         $crate::FieldValue::Ipv6(::std::net::Ipv6Addr::from($v))
+    };
+    (ty, $v:expr) => {
+        $crate::FieldValue::from($v)
     };
     (nsap, $v:expr) => {
         $crate::FieldValue::Nsap(::std::vec::Vec::<u8>::from($v))

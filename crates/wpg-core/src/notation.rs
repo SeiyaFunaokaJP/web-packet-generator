@@ -303,6 +303,8 @@ pub fn format_value(v: &FieldValue, ty: &FieldType) -> String {
         FieldValue::Mac(m) => format_mac(m),
         FieldValue::Nsap(b) => format_nsap(b),
         FieldValue::Bytes(b) => format_bytes(b),
+        // Composite values have no human notation yet (the GUI edits them as trees).
+        FieldValue::List(_) | FieldValue::Struct(_) | FieldValue::Tlv(_) => format!("{v:?}"),
     }
 }
 

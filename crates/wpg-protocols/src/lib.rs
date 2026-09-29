@@ -90,6 +90,10 @@ pub fn builtin() -> Vec<ProtocolDef> {
     vec![
         l2::ethernet2(),
         l2::dot1q(),
+        l2::dot1ad(),
+        l2::dot3(),
+        l2::llc(),
+        l2::snap(),
         l3::ipv4(),
         l4::tcp(),
         l4::udp(),
@@ -107,6 +111,7 @@ pub fn builtin() -> Vec<ProtocolDef> {
         icmp::ndp_ns(),
         icmp::ndp_na(),
         icmp::ndp_redirect(),
+        payload::payload(),
         payload::raw(),
     ]
 }
@@ -134,7 +139,7 @@ mod tests {
     #[test]
     fn bindings_point_to_known_or_planned_protocols() {
         // Planned P0 ids that are referenced before they exist.
-        const PLANNED: &[&str] = &[];
+        const PLANNED: &[&str] = &["clnp", "stp"];
         for def in catalog().iter() {
             for e in def.next.iter().flat_map(|b| &b.table) {
                 assert!(

@@ -19,8 +19,7 @@ const ARP_REQUEST: &str = "ff ff ff ff ff ff 00 0b 82 01 fc 42 08 06 \
     00 00 00 00 00 00 c0 a8 00 0a";
 
 fn request() -> Packet {
-    Packet {
-        layers: vec![
+    Packet::from_layers(vec![
             Layer::new("ethernet2")
                 .with("dst", FieldValue::Mac([0xff; 6]))
                 .with("src", FieldValue::Mac([0x00, 0x0b, 0x82, 0x01, 0xfc, 0x42])),
@@ -29,8 +28,9 @@ fn request() -> Packet {
                 .with("spa", Ipv4Addr::new(192, 168, 0, 1))
                 .with("tpa", Ipv4Addr::new(192, 168, 0, 10))
                 .with("tha", FieldValue::Mac([0; 6])),
-        ],
-    }
+        ])
+    // The sample was captured on the sending host, before minimum-frame padding.
+    .unpadded()
 }
 
 #[test]
@@ -38,6 +38,11 @@ fn golden_arp_request() {
     let built = request().build(catalog()).unwrap();
     assert_eq!(built.bytes, hex(ARP_REQUEST));
     assert_eq!(built.bytes.len(), 42);
+    let mut padded = request();
+    padded.pad_to_min = true;
+    let mut want = hex(ARP_REQUEST);
+    want.resize(60, 0);
+    assert_eq!(padded.build(catalog()).unwrap().bytes, want);
     assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
     // EtherType came from the binding.
     let eth = &built.layout[0];
@@ -72,9 +77,7 @@ fn arp_parse_rebuild() {
 
 #[test]
 fn arp_nonstandard_sizes_warn() {
-    let p = Packet {
-        layers: vec![Layer::new("arp").with("hlen", 8u8)],
-    };
+    let p = Packet::from_layers(vec![Layer::new("arp").with("hlen", 8u8)]);
     let b = p.build(catalog()).unwrap();
     assert!(b.diagnostics.iter().any(|d| d.level == DiagLevel::Warning));
 }

@@ -4,7 +4,7 @@
 use std::net::Ipv4Addr;
 
 use proptest::prelude::*;
-use wpg_core::{parse, DiagLevel, FieldValue, Layer, Packet};
+use wpg_core::{parse, DiagLevel, FieldValue, Layer, Packet, TlvItem};
 use wpg_protocols::catalog;
 
 fn ethernet() -> impl Strategy<Value = Layer> {
@@ -24,11 +24,70 @@ fn vlan() -> impl Strategy<Value = Layer> {
     })
 }
 
+/// One typed TCP option (or an unknown kind with value octets) and its size.
+fn tcp_option() -> impl Strategy<Value = (TlvItem, usize)> {
+    prop_oneof![
+        Just((TlvItem::named("nop"), 1)),
+        any::<u16>().prop_map(|v| (TlvItem::named("mss").with("value", v), 4)),
+        any::<u8>().prop_map(|v| (TlvItem::named("ws").with("shift", v), 3)),
+        Just((TlvItem::named("sack_permitted"), 2)),
+        proptest::collection::vec((any::<u32>(), any::<u32>()), 0..=4).prop_map(|b| {
+            let n = 2 + 8 * b.len();
+            let blocks = b
+                .into_iter()
+                .map(|(l, r)| {
+                    FieldValue::Struct(
+                        [
+                            ("left".to_owned(), FieldValue::UInt(l.into())),
+                            ("right".to_owned(), FieldValue::UInt(r.into())),
+                        ]
+                        .into(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            (TlvItem::named("sack").with("blocks", blocks), n)
+        }),
+        (any::<u32>(), any::<u32>()).prop_map(|(a, b)| {
+            (
+                TlvItem::named("timestamps")
+                    .with("tsval", a)
+                    .with("tsecr", b),
+                10,
+            )
+        }),
+        (9u64..=253, proptest::collection::vec(any::<u8>(), 0..6))
+            .prop_map(|(k, d)| (TlvItem::with_type(k, d.clone()), 2 + d.len())),
+    ]
+}
+
+/// Typed options fitting the 40-octet option space.
+fn tcp_options() -> impl Strategy<Value = Vec<TlvItem>> {
+    proptest::collection::vec(tcp_option(), 0..8).prop_map(|opts| {
+        let mut used = 0;
+        opts.into_iter()
+            .filter(|(_, n)| {
+                used += n;
+                used <= 40
+            })
+            .map(|(o, _)| o)
+            .collect()
+    })
+}
+
 fn ipv4() -> impl Strategy<Value = Layer> {
     (
         (0u8..64, 0u8..4, any::<u16>(), 0u8..8, 0u16..8192, 1u8..=255),
         (any::<[u8; 4]>(), any::<[u8; 4]>()),
-        proptest::collection::vec(any::<u8>(), 0..=40),
+        proptest::collection::vec(
+            prop_oneof![
+                Just(TlvItem::named("nop")),
+                any::<u16>().prop_map(|v| TlvItem::named("router_alert").with("value", v)),
+                (2u64..=255, proptest::collection::vec(any::<u8>(), 0..6))
+                    .prop_filter("typed kinds", |(k, _)| *k != 148)
+                    .prop_map(|(k, d)| TlvItem::with_type(k, d)),
+            ],
+            0..5,
+        ),
     )
         .prop_map(|((dscp, ecn, id, flags, frag, ttl), (src, dst), options)| {
             Layer::new("ipv4")
@@ -53,7 +112,7 @@ fn tcp() -> impl Strategy<Value = Layer> {
     (
         (any::<u16>(), any::<u16>(), any::<u32>(), any::<u32>()),
         (0u8..16, any::<u8>(), any::<u16>(), any::<u16>()),
-        proptest::collection::vec(any::<u8>(), 0..=40),
+        tcp_options(),
     )
         .prop_map(|((sp, dp, seq, ack), (res, flags, win, urg), options)| {
             Layer::new("tcp")
@@ -85,7 +144,7 @@ fn packet() -> impl Strategy<Value = Packet> {
             if !payload.is_empty() {
                 layers.push(Layer::new("raw").with("data", payload));
             }
-            Packet { layers }
+            Packet::from_layers(layers)
         })
 }
 
@@ -113,5 +172,48 @@ proptest! {
         // Parsing is stable.
         let again = parse(&rebuilt.bytes, "ethernet2", catalog()).unwrap();
         prop_assert_eq!(again.packet, parsed.packet);
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(512))]
+
+    /// Arbitrary (mostly malformed) option octets survive parse → build unchanged,
+    /// and well-formed typed options parse back to the same items.
+    #[test]
+    fn tcp_option_octets_roundtrip(
+        raw in proptest::collection::vec(any::<u8>(), 0..=40),
+        typed in tcp_options(),
+    ) {
+        for options in [FieldValue::Bytes(raw), FieldValue::Tlv(typed.clone())] {
+            let p = Packet::from_layers(vec![
+                Layer::new("ipv4"),
+                Layer::new("tcp").with("options", options),
+            ]);
+            let built = p.build(catalog()).unwrap();
+            let parsed = parse(&built.bytes, "ipv4", catalog()).unwrap();
+            prop_assert_eq!(&parsed.packet.build(catalog()).unwrap().bytes, &built.bytes);
+        }
+        let p = Packet::from_layers(vec![
+            Layer::new("ipv4"),
+            Layer::new("tcp").with("options", typed.clone()),
+        ]);
+        let built = p.build(catalog()).unwrap();
+        let parsed = parse(&built.bytes, "ipv4", catalog()).unwrap();
+        let FieldValue::Tlv(items) = &parsed.packet.layers[1].fields["options"] else {
+            panic!("options not typed: {:?}", parsed.packet.layers[1]);
+        };
+        // Parsed items carry both type and name; trailing EOLs pad to 32 bits.
+        let names: Vec<_> = items.iter().map(|i| i.name.clone()).collect();
+        let mut want: Vec<_> = typed.iter().map(|i| i.name.clone()).collect();
+        while want.len() < names.len() {
+            want.push(Some("eol".to_owned()));
+        }
+        prop_assert_eq!(names, want);
+        for (got, sent) in items.iter().zip(&typed) {
+            prop_assert_eq!(&got.fields, &sent.fields);
+            prop_assert_eq!(&got.data, &sent.data);
+            prop_assert_eq!(got.length, None);
+        }
     }
 }

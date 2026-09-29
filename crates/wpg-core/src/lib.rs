@@ -24,16 +24,17 @@ pub mod notation;
 pub mod packet;
 pub mod parse;
 pub mod stream;
+pub mod synth;
 
-pub use build::{Built, FieldLayout, LayerLayout};
+pub use build::{Built, FieldLayout, LayerLayout, TrailerKind, TrailerLayout};
 pub use constraint::{Constraint, ConstraintRule};
 pub use diag::{DiagLevel, Diagnostic};
 pub use error::{CoreError, Result};
 pub use generator::{CompiledGenerator, Generator, GeneratorError, GeneratorState};
 pub use ir::{
     raw_protocol, AutoCompute, Binding, BindingEntry, ChecksumCoverage, ChecksumKind, EnumVariant,
-    FieldDef, FieldType, FlagBit, Length, LengthOf, LengthUnit, ProtocolDef, ProtocolLayer,
-    PseudoHeader, Resolve, RAW_PROTOCOL_ID,
+    FieldDef, FieldType, FlagBit, ItemDef, Length, LengthOf, LengthUnit, ProtocolDef,
+    ProtocolLayer, PseudoHeader, Resolve, Synthesizer, TlvDef, TlvVariant, RAW_PROTOCOL_ID,
 };
-pub use packet::{FieldValue, Layer, Packet};
-pub use parse::{parse, Parsed};
+pub use packet::{FcsMode, FieldValue, Layer, Packet, TlvItem};
+pub use parse::{parse, parse_with_fcs, Parsed};

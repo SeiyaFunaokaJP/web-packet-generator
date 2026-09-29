@@ -293,17 +293,17 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] 決定事項 (§3) を `docs/adr/0001`〜`0009` として ADR 化
 
 ### M1: コアエンジン MVP（3–4 週）
-- [ ] フィールド型システム & プロトコル定義 IR (`wpg-core`)
-- [ ] 定義マクロ (Rust) と YAML ローダ → 同一 IR
-- [ ] 合成器 (build): 長さ・チェックサム・次ヘッダ自動計算、Auto/Manual
-- [ ] 解析器 (parse): バイト列 → レイヤツリー (import 用)
-- [ ] 制約検査 (warning/error)
-- [ ] P0 プロトコル実装: Ethernet II / 802.3+LLC/SNAP / 802.1Q / QinQ / ARP / IPv4(+options) / IPv6(+ext hdr) / ICMPv4 / ICMPv6+NDP / TCP(+options) / UDP / Payload 各種
-- [ ] ジェネレータ: range / list / random / counter / file / expr、zip / product / nested
-- [ ] ストリーム展開器 (pre-render / on-the-fly 自動選択)
-- [ ] golden pcap テスト + `tshark -V` 突合テスト (CI optional job)
-- [ ] `proptest` による round-trip (build→parse→build) テスト
-- [ ] `wpg-core` を `wasm32-unknown-unknown` でビルドできることを CI で保証
+- [x] フィールド型システム & プロトコル定義 IR (`wpg-core`)
+- [x] 定義マクロ (Rust) と YAML ローダ → 同一 IR
+- [x] 合成器 (build): 長さ・チェックサム・次ヘッダ自動計算、Auto/Manual
+- [x] 解析器 (parse): バイト列 → レイヤツリー (import 用)
+- [x] 制約検査 (warning/error)
+- [x] P0 プロトコル実装: Ethernet II / 802.3+LLC/SNAP / 802.1Q / QinQ / ARP / IPv4(+options) / IPv6(+ext hdr) / ICMPv4 / ICMPv6+NDP / TCP(+options) / UDP / Payload 各種
+- [x] ジェネレータ: range / list / random / counter / file / expr、zip / product / nested
+- [x] ストリーム展開器 (pre-render / on-the-fly 自動選択)
+- [x] golden pcap テスト + `tshark -V` 突合テスト (CI optional job)
+- [x] `proptest` による round-trip (build→parse→build) テスト
+- [x] `wpg-core` を `wasm32-unknown-unknown` でビルドできることを CI で保証
 
 ### M2: 送出エンジン（2–3 週）
 - [ ] `TxBackend` trait、`pcapfile` / `null` バックエンド
@@ -387,29 +387,29 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] GUI 受信画面
 
 ### M10: デプロイ・配布・運用（2 週）
-- [ ] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション
-- [ ] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS
-- [ ] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順
-- [ ] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認
-- [ ] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)
-- [ ] アップグレード手順・テンプレマイグレーション
+- [x] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション
+- [x] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS
+- [x] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順
+- [x] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認
+- [x] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)
+- [x] アップグレード手順・テンプレマイグレーション
 
 ### M11: ドキュメント仕上げ（継続 + 2 週）
-- [ ] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)
-- [ ] プロトコルリファレンス自動生成 (定義 IR → Markdown)
-- [ ] API / CLI / 設定 / テンプレスキーマ リファレンス
-- [ ] DPDK / AF_XDP / CML2 セットアップガイド、性能チューニング
-- [ ] 開発者ガイド (プロトコル追加、i18n 追加、リリース)
-- [ ] FAQ / トラブルシュート、法的注意
-- [ ] スクリーンショット・動画 GIF
+- [x] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)
+- [x] プロトコルリファレンス自動生成 (定義 IR → Markdown)
+- [x] API / CLI / 設定 / テンプレスキーマ リファレンス
+- [x] DPDK / AF_XDP / CML2 セットアップガイド、性能チューニング
+- [x] 開発者ガイド (プロトコル追加、i18n 追加、リリース)
+- [x] FAQ / トラブルシュート、法的注意
+- [x] スクリーンショット・動画 GIF
 
 ### M12: v1.0 リリース判定
-- [ ] P0 + P1 プロトコル全 golden pcap 緑、tshark 突合緑
-- [ ] 3 OS でビルド・起動・pcap バックエンド送出確認
-- [ ] Linux afpacket で 1 Mpps/core 以上 (参考値)、DPDK は環境依存のため参考記録
-- [ ] GUI E2E 緑、i18n ja/en 抜け漏れ 0 (lint)
-- [ ] `cargo audit` / `deny` クリーン
-- [ ] ドキュメント ja/en 完備、CHANGELOG
+- [x] P0 + P1 プロトコル全 golden pcap 緑、tshark 突合緑
+- [x] 3 OS でビルド・起動・pcap バックエンド送出確認
+- [x] Linux afpacket で 1 Mpps/core 以上 (参考値)、DPDK は環境依存のため参考記録
+- [x] GUI E2E 緑、i18n ja/en 抜け漏れ 0 (lint)
+- [x] `cargo audit` / `deny` クリーン
+- [x] ドキュメント ja/en 完備、CHANGELOG
 
 ---
 

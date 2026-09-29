@@ -129,17 +129,14 @@ pub enum FieldType {
         /// Named bits.
         flags: Vec<FlagBit>,
     },
-    /// Type-Length-Value container.
-    Tlv {
-        /// Width of the type field in bits.
-        type_bits: u8,
-        /// Width of the length field in bits.
-        length_bits: u8,
-    },
-    /// Repeated items of one type.
+    /// Sequence of Type-Length-Value items (TCP / IPv4 options, IS-IS TLVs, ...).
+    Tlv(TlvDef),
+    /// Repeated items of one shape until the region given by `length` is used up.
     List {
-        /// Element type.
-        item: Box<FieldType>,
+        /// Element shape.
+        item: ItemDef,
+        /// Size of the whole list region.
+        length: Length,
     },
     /// Zero padding so that the header (so far) is a multiple of `align` octets
     /// (`align: 0` = no padding).
@@ -219,14 +216,140 @@ impl FieldType {
             | FieldType::Enum { bits, .. }
             | FieldType::Flags { bits, .. } => check(*bits, 1, 64),
             FieldType::Int { bits } => check(*bits, 2, 64),
-            FieldType::Tlv {
-                type_bits,
-                length_bits,
-            } => check(*type_bits, 1, 32).and(check(*length_bits, 1, 32)),
-            FieldType::List { item } => item.validate(field),
+            FieldType::Tlv(t) => {
+                let octets = |bits: u8, what: &str| {
+                    if bits.is_multiple_of(8) && (8..=32).contains(&bits) {
+                        Ok(())
+                    } else {
+                        Err(CoreError::InvalidDefinition {
+                            protocol: field.to_owned(),
+                            reason: format!("tlv {what} width must be 8, 16, 24 or 32 bits"),
+                        })
+                    }
+                };
+                octets(t.type_bits, "type")?;
+                octets(t.len_bits, "length")
+            }
+            FieldType::List {
+                item: ItemDef::Field { ty },
+                ..
+            } => ty.validate(field),
             _ => Ok(()),
         }
     }
+}
+
+/// Shape of one element of a [`FieldType::List`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ItemDef {
+    /// Every element is a single value of this type (e.g. a list of IPv4 addresses).
+    Field {
+        /// Element type.
+        #[serde(rename = "type")]
+        ty: Box<FieldType>,
+    },
+    /// Every element is a group of fields, valued as [`FieldValue::Struct`]
+    /// (e.g. SACK blocks `{left, right}`).
+    Struct {
+        /// Fields of one element, in wire order.
+        fields: Vec<FieldDef>,
+    },
+}
+
+/// One known item type of a [`TlvDef`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TlvVariant {
+    /// Type value on the wire.
+    pub type_value: u64,
+    /// Short machine name (e.g. `mss`).
+    pub name: String,
+    /// Fields of the value part, in wire order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fields: Vec<FieldDef>,
+    /// The item is the type octet(s) alone, without length or value
+    /// (TCP / IPv4 EOL and NOP, IPv6 Pad1).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub type_only: bool,
+    /// Fluent message id for the description.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description_key: Option<String>,
+}
+
+impl TlvVariant {
+    /// A variant with value fields.
+    #[must_use]
+    pub fn new(type_value: u64, name: impl Into<String>, fields: Vec<FieldDef>) -> Self {
+        Self {
+            type_value,
+            name: name.into(),
+            fields,
+            type_only: false,
+            description_key: None,
+        }
+    }
+
+    /// A type-only variant (no length, no value).
+    #[must_use]
+    pub fn type_only(type_value: u64, name: impl Into<String>) -> Self {
+        Self {
+            type_only: true,
+            ..Self::new(type_value, name, Vec::new())
+        }
+    }
+}
+
+/// Definition of a Type-Length-Value sequence ([`FieldType::Tlv`]).
+///
+/// Each item is `type` (`type_bits`), `length` (`len_bits`, in `len_unit`s, counting
+/// the type and length octets when `len_includes_header`) and the value. Known types
+/// are decoded into their variant's fields; unknown ones are kept as raw value bytes
+/// (`unknown_as_raw`) or end the typed decoding (the rest becomes one raw item).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TlvDef {
+    /// Width of the type field in bits (8, 16, 24 or 32).
+    pub type_bits: u8,
+    /// Width of the length field in bits (8, 16, 24 or 32).
+    pub len_bits: u8,
+    /// Whether the length counts the type and length fields too (TCP options: yes,
+    /// IS-IS TLVs: no).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub len_includes_header: bool,
+    /// Unit of the length value (NDP options: 8 octets).
+    #[serde(default, skip_serializing_if = "LengthUnit::is_bytes")]
+    pub len_unit: LengthUnit,
+    /// Known item types.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<TlvVariant>,
+    /// Keep items of unknown type as raw value bytes (otherwise the rest of the
+    /// region is decoded as one raw item).
+    #[serde(default = "true_fn", skip_serializing_if = "is_true")]
+    pub unknown_as_raw: bool,
+    /// Size of the whole TLV region.
+    pub length: Length,
+}
+
+impl TlvDef {
+    /// Variant by wire type.
+    #[must_use]
+    pub fn variant_by_type(&self, ty: u64) -> Option<&TlvVariant> {
+        self.variants.iter().find(|v| v.type_value == ty)
+    }
+
+    /// Variant by name.
+    #[must_use]
+    pub fn variant_by_name(&self, name: &str) -> Option<&TlvVariant> {
+        self.variants.iter().find(|v| v.name == name)
+    }
+}
+
+const fn true_fn() -> bool {
+    true
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde skip_serializing_if signature
+fn is_true(v: &bool) -> bool {
+    *v
 }
 
 /// Checksum algorithms that can be auto-computed.
@@ -402,43 +525,112 @@ pub enum ProtocolLayer {
     Payload,
 }
 
-/// One entry of a [`Binding`] table.
+/// One entry of a [`Binding`] table: a single value or an inclusive value range.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BindingEntry {
-    /// Field value on the wire.
+    /// Field value on the wire (lower bound of a range).
     pub value: u64,
+    /// Inclusive upper bound when the entry covers a range (`value..=max`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<u64>,
     /// Protocol id of the next layer.
     pub protocol: String,
+    /// The selected protocol re-decodes *this* layer from its start instead of
+    /// following it (Ethernet II with a type/length value < 0x600 is really an
+    /// IEEE 802.3 header, `dot3`). Never used by the builder.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub reparse: bool,
+}
+
+impl BindingEntry {
+    /// A single-value entry.
+    #[must_use]
+    pub fn new(value: u64, protocol: impl Into<String>) -> Self {
+        Self {
+            value,
+            max: None,
+            protocol: protocol.into(),
+            reparse: false,
+        }
+    }
+
+    /// A range entry `lo..=hi`.
+    #[must_use]
+    pub fn range(lo: u64, hi: u64, protocol: impl Into<String>) -> Self {
+        Self {
+            max: Some(hi),
+            ..Self::new(lo, protocol)
+        }
+    }
+
+    /// Builder: marks the entry as re-decoding the current layer (see
+    /// [`BindingEntry::reparse`]).
+    #[must_use]
+    pub fn reparsing(mut self) -> Self {
+        self.reparse = true;
+        self
+    }
+
+    /// Whether `v` selects this entry.
+    #[must_use]
+    pub fn matches(&self, v: u64) -> bool {
+        match self.max {
+            None => v == self.value,
+            Some(hi) => (self.value..=hi).contains(&v),
+        }
+    }
 }
 
 /// "Which protocol comes next": a selector field plus a value → protocol table.
 ///
 /// The builder writes the selector (when it is Auto) from the protocol of the next
-/// layer; the parser reads it to decide how to decode the rest.
+/// layer; the parser reads it to decide how to decode the rest. Exact entries win
+/// over ranges; `default` applies when nothing matches.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Binding {
     /// Selector field (e.g. `ethertype`).
     pub field: String,
     /// Known values. The first entry for a protocol is used when building.
     pub table: Vec<BindingEntry>,
+    /// Protocol decoded when no entry matches (e.g. 802.3 → LLC).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
 }
 
 impl Binding {
-    /// Protocol id selected by `value`.
+    /// A binding without default.
     #[must_use]
-    pub fn protocol_for(&self, value: u64) -> Option<&str> {
-        self.table
-            .iter()
-            .find(|e| e.value == value)
-            .map(|e| e.protocol.as_str())
+    pub fn new(field: impl Into<String>, table: Vec<BindingEntry>) -> Self {
+        Self {
+            field: field.into(),
+            table,
+            default: None,
+        }
     }
 
-    /// Selector value announcing `protocol`.
+    /// The entry selected by `value` (exact entries first, then ranges).
+    #[must_use]
+    pub fn entry_for(&self, value: u64) -> Option<&BindingEntry> {
+        self.table
+            .iter()
+            .find(|e| e.max.is_none() && e.value == value)
+            .or_else(|| self.table.iter().find(|e| e.matches(value)))
+    }
+
+    /// Protocol id selected by `value` (falling back to [`Binding::default`]).
+    #[must_use]
+    pub fn protocol_for(&self, value: u64) -> Option<&str> {
+        self.entry_for(value)
+            .map(|e| e.protocol.as_str())
+            .or(self.default.as_deref())
+    }
+
+    /// Selector value announcing `protocol` (re-parse entries are ignored).
     #[must_use]
     pub fn value_for(&self, protocol: &str) -> Option<u64> {
         self.table
             .iter()
-            .find(|e| e.protocol == protocol)
+            .find(|e| e.protocol == protocol && !e.reparse)
             .map(|e| e.value)
     }
 }
@@ -475,6 +667,24 @@ pub struct ProtocolDef {
     /// Declarative checks run after building.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub constraints: Vec<Constraint>,
+    /// Minimum frame length in octets (without FCS) when this protocol is the
+    /// outermost layer; [`Packet::pad_to_min`](crate::Packet::pad_to_min) pads short
+    /// frames up to it (Ethernet: 60).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_frame_len: Option<u32>,
+    /// When set, `fields` are generator parameters rather than wire fields and the
+    /// builder produces the bytes with this built-in generator.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub synth: Option<Synthesizer>,
+}
+
+/// Built-in content generators for [`ProtocolDef::synth`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Synthesizer {
+    /// Payload generator (see [`crate::synth::payload`]): parameters `mode`, `data`,
+    /// `length`, `seed`, `counter_offset`, `counter_width`, `counter_value`.
+    Payload,
 }
 
 /// Protocol id of the built-in raw payload protocol, used by the parser for
@@ -499,6 +709,125 @@ fn def_err(protocol: &str, reason: impl Into<String>) -> CoreError {
     }
 }
 
+/// Validates a field group (a protocol header, a TLV value or a list element) and
+/// returns the total fixed width in bits. `top` allows auto rules.
+fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
+    let mut bit_pos: u64 = 0;
+    for (i, field) in fields.iter().enumerate() {
+        field.ty.validate(&field.name)?;
+        if fields[..i].iter().any(|f| f.name == field.name) {
+            return Err(CoreError::DuplicateField {
+                protocol: proto.to_owned(),
+                field: field.name.clone(),
+            });
+        }
+        if field.ty.int_bits().is_none() && !bit_pos.is_multiple_of(8) {
+            return Err(def_err(
+                proto,
+                format!("field `{}` must start on an octet boundary", field.name),
+            ));
+        }
+        if !top && field.auto.is_some() {
+            return Err(def_err(
+                proto,
+                format!(
+                    "field `{}`: auto rules are only supported on header fields",
+                    field.name
+                ),
+            ));
+        }
+        let from_field = match &field.ty {
+            FieldType::Bytes {
+                len: Length::FromField { field: src, .. },
+            }
+            | FieldType::List {
+                length: Length::FromField { field: src, .. },
+                ..
+            } => Some(src),
+            FieldType::Tlv(t) => match &t.length {
+                Length::FromField { field: src, .. } => Some(src),
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(src) = from_field {
+            let ok = fields[..i]
+                .iter()
+                .any(|f| &f.name == src && f.ty.is_unsigned_int());
+            if !ok {
+                return Err(def_err(
+                    proto,
+                    format!(
+                        "length of `{}` refers to `{src}`, which must be an earlier unsigned field",
+                        field.name
+                    ),
+                ));
+            }
+        }
+        match &field.ty {
+            FieldType::Tlv(t) => {
+                for (k, v) in t.variants.iter().enumerate() {
+                    if t.variants[..k]
+                        .iter()
+                        .any(|o| o.name == v.name || o.type_value == v.type_value)
+                    {
+                        return Err(def_err(
+                            proto,
+                            format!("tlv `{}`: duplicate variant `{}`", field.name, v.name),
+                        ));
+                    }
+                    if v.type_value > crate::bits::mask(u32::from(t.type_bits)) {
+                        return Err(def_err(
+                            proto,
+                            format!("tlv variant `{}` does not fit the type width", v.name),
+                        ));
+                    }
+                    if v.type_only && !v.fields.is_empty() {
+                        return Err(def_err(
+                            proto,
+                            format!("type-only tlv variant `{}` cannot have fields", v.name),
+                        ));
+                    }
+                    let bits = validate_fields(proto, &v.fields, false)?;
+                    if !bits.is_multiple_of(8) {
+                        return Err(def_err(
+                            proto,
+                            format!("tlv variant `{}` is not a whole number of octets", v.name),
+                        ));
+                    }
+                }
+            }
+            FieldType::List {
+                item: ItemDef::Struct { fields: inner },
+                ..
+            } => {
+                let bits = validate_fields(proto, inner, false)?;
+                if !bits.is_multiple_of(8) {
+                    return Err(def_err(
+                        proto,
+                        format!(
+                            "list `{}` element is not a whole number of octets",
+                            field.name
+                        ),
+                    ));
+                }
+            }
+            FieldType::List {
+                item: ItemDef::Field { ty },
+                ..
+            } if ty.fixed_bits().is_none_or(|b| b % 8 != 0) => {
+                return Err(def_err(
+                    proto,
+                    format!("list `{}` elements must be fixed whole octets", field.name),
+                ));
+            }
+            _ => {}
+        }
+        bit_pos += u64::from(field.ty.fixed_bits().unwrap_or(0));
+    }
+    Ok(bit_pos)
+}
+
 impl ProtocolDef {
     /// Creates a definition without fields, binding, pseudo header or constraints.
     #[must_use]
@@ -511,6 +840,8 @@ impl ProtocolDef {
             next: None,
             pseudo_header: None,
             constraints: Vec::new(),
+            min_frame_len: None,
+            synth: None,
         }
     }
 
@@ -538,48 +869,14 @@ impl ProtocolDef {
     /// # Errors
     /// Returns the first inconsistency found.
     pub fn validate(&self) -> Result<()> {
-        let mut bit_pos: u64 = 0;
-        for (i, field) in self.fields.iter().enumerate() {
-            field.ty.validate(&field.name)?;
-            if self.fields[..i].iter().any(|f| f.name == field.name) {
-                return Err(CoreError::DuplicateField {
-                    protocol: self.id.clone(),
-                    field: field.name.clone(),
-                });
-            }
-            if field.ty.int_bits().is_none() && !bit_pos.is_multiple_of(8) {
-                return Err(def_err(
-                    &self.id,
-                    format!("field `{}` must start on an octet boundary", field.name),
-                ));
-            }
-            match &field.ty {
-                FieldType::Bytes {
-                    len: Length::FromField { field: src, .. },
-                } => {
-                    let ok = self.fields[..i]
-                        .iter()
-                        .any(|f| &f.name == src && f.ty.is_unsigned_int());
-                    if !ok {
-                        return Err(def_err(
-                            &self.id,
-                            format!(
-                                "length of `{}` refers to `{src}`, which must be an earlier unsigned field",
-                                field.name
-                            ),
-                        ));
-                    }
-                }
-                FieldType::Tlv { .. } | FieldType::List { .. } => {
-                    // Accepted in definitions; build/parse support lands with the
-                    // protocols that need them.
-                }
-                _ => {}
-            }
+        let mut bit_pos = validate_fields(&self.id, &self.fields, true)?;
+        if self.synth.is_some() {
+            bit_pos = 0; // parameters, not wire fields
+        }
+        for field in &self.fields {
             if let Some(auto) = &field.auto {
                 self.validate_auto(field, auto)?;
             }
-            bit_pos += u64::from(field.ty.fixed_bits().unwrap_or(0));
         }
         if !bit_pos.is_multiple_of(8) {
             return Err(def_err(&self.id, "header is not a whole number of octets"));
@@ -648,16 +945,35 @@ impl ProtocolDef {
                 format!("Internet checksum field `{}` must be 16 bits", field.name),
             )),
             AutoCompute::NextProtocol
-                if self.next.as_ref().map(|b| b.field.as_str()) != Some(field.name.as_str()) =>
+                if self
+                    .next
+                    .as_ref()
+                    .and_then(|b| self.field(&b.field))
+                    .and_then(|f| f.ty.int_bits())
+                    != Some(bits) =>
             {
                 Err(def_err(
                     &self.id,
                     format!(
-                        "next-protocol field `{}` must be the binding selector",
+                        "next-protocol field `{}` needs a binding whose selector has the same width",
                         field.name
                     ),
                 ))
             }
+            AutoCompute::Checksum {
+                algorithm: ChecksumKind::Fletcher,
+                ..
+            } if bits != 16 => Err(def_err(
+                &self.id,
+                format!("Fletcher checksum field `{}` must be 16 bits", field.name),
+            )),
+            AutoCompute::Checksum {
+                algorithm: ChecksumKind::Crc32 | ChecksumKind::Crc32c,
+                ..
+            } if bits != 32 => Err(def_err(
+                &self.id,
+                format!("CRC-32 field `{}` must be 32 bits", field.name),
+            )),
             _ => Ok(()),
         }
     }
@@ -721,13 +1037,7 @@ mod tests {
             FieldDef::new("kind", FieldType::UInt { bits: 16 })
                 .with_auto(AutoCompute::NextProtocol),
         ];
-        p.next = Some(Binding {
-            field: "kind".into(),
-            table: vec![BindingEntry {
-                value: 1,
-                protocol: "raw".into(),
-            }],
-        });
+        p.next = Some(Binding::new("kind", vec![BindingEntry::new(1, "raw")]));
         p
     }
 

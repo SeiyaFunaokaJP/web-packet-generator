@@ -20,15 +20,15 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 use serde::{Deserialize, Serialize};
 
 use crate::bits::{mask, put_bits, BitWriter};
-use crate::checksum::InternetSum;
+use crate::checksum::{crc32, crc32c, fletcher_checksum, InternetSum};
 use crate::constraint::{evaluate, span_name, Spans};
 use crate::diag::{keys, DiagLevel, Diagnostic};
 use crate::error::{CoreError, Result};
 use crate::ir::{
-    raw_protocol, AutoCompute, ChecksumCoverage, ChecksumKind, FieldDef, FieldType, Length,
-    ProtocolDef, Resolve, RAW_PROTOCOL_ID,
+    raw_protocol, AutoCompute, ChecksumCoverage, ChecksumKind, FieldDef, FieldType, ItemDef,
+    Length, ProtocolDef, Resolve, Synthesizer, TlvDef, RAW_PROTOCOL_ID,
 };
-use crate::packet::{FieldValue, Layer, Packet};
+use crate::packet::{FcsMode, FieldValue, Layer, Packet, TlvItem};
 
 /// Position and final value of one field in the built bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,6 +44,53 @@ pub struct FieldLayout {
     /// Whether the value was computed by the builder (Auto) rather than taken from
     /// the layer (Manual) or the definition default.
     pub auto: bool,
+    /// Sub-fields of composite values (TLV items with their `type` / `length` /
+    /// value fields, list elements), with absolute offsets like the parent.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<FieldLayout>,
+}
+
+impl FieldLayout {
+    fn leaf(name: impl Into<String>, bit_offset: usize, bit_len: usize, value: FieldValue) -> Self {
+        Self {
+            name: name.into(),
+            bit_offset,
+            bit_len,
+            value,
+            auto: false,
+            children: Vec::new(),
+        }
+    }
+}
+
+/// Moves layouts (and their children) by `by` bits.
+fn shift(mut v: Vec<FieldLayout>, by: usize) -> Vec<FieldLayout> {
+    for f in &mut v {
+        f.bit_offset += by;
+        f.children = shift(std::mem::take(&mut f.children), by);
+    }
+    v
+}
+
+/// What a frame trailer is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TrailerKind {
+    /// Zero padding up to the minimum frame length ([`Packet::pad_to_min`]).
+    Padding,
+    /// Frame check sequence ([`Packet::fcs`]).
+    Fcs,
+}
+
+/// Octets appended after the last layer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrailerLayout {
+    /// Kind.
+    pub kind: TrailerKind,
+    /// Offset in octets from the start of the packet.
+    pub offset: usize,
+    /// Length in octets.
+    pub len: usize,
 }
 
 /// Position of one layer in the built bytes.
@@ -74,6 +121,9 @@ pub struct Built {
     pub layout: Vec<LayerLayout>,
     /// Warnings and errors (constraints, inconsistent Manual values, ...).
     pub diagnostics: Vec<Diagnostic>,
+    /// Padding / FCS appended after the layers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trailers: Vec<TrailerLayout>,
 }
 
 impl Built {
@@ -90,8 +140,7 @@ impl Packet {
     /// # Errors
     /// [`CoreError::UnknownProtocol`] / [`CoreError::UnknownField`] for references
     /// that do not resolve, [`CoreError::InvalidValue`] when a Manual or default
-    /// value does not match / fit its field type, and [`CoreError::NotImplemented`]
-    /// for field types the builder does not support yet (`tlv`, `list`).
+    /// value does not match / fit its field type.
     /// Inconsistent-but-representable packets are *not* errors; see
     /// [`Built::diagnostics`].
     pub fn build(&self, catalog: &dyn Resolve) -> Result<Built> {
@@ -123,6 +172,8 @@ struct Slot {
     /// Auto rule to apply in pass 2 (`None` when Manual or not auto).
     pending: Option<AutoCompute>,
     computed: bool,
+    /// Sub-field layouts (bit offsets relative to the header start).
+    children: Vec<FieldLayout>,
 }
 
 /// One encoded layer header.
@@ -168,11 +219,11 @@ pub(crate) fn zero_value(ty: &FieldType) -> FieldValue {
         FieldType::Ipv4 => FieldValue::Ipv4(Ipv4Addr::UNSPECIFIED),
         FieldType::Ipv6 => FieldValue::Ipv6(Ipv6Addr::UNSPECIFIED),
         FieldType::Nsap => FieldValue::Nsap(Vec::new()),
-        FieldType::Bytes { .. }
-        | FieldType::Tlv { .. }
-        | FieldType::List { .. }
-        | FieldType::Padding { .. }
-        | FieldType::Raw => FieldValue::Bytes(Vec::new()),
+        FieldType::Tlv(_) => FieldValue::Tlv(Vec::new()),
+        FieldType::List { .. } => FieldValue::List(Vec::new()),
+        FieldType::Bytes { .. } | FieldType::Padding { .. } | FieldType::Raw => {
+            FieldValue::Bytes(Vec::new())
+        }
     }
 }
 
@@ -185,11 +236,20 @@ fn type_name(v: &FieldValue) -> &'static str {
         FieldValue::Ipv4(_) => "ipv4",
         FieldValue::Ipv6(_) => "ipv6",
         FieldValue::Nsap(_) => "nsap",
+        FieldValue::List(_) => "list",
+        FieldValue::Struct(_) => "struct",
+        FieldValue::Tlv(_) => "tlv",
     }
 }
 
-/// Writes one value into the header writer.
-fn encode_value(w: &mut BitWriter, fd: &FieldDef, value: &FieldValue) -> Result<()> {
+/// Writes one value into `w`; returns the layouts of its sub-fields (offsets in
+/// bits from the start of `w`).
+pub(crate) fn encode_value(
+    w: &mut BitWriter,
+    fd: &FieldDef,
+    value: &FieldValue,
+    diags: &mut Vec<Diagnostic>,
+) -> Result<Vec<FieldLayout>> {
     let mismatch = || {
         invalid(
             fd,
@@ -232,26 +292,270 @@ fn encode_value(w: &mut BitWriter, fd: &FieldDef, value: &FieldValue) -> Result<
             }
             w.push_bytes(b);
         }
-        (FieldType::Raw | FieldType::Padding { .. }, FieldValue::Bytes(b))
+        // Composite fields accept verbatim octets too (malformed content on purpose).
+        (
+            FieldType::Raw | FieldType::Padding { .. } | FieldType::Tlv(_) | FieldType::List { .. },
+            FieldValue::Bytes(b),
+        )
         | (FieldType::Nsap, FieldValue::Nsap(b) | FieldValue::Bytes(b)) => w.push_bytes(b),
         (FieldType::Mac, FieldValue::Mac(m)) => w.push_bytes(m),
         (FieldType::Ipv4, FieldValue::Ipv4(a)) => w.push_bytes(&a.octets()),
         (FieldType::Ipv6, FieldValue::Ipv6(a)) => w.push_bytes(&a.octets()),
-        (FieldType::Tlv { .. } | FieldType::List { .. }, _) => {
-            return Err(CoreError::NotImplemented("building tlv / list fields"))
+        (FieldType::Tlv(t), FieldValue::Tlv(items)) => {
+            let mut out = Vec::with_capacity(items.len());
+            for (k, item) in items.iter().enumerate() {
+                let (bytes, mut lay) = encode_tlv_item(fd, t, k, item, diags)?;
+                let at = w.bits;
+                lay.bit_offset += at;
+                lay.children = shift(lay.children, at);
+                w.push_bytes(&bytes);
+                out.push(lay);
+            }
+            return Ok(out);
+        }
+        (FieldType::List { item, .. }, FieldValue::List(elems)) => {
+            let mut out = Vec::with_capacity(elems.len());
+            for (k, e) in elems.iter().enumerate() {
+                let before = w.bits;
+                let children = match (item, e) {
+                    (ItemDef::Field { ty }, v) => {
+                        let efd = FieldDef::new(format!("{}[{k}]", fd.name), (**ty).clone());
+                        encode_value(w, &efd, v, diags)?
+                    }
+                    (ItemDef::Struct { fields }, FieldValue::Struct(m)) => {
+                        encode_group(w, &fd.name, fields, m, diags)?
+                    }
+                    _ => return Err(mismatch()),
+                };
+                out.push(FieldLayout {
+                    children,
+                    ..FieldLayout::leaf(format!("[{k}]"), before, w.bits - before, e.clone())
+                });
+            }
+            return Ok(out);
         }
         _ => return Err(mismatch()),
     }
-    Ok(())
+    Ok(Vec::new())
+}
+
+/// Encodes a group of fields (TLV value, list element) without auto rules; unset
+/// fields use their default. Layout offsets are relative to the start of `w`.
+fn encode_group(
+    w: &mut BitWriter,
+    owner: &str,
+    fields: &[FieldDef],
+    values: &std::collections::BTreeMap<String, FieldValue>,
+    diags: &mut Vec<Diagnostic>,
+) -> Result<Vec<FieldLayout>> {
+    if let Some(k) = values
+        .keys()
+        .find(|k| !fields.iter().any(|f| &f.name == *k))
+    {
+        return Err(CoreError::UnknownField {
+            protocol: owner.to_owned(),
+            field: k.clone(),
+        });
+    }
+    let start = w.bits;
+    let mut out = Vec::with_capacity(fields.len());
+    for fd in fields {
+        let (value, computed) = match (values.get(&fd.name), &fd.ty) {
+            (Some(v), _) => (v.clone(), false),
+            (None, FieldType::Padding { align }) => {
+                let align = *align as usize;
+                let used = (w.bits - start) / 8;
+                let pad = if align == 0 {
+                    0
+                } else {
+                    (align - used % align) % align
+                };
+                (FieldValue::Bytes(vec![0; pad]), true)
+            }
+            (None, ty) => (fd.default.clone().unwrap_or_else(|| zero_value(ty)), false),
+        };
+        let before = w.bits;
+        let children = encode_value(w, fd, &value, diags)?;
+        out.push(FieldLayout {
+            auto: computed,
+            children,
+            ..FieldLayout::leaf(fd.name.clone(), before, w.bits - before, value)
+        });
+    }
+    Ok(out)
+}
+
+/// Encodes one TLV item; returns its octets and its layout (offsets relative to
+/// the item start).
+pub(crate) fn encode_tlv_item(
+    fd: &FieldDef,
+    t: &TlvDef,
+    index: usize,
+    item: &TlvItem,
+    diags: &mut Vec<Diagnostic>,
+) -> Result<(Vec<u8>, FieldLayout)> {
+    if let Some(raw) = &item.raw {
+        let lay = FieldLayout::leaf("raw", 0, raw.len() * 8, FieldValue::Bytes(raw.clone()));
+        return Ok((raw.clone(), lay));
+    }
+    let variant = match &item.name {
+        Some(n) => Some(
+            t.variant_by_name(n)
+                .ok_or_else(|| invalid(fd, format!("unknown tlv item `{n}`")))?,
+        ),
+        None => item.ty.and_then(|ty| t.variant_by_type(ty)),
+    };
+    let ty = item
+        .ty
+        .or(variant.map(|v| v.type_value))
+        .ok_or_else(|| invalid(fd, "a tlv item needs a `type` or a `name`"))?;
+    let type_bits = u32::from(t.type_bits);
+    let len_bits = u32::from(t.len_bits);
+    if ty > mask(type_bits) {
+        return Err(invalid(
+            fd,
+            format!("tlv type {ty} does not fit in {type_bits} bits"),
+        ));
+    }
+    let label = variant.map_or_else(|| format!("type_{ty}"), |v| v.name.clone());
+    let mut w = BitWriter::default();
+    w.push_bits(type_bits, ty);
+    let mut children = vec![FieldLayout::leaf(
+        "type",
+        0,
+        type_bits as usize,
+        FieldValue::UInt(ty),
+    )];
+    let finish = |bytes: Vec<u8>, children: Vec<FieldLayout>| {
+        let lay = FieldLayout {
+            children,
+            ..FieldLayout::leaf(
+                label.clone(),
+                0,
+                bytes.len() * 8,
+                FieldValue::Bytes(bytes.clone()),
+            )
+        };
+        (bytes, lay)
+    };
+    if variant.is_some_and(|v| v.type_only) && item.length.is_none() && item.data.is_none() {
+        if !item.fields.is_empty() {
+            return Err(invalid(
+                fd,
+                format!("tlv item `{label}` has no value fields"),
+            ));
+        }
+        return Ok(finish(w.buf, children));
+    }
+    let hdr = ((type_bits + len_bits) / 8) as usize;
+    let mut vw = BitWriter::default();
+    let vchildren = match (&item.data, variant) {
+        (Some(d), _) => {
+            if !item.fields.is_empty() {
+                return Err(invalid(
+                    fd,
+                    format!("tlv item `{label}` has both `data` and `fields`"),
+                ));
+            }
+            vw.push_bytes(d);
+            vec![FieldLayout::leaf(
+                "data",
+                0,
+                d.len() * 8,
+                FieldValue::Bytes(d.clone()),
+            )]
+        }
+        (None, Some(v)) => encode_group(
+            &mut vw,
+            &format!("{}.{label}", fd.name),
+            &v.fields,
+            &item.fields,
+            diags,
+        )?,
+        (None, None) if item.fields.is_empty() => Vec::new(),
+        (None, None) => {
+            return Err(invalid(
+                fd,
+                format!("tlv type {ty} is unknown; give its value as `data`"),
+            ))
+        }
+    };
+    let mut value = vw.buf;
+    let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
+    let counted = if t.len_includes_header { hdr } else { 0 } + value.len();
+    let expected = counted.div_ceil(unit);
+    let field_name = format!("{}[{index}].length", fd.name);
+    let (len, auto) = match item.length {
+        Some(l) => {
+            if l > mask(len_bits) {
+                return Err(invalid(
+                    fd,
+                    format!("tlv length {l} does not fit in {len_bits} bits"),
+                ));
+            }
+            if l != expected as u64 {
+                diags.push(
+                    Diagnostic::new(
+                        DiagLevel::Warning,
+                        keys::LENGTH_MISMATCH,
+                        format!("`{field_name}` is {l:#x} but the correct length is {expected:#x}"),
+                    )
+                    .on_field(field_name.clone())
+                    .arg("value", l)
+                    .arg("expected", expected),
+                );
+            }
+            (l, false)
+        }
+        None => {
+            value.resize(value.len() + expected * unit - counted, 0);
+            let l = expected as u64;
+            if l > mask(len_bits) {
+                diags.push(
+                    Diagnostic::new(
+                        DiagLevel::Error,
+                        keys::AUTO_OVERFLOW,
+                        format!(
+                            "computed value {l} does not fit in `{field_name}` ({len_bits} bits)"
+                        ),
+                    )
+                    .on_field(field_name.clone())
+                    .arg("value", l)
+                    .arg("bits", len_bits),
+                );
+            }
+            (l & mask(len_bits), true)
+        }
+    };
+    w.push_bits(len_bits, len);
+    children.push(FieldLayout {
+        auto,
+        ..FieldLayout::leaf(
+            "length",
+            type_bits as usize,
+            len_bits as usize,
+            FieldValue::UInt(len),
+        )
+    });
+    children.extend(shift(vchildren, hdr * 8));
+    w.push_bytes(&value);
+    Ok(finish(w.buf, children))
 }
 
 /// Pass 1: serialise one layer header.
-fn encode_layer<'a>(def: &'a ProtocolDef, layer: &Layer) -> Result<Enc<'a>> {
+fn encode_layer<'a>(
+    def: &'a ProtocolDef,
+    layer: &Layer,
+    diags: &mut Vec<Diagnostic>,
+) -> Result<Enc<'a>> {
     if let Some(name) = layer.fields.keys().find(|k| def.field(k).is_none()) {
         return Err(CoreError::UnknownField {
             protocol: def.id.clone(),
             field: name.clone(),
         });
+    }
+    if let Some(Synthesizer::Payload) = def.synth {
+        return Ok(encode_synth(def, layer));
     }
     let mut w = BitWriter::default();
     let mut slots = Vec::with_capacity(def.fields.len());
@@ -280,7 +584,7 @@ fn encode_layer<'a>(def: &'a ProtocolDef, layer: &Layer) -> Result<Enc<'a>> {
             (None, _, ty) => fd.default.clone().unwrap_or_else(|| zero_value(ty)),
         };
         let before = w.bits;
-        encode_value(&mut w, fd, &value)?;
+        let children = encode_value(&mut w, fd, &value, diags)?;
         slots.push(Slot {
             def: k,
             bit_off: before,
@@ -289,6 +593,7 @@ fn encode_layer<'a>(def: &'a ProtocolDef, layer: &Layer) -> Result<Enc<'a>> {
             manual: manual.is_some(),
             pending,
             computed,
+            children,
         });
     }
     if !w.bits.is_multiple_of(8) {
@@ -303,6 +608,47 @@ fn encode_layer<'a>(def: &'a ProtocolDef, layer: &Layer) -> Result<Enc<'a>> {
         slots,
         offset: 0,
     })
+}
+
+/// A generator protocol ([`ProtocolDef::synth`]): parameters (Manual or default)
+/// → octets, reported as one `data` field.
+fn encode_synth<'a>(def: &'a ProtocolDef, layer: &Layer) -> Enc<'a> {
+    let params: std::collections::BTreeMap<String, FieldValue> = def
+        .fields
+        .iter()
+        .filter_map(|f| {
+            layer
+                .fields
+                .get(&f.name)
+                .or(f.default.as_ref())
+                .map(|v| (f.name.clone(), v.clone()))
+        })
+        .collect();
+    let bytes = crate::synth::payload(&params);
+    let generated = params
+        .get("mode")
+        .and_then(FieldValue::as_u64)
+        .is_some_and(|m| m != crate::synth::payload_mode::FIXED);
+    let slots = def
+        .field_index("data")
+        .map(|k| Slot {
+            def: k,
+            bit_off: 0,
+            bits: bytes.len() * 8,
+            value: FieldValue::Bytes(bytes.clone()),
+            manual: layer.fields.contains_key("data"),
+            pending: None,
+            computed: generated,
+            children: Vec::new(),
+        })
+        .into_iter()
+        .collect();
+    Enc {
+        def,
+        header: bytes,
+        slots,
+        offset: 0,
+    }
 }
 
 struct Ctx<'a> {
@@ -394,28 +740,43 @@ impl Ctx<'_> {
     /// Checksum for slot `s` of layer `i` over the current bytes (field zeroed),
     /// plus a warning when a pseudo header was wanted but not available.
     ///
-    /// `Err` when the algorithm is not implemented.
-    fn checksum_value(
-        &self,
-        i: usize,
-        s: usize,
-        auto: &AutoCompute,
-    ) -> Result<(u16, Option<Diagnostic>), Diagnostic> {
+    /// CRC values are returned byte-swapped so that the (big-endian) field carries
+    /// them least significant octet first, as Ethernet FCS and SCTP do.
+    fn checksum_value(&self, i: usize, s: usize, auto: &AutoCompute) -> (u64, Option<Diagnostic>) {
         let AutoCompute::Checksum {
             algorithm: kind,
             covers,
             nonzero,
         } = auto
         else {
-            return Ok((0, None));
+            return (0, None);
         };
         let e = &self.encs[i];
+        let end = match covers {
+            ChecksumCoverage::Header => e.offset + e.header_len(),
+            ChecksumCoverage::HeaderAndPayload => self.bytes.len(),
+        };
+        let mut data = self.bytes[e.offset..end].to_vec();
+        let slot = &e.slots[s];
+        put_bits(
+            &mut data,
+            slot.bit_off,
+            u32::try_from(slot.bits).unwrap_or(64),
+            0,
+        );
+        match kind {
+            ChecksumKind::Internet | ChecksumKind::InternetPseudoHeader => {}
+            ChecksumKind::Fletcher => {
+                return (u64::from(fletcher_checksum(&data, slot.bit_off / 8)), None)
+            }
+            ChecksumKind::Crc32 => return (u64::from(crc32(&data).swap_bytes()), None),
+            ChecksumKind::Crc32c => return (u64::from(crc32c(&data).swap_bytes()), None),
+        }
         let name = self.field_name(i, s).to_owned();
         let mut warning = None;
         let mut sum = InternetSum::new();
-        match kind {
-            ChecksumKind::Internet => {}
-            ChecksumKind::InternetPseudoHeader => match self.pseudo_header(i) {
+        if *kind == ChecksumKind::InternetPseudoHeader {
+            match self.pseudo_header(i) {
                 Some(ph) => {
                     sum.add(&ph);
                 }
@@ -429,44 +790,17 @@ impl Ctx<'_> {
                             ),
                         )
                         .at_layer(i)
-                        .on_field(name.clone()),
+                        .on_field(name),
                     );
                 }
-            },
-            ChecksumKind::Fletcher | ChecksumKind::Crc32c | ChecksumKind::Crc32 => {
-                let what = match kind {
-                    ChecksumKind::Fletcher => "fletcher",
-                    ChecksumKind::Crc32c => "crc32c",
-                    _ => "crc32",
-                };
-                return Err(Diagnostic::new(
-                    DiagLevel::Error,
-                    keys::NOT_IMPLEMENTED,
-                    format!("{what} checksum for `{name}` is not implemented yet"),
-                )
-                .at_layer(i)
-                .on_field(name)
-                .arg("what", what));
             }
         }
-        let end = match covers {
-            ChecksumCoverage::Header => e.offset + e.header_len(),
-            ChecksumCoverage::HeaderAndPayload => self.bytes.len(),
-        };
-        let mut data = self.bytes[e.offset..end].to_vec();
-        let slot = &e.slots[s];
-        put_bits(
-            &mut data,
-            slot.bit_off,
-            u32::try_from(slot.bits).unwrap_or(64),
-            0,
-        );
         sum.add(&data);
         let mut c = sum.finish();
         if *nonzero && c == 0 {
             c = 0xffff;
         }
-        Ok((c, warning))
+        (u64::from(c), warning)
     }
 
     /// IPv4 / IPv6 pseudo header for layer `i` from the nearest lower layer that
@@ -553,13 +887,9 @@ impl Ctx<'_> {
     fn fill_checksums(&mut self) {
         for i in (0..self.encs.len()).rev() {
             for (s, auto) in self.slots_with(i, |a| matches!(a, AutoCompute::Checksum { .. })) {
-                match self.checksum_value(i, s, &auto) {
-                    Ok((v, warning)) => {
-                        self.diags.extend(warning);
-                        self.store(i, s, i128::from(v));
-                    }
-                    Err(d) => self.diags.push(d),
-                }
+                let (v, warning) = self.checksum_value(i, s, &auto);
+                self.diags.extend(warning);
+                self.store(i, s, i128::from(v));
             }
         }
     }
@@ -585,10 +915,10 @@ impl Ctx<'_> {
                         let (v, _) = self.length_value(i, s, &auto);
                         (keys::LENGTH_MISMATCH, v, "length")
                     }
-                    AutoCompute::Checksum { .. } => match self.checksum_value(i, s, &auto) {
-                        Ok((v, _)) => (keys::CHECKSUM_MISMATCH, i128::from(v), "checksum"),
-                        Err(_) => continue,
-                    },
+                    AutoCompute::Checksum { .. } => {
+                        let (v, _) = self.checksum_value(i, s, &auto);
+                        (keys::CHECKSUM_MISMATCH, i128::from(v), "checksum")
+                    }
                     AutoCompute::NextProtocol => match self.next_value(i) {
                         Some(v) => (keys::NEXT_PROTOCOL_MISMATCH, i128::from(v), "next protocol"),
                         None => continue,
@@ -632,10 +962,13 @@ fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
     let raw = raw_protocol();
     let mut encs = Vec::with_capacity(packet.layers.len());
     let mut bytes = Vec::new();
-    for layer in &packet.layers {
+    let mut diags = Vec::new();
+    for (i, layer) in packet.layers.iter().enumerate() {
         let def = resolve(catalog, &raw, &layer.protocol)
             .ok_or_else(|| CoreError::UnknownProtocol(layer.protocol.clone()))?;
-        let mut enc = encode_layer(def, layer)?;
+        let mut layer_diags = Vec::new();
+        let mut enc = encode_layer(def, layer, &mut layer_diags)?;
+        diags.extend(layer_diags.into_iter().map(|d| d.at_layer(i)));
         enc.offset = bytes.len();
         bytes.extend_from_slice(&enc.header);
         encs.push(enc);
@@ -644,7 +977,7 @@ fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
         packet,
         encs,
         bytes,
-        diags: Vec::new(),
+        diags,
     };
     ctx.fill_lengths();
     ctx.fill_next_protocols();
@@ -672,6 +1005,11 @@ fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
             cut = cut.min(end);
         }
     }
+    let min_frame = ctx
+        .encs
+        .first()
+        .and_then(|e| e.def.min_frame_len)
+        .map(|m| m as usize);
     let Ctx {
         encs,
         mut bytes,
@@ -680,12 +1018,39 @@ fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
     } = ctx;
     bytes.truncate(cut);
 
+    let mut trailers = Vec::new();
+    if let (true, Some(min)) = (packet.pad_to_min, min_frame) {
+        if bytes.len() < min {
+            trailers.push(TrailerLayout {
+                kind: TrailerKind::Padding,
+                offset: bytes.len(),
+                len: min - bytes.len(),
+            });
+            bytes.resize(min, 0);
+        }
+    }
+    let fcs = match packet.fcs {
+        Some(FcsMode::Auto) => Some(crc32(&bytes)),
+        Some(FcsMode::Bad) => Some(!crc32(&bytes)),
+        Some(FcsMode::Manual(v)) => Some(v),
+        Some(FcsMode::None) | None => None,
+    };
+    if let Some(v) = fcs {
+        trailers.push(TrailerLayout {
+            kind: TrailerKind::Fcs,
+            offset: bytes.len(),
+            len: 4,
+        });
+        bytes.extend_from_slice(&v.to_le_bytes());
+    }
+
     let layout = encs
         .into_iter()
         .map(|e| {
             let offset = e.offset.min(cut);
             let len = total - e.offset;
             let present = cut.saturating_sub(e.offset).min(len);
+            let base = e.offset * 8;
             LayerLayout {
                 protocol: e.def.id.clone(),
                 offset,
@@ -697,10 +1062,11 @@ fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
                     .into_iter()
                     .map(|s| FieldLayout {
                         name: e.def.fields[s.def].name.clone(),
-                        bit_offset: e.offset * 8 + s.bit_off,
+                        bit_offset: base + s.bit_off,
                         bit_len: s.bits,
                         value: s.value,
                         auto: s.computed,
+                        children: clip(shift(s.children, base), cut * 8),
                     })
                     .filter(|f| f.bit_offset + f.bit_len <= cut * 8)
                     .collect(),
@@ -711,7 +1077,19 @@ fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
         bytes,
         layout,
         diagnostics: diags,
+        trailers,
     })
+}
+
+/// Drops layouts that do not fit completely before bit `end`.
+fn clip(v: Vec<FieldLayout>, end: usize) -> Vec<FieldLayout> {
+    v.into_iter()
+        .filter(|f| f.bit_offset + f.bit_len <= end)
+        .map(|mut f| {
+            f.children = clip(std::mem::take(&mut f.children), end);
+            f
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -748,13 +1126,7 @@ mod tests {
             FieldDef::new("src", FieldType::Ipv4),
             FieldDef::new("dst", FieldType::Ipv4),
         ];
-        outer.next = Some(Binding {
-            field: "proto".into(),
-            table: vec![BindingEntry {
-                value: 17,
-                protocol: "inner".into(),
-            }],
-        });
+        outer.next = Some(Binding::new("proto", vec![BindingEntry::new(17, "inner")]));
         outer.pseudo_header = Some(PseudoHeader {
             src: "src".into(),
             dst: "dst".into(),
@@ -787,15 +1159,13 @@ mod tests {
     }
 
     fn packet() -> Packet {
-        Packet {
-            layers: vec![
-                Layer::new("outer")
-                    .with("src", Ipv4Addr::new(10, 0, 0, 1))
-                    .with("dst", Ipv4Addr::new(10, 0, 0, 2)),
-                Layer::new("inner"),
-                Layer::new("raw").with("data", vec![1u8, 2, 3]),
-            ],
-        }
+        Packet::from_layers(vec![
+            Layer::new("outer")
+                .with("src", Ipv4Addr::new(10, 0, 0, 1))
+                .with("dst", Ipv4Addr::new(10, 0, 0, 2)),
+            Layer::new("inner"),
+            Layer::new("raw").with("data", vec![1u8, 2, 3]),
+        ])
     }
 
     #[test]
@@ -843,9 +1213,7 @@ mod tests {
 
     #[test]
     fn missing_pseudo_header_is_a_warning() {
-        let p = Packet {
-            layers: vec![Layer::new("inner")],
-        };
+        let p = Packet::from_layers(vec![Layer::new("inner")]);
         let built = p.build(&defs()).unwrap();
         assert_eq!(built.diagnostics[0].key, keys::NO_PSEUDO_HEADER);
         assert_eq!(built.bytes[..2], [0, 4]);
@@ -863,30 +1231,22 @@ mod tests {
         assert_eq!(built.layout[2].len, 0);
         assert_eq!(built.diagnostics[0].key, keys::TRUNCATED);
 
-        let p = Packet {
-            layers: vec![Layer::new("nope")],
-        };
+        let p = Packet::from_layers(vec![Layer::new("nope")]);
         assert!(matches!(
             p.build(&defs()),
             Err(CoreError::UnknownProtocol(_))
         ));
-        let p = Packet {
-            layers: vec![Layer::new("inner").with("bogus", 1u8)],
-        };
+        let p = Packet::from_layers(vec![Layer::new("inner").with("bogus", 1u8)]);
         assert!(matches!(
             p.build(&defs()),
             Err(CoreError::UnknownField { .. })
         ));
-        let p = Packet {
-            layers: vec![Layer::new("outer").with("ver", 16u8)],
-        };
+        let p = Packet::from_layers(vec![Layer::new("outer").with("ver", 16u8)]);
         assert!(matches!(
             p.build(&defs()),
             Err(CoreError::InvalidValue { .. })
         ));
-        let p = Packet {
-            layers: vec![Layer::new("outer").with("src", 1u8)],
-        };
+        let p = Packet::from_layers(vec![Layer::new("outer").with("src", 1u8)]);
         assert!(matches!(
             p.build(&defs()),
             Err(CoreError::InvalidValue { .. })
@@ -902,5 +1262,52 @@ mod tests {
             .diagnostics
             .iter()
             .any(|d| d.key == keys::AUTO_OVERFLOW && d.level == DiagLevel::Error));
+    }
+
+    #[test]
+    fn fletcher_and_crc_checksum_fields() {
+        let mut p = ProtocolDef::new("osi", "OSI-like", ProtocolLayer::L3);
+        p.fields = vec![
+            FieldDef::new("a", FieldType::UInt { bits: 16 }).with_default(FieldValue::UInt(0x8101)),
+            FieldDef::new("ck", FieldType::UInt { bits: 16 }).with_auto(AutoCompute::Checksum {
+                algorithm: ChecksumKind::Fletcher,
+                covers: ChecksumCoverage::Header,
+                nonzero: false,
+            }),
+            FieldDef::new("b", FieldType::UInt { bits: 32 })
+                .with_default(FieldValue::UInt(0x1234_5678)),
+            FieldDef::new("crc", FieldType::UInt { bits: 32 }).with_auto(AutoCompute::Checksum {
+                algorithm: ChecksumKind::Crc32c,
+                covers: ChecksumCoverage::HeaderAndPayload,
+                nonzero: false,
+            }),
+        ];
+        p.validate().unwrap();
+        let defs = vec![p];
+        let built = Packet::from_layers(vec![
+            Layer::new("osi"),
+            Layer::new("raw").with("data", b"123456789".to_vec()),
+        ])
+        .build(&defs)
+        .unwrap();
+        let b = &built.bytes;
+        // CRC-32C over everything with the field zeroed, least significant octet first.
+        let mut z = b.clone();
+        z[8..12].fill(0);
+        assert_eq!(&b[8..12], &crc32c(&z).to_le_bytes());
+        // Checksums of one layer are filled in field order: the Fletcher sum saw the
+        // CRC field still zero, and verifies (C0 = C1 = 0) over those octets.
+        let (mut c0, mut c1) = (0u32, 0u32);
+        for x in &z[..12] {
+            c0 = (c0 + u32::from(*x)) % 255;
+            c1 = (c1 + c0) % 255;
+        }
+        assert_eq!((c0, c1), (0, 0));
+        assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+
+        // A 16-bit CRC field is rejected by validation.
+        let mut bad = defs[0].clone();
+        bad.fields[3].ty = FieldType::UInt { bits: 16 };
+        assert!(bad.validate().is_err());
     }
 }

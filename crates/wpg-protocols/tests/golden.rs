@@ -6,7 +6,7 @@
 use std::net::Ipv4Addr;
 
 use wpg_core::diag::keys;
-use wpg_core::{parse, DiagLevel, FieldValue, Layer, Packet};
+use wpg_core::{parse, DiagLevel, FieldValue, Layer, Packet, TlvItem, TrailerKind, TrailerLayout};
 use wpg_protocols::catalog;
 
 fn hex(s: &str) -> Vec<u8> {
@@ -43,20 +43,18 @@ fn eth() -> Layer {
 }
 
 fn eth_ipv4_udp() -> Packet {
-    Packet {
-        layers: vec![
-            eth(),
-            Layer::new("ipv4")
-                .with("identification", 0x1234u16)
-                .with("flags", 0b010u8)
-                .with("src", Ipv4Addr::new(10, 0, 0, 1))
-                .with("dst", Ipv4Addr::new(10, 0, 0, 2)),
-            Layer::new("udp")
-                .with("src_port", 1234u16)
-                .with("dst_port", 5678u16),
-            Layer::new("raw").with("data", b"hello".to_vec()),
-        ],
-    }
+    Packet::from_layers(vec![
+        eth(),
+        Layer::new("ipv4")
+            .with("identification", 0x1234u16)
+            .with("flags", 0b010u8)
+            .with("src", Ipv4Addr::new(10, 0, 0, 1))
+            .with("dst", Ipv4Addr::new(10, 0, 0, 2)),
+        Layer::new("udp")
+            .with("src_port", 1234u16)
+            .with("dst_port", 5678u16),
+        Layer::new("raw").with("data", b"hello".to_vec()),
+    ])
 }
 
 const ETH_IPV4_UDP: &str = "00112233445566778899aabb0800\
@@ -65,23 +63,24 @@ const ETH_IPV4_UDP: &str = "00112233445566778899aabb0800\
     68656c6c6f";
 
 fn eth_vlan_ipv4_tcp() -> Packet {
-    Packet {
-        layers: vec![
-            eth(),
-            Layer::new("dot1q").with("pcp", 5u8).with("vid", 100u16),
-            Layer::new("ipv4")
-                .with("identification", 1u16)
-                .with("ttl", 128u8)
-                .with("src", Ipv4Addr::new(192, 168, 1, 10))
-                .with("dst", Ipv4Addr::new(198, 51, 100, 7)),
-            Layer::new("tcp")
-                .with("src_port", 40000u16)
-                .with("dst_port", 443u16)
-                .with("seq", 0x0102_0304u32)
-                .with("window", 64240u16)
-                .with("options", vec![0x02, 0x04, 0x05, 0xb4]),
-        ],
-    }
+    Packet::from_layers(vec![
+        eth(),
+        Layer::new("dot1q").with("pcp", 5u8).with("vid", 100u16),
+        Layer::new("ipv4")
+            .with("identification", 1u16)
+            .with("ttl", 128u8)
+            .with("src", Ipv4Addr::new(192, 168, 1, 10))
+            .with("dst", Ipv4Addr::new(198, 51, 100, 7)),
+        Layer::new("tcp")
+            .with("src_port", 40000u16)
+            .with("dst_port", 443u16)
+            .with("seq", 0x0102_0304u32)
+            .with("window", 64240u16)
+            .with(
+                "options",
+                vec![TlvItem::named("mss").with("value", 1460u16)],
+            ),
+    ])
 }
 
 const ETH_VLAN_IPV4_TCP: &str = "00112233445566778899aabb8100\
@@ -92,14 +91,28 @@ const ETH_VLAN_IPV4_TCP: &str = "00112233445566778899aabb8100\
 #[test]
 fn golden_ethernet_ipv4_udp() {
     let built = eth_ipv4_udp().build(catalog()).unwrap();
-    assert_eq!(built.bytes, hex(ETH_IPV4_UDP));
+    // 47 octets of headers + payload, zero padded to the 60-octet minimum frame.
+    let mut want = hex(ETH_IPV4_UDP);
+    want.resize(60, 0);
+    assert_eq!(built.bytes, want);
     assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    assert_eq!(
+        built.trailers,
+        [TrailerLayout {
+            kind: TrailerKind::Padding,
+            offset: 47,
+            len: 13
+        }]
+    );
+    let unpadded = eth_ipv4_udp().unpadded().build(catalog()).unwrap();
+    assert_eq!(unpadded.bytes, hex(ETH_IPV4_UDP));
+    assert!(unpadded.trailers.is_empty());
 
     let b = &built.bytes;
     assert!(verifies(&b[14..34]), "IPv4 header checksum");
     let mut ph = b[26..34].to_vec(); // src + dst
     ph.extend_from_slice(&[0, 17, 0, 13]);
-    ph.extend_from_slice(&b[34..]);
+    ph.extend_from_slice(&b[34..47]);
     assert!(verifies(&ph), "UDP checksum with pseudo header");
 
     // Layout: auto flags and bit positions of packed fields.
@@ -155,7 +168,21 @@ fn parse_golden_vectors_roundtrip() {
     }
     let parsed = parse(&hex(ETH_VLAN_IPV4_TCP), "ethernet2", catalog()).unwrap();
     let tcp = &parsed.packet.layers[3].fields;
-    assert_eq!(tcp["options"], FieldValue::Bytes(vec![2, 4, 5, 0xb4]));
+    assert_eq!(
+        tcp["options"],
+        FieldValue::Tlv(vec![TlvItem {
+            ty: Some(2),
+            ..TlvItem::named("mss").with("value", 1460u16)
+        }])
+    );
+    // The padded frame parses back to the same layers with `pad_to_min`.
+    let padded = eth_ipv4_udp().build(catalog()).unwrap().bytes;
+    let parsed = parse(&padded, "ethernet2", catalog()).unwrap();
+    assert_eq!(parsed.packet.layers.len(), 4);
+    assert!(parsed.packet.pad_to_min);
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    assert_eq!(parsed.trailers.len(), 1);
+    assert_eq!(parsed.packet.build(catalog()).unwrap().bytes, padded);
     assert_eq!(tcp["data_offset"], FieldValue::UInt(6));
 }
 
@@ -247,18 +274,18 @@ fn constraint_diagnostics() {
 
 #[test]
 fn next_protocol_defaults_and_raw_payload() {
-    let p = Packet {
-        layers: vec![eth(), Layer::new("raw").with("data", vec![0xde, 0xad])],
-    };
+    let p = Packet::from_layers(vec![
+        eth(),
+        Layer::new("raw").with("data", vec![0xde, 0xad]),
+    ])
+    .unpadded();
     let built = p.build(catalog()).unwrap();
     assert_eq!(&built.bytes[12..14], &[0x88, 0xb5], "default EtherType");
     let parsed = parse(&built.bytes, "ethernet2", catalog()).unwrap();
     assert_eq!(parsed.packet, {
         let mut e = eth().with("ethertype", 0x88b5u16);
         e.truncate = None;
-        Packet {
-            layers: vec![e, Layer::new("raw").with("data", vec![0xde, 0xad])],
-        }
+        Packet::from_layers(vec![e, Layer::new("raw").with("data", vec![0xde, 0xad])]).unpadded()
     });
 }
 
@@ -280,7 +307,7 @@ fn truncated_frames_parse_with_errors() {
     }
 
     // Deliberate truncation through the builder.
-    let mut p = eth_vlan_ipv4_tcp();
+    let mut p = eth_vlan_ipv4_tcp().unpadded();
     p.layers[3].truncate = Some(10);
     let built = p.build(catalog()).unwrap();
     assert_eq!(built.bytes, &full[..38 + 10]);

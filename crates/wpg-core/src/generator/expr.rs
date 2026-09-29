@@ -326,36 +326,7 @@ impl Parser {
     }
 }
 
-const CRC_TABLE: [u32; 256] = {
-    let mut t = [0u32; 256];
-    let mut i = 0;
-    while i < 256 {
-        #[allow(clippy::cast_possible_truncation)]
-        let mut c = i as u32;
-        let mut k = 0;
-        while k < 8 {
-            c = if c & 1 != 0 {
-                0xEDB8_8320 ^ (c >> 1)
-            } else {
-                c >> 1
-            };
-            k += 1;
-        }
-        t[i] = c;
-        i += 1;
-    }
-    t
-};
-
-/// CRC-32 (IEEE 802.3, as used by Ethernet FCS / zlib) of `data`.
-#[must_use]
-pub fn crc32(data: &[u8]) -> u32 {
-    let mut c = 0xFFFF_FFFFu32;
-    for b in data {
-        c = CRC_TABLE[usize::from((c as u8) ^ *b)] ^ (c >> 8);
-    }
-    !c
-}
+pub use crate::checksum::crc32;
 
 /// FNV-1a 64-bit hash of `data`.
 #[must_use]

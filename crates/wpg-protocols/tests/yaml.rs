@@ -41,7 +41,34 @@ next:
     - { value: 0x86dd, protocol: ipv6 }
     - { value: 0x0806, protocol: arp }
     - { value: 0x8100, protocol: dot1q }
+    - { value: 0x88a8, protocol: dot1ad }
+    - { value: 0, max: 0x5ff, protocol: dot3, reparse: true }
+min_frame_len: 60
 ";
+
+/// A TLV field in YAML: the IPv4 options of `wpg_protocols::l3::ipv4_options`.
+const IPV4_OPTIONS_YAML: &str = r"
+kind: tlv
+type_bits: 8
+len_bits: 8
+len_includes_header: true
+variants:
+  - { type_value: 0, name: eol, type_only: true }
+  - { type_value: 1, name: nop, type_only: true }
+  - type_value: 148
+    name: router_alert
+    fields:
+      - { name: value, type: { kind: uint, bits: 16 } }
+length: { kind: from_field, field: ihl, unit: 4, adjust: -20 }
+";
+
+#[test]
+fn tlv_field_type_from_yaml() {
+    let de = serde_yaml::Deserializer::from_str(IPV4_OPTIONS_YAML);
+    let ty: wpg_core::FieldType =
+        serde_yaml::with::singleton_map_recursive::deserialize(de).unwrap();
+    assert_eq!(ty, wpg_protocols::l3::ipv4_options());
+}
 
 #[test]
 fn ethernet2_macro_equals_yaml() {

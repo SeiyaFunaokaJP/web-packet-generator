@@ -44,12 +44,10 @@ fn assert_roundtrip(bytes: &[u8], first: &str, protos: &[&str]) {
 const ICMP4_ECHO: &str = "08005435123400016162636465666768";
 
 fn echo4() -> Packet {
-    Packet {
-        layers: vec![
-            Layer::new("icmpv4").with("rest", vec![0x12u8, 0x34, 0x00, 0x01]),
-            Layer::new("raw").with("data", b"abcdefgh".to_vec()),
-        ],
-    }
+    Packet::from_layers(vec![
+        Layer::new("icmpv4").with("rest", vec![0x12u8, 0x34, 0x00, 0x01]),
+        Layer::new("raw").with("data", b"abcdefgh".to_vec()),
+    ])
 }
 
 #[test]
@@ -83,9 +81,7 @@ fn icmpv4_in_ipv4_roundtrip() {
 
 #[test]
 fn icmpv4_unknown_type_warns() {
-    let p = Packet {
-        layers: vec![Layer::new("icmpv4").with("type", 200u8)],
-    };
+    let p = Packet::from_layers(vec![Layer::new("icmpv4").with("type", 200u8)]);
     let b = p.build(catalog()).unwrap();
     assert!(b.diagnostics.iter().any(|d| d.level == DiagLevel::Warning));
 }
@@ -93,18 +89,16 @@ fn icmpv4_unknown_type_warns() {
 const IPV6_NS: &str = "6000000000203aff20010db8000000000000000000000001ff0200000000000000000001ff0000018700b39500000000fe800000000000000000000000000001010166778899aabb";
 
 fn ns_packet() -> Packet {
-    Packet {
-        layers: vec![
-            Layer::new("ipv6")
-                .with("hop_limit", 255u8)
-                .with("src", a("2001:db8::1"))
-                .with("dst", a("ff02::1:ff00:1")),
-            Layer::new("icmpv6"),
-            Layer::new("ndp_ns")
-                .with("target", a("fe80::1"))
-                .with("options", vec![1u8, 1, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb]),
-        ],
-    }
+    Packet::from_layers(vec![
+        Layer::new("ipv6")
+            .with("hop_limit", 255u8)
+            .with("src", a("2001:db8::1"))
+            .with("dst", a("ff02::1:ff00:1")),
+        Layer::new("icmpv6"),
+        Layer::new("ndp_ns")
+            .with("target", a("fe80::1"))
+            .with("options", vec![1u8, 1, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb]),
+    ])
 }
 
 #[test]
@@ -126,16 +120,14 @@ fn golden_icmpv6_neighbor_solicitation() {
 
 #[test]
 fn icmpv6_echo_and_other_ndp_messages() {
-    let echo = Packet {
-        layers: vec![
-            Layer::new("ipv6"),
-            Layer::new("icmpv6"),
-            Layer::new("icmpv6_echo")
-                .with("identifier", 7u16)
-                .with("sequence", 9u16),
-            Layer::new("raw").with("data", b"ping".to_vec()),
-        ],
-    };
+    let echo = Packet::from_layers(vec![
+        Layer::new("ipv6"),
+        Layer::new("icmpv6"),
+        Layer::new("icmpv6_echo")
+            .with("identifier", 7u16)
+            .with("sequence", 9u16),
+        Layer::new("raw").with("data", b"ping".to_vec()),
+    ]);
     let b = echo.build(catalog()).unwrap();
     assert!(b.diagnostics.is_empty(), "{:?}", b.diagnostics);
     assert_eq!(b.bytes[40], 128);
@@ -147,9 +139,11 @@ fn icmpv6_echo_and_other_ndp_messages() {
         ("ndp_na", 136, 20),
         ("ndp_redirect", 137, 36),
     ] {
-        let p = Packet {
-            layers: vec![Layer::new("ipv6"), Layer::new("icmpv6"), Layer::new(body)],
-        };
+        let p = Packet::from_layers(vec![
+            Layer::new("ipv6"),
+            Layer::new("icmpv6"),
+            Layer::new(body),
+        ]);
         let b = p.build(catalog()).unwrap();
         assert!(b.diagnostics.is_empty(), "{body}: {:?}", b.diagnostics);
         assert_eq!(b.bytes[40], ty, "{body}");
@@ -160,16 +154,14 @@ fn icmpv6_echo_and_other_ndp_messages() {
 
 #[test]
 fn ndp_na_flags_pack_into_first_word() {
-    let p = Packet {
-        layers: vec![
-            Layer::new("ipv6"),
-            Layer::new("icmpv6"),
-            Layer::new("ndp_na")
-                .with("r", 1u8)
-                .with("s", 0u8)
-                .with("o", 1u8),
-        ],
-    };
+    let p = Packet::from_layers(vec![
+        Layer::new("ipv6"),
+        Layer::new("icmpv6"),
+        Layer::new("ndp_na")
+            .with("r", 1u8)
+            .with("s", 0u8)
+            .with("o", 1u8),
+    ]);
     let b = p.build(catalog()).unwrap();
     assert_eq!(b.bytes[44], 0b1010_0000);
 }

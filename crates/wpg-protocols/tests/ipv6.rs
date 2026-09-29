@@ -65,33 +65,29 @@ fn ip6(extra_fields: impl FnOnce(Layer) -> Layer) -> Layer {
 }
 
 fn udp_packet() -> Packet {
-    Packet {
-        layers: vec![
-            eth(),
-            ip6(|l| {
-                l.with("dscp", 0x2eu8)
-                    .with("ecn", 0u8)
-                    .with("flow_label", 0x12345u32)
-            }),
-            udp(),
-            payload(),
-        ],
-    }
+    Packet::from_layers(vec![
+        eth(),
+        ip6(|l| {
+            l.with("dscp", 0x2eu8)
+                .with("ecn", 0u8)
+                .with("flow_label", 0x12345u32)
+        }),
+        udp(),
+        payload(),
+    ])
 }
 
 fn chain_packet() -> Packet {
-    Packet {
-        layers: vec![
-            eth(),
-            ip6(|l| l),
-            Layer::new("ipv6_hopopts"),
-            Layer::new("ipv6_frag")
-                .with("m", 1u8)
-                .with("identification", 0xdead_beefu32),
-            udp(),
-            payload(),
-        ],
-    }
+    Packet::from_layers(vec![
+        eth(),
+        ip6(|l| l),
+        Layer::new("ipv6_hopopts"),
+        Layer::new("ipv6_frag")
+            .with("m", 1u8)
+            .with("identification", 0xdead_beefu32),
+        udp(),
+        payload(),
+    ])
 }
 
 #[test]
@@ -142,13 +138,11 @@ fn golden_ipv6_hopopts_frag_udp() {
 
 #[test]
 fn hdr_ext_len_grows_with_options() {
-    let p = Packet {
-        layers: vec![
-            ip6(|l| l),
-            Layer::new("ipv6_dstopts").with("options", vec![1u8; 14]),
-            udp(),
-        ],
-    };
+    let p = Packet::from_layers(vec![
+        ip6(|l| l),
+        Layer::new("ipv6_dstopts").with("options", vec![1u8; 14]),
+        udp(),
+    ]);
     let b = p.build(catalog()).unwrap();
     assert_clean(&b.diagnostics);
     // 2 + 14 = 16 octets -> hdr_ext_len 1.
@@ -156,13 +150,11 @@ fn hdr_ext_len_grows_with_options() {
     assert_eq!(b.bytes[41], 1);
     assert_eq!(b.layout[1].header_len, 16);
     // Unaligned options are zero padded.
-    let p = Packet {
-        layers: vec![
-            ip6(|l| l),
-            Layer::new("ipv6_dstopts").with("options", vec![1u8, 1, 0]),
-            udp(),
-        ],
-    };
+    let p = Packet::from_layers(vec![
+        ip6(|l| l),
+        Layer::new("ipv6_dstopts").with("options", vec![1u8, 1, 0]),
+        udp(),
+    ]);
     let b = p.build(catalog()).unwrap();
     assert_eq!(b.layout[1].header_len, 8);
     assert_eq!(b.bytes[41], 0);
@@ -170,9 +162,7 @@ fn hdr_ext_len_grows_with_options() {
 
 #[test]
 fn routing_header_defaults() {
-    let p = Packet {
-        layers: vec![ip6(|l| l), Layer::new("ipv6_route"), udp()],
-    };
+    let p = Packet::from_layers(vec![ip6(|l| l), Layer::new("ipv6_route"), udp()]);
     let b = p.build(catalog()).unwrap();
     assert_clean(&b.diagnostics);
     assert_eq!(b.bytes[6], 43);
@@ -185,14 +175,10 @@ fn routing_header_defaults() {
 
 #[test]
 fn ipv6_in_ipv6_and_ipv4_binding() {
-    let p = Packet {
-        layers: vec![ip6(|l| l), Layer::new("ipv6"), udp()],
-    };
+    let p = Packet::from_layers(vec![ip6(|l| l), Layer::new("ipv6"), udp()]);
     let b = p.build(catalog()).unwrap();
     assert_eq!(b.bytes[6], 41);
-    let p = Packet {
-        layers: vec![Layer::new("ipv4"), ip6(|l| l), udp()],
-    };
+    let p = Packet::from_layers(vec![Layer::new("ipv4"), ip6(|l| l), udp()]);
     assert_eq!(p.build(catalog()).unwrap().bytes[9], 41);
 }
 
@@ -288,7 +274,7 @@ proptest! {
         if !data.is_empty() {
             layers.push(Layer::new("raw").with("data", data));
         }
-        let p = Packet { layers };
+        let p = Packet::from_layers(layers);
         let built = p.build(catalog()).unwrap();
         prop_assert!(!built.diagnostics.iter().any(|d| d.level == DiagLevel::Error), "{:?}", built.diagnostics);
         let parsed = parse(&built.bytes, "ethernet2", catalog()).unwrap();

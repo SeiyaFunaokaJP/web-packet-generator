@@ -15,16 +15,13 @@ fn next_header_binding() -> Binding {
         (58, "icmpv6"),
         (60, "ipv6_dstopts"),
     ];
-    Binding {
-        field: "next_header".into(),
-        table: table
+    Binding::new(
+        "next_header",
+        table
             .iter()
-            .map(|(value, p)| BindingEntry {
-                value: *value,
-                protocol: (*p).into(),
-            })
+            .map(|(value, p)| BindingEntry::new(*value, *p))
             .collect(),
-    }
+    )
 }
 
 /// IPv6 fixed header (40 octets).

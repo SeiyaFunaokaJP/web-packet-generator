@@ -94,7 +94,53 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ("tcp.flags.syn", "1"),
                 ("tcp.flags.ack", "0"),
                 ("tcp.dstport", "80"),
-                ("tcp.hdr_len", "20"),
+                ("tcp.hdr_len", "40"),
+                ("tcp.options.mss_val", "1460"),
+                ("tcp.options.wscale.shift", "7"),
+                ("tcp.options.timestamp.tsval", "1"),
+                ("tcp.options.timestamp.tsecr", "0"),
+            ],
+        ),
+        (
+            "eth_qinq_ipv4_udp",
+            vec![
+                ("eth.type", "0x88a8"),
+                ("ieee8021ad.id", "100"),
+                ("ieee8021ad.priority", "3"),
+                ("vlan.id", "200"),
+                ("udp.dstport", "4001"),
+                ("ip.dst", "10.1.0.2"),
+            ],
+        ),
+        (
+            "dot3_llc_snap_ipv4_udp",
+            vec![
+                ("eth.len", "40"),
+                ("llc.dsap", "0xaa"),
+                ("llc.ssap", "0xaa"),
+                ("llc.control", "0x0003"),
+                ("llc.type", "0x0800"),
+                ("ip.dst", "10.2.0.2"),
+                ("udp.dstport", "33001"),
+            ],
+        ),
+        (
+            "eth_ipv4_ra_udp",
+            vec![
+                ("ip.hdr_len", "24"),
+                ("ip.opt.type", "148"),
+                ("ip.opt.ra", "0"),
+                ("udp.dstport", "6001"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_counter",
+            vec![
+                ("udp.length", "24"),
+                (
+                    "data.data",
+                    "77:70:67:2d:00:00:00:00:01:02:03:04:00:00:00:00",
+                ),
             ],
         ),
     ]

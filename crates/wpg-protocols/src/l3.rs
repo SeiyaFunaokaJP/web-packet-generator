@@ -1,8 +1,36 @@
 //! Layer 3 protocol definitions.
 
-use wpg_core::{protocol, ProtocolDef};
+use wpg_core::{protocol, FieldDef, FieldType, Length, ProtocolDef, TlvDef, TlvVariant};
 
-/// IPv4 (RFC 791) with options as raw octets.
+/// IPv4 options (RFC 791): EOL (0), NOP (1) and Router Alert (148, RFC 2113) are
+/// typed; other options keep their value octets (`data`). The option length counts
+/// the type and length octets. The region is `ihl * 4 - 20` octets.
+#[must_use]
+pub fn ipv4_options() -> FieldType {
+    FieldType::Tlv(TlvDef {
+        type_bits: 8,
+        len_bits: 8,
+        len_includes_header: true,
+        len_unit: wpg_core::LengthUnit::Bytes,
+        variants: vec![
+            TlvVariant::type_only(0, "eol"),
+            TlvVariant::type_only(1, "nop"),
+            TlvVariant::new(
+                148,
+                "router_alert",
+                vec![FieldDef::new("value", FieldType::UInt { bits: 16 })],
+            ),
+        ],
+        unknown_as_raw: true,
+        length: Length::FromField {
+            field: "ihl".into(),
+            unit: 4,
+            adjust: -20,
+        },
+    })
+}
+
+/// IPv4 (RFC 791) with typed options ([`ipv4_options`]).
 ///
 /// Auto fields: `ihl` (header length in 32-bit words, including options and the
 /// automatic zero padding to a 4-octet boundary), `total_length`, `protocol`
@@ -42,7 +70,7 @@ pub fn ipv4() -> ProtocolDef {
             header_checksum: uint(16), auto = checksum(internet, header);
             src: ipv4 = [192, 0, 2, 1];
             dst: ipv4 = [192, 0, 2, 2];
-            options: bytes(from = ihl, unit = 4, adjust = -20);
+            options: ty(ipv4_options());
             padding: padding(4);
         },
         next: protocol {
