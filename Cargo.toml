@@ -9,6 +9,7 @@ members = [
     "crates/wpg-i18n",
     "crates/wpg-sys",
     "crates/wpg-server",
+    "crates/wpg-log",
     "crates/wpg-cli",
     "crates/wpg-web",
     "crates/wpg-testutil",
@@ -28,6 +29,7 @@ default-members = [
     "crates/wpg-i18n",
     "crates/wpg-sys",
     "crates/wpg-server",
+    "crates/wpg-log",
     "crates/wpg-cli",
 ]
 
@@ -53,6 +55,7 @@ wpg-i18n = { path = "crates/wpg-i18n", version = "0.1.0" }
 wpg-sys = { path = "crates/wpg-sys", version = "0.1.0" }
 wpg-server = { path = "crates/wpg-server", version = "0.1.0" }
 wpg-testutil = { path = "crates/wpg-testutil", version = "0.1.0" }
+wpg-log = { path = "crates/wpg-log", version = "0.1.0" }
 
 # --- shared third-party crates ---
 serde = { version = "1.0.228", features = ["derive"] }

@@ -16,6 +16,8 @@ serde_json.workspace = true
 serde_yaml.workspace = true
 thiserror.workspace = true
 indexmap = { version = "2", features = ["serde"] }
+# `.wpgbundle` archives (deflate only; no encryption / bzip2 / zstd).
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
 schemars = { version = "1", default-features = true, features = ["indexmap2"] }
 
 [dev-dependencies]

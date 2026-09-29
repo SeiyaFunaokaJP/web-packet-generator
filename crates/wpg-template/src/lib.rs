@@ -33,13 +33,23 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use wpg_core::Generator;
 
+pub mod bundle;
 mod compile;
+pub mod import;
 mod input;
 mod lint;
 mod pcapng;
+pub mod pcapread;
 pub mod render;
 
+pub use bundle::{
+    export_bundle, import_bundle, BundleError, BundleTemplate, ImportedBundle, Manifest,
+};
 pub use compile::{apply_overrides, compile, Compiled, VarOverrides};
+pub use import::{
+    import_capture, import_frames, import_hex, parse_hex, ImportError, ImportMode, ImportNote,
+    ImportOptions, ImportResult,
+};
 pub use input::{parse_text, FieldInput};
 pub use lint::{lint, LintIssue, LintLevel};
 pub use pcapng::PcapngWriter;

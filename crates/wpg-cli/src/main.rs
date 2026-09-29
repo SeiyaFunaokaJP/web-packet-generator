@@ -112,11 +112,27 @@ pub(crate) struct RenderArgs {
 /// Arguments of `wpg import`.
 #[derive(Debug, Args)]
 pub(crate) struct ImportArgs {
-    /// Input capture.
+    /// Input: a `.pcap` / `.pcapng` capture, a hex dump (`.hex`, see `--hex`) or `-`
+    /// for standard input.
     pub(crate) input: PathBuf,
-    /// Output template.
-    #[arg(short, long)]
-    pub(crate) output: PathBuf,
+    /// Output template (`-` prints YAML on standard output).
+    #[arg(short, long, required_unless_present = "per_packet")]
+    pub(crate) output: Option<PathBuf>,
+    /// Write one template per packet into this directory instead of one merged template.
+    #[arg(long, value_name = "DIR", conflicts_with = "output")]
+    pub(crate) per_packet: Option<PathBuf>,
+    /// Protocol the frames start with.
+    #[arg(long, default_value = "ethernet2", value_name = "PROTOCOL")]
+    pub(crate) first_protocol: String,
+    /// Read at most this many packets.
+    #[arg(long, value_name = "N")]
+    pub(crate) max_packets: Option<usize>,
+    /// Do not infer generators (range / list / random) from the packets.
+    #[arg(long)]
+    pub(crate) no_detect_generators: bool,
+    /// Treat the input as pasted hex (Wireshark hex stream, spaced bytes, hexdump).
+    #[arg(long)]
+    pub(crate) hex: bool,
 }
 
 /// Arguments of `wpg template`.
@@ -150,15 +166,31 @@ pub(crate) enum TemplateAction {
     },
     /// Print the JSON Schema of the template format.
     Schema,
-    /// Export templates (not implemented yet).
+    /// Pack templates (files or ids) into a `.wpgbundle` archive.
     Export {
-        /// Arguments.
-        args: Vec<String>,
+        /// Template files, or ids (file stem / name slug) looked up in `--dir`.
+        #[arg(required = true)]
+        templates: Vec<String>,
+        /// Output bundle.
+        #[arg(short, long)]
+        output: PathBuf,
+        /// Attach a capture (pcap / pcapng) or other file, repeatable.
+        #[arg(long, value_name = "FILE")]
+        attach: Vec<PathBuf>,
+        /// Template library used to resolve ids (default: `templates/`).
+        #[arg(long, value_name = "DIR")]
+        dir: Option<PathBuf>,
     },
-    /// Import templates (not implemented yet).
+    /// Extract the templates of a `.wpgbundle` archive into a directory.
     Import {
-        /// Arguments.
-        args: Vec<String>,
+        /// The bundle.
+        bundle: PathBuf,
+        /// Output directory.
+        #[arg(short, long)]
+        output: PathBuf,
+        /// Overwrite existing files.
+        #[arg(long)]
+        force: bool,
     },
 }
 
@@ -249,7 +281,7 @@ fn main() -> ExitCode {
         Command::Serve(args) => serve(args.bind),
         Command::Send(args) => cmd::send::run(args),
         Command::Render(args) => cmd::render::run(&args),
-        Command::Import(args) => cmd::import::run(args),
+        Command::Import(args) => cmd::import::run(&args),
         Command::Template(args) => cmd::template::run(args),
         Command::Ifaces(args) => cmd::ifaces::run(&args),
         Command::Doctor(args) => cmd::doctor::run(&args),

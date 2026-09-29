@@ -145,10 +145,37 @@ tx:
 ## 共有
 
 - 単体エクスポート: `.wpg.yaml`
-- 複数まとめ: `.wpgbundle` (zip: templates + README + 添付 pcap)
+- 複数まとめ: `.wpgbundle` (zip: templates + README + 添付 pcap、下記「バンドル」)
 - URL 共有 (サーバ内リンク)
 - Git 連携: テンプレートディレクトリを任意パスに置くだけで読み込む「ライブラリパス」を複数指定可能
 - 同梱ライブラリ: プロトコル別サンプル、代表シナリオ (「VLAN 越し ARP スイープ」「IS-IS L2 IIH フラッド」「DHCP Discover 大量」)
+
+## バンドル (`.wpgbundle`)
+
+zip (deflate) アーカイブ。エントリのタイムスタンプは固定で、同じ入力からは同じバイト列 (`created` を除く) になる。
+
+```text
+manifest.json             { "version": 1, "created": "<RFC 3339>",
+                            "templates": [{ "path", "id", "name" }], "attachments": ["attachments/x.pcapng"] }
+templates/<id>.wpg.yaml   テンプレート本体 (id は meta.name / ファイル名の slug、重複時は -2, -3 ...)
+attachments/<name>        任意の添付 (pcap / pcapng など。フラットなファイル名のみ)
+README.md                 生成される一覧 (情報用。読み込み時は無視)
+```
+
+- `wpg template export <files|ids…> -o x.wpgbundle [--attach cap.pcapng] [--dir templates/]`。id は「ファイル名 (拡張子除く)」または `meta.name` の slug で `--dir` から解決する。
+- `wpg template import x.wpgbundle -o DIR [--force]`。各テンプレートを lint し (エラーは終了コード 1、ファイルは書き出す)、既存ファイルは `--force` なしでは上書きしない。添付も `DIR` に展開する。
+- 読み込みは `manifest.json` の `version` が 1 を超えると拒否する。マニフェストが無くても `templates/*.wpg.yaml` を拾う。`..` / 絶対パス / `\` を含むエントリ名は拒否 (zip slip 対策)、1 エントリ 256 MiB 上限。
+- ライブラリ API: `wpg_template::{export_bundle, import_bundle}` (`bundle` モジュール)。
+
+## インポート (逆生成)
+
+`wpg import <in.pcap|.pcapng|.hex|-> -o out.wpg.yaml` / `--per-packet DIR`。API は `wpg_template::{import_capture, import_frames, import_hex}`。
+
+- 入力: pcap (LE/BE、µs/ns) と pcapng (SHB/IDB/EPB/SPB、複数セクション、`if_tsresol`)。リンク層は Ethernet のみ (それ以外はエラー)。FCS は付いていない前提。Hex は Wireshark の "Copy as Hex Stream"、空白区切り、`0x` 付き、オフセット付き hexdump / xxd (オフセットは 0 から連続、ASCII 列は捨てる)。
+- 各フレームを `wpg_core::parse` (`--first-protocol`、既定 `ethernet2`) で復号する。パーサは全フィールドを Manual にするが、インポータは Auto を持つフィールド (長さ・チェックサム・次プロトコル) を **外して再構築してもバイト列が一致する場合のみ** `auto` に戻す。壊れたチェックサムや長さは Manual のまま残る。値は人間表記 (`192.168.1.1`、`syn|ack`、列挙名、TLV は `mss: 1460` 形式)。
+- 生成したテンプレートが元のオクテットを再現できない場合はフレーム全体を `raw` レイヤに保存して警告する (`import-not-reproducible`)。
+- `Merge` (既定): 先頭パケットから **1 つ** のテンプレートを作り、`stream.count = パケット数`、`meta.description` に取り込み元を記す。`PerPacket`: パケットごとに `<prefix>-0001` ...。
+- ジェネレータ推定 (`Merge`、`--no-detect-generators` で無効): 全パケットのレイヤ構成が同一のときだけ動作し、固定長スカラ (整数 / enum / flags / MAC / IPv4 / IPv6) で値が変化するフィールドごとに、等差数列 → `range` (`step` 付き、厳密)、周期 16 以下の反復 → `list` (厳密)、異なる値が 16 以下 → `list` (近似)、それ以外 → 観測 min/max の `random` (近似)。近似の場合は警告する。可変長フィールド (payload など) と TLV/list は推定しない (先頭パケットの値が Manual で入る)。`random` を含む場合、先頭パケットのバイト列は元と一致しない。
 
 ## 検証
 
@@ -158,6 +185,6 @@ tx:
 
 - `layers` 内の入れ子表現 (トンネルの内側パケット、TLV/list の記述形式)。
 - `variables` の型システム (プロトコルのフィールド型と共通化するか) と、実行時オーバーライドの文法。
-- `.wpgbundle` 内のディレクトリ構造、マニフェストの有無、添付 pcap の参照方法。
+- 添付 pcap をテンプレートの `file` ジェネレータ等から参照する記法 (現状は同梱のみ)。
 - `wpg template migrate` コマンド (読み込み時変換は実装済み)。
 - Git ライブラリパスの競合 (同名テンプレート) の解決規則と、ホットリロードの検出方法。
