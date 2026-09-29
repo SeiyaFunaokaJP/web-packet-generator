@@ -387,29 +387,29 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] GUI 受信画面
 
 ### M10: デプロイ・配布・運用（2 週）
-- [x] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション
-- [x] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS
-- [x] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順
-- [x] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認
-- [x] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)
-- [x] アップグレード手順・テンプレマイグレーション
+- [ ] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション
+- [ ] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS
+- [ ] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順
+- [ ] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認
+- [ ] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)
+- [ ] アップグレード手順・テンプレマイグレーション
 
 ### M11: ドキュメント仕上げ（継続 + 2 週）
-- [x] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)
-- [x] プロトコルリファレンス自動生成 (定義 IR → Markdown)
-- [x] API / CLI / 設定 / テンプレスキーマ リファレンス
-- [x] DPDK / AF_XDP / CML2 セットアップガイド、性能チューニング
-- [x] 開発者ガイド (プロトコル追加、i18n 追加、リリース)
-- [x] FAQ / トラブルシュート、法的注意
-- [x] スクリーンショット・動画 GIF
+- [ ] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)
+- [ ] プロトコルリファレンス自動生成 (定義 IR → Markdown)
+- [ ] API / CLI / 設定 / テンプレスキーマ リファレンス
+- [ ] DPDK / AF_XDP / CML2 セットアップガイド、性能チューニング
+- [ ] 開発者ガイド (プロトコル追加、i18n 追加、リリース)
+- [ ] FAQ / トラブルシュート、法的注意
+- [ ] スクリーンショット・動画 GIF
 
 ### M12: v1.0 リリース判定
-- [x] P0 + P1 プロトコル全 golden pcap 緑、tshark 突合緑
-- [x] 3 OS でビルド・起動・pcap バックエンド送出確認
-- [x] Linux afpacket で 1 Mpps/core 以上 (参考値)、DPDK は環境依存のため参考記録
-- [x] GUI E2E 緑、i18n ja/en 抜け漏れ 0 (lint)
-- [x] `cargo audit` / `deny` クリーン
-- [x] ドキュメント ja/en 完備、CHANGELOG
+- [ ] P0 + P1 プロトコル全 golden pcap 緑、tshark 突合緑
+- [ ] 3 OS でビルド・起動・pcap バックエンド送出確認
+- [ ] Linux afpacket で 1 Mpps/core 以上 (参考値)、DPDK は環境依存のため参考記録
+- [ ] GUI E2E 緑、i18n ja/en 抜け漏れ 0 (lint)
+- [ ] `cargo audit` / `deny` クリーン
+- [ ] ドキュメント ja/en 完備、CHANGELOG
 
 ---
 
