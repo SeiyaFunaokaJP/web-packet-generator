@@ -79,7 +79,7 @@ web-packet-generator/
 |---|---|---|
 | Web サーバ | `axum` + `tokio` + `tower-http` | エコシステム最大、WS 対応、ミドルウェア豊富 |
 | API 定義 | `utoipa` (OpenAPI) | フロント/CLI/外部連携で型共有。Swagger UI 同梱 |
-| フロント | `leptos` (CSR) + Tailwind CSS | Rust 一貫、WASM。代替案: Dioxus。※ TS フレームワーク不採用は「Rust 製」要件優先のため |
+| フロント | `leptos` (CSR) + Tailwind CSS | Rust 一貫、WASM。※ TS フレームワーク不採用は「Rust 製」要件優先のため (§3 決定) |
 | D&D | HTML5 DnD API を Leptos で薄くラップ（自作） | 依存を減らす。必要なら `web-sys` 直叩き |
 | Hex 表示 | 自作コンポーネント（仮想スクロール） | 1500〜9000B の同期ハイライトが必要 |
 | 状態共有 | `wpg-core` を WASM でもビルド → ブラウザ側でプレビュー合成 | サーバ往復なしで即時プレビュー |
@@ -88,11 +88,11 @@ web-packet-generator/
 | 認証 | `argon2` + `tower-sessions`（Cookie） | パスワード 1 つ〜複数ユーザ。TLS は `rustls` オプション |
 | 静的資産埋め込み | `rust-embed` | 単一バイナリ配布 |
 | 送出 (共通) | `pcap` crate (libpcap / Npcap / BPF) | Windows・macOS の主経路 |
-| 送出 (Linux 高速) | `libc` 直叩き AF_PACKET TPACKET_V3 + `sendmmsg`、`xsk-rs` or 自作 AF_XDP | 依存を最小化しつつ Mpps 級 |
-| 送出 (最高速) | DPDK (`dpdk-sys` bindgen、feature = "dpdk") | ビルド任意。EAL 引数を設定ファイルから |
+| 送出 (Linux 高速) | `libc` 直叩き AF_PACKET TPACKET_V3 + `sendmmsg`、AF_XDP は `xsk-rs` | 依存を最小化しつつ Mpps 級 |
+| 送出 (最高速) | DPDK 24.11 LTS (自前 `dpdk-sys` bindgen、feature = "dpdk") | ビルド任意。EAL 引数を設定ファイルから |
 | ログ | `tracing` + `tracing-subscriber` | JSON ログ/ローテーション |
 | 設定 | `figment` or `config` (TOML + env + CLI) | `wpg.toml` |
-| DB | `sqlite` (`rusqlite` bundled) or ファイルベース | テンプレ/履歴/ユーザ。v1 はファイル + sqlite 併用 |
+| DB | テンプレ = YAML ファイル、履歴/ユーザ/セッション = SQLite (`rusqlite` bundled) | ハイブリッド (§3 決定) |
 | テスト | `cargo test`, `proptest`, golden pcap 比較, `tshark -V` による外部検証 (CI optional) | プロトコル正しさの担保 |
 | リリース | `cargo-dist` + GitHub Actions matrix | 3 OS バイナリ + checksums |
 
@@ -170,8 +170,8 @@ web-packet-generator/
 |---|---|---|---|
 | `pcap` (libpcap / Npcap / BPF) | Win / mac / Linux | 〜数十万 pps | 全 OS 共通のフォールバック。Npcap は WinPcap 互換モード要件を明記 |
 | `afpacket` (TPACKET_V3 mmap ring + `sendmmsg`) | Linux | 〜1–3 Mpps/core | CML2 上 Ubuntu (virtio) の主経路。CAP_NET_RAW |
-| `afxdp` | Linux 5.x+ | 〜数 Mpps/core | ドライバ対応要。zero-copy / copy モード自動 |
-| `dpdk` | Linux | 10 Mpps+ /core | `--features dpdk`。EAL 引数・hugepages・NIC バインド手順をドキュメント化。CML2 では virtio-net PMD |
+| `afxdp` | Linux 5.10+ | 〜数 Mpps/core | ドライバ対応要。zero-copy / copy モード自動 |
+| `dpdk` | Linux | 10 Mpps+ /core | `--features dpdk`、DPDK 24.11 LTS (23.11 も可)。EAL 引数・hugepages・NIC バインド手順をドキュメント化。CML2 では virtio-net PMD |
 | `pcapfile` | 全 | — | 送出せず pcapng に書き出す（ドライラン、共有、CI テスト） |
 | `loopback/null` | 全 | — | ベンチ・テスト用 |
 
@@ -257,21 +257,25 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - 運用: DPDK / AF_XDP セットアップ、CML2 での注意点 (virtio, promiscuous, MAC 制限)、性能チューニング
 - 開発者ガイド: crate 構成、プロトコル追加手順、i18n 追加手順、リリース手順
 - FAQ / トラブルシュート (`wpg doctor` 出力との対応表)
-- 法的注意: 検証環境以外での使用禁止の明記、ライセンス (Apache-2.0 or MIT / 要決定)
+- 法的注意: 検証環境以外での使用禁止の明記、ライセンス (MIT / Apache-2.0 デュアル)
 
 ---
 
-## 3. 未決事項 / 要判断（着手前に決めたい）
+## 3. 決定事項（2026-09-29 確定）
 
-- [ ] **ライセンス**: MIT / Apache-2.0 デュアル? (DPDK は BSD で問題なし)
-- [ ] **フロント**: Leptos (CSR) で確定するか。Dioxus も候補。→ 推奨: Leptos（エコシステムと SSR 将来性）
-- [ ] **DB**: sqlite 同梱 vs 完全ファイルベース。→ 推奨: テンプレはファイル (Git 親和性)、履歴/ユーザ/セッションは sqlite
-- [ ] **DPDK バインディング**: 自前 bindgen (`dpdk-sys`) vs 既存 crate。DPDK バージョン固定 (LTS 23.11 / 24.11)
-- [ ] **AF_XDP**: 自作 vs `xsk-rs`。カーネル最低要件 (5.4? 5.10?)
-- [ ] **Windows 高速化**: Npcap のみか、将来 Windows Packet Filter / XDP for Windows を視野に入れるか
-- [ ] **プロトコル定義の記述方式**: Rust マクロ (型安全・高速) vs YAML (ユーザ拡張容易)。→ 推奨: コアは Rust マクロ、ユーザ拡張は YAML → 同一 IR に落とすハイブリッド
-- [ ] **プロジェクト名 / バイナリ名**: `wpg` 仮置き
-- [ ] **最低対応 OS バージョン**: Win10 21H2+, macOS 12+, Ubuntu 20.04+ (glibc 2.31) 想定
+| 項目 | 決定 | 補足 |
+|---|---|---|
+| ライセンス | **MIT / Apache-2.0 デュアル** | Rust エコシステム標準。DPDK (BSD-3) / libpcap (BSD) / Npcap (利用規約: 再配布せず利用者がインストール) と競合なし。`LICENSE-MIT` / `LICENSE-APACHE` を同梱 |
+| フロントエンド | **Leptos (CSR) + Tailwind CSS** | WASM。将来 SSR/ハイドレーションへ移行可能な構成を維持 |
+| DB | **ハイブリッド**: テンプレはファイル (YAML)、履歴 / ユーザ / セッションは SQLite | `rusqlite` (bundled) で外部依存なし。テンプレは Git 管理しやすいディレクトリ配置 |
+| DPDK バインディング | **自前 bindgen (`dpdk-sys` crate を workspace 内に作成)** | 対象 DPDK **24.11 LTS** を第一、**23.11 LTS** も CI でビルド確認。`--features dpdk` でのみ有効 |
+| AF_XDP | **`xsk-rs` を採用、不足分は libc 直叩きで補完** | カーネル最低 **5.10** (Ubuntu 20.04 HWE / 22.04 以降)。zero-copy 非対応 NIC は copy モードへ自動フォールバック |
+| Windows 送出 | **Npcap のみ** | Windows は「GUI + 低〜中速送出」の位置づけ。WinPF / XDP for Windows は v1 スコープ外 |
+| プロトコル定義方式 | **ハイブリッド**: コア = Rust マクロ、ユーザ拡張 = YAML、どちらも同一 IR へ | IR から合成 / 解析 / GUI / ドキュメントを生成 |
+| 名称 | **wpg** (`web-packet-generator`)、バイナリ名 `wpg` | 設定ファイル `wpg.toml`、テンプレ拡張子 `.wpg.yaml`、バンドル `.wpgbundle` |
+| 最低対応 OS | **Windows 10 21H2+ / macOS 12+ / Ubuntu 20.04+ (glibc 2.31)** | Linux は他ディストリも glibc 2.31 以上なら動作想定。musl 静的ビルドは P2 で検討 |
+
+> 変更が必要になった場合は `docs/adr/` に ADR を追加して上書きする（M0 で ADR 化）。
 
 ---
 
@@ -279,13 +283,14 @@ wpg bench   [--backend ...]                                # 送出性能計測
 
 ### M0: プロジェクト基盤（1–2 週）
 - [ ] Cargo workspace 作成、crate 雛形 (`wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-template`, `wpg-server`, `wpg-cli`, `wpg-web`)
-- [ ] `rust-toolchain.toml`、`rustfmt.toml`、`clippy` 設定、`deny.toml`
+- [ ] `Cargo.toml` の `license = "MIT OR Apache-2.0"`、`rust-toolchain.toml`、`rustfmt.toml`、`clippy` 設定、`deny.toml`
 - [ ] `justfile` + `scripts/build.sh|ps1`、`scripts/run.sh|ps1` の骨格
 - [ ] GitHub Actions: fmt / clippy / test (Linux, macOS, Windows matrix)、`cargo audit`
-- [ ] ライセンス・`README.md`（ja/en）・`CONTRIBUTING.md`・`CODE_OF_CONDUCT.md`
+- [x] ライセンス (`LICENSE-MIT` / `LICENSE-APACHE`)
+- [ ] `README.md`（ja/en）・`CONTRIBUTING.md`・`CODE_OF_CONDUCT.md`
 - [ ] mdBook 雛形 (ja/en 切替)、`docs/spec/` に本ファイルの詳細版を分割開始
 - [ ] i18n 基盤 (Fluent) を server / web 両方に導入、`locales/ja`, `locales/en`
-- [ ] 未決事項 (§3) の決定を記録 (`docs/adr/` に ADR 形式)
+- [ ] 決定事項 (§3) を `docs/adr/0001`〜`0009` として ADR 化
 
 ### M1: コアエンジン MVP（3–4 週）
 - [ ] フィールド型システム & プロトコル定義 IR (`wpg-core`)
@@ -368,7 +373,8 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] 実機 (or CML2 上 IOS-XR / Junos / FRR) との相互接続確認シナリオをドキュメント化
 
 ### M8: 高速バックエンド（3–5 週）
-- [ ] AF_XDP バックエンド (copy / zero-copy 自動)、対応 NIC 一覧
+- [ ] AF_XDP バックエンド (`xsk-rs`、copy / zero-copy 自動、kernel 5.10+)、対応 NIC 一覧
+- [ ] `dpdk-sys` crate (bindgen、DPDK 24.11 / 23.11 LTS)
 - [ ] DPDK バックエンド (`--features dpdk`)、EAL 設定、hugepages / `dpdk-devbind` 手順、virtio PMD (CML2)
 - [ ] マルチキュー・マルチコア送出、NUMA 配慮
 - [ ] レート制御精度の改善 (busy-poll、TSC)
