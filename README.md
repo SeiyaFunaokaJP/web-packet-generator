@@ -1,0 +1,137 @@
+# wpg — web-packet-generator
+
+**English** | [日本語](README.ja.md)
+
+[![CI](https://github.com/SeiyaFunaokaJP/web-packet-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/SeiyaFunaokaJP/web-packet-generator/actions/workflows/ci.yml)
+[![Security audit](https://github.com/SeiyaFunaokaJP/web-packet-generator/actions/workflows/audit.yml/badge.svg)](https://github.com/SeiyaFunaokaJP/web-packet-generator/actions/workflows/audit.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+
+A high-performance, browser-driven packet generator for network verification, written entirely in Rust
+(backend, packet engine and the WASM frontend). Build arbitrary packets in a GUI and send them at very
+high rates to test network devices and topologies.
+
+> **Status: early development (milestone M0, project foundation).** Nothing described below is
+> guaranteed to work yet. See [TODO.md](TODO.md) for the roadmap.
+
+## What is wpg?
+
+wpg lets network engineers, test engineers, lab users (CML2, EVE-NG, ...) and protocol implementers
+assemble packets layer by layer in a web GUI, and transmit them with a fast backend. The binary is named
+`wpg`; the web frontend is embedded in it, so a single executable is all you need.
+
+What sets it apart:
+
+1. **Deep protocol support**, including OSI-family protocols such as IS-IS and CLNP.
+2. **Fast transmission** through AF_PACKET, AF_XDP and DPDK.
+3. **GUI plus shareable templates**, so anyone can reproduce a test.
+
+Non-goals for v1: a full capture/analysis tool (this is not a Wireshark replacement), stateful sessions
+such as full TCP handshakes, and optimisation for attack tooling.
+
+## Key features (planned)
+
+- Declarative protocol definitions that drive build, parse, GUI generation and documentation from one source
+- Auto-computed lengths, checksums and next-header fields, with Auto/Manual toggles and deliberate malformed packets
+- Field generators (range, list, random, counter, file, expr) and mass stream generation
+- Instant in-browser preview: `wpg-core` is compiled to WASM and shared with the server
+- YAML templates (`.wpg.yaml`) and bundles (`.wpgbundle`) for sharing; pcap/pcapng import
+- Rate control (pps / bps / line-rate %), bursts, live statistics over WebSocket
+- REST API with OpenAPI, password authentication (argon2id), optional TLS
+- Japanese and English UI, manuals and messages
+
+## Quick start
+
+Prerequisites: [rustup](https://rustup.rs), the WASM target
+(`rustup target add wasm32-unknown-unknown`), [trunk](https://trunkrs.dev) (`cargo install trunk --locked`),
+and optionally [just](https://github.com/casey/just). On Linux, `libpcap-dev` is recommended; on Windows
+install the Npcap SDK (not needed yet, the pcap backend is not used at this stage).
+
+```sh
+# Build (frontend, then backend)
+just build            # or: ./scripts/build.sh      (Windows: .\scripts\build.ps1)
+just release          # optimised build
+
+# Run
+./target/release/wpg serve    # or: ./scripts/run.sh   (Windows: .\scripts\run.ps1)
+```
+
+Then open <http://127.0.0.1:8080> in your browser.
+
+For development with hot reload (needs `cargo install cargo-watch --locked`):
+
+```sh
+just run              # or: ./scripts/run.sh --dev
+```
+
+Raw-socket transmission needs privileges: on Linux run as root or use
+`sudo setcap cap_net_raw,cap_net_admin+ep ./target/release/wpg`; on Windows install Npcap and run as
+Administrator; on macOS grant access to `/dev/bpf*`. Run `wpg doctor` (planned) to diagnose.
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Browser (WASM: Leptos)                                       │
+│  packet builder GUI, template manager, jobs, stats, i18n     │
+└───────────────▲──────────────────────────────▲───────────────┘
+                │ REST (JSON)                  │ WebSocket (stats/logs)
+┌───────────────┴──────────────────────────────┴───────────────┐
+│ wpg-server (axum + tokio) - single binary, embedded assets   │
+│  auth, template CRUD, job management, OpenAPI                │
+├──────────────────────────────────────────────────────────────┤
+│ wpg-core (pure Rust, WASM-capable)                           │
+│  protocol definition engine, build/parse, generators         │
+├──────────────────────────────────────────────────────────────┤
+│ wpg-tx (TxBackend trait)                                     │
+│  pcap/Npcap | AF_PACKET | AF_XDP | DPDK | pcap file output   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Workspace crates: `wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-rx`, `wpg-template`, `wpg-i18n`,
+`wpg-server`, `wpg-cli` (binary `wpg`), `wpg-web`.
+
+## Transmission backends
+
+| Backend | OS | Expected performance | Notes |
+|---|---|---|---|
+| `pcap` (libpcap / Npcap / BPF) | Windows / macOS / Linux | up to several hundred kpps | Portable fallback |
+| `afpacket` (TPACKET_V3 + `sendmmsg`) | Linux | ~1-3 Mpps/core | Main path on CML2 Ubuntu (virtio); needs CAP_NET_RAW |
+| `afxdp` | Linux 5.10+ | several Mpps/core | Driver support required; zero-copy/copy auto |
+| `dpdk` | Linux | 10 Mpps+/core | `--features dpdk`, DPDK 24.11 LTS (23.11 also) |
+| `pcapfile` | all | n/a | Writes pcapng instead of sending (dry run, CI) |
+| `loopback` / `null` | all | n/a | Benchmarks and tests |
+
+Minimum supported OS: Windows 10 21H2+, macOS 12+, Ubuntu 20.04+ (glibc 2.31). Windows transmission uses
+Npcap only and is positioned as "GUI plus low-to-medium rate".
+
+## Roadmap
+
+Milestones M0 to M12 and the full specification live in [TODO.md](TODO.md) (written in Japanese).
+
+## Legal notice and responsible use
+
+wpg is a **network verification tool**. Use it **only on networks and devices you own or are explicitly
+authorised to test**, such as isolated lab or test networks. Sending crafted or high-rate traffic to
+production networks or third-party systems can disrupt services and may be illegal. It is not designed or
+optimised for attacks. **You are solely responsible for how you use this software**; the authors and
+contributors accept no liability for damage or misuse (see the disclaimer of warranty in the licences).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) ([日本語](CONTRIBUTING.ja.md)) and the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work
+by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms
+or conditions.

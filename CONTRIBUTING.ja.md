@@ -1,0 +1,53 @@
+# wpg へのコントリビュート
+
+[English](CONTRIBUTING.md) | **日本語**
+
+ご関心をありがとうございます。まず [行動規範](CODE_OF_CONDUCT.md) をお読みください。ロードマップと仕様は
+[TODO.md](TODO.md) にあります。
+
+## 開発環境
+
+1. [rustup](https://rustup.rs) をインストール（`rust-toolchain.toml` のツールチェーンが自動で使われます）
+2. WASM ターゲット追加: `rustup target add wasm32-unknown-unknown`
+3. ツール: `cargo install just trunk cargo-watch cargo-deny cargo-audit mdbook --locked`
+   （最低限のビルドには `just` と `trunk` のみ必要）
+4. Linux は `sudo apt install libpcap-dev`、Windows は Npcap SDK（pcap バックエンド実装までは任意）
+5. `just build && ./target/debug/wpg serve` の後、<http://127.0.0.1:8080> を開く
+
+## よく使うレシピ
+
+`just --list` で一覧を確認できます。`just build` / `release`（ビルド）、`run`（ホットリロード開発起動）、
+`test`、`fmt`、`lint`（clippy `-D warnings`）、`check-wasm`、`audit`、`deny`、`docs`、`clean`。
+PR 前に `just fmt lint test check-wasm` を実行してください。CI でも同じチェックが走ります。
+
+## コミット / PR 規約
+
+- [Conventional Commits](https://www.conventionalcommits.org) を使用（例: `feat(core): ...`）。
+  scope は `wpg-` を除いた crate 名。
+- PR は小さく、1 PR 1 論理変更。TODO.md のマイルストーンや issue を参照してください。
+- テストを追加してください。プロトコルは golden pcap と、可能なら `tshark -V` での突合が必要です。
+- TODO.md のチェックは項目が完全に完了したときのみ更新します。TODO.md §3 の決定事項を変える場合は
+  `docs/adr/` に ADR を追加します。
+
+## プロトコルの追加
+
+`docs/dev/` の開発者ガイド（プロトコル追加手順）を参照してください。定義、Fluent 文字列（名称・フィールド説明）、
+サンプルテンプレート、golden pcap、テストが最低限必要です。
+
+## 国際化 (i18n) ルール
+
+- サーバ / CLI / Web UI（エラーメッセージ含む）に **ユーザー向け文字列を直書きしない**。Fluent のキーを使う。
+- すべてのキーは `locales/ja/main.ftl` と `locales/en/main.ftl` の **両方** に存在すること
+  （抜けは CI の lint で検出予定）。
+
+## ライセンスと DCO
+
+本プロジェクトは MIT OR Apache-2.0 のデュアルライセンスです。明示的な別段の表明がない限り、Apache-2.0 で
+定義される、本プロジェクトへの取り込みを意図して提出されたコントリビューションは、追加条件なしに同デュアル
+ライセンスで提供されるものとします。コントリビューションを提出することで、自身が作成したもの、または当該
+ライセンスで提出する権利を持つものであることを表明したものとみなします（Developer Certificate of Origin の
+趣旨）。`git commit -s` で sign-off してください。
+
+## 責任ある利用
+
+wpg は自身が所有する、または許可を得たネットワークの検証用です。攻撃ツール化を目的とする変更は受け付けません。
