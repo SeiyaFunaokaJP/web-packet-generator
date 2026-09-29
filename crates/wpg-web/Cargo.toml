@@ -1,0 +1,19 @@
+[package]
+name = "wpg-web"
+description = "Leptos (CSR) web UI for wpg, compiled to WASM with Trunk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+wpg-i18n.workspace = true
+leptos.workspace = true
+console_error_panic_hook.workspace = true
+web-sys.workspace = true
+
+[lints]
+workspace = true

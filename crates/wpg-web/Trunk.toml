@@ -1,0 +1,13 @@
+# Build: `trunk build --release` (from this directory) -> ./dist, which wpg-server embeds.
+# Dev:   `trunk serve` on :8081 with /api proxied to a running `wpg serve` on :8080.
+
+[build]
+target = "index.html"
+dist = "dist"
+
+[serve]
+addresses = ["127.0.0.1"]
+port = 8081
+
+[[proxy]]
+backend = "http://127.0.0.1:8080/api/"

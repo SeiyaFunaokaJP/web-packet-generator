@@ -282,15 +282,15 @@ wpg bench   [--backend ...]                                # 送出性能計測
 ## 4. マイルストーン & TODO
 
 ### M0: プロジェクト基盤（1–2 週）
-- [ ] Cargo workspace 作成、crate 雛形 (`wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-template`, `wpg-server`, `wpg-cli`, `wpg-web`)
-- [ ] `Cargo.toml` の `license = "MIT OR Apache-2.0"`、`rust-toolchain.toml`、`rustfmt.toml`、`clippy` 設定、`deny.toml`
-- [ ] `justfile` + `scripts/build.sh|ps1`、`scripts/run.sh|ps1` の骨格
-- [ ] GitHub Actions: fmt / clippy / test (Linux, macOS, Windows matrix)、`cargo audit`
+- [x] Cargo workspace 作成、crate 雛形 (`wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-template`, `wpg-server`, `wpg-cli`, `wpg-web`)
+- [x] `Cargo.toml` の `license = "MIT OR Apache-2.0"`、`rust-toolchain.toml`、`rustfmt.toml`、`clippy` 設定、`deny.toml`
+- [x] `justfile` + `scripts/build.sh|ps1`、`scripts/run.sh|ps1` の骨格
+- [x] GitHub Actions: fmt / clippy / test (Linux, macOS, Windows matrix)、`cargo audit`
 - [x] ライセンス (`LICENSE-MIT` / `LICENSE-APACHE`)
-- [ ] `README.md`（ja/en）・`CONTRIBUTING.md`・`CODE_OF_CONDUCT.md`
-- [ ] mdBook 雛形 (ja/en 切替)、`docs/spec/` に本ファイルの詳細版を分割開始
-- [ ] i18n 基盤 (Fluent) を server / web 両方に導入、`locales/ja`, `locales/en`
-- [ ] 決定事項 (§3) を `docs/adr/0001`〜`0009` として ADR 化
+- [x] `README.md`（ja/en）・`CONTRIBUTING.md`・`CODE_OF_CONDUCT.md`
+- [x] mdBook 雛形 (ja/en 切替)、`docs/spec/` に本ファイルの詳細版を分割開始
+- [x] i18n 基盤 (Fluent) を server / web 両方に導入、`locales/ja`, `locales/en`
+- [x] 決定事項 (§3) を `docs/adr/0001`〜`0009` として ADR 化
 
 ### M1: コアエンジン MVP（3–4 週）
 - [ ] フィールド型システム & プロトコル定義 IR (`wpg-core`)

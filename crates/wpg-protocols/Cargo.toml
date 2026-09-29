@@ -1,0 +1,20 @@
+[package]
+name = "wpg-protocols"
+description = "Built-in protocol definitions (Ethernet, IPv4, ..., IS-IS, CLNP) for wpg"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+wpg-core.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

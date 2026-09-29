@@ -1,0 +1,27 @@
+# Rust build output
+/target/
+**/*.rs.bk
+
+# Release / packaging output
+/dist/
+
+# Trunk output of the Leptos front-end (embedded into wpg-server at build time)
+/crates/wpg-web/dist/
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Local runtime config / data (examples are committed under other names)
+/wpg.toml
+*.sqlite
+*.sqlite3
+
+# NOTE: *.pcap / *.pcapng are intentionally NOT ignored: golden pcaps under tests/ are committed.
+
+# mdBook output (docs/build.sh)
+/docs/book/

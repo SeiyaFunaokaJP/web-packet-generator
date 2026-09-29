@@ -1,0 +1,9 @@
+[book]
+title = "wpg ドキュメント"
+language = "ja"
+src = "src"
+
+[build]
+build-dir = "../book/ja"
+
+[output.html]
