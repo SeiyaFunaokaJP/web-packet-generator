@@ -13,6 +13,9 @@ use std::sync::OnceLock;
 use serde::Serialize;
 use wpg_core::{ProtocolDef, Resolve};
 
+pub mod arp;
+pub mod icmp;
+pub mod ipv6;
 pub mod l2;
 pub mod l3;
 pub mod l4;
@@ -90,6 +93,20 @@ pub fn builtin() -> Vec<ProtocolDef> {
         l3::ipv4(),
         l4::tcp(),
         l4::udp(),
+        arp::arp(),
+        ipv6::ipv6(),
+        ipv6::ipv6_hopopts(),
+        ipv6::ipv6_route(),
+        ipv6::ipv6_frag(),
+        ipv6::ipv6_dstopts(),
+        icmp::icmpv4(),
+        icmp::icmpv6(),
+        icmp::icmpv6_echo(),
+        icmp::ndp_rs(),
+        icmp::ndp_ra(),
+        icmp::ndp_ns(),
+        icmp::ndp_na(),
+        icmp::ndp_redirect(),
         payload::raw(),
     ]
 }
@@ -117,7 +134,7 @@ mod tests {
     #[test]
     fn bindings_point_to_known_or_planned_protocols() {
         // Planned P0 ids that are referenced before they exist.
-        const PLANNED: &[&str] = &["ipv6", "arp", "icmpv4"];
+        const PLANNED: &[&str] = &[];
         for def in catalog().iter() {
             for e in def.next.iter().flat_map(|b| &b.table) {
                 assert!(
