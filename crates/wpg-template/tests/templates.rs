@@ -51,7 +51,10 @@ fn every_sample_compiles_lints_clean_and_renders() {
     for f in files {
         let t = Template::from_path(&f).unwrap_or_else(|e| panic!("{}: {e}", f.display()));
         let issues = lint(&t, catalog());
-        assert!(issues.is_empty(), "{}: {issues:#?}", f.display());
+        // `templates/malformed/` is deliberately broken (checked by tests/samples.rs)
+        if !f.components().any(|c| c.as_os_str() == "malformed") {
+            assert!(issues.is_empty(), "{}: {issues:#?}", f.display());
+        }
         let c = compile(&t, &no_vars(), catalog()).unwrap();
         let mut n = 0;
         render_with(&c, catalog(), Some(3), &mut |_, bytes| {

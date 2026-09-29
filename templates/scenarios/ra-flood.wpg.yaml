@@ -1,0 +1,36 @@
+# IPv6 RA flood: Router Advertisements from random source MACs and link-local addresses (for ND protection tests)
+schema: 1
+
+meta:
+  name: scenario-ipv6-ra-flood
+  descriptions:
+    ja: "IPv6 RA フラッド: 送信元 MAC / リンクローカルアドレスをランダム化した RA (ND 保護機能の検証用)"
+    en: "IPv6 RA flood: Router Advertisements from random source MACs and link-local addresses (for ND protection tests)"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv6", "protocol:icmpv6", "protocol:ndp_ra", "layer:l3", ndp, ipv6, flood]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:01"
+    generators:
+      src: { kind: random_mac, oui: "02:00:00" }
+  - protocol: ipv6
+    fields:
+      dst: ff02::1
+      hop_limit: 255
+    generators:
+      src: { kind: random, min: "fe80::1:0:0:1", max: "fe80::1:ffff:ffff:ffff" }
+  - protocol: icmpv6
+  - protocol: ndp_ra
+    fields:
+      router_lifetime: 1800
+      options: "03 04 40 c0 00 27 8d 00 00 09 3a 80 00 00 00 00 20 01 0d b8 00 01 00 00 00 00 00 00 00 00 00 00"
+
+stream:
+  seed: 3
+  count: 10000
+
+tx:
+  rate: 500pps

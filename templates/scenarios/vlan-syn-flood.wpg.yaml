@@ -1,0 +1,61 @@
+# VLAN-tagged TCP SYN flood with random source IP and port (reproducible with a fixed seed, 100000 frames)
+schema: 1
+
+meta:
+  name: scenario-vlan-syn-flood
+  descriptions:
+    ja: "VLAN タグ付き TCP SYN フラッド: 送信元 IP / ポートをランダム化 (seed 固定で再現可能、10 万個)"
+    en: "VLAN-tagged TCP SYN flood with random source IP and port (reproducible with a fixed seed, 100000 frames)"
+  tags: [scenario, "protocol:ethernet2", "protocol:dot1q", "protocol:ipv4", "protocol:tcp", "layer:l4", vlan, tcp, syn, flood]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+  - name: vid
+    default: 100
+  - name: dst_ip
+    default: 198.51.100.7
+  - name: dst_port
+    default: 443
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: dot1q
+    fields:
+      vid: ${vid}
+  - protocol: ipv4
+    fields:
+      dst: ${dst_ip}
+      ttl: 64
+      flags: df
+    generators:
+      src: { kind: random, min: 10.0.0.1, max: 10.255.255.254 }
+  - protocol: tcp
+    fields:
+      dst_port: ${dst_port}
+      flags: syn
+      window: 64240
+      options:
+        - mss: 1460
+        - sack_permitted
+        - ws: 7
+    generators:
+      src_port: { kind: random, min: 1024, max: 65535 }
+      seq: { kind: random, min: 0, max: 4294967295 }
+
+stream:
+  seed: 7
+  count: 100000
+
+tx:
+  rate: 50kpps
+  burst: 32

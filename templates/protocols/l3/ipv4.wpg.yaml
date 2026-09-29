@@ -1,0 +1,49 @@
+# Plain IPv4/UDP packet (addresses and TTL are variables)
+schema: 1
+
+meta:
+  name: ipv4-udp
+  descriptions:
+    ja: "プレーンな IPv4/UDP パケット (アドレス・TTL を変数化)"
+    en: "Plain IPv4/UDP packet (addresses and TTL are variables)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "layer:l3", sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+  - name: src_ip
+    default: 192.0.2.1
+  - name: dst_ip
+    default: 192.0.2.2
+  - name: ttl
+    default: 64
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: ${src_ip}
+      dst: ${dst_ip}
+      ttl: ${ttl}
+      flags: df
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

@@ -1,0 +1,33 @@
+# NDP Neighbor Advertisement (S=1, O=1) with a target link-layer address
+schema: 1
+
+meta:
+  name: ndp-neighbor-advertisement
+  descriptions:
+    ja: "NDP 近隣通知 (NA、S=1 O=1、ターゲットリンク層アドレス付き)"
+    en: "NDP Neighbor Advertisement (S=1, O=1) with a target link-layer address"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:icmpv6", "protocol:ndp_na", "layer:l3", sample, ndp]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: 2001:db8::2
+      hop_limit: 255 # NDP messages must arrive with hop limit 255
+  - protocol: icmpv6
+  - protocol: ndp_na
+    fields:
+      r: 0
+      s: 1
+      o: 1
+      target: 2001:db8::1
+      options: "02 01 02 00 00 00 00 01" # target link-layer address
+
+tx:
+  count: 1

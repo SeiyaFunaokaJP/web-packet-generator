@@ -1,0 +1,44 @@
+# [Malformed] Frame with a deliberately wrong CRC-32 FCS (packet.fcs: bad)
+schema: 1
+
+meta:
+  name: bad-fcs
+  descriptions:
+    ja: "[異常系] FCS (CRC-32) を故意に誤った値にしたフレーム (packet.fcs: bad)"
+    en: "[Malformed] Frame with a deliberately wrong CRC-32 FCS (packet.fcs: bad)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "layer:l2", malformed, sample, fcs]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+packet:
+  fcs: bad # NICs normally drop this before the host sees it; needs a raw TX path
+
+tx:
+  count: 1

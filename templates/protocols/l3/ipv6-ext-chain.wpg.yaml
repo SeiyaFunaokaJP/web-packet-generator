@@ -1,0 +1,41 @@
+# IPv6/UDP behind a chain of extension headers (HopOpts, DstOpts, Routing, Fragment)
+schema: 1
+
+meta:
+  name: ipv6-ext-chain
+  descriptions:
+    ja: "拡張ヘッダ連鎖 (HopOpts → DstOpts → Routing → Fragment) の IPv6/UDP"
+    en: "IPv6/UDP behind a chain of extension headers (HopOpts, DstOpts, Routing, Fragment)"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:ipv6_hopopts", "protocol:ipv6_dstopts", "protocol:ipv6_route", "protocol:ipv6_frag", "protocol:udp", "layer:l3", sample, ipv6-ext]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: 2001:db8::2
+  - protocol: ipv6_hopopts
+  - protocol: ipv6_dstopts
+  - protocol: ipv6_route
+    fields:
+      segments_left: 0 # keep ipv6.dst as the final destination
+  - protocol: ipv6_frag
+    fields:
+      identification: 1
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

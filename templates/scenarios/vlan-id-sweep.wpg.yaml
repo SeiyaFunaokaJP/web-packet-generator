@@ -1,0 +1,40 @@
+# VLAN ID sweep: tagged broadcast frames with VID 1-4094 (to check VLAN filters and allow lists)
+schema: 1
+
+meta:
+  name: scenario-vlan-id-sweep
+  descriptions:
+    ja: "VLAN ID スイープ: VID 1-4094 のタグ付きブロードキャスト (VLAN フィルタ / 許可リストの確認)"
+    en: "VLAN ID sweep: tagged broadcast frames with VID 1-4094 (to check VLAN filters and allow lists)"
+  tags: [scenario, "protocol:ethernet2", "protocol:dot1q", "protocol:ipv4", "protocol:udp", "layer:l2", vlan, sweep]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: ${src_mac}
+  - protocol: dot1q
+    generators:
+      vid: 1-4094
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 255.255.255.255
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  rate: 4000pps

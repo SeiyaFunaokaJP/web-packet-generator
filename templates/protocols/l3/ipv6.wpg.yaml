@@ -1,0 +1,43 @@
+# Plain IPv6/UDP packet with traffic class and flow label
+schema: 1
+
+meta:
+  name: ipv6-udp
+  descriptions:
+    ja: "プレーンな IPv6/UDP パケット (トラフィッククラス・フローラベル付き)"
+    en: "Plain IPv6/UDP packet with traffic class and flow label"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:udp", "layer:l3", sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: src_ip
+    default: 2001:db8::1
+  - name: dst_ip
+    default: 2001:db8::2
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      dscp: 46
+      ecn: 0
+      flow_label: 0x12345
+      hop_limit: 64
+      src: ${src_ip}
+      dst: ${dst_ip}
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

@@ -1,0 +1,30 @@
+# Minimum frame: a 42-octet ARP zero-padded to 60 octets (plus FCS on the wire)
+schema: 1
+
+meta:
+  name: min-frame-padded
+  descriptions:
+    ja: "最小フレーム: ヘッダのみ (ARP 28 B) をゼロ埋めで 60 オクテットにする (FCS 別)"
+    en: "Minimum frame: a 42-octet ARP zero-padded to 60 octets (plus FCS on the wire)"
+  tags: ["protocol:ethernet2", "protocol:arp", "layer:l2", sample, padding]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: "02:00:00:00:00:01"
+  - protocol: arp
+    fields:
+      oper: request
+      sha: "02:00:00:00:00:01"
+      spa: 192.0.2.1
+      tpa: 192.0.2.2
+
+packet:
+  pad_to_min: true # set to false to send the bare 42 octets (runt frame)
+  fcs: none
+
+tx:
+  count: 1

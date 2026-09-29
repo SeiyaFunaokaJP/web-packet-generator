@@ -14,8 +14,8 @@
 
 - [Tutorial: ARP sweep](tutorials/arp-sweep.md)
 - [Tutorial: VLAN-tagged TCP SYN flood](tutorials/vlan-syn-flood.md)
-- [Tutorial: IS-IS IIH](tutorials/isis-iih.md)
-- [Tutorial: DHCP load](tutorials/dhcp-load.md)
+- [Tutorial: IPv6 and Neighbor Discovery](tutorials/ipv6-ndp.md)
+- [Tutorial: Load and rate control](tutorials/rate-control.md)
 - [Tutorial: pcap to template replay](tutorials/pcap-replay.md)
 
 # Reference

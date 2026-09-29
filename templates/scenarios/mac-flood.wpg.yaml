@@ -1,0 +1,39 @@
+# MAC flood: random source MACs to exercise a switch MAC table (100000 frames)
+schema: 1
+
+meta:
+  name: scenario-mac-flood
+  descriptions:
+    ja: "MAC フラッド: 送信元 MAC をランダム化し、スイッチの MAC テーブル収容を確認 (10 万フレーム)"
+    en: "MAC flood: random source MACs to exercise a switch MAC table (100000 frames)"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv4", "protocol:udp", "layer:l2", flood, cam]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+    generators:
+      src: { kind: random_mac, oui: "02:00:00" } # locally administered, unicast
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 255.255.255.255
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+stream:
+  seed: 1
+  count: 100000
+
+tx:
+  rate: 20kpps
+  burst: 64

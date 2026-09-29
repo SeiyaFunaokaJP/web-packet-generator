@@ -1,0 +1,53 @@
+# QinQ (802.1ad) UDP across service VLANs 200-203 x customer VLANs 10, 20, 30
+schema: 1
+
+meta:
+  name: scenario-qinq-service-sweep
+  descriptions:
+    ja: "QinQ (802.1ad) サービス VLAN 200-203 x カスタマ VLAN 10,20,30 の UDP"
+    en: "QinQ (802.1ad) UDP across service VLANs 200-203 x customer VLANs 10, 20, 30"
+  tags: [scenario, "protocol:ethernet2", "protocol:dot1ad", "protocol:dot1q", "protocol:ipv4", "protocol:udp", "layer:l2", vlan, qinq]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: dot1ad
+    fields:
+      pcp: 3
+    generators:
+      vid: 200-203
+  - protocol: dot1q
+    generators:
+      vid: 10,20,30
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+stream:
+  mode: product # 4 x 3 = 12 combinations, the customer VID varies fastest
+
+tx:
+  count: 120
+  rate: 1000pps

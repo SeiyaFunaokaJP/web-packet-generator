@@ -1,5 +1,126 @@
 # テンプレートスキーマ
 
-Status: draft
+テンプレートは 1 つのストリームを記述する YAML ファイル (`.wpg.yaml`。`.wpg.json` の JSON も同等) です。レイヤスタック、フィールドを変化させるジェネレータ、送出プロファイルから成ります。機械可読な定義は [`docs/schema/template.schema.json`](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/docs/schema/template.schema.json) で、`wpg template schema` でも出力できます。未知のキーはエラーになるのでタイプミスを検出できます。ファイルの検査は `wpg template lint FILE` です。
 
-テンプレートは拡張子 `.wpg.yaml` の YAML (または同等の JSON) ファイルで、最上位に `schema: 1` のバージョンを持ちます。メタ情報、レイヤ配列、送出プロファイル、変数定義で構成されます。JSON Schema が公開され、`wpg template lint` で検証できます。完全な例は docs/spec の詳細仕様を参照してください。
+```yaml
+schema: 1                  # 必須
+meta: { ... }              # 必須
+variables: [ ... ]         # 任意
+layers: [ ... ]            # 必須。外側から内側の順
+packet: { ... }            # 任意
+stream: { ... }            # 任意
+tx: { ... }                # 任意
+```
+
+## `meta`
+
+| キー | 意味 |
+|---|---|
+| `name` | 必須の表示名。ライブラリ内で一意 (同梱ライブラリはテストで確認) |
+| `description` | 自由記述 |
+| `descriptions` | 言語別の説明: `ja:` と `en:` |
+| `tags` | 検索用タグ。同梱ライブラリは `protocol:<id>`、`layer:l2\|l3\|l4`、`scenario`、`malformed` と話題語を使う |
+| `author`, `created` | 自由記述。`created` は日付または RFC 3339 の時刻 |
+
+## `variables`
+
+テンプレート引数です。各項目は `name`、任意の `default` (文字列・数値・真偽値)、`description` を持ちます。フィールド値やジェネレータの中で `${name}` と書き、実行時に `--var name=value` (`wpg send`、`wpg render`) や GUI で上書きします。既定値も上書きも無い変数はエラーで、宣言の無い `${…}` もエラーです。宣言だけで使われていない変数は警告になります。
+
+## `layers`
+
+各項目は `protocol` (カタログの ID。[プロトコルリファレンス](protocols.md) を参照)、`fields`、`generators` から成ります。
+
+### `fields`
+
+書いたフィールドは **Manual**、書かない (または `auto` にした) フィールドは既定値になるか、計算されます (長さ、チェックサム、次プロトコル番号)。値は人間向け表記です。
+
+| 型 | 例 |
+|---|---|
+| 整数 | `64`、`0x0800`、`0b101` |
+| MAC / IPv4 / IPv6 | `02:00:00:00:00:01`、`192.0.2.1`、`2001:db8::1` (`"00:11:22:33:44:55"` のように数字だけの MAC は YAML が数値と解釈しうるので引用符で囲む) |
+| バイト列 | `"00 01 02 03"` (必ず引用符) |
+| enum | 数値かバリアント名: `ethertype: arp`、`oper: request`、`type: echo_request` |
+| flags | ビット名を `\|` で連結: `flags: syn\|ack`、`flags: df` |
+| TLV リスト (TCP/IPv4 オプション) | `- mss: 1460`、`- sack_permitted`、`- nop`、`- timestamps: { tsval: 1, tsecr: 0 }`、`- { type: 99, data: "01 02" }` |
+
+わざと誤った値も受け付けます。Manual の長さやチェックサムは書いたとおりに使われ、`wpg template lint` は不一致を警告 (`diag-*`) として報告します。`templates/malformed/` のサンプルはこの仕組みで作っています。
+
+### `generators`
+
+フィールド名からジェネレータへの対応です。完全形か、GUI と同じ短縮表記で書きます。
+
+| `kind` | パラメータ | 短縮表記 | 意味 |
+|---|---|---|---|
+| `range` | `start`、`end`、`step` (既定 1) | `192.168.1.1-192.168.5.254`、`1-1024` | 両端を含むスイープ。件数が多いと先頭に戻る |
+| `range` (CIDR) | | `10.0.0.0/22` | ブロックのホストアドレス |
+| `list` | `values` | `1,5,9` | 値を順に繰り返す |
+| `random` | `min`、`max`、`seed` | | 一様乱数 (整数、IPv4、IPv6) |
+| `random_mac` | `oui`、`seed` | `00:11:22:*` | ランダムな MAC (上位を固定可) |
+| `counter` | `start`、`step`、`wrap` | | 増加する値。`wrap` が無ければ無限 |
+| `file` | `path` | | ファイルから読む値 |
+| `expr` | `expr` | | 計算式による値 |
+
+同じフィールドに固定値とジェネレータを書くと lint が警告します。
+
+## `packet`
+
+| キー | 既定 | 意味 |
+|---|---|---|
+| `pad_to_min` | `true` | Ethernet の最小 60 オクテット (FCS 除く) までゼロ埋め |
+| `fcs` | `none` | `auto` は正しい CRC-32、`bad` は誤った CRC-32 を付け、`none` は付けない |
+
+## `stream`
+
+ジェネレータの組み合わせ方とストリームの長さです。
+
+| キー | 意味 |
+|---|---|
+| `mode` | `zip` (既定。同時に進める)、`product` (最後が最速)、`nested` |
+| `order` | `nested` 用。遅い方から速い方へ `<レイヤ>.<フィールド>` で列挙。`<レイヤ>` は 0 始まりの添字か、スタック内で一意なプロトコル ID (`dot1q.vid`、`arp.tpa`) |
+| `count` | パケット数。既定は `tx.count`、無ければジェネレータの自然な長さ |
+| `seed` | ランダムジェネレータの seed。ストリームを再現可能にする |
+
+無限のジェネレータ (`wrap` 無しの `counter`) には `count` が必要で、`product` や `nested` の内側には置けません。
+
+## `tx`
+
+| キー | 意味 |
+|---|---|
+| `count` | 送信パケット数 (`count` も `duration_secs` も無ければ停止するまで) |
+| `duration_secs` | 秒単位の時間制限 |
+| `rate` | `1000pps`、`1Mpps`、`10Gbps`、`50%`、`ifg=10us` |
+| `burst` | 連続送信するフレーム数 |
+
+`wpg send` のコマンドラインオプションが優先されます。
+
+## payload レイヤ
+
+`payload` は実際のプロトコルではなく、フィールドが生成を制御します。`mode` (`fixed`、`pattern`、`random`、`counter`)、`data`、`length`、`seed`、`counter` モードでは `counter_offset`、`counter_width` (`u32` または `u64`)、`counter_value` (通常は `counter` ジェネレータで与える) です。`raw` は指定したバイト列をそのまま置きます。
+
+## lint の検査項目
+
+| キー | 重大度 | 意味 |
+|---|---|---|
+| `lint-schema-version` | error | 未対応の `schema` |
+| `lint-missing-name` | warning | `meta.name` が空 |
+| `lint-no-layers` | error | レイヤなし |
+| `lint-unknown-protocol`, `lint-unknown-field` | error | カタログにない |
+| `lint-invalid-value`, `lint-invalid-generator` | error | 値やジェネレータがフィールド型に合わない |
+| `lint-unknown-variable`, `lint-missing-variable` | error | 宣言のない変数 / 値のない変数 |
+| `lint-unused-variable` | warning | 宣言だけで未使用 |
+| `lint-next-protocol-manual` | warning | 次レイヤが前のレイヤのバインディング表になく、次プロトコルのフィールドを Auto にできない |
+| `lint-field-and-generator` | warning | 同じフィールドに固定値とジェネレータ |
+| `diag-*` | error / warning | 構築したパケットの診断 (計算値と異なるチェックサムや長さなど) |
+
+## 同梱ライブラリ
+
+`templates/` は既定でライブラリとして読み込まれ、`crates/wpg-template/tests/samples.rs` で検証されています。
+
+| フォルダ | 内容 |
+|---|---|
+| `examples/` | 小さな出発点 5 本 |
+| `protocols/l2`, `l3`, `l4`, `payload`, `frame` | カタログの全プロトコルのサンプル。ジャンボ、最小サイズ、ランツ、FCS の例を含む |
+| `scenarios/` | すぐ使える試験: ARP スイープ、SYN フラッドとポートスキャン、QinQ、NDP と RA、ping と TTL スイープ、QoS マトリクス、MTU 探索、フレーム長スイープ、MAC フラッド |
+| `malformed/` | わざと壊したパケット (チェックサム不正、長さ不一致、切り詰め、FCS 不正)。設計上 lint が警告を出し、`malformed` タグが付く |
+
+一覧は `wpg template list templates` で表示できます。

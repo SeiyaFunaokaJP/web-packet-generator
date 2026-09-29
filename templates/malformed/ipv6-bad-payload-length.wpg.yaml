@@ -1,0 +1,34 @@
+# [Malformed] IPv6/UDP packet whose payload_length is forced to 1
+schema: 1
+
+meta:
+  name: bad-ipv6-payload-length
+  descriptions:
+    ja: "[異常系] IPv6 payload_length を 1 にした UDP パケット (実際より短い)"
+    en: "[Malformed] IPv6/UDP packet whose payload_length is forced to 1"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:udp", "layer:l3", malformed, sample]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: 2001:db8::2
+      payload_length: 1
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

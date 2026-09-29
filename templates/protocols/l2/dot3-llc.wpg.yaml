@@ -1,0 +1,39 @@
+# IEEE 802.3 frame (length field) with an 802.2 LLC header (SAP 0x04)
+schema: 1
+
+meta:
+  name: dot3-llc-frame
+  descriptions:
+    ja: "IEEE 802.3 (長さフィールド) + 802.2 LLC (SAP 0x04) フレーム"
+    en: "IEEE 802.3 frame (length field) with an 802.2 LLC header (SAP 0x04)"
+  tags: ["protocol:dot3", "protocol:llc", "layer:l2", sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+      length: auto # octets after the 802.3 header
+  - protocol: llc
+    fields:
+      dsap: 0x04 # any SAP; 0x04 = IBM SNA path control
+      ssap: 0x04
+      control: ui
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "de ad be ef"
+      length: 43
+
+tx:
+  count: 1

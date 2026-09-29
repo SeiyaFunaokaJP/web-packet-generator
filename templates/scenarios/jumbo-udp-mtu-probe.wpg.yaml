@@ -1,0 +1,47 @@
+# Jumbo UDP with DF set: payload lengths 1472 / 4000 / 8972 to probe the path MTU
+schema: 1
+
+meta:
+  name: scenario-jumbo-udp-mtu-probe
+  descriptions:
+    ja: "ジャンボフレーム UDP: DF 付き、payload 長 1472/4000/8972 で経路 MTU を確認"
+    en: "Jumbo UDP with DF set: payload lengths 1472 / 4000 / 8972 to probe the path MTU"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:payload", "layer:l3", jumbo, mtu]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      flags: df
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+    generators:
+      length: 1472,4000,8972
+
+stream:
+  mode: zip
+
+tx:
+  count: 30
+  rate: 10pps

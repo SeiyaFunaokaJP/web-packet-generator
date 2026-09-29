@@ -1,0 +1,39 @@
+# NDP Router Advertisement with SLLA, MTU and the prefix 2001:db8:1::/64
+schema: 1
+
+meta:
+  name: ndp-router-advertisement
+  descriptions:
+    ja: "NDP ルータ通知 (RA、SLLA + MTU + プレフィックス 2001:db8:1::/64)"
+    en: "NDP Router Advertisement with SLLA, MTU and the prefix 2001:db8:1::/64"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:icmpv6", "protocol:ndp_ra", "layer:l3", sample, ndp]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:01"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::1
+      hop_limit: 255 # NDP messages must arrive with hop limit 255
+  - protocol: icmpv6
+  - protocol: ndp_ra
+    fields:
+      cur_hop_limit: 64
+      m: 0
+      o: 0
+      router_lifetime: 1800
+      reachable_time: 0
+      retrans_timer: 0
+      options: >-
+        01 01 02 00 00 00 00 01
+        05 01 00 00 00 00 05 dc
+        03 04 40 c0 00 27 8d 00 00 09 3a 80 00 00 00 00
+        20 01 0d b8 00 01 00 00 00 00 00 00 00 00 00 00
+
+tx:
+  count: 1

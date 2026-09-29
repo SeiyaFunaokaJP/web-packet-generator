@@ -1,0 +1,38 @@
+# First IPv6 fragment (M=1) with a Fragment header and an identification
+schema: 1
+
+meta:
+  name: ipv6-fragment
+  descriptions:
+    ja: "フラグメントヘッダ (M=1、ID 付き) の IPv6 先頭フラグメント"
+    en: "First IPv6 fragment (M=1) with a Fragment header and an identification"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:ipv6_frag", "protocol:udp", "layer:l3", sample, ipv6-ext, fragmentation]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: 2001:db8::2
+  - protocol: ipv6_frag
+    fields:
+      fragment_offset: 0
+      m: 1
+      identification: 0x12345678
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

@@ -1,0 +1,34 @@
+# Ethernet II frame carrying 46 octets of payload (EtherType 0x88b5, local experimental)
+schema: 1
+
+meta:
+  name: eth-ii-frame
+  descriptions:
+    ja: "Ethernet II フレーム (EtherType 0x88b5 の 46 オクテット payload)"
+    en: "Ethernet II frame carrying 46 octets of payload (EtherType 0x88b5, local experimental)"
+  tags: ["protocol:ethernet2", "protocol:payload", "layer:l2", sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+      ethertype: local_experimental
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 46
+
+tx:
+  count: 1

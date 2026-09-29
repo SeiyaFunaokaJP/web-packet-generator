@@ -1,0 +1,42 @@
+# Frame size sweep: UDP payload from 0 to 1472 octets in steps of 16 (minimum-frame padding up to the MTU)
+schema: 1
+
+meta:
+  name: scenario-frame-size-sweep
+  descriptions:
+    ja: "フレーム長スイープ: UDP payload 0-1472 オクテットを 16 刻み (最小フレームのパディング確認から MTU まで)"
+    en: "Frame size sweep: UDP payload from 0 to 1472 octets in steps of 16 (minimum-frame padding up to the MTU)"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:payload", "layer:l3", padding, rfc2544]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+    generators:
+      length: { kind: range, start: 0, end: 1472, step: 16 }
+
+tx:
+  rate: 1000pps
