@@ -301,6 +301,22 @@ mod tests {
                     "core",
                     "batch",
                     "mode",
+                    // wpg-server API errors / wpg serve / wpg config
+                    "id",
+                    "state",
+                    "action",
+                    "allowed",
+                    "path",
+                    "source",
+                    "errors",
+                    "warnings",
+                    "level",
+                    "key",
+                    "message",
+                    "app",
+                    "version",
+                    "list",
+                    "origins",
                 ] {
                     args.set(name, "1");
                 }

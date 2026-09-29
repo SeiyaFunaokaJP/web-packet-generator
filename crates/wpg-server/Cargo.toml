@@ -9,20 +9,49 @@ repository.workspace = true
 authors.workspace = true
 publish.workspace = true
 
+[features]
+# Forwarded to wpg-tx: the libpcap / Npcap backend.
+pcap = ["wpg-tx/pcap"]
+
 [dependencies]
 wpg-core.workspace = true
 wpg-i18n.workspace = true
 wpg-protocols.workspace = true
-axum.workspace = true
+wpg-sys.workspace = true
+wpg-template.workspace = true
+wpg-tx.workspace = true
+wpg-log.workspace = true
+axum = { workspace = true, features = ["ws", "macros"] }
 rust-embed.workspace = true
 serde.workspace = true
-tokio.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+indexmap = { version = "2", features = ["serde"] }
+thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "fs"] }
+tower.workspace = true
 tracing.workspace = true
-tracing-subscriber.workspace = true
+tracing-subscriber = { workspace = true, features = ["json", "registry"] }
+# `wpg.toml` + `WPG_*` environment + CLI overrides (TODO §1.2 "設定").
+figment = { version = "0.10", features = ["toml", "env"] }
+toml = "0.9"
+# Default data directory (`~/.local/share/wpg` etc.).
+directories = "6"
+# Template library hot reload (TODO §2.4).
+notify = "8"
+notify-debouncer-mini = "0.7"
+tower-http = { version = "0.6", features = ["compression-gzip", "compression-br", "trace", "cors", "request-id", "util"] }
+uuid = { version = "1", features = ["v4"] }
+# OpenAPI document + Swagger UI (vendored: no download at build time).
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-axum = "0.2"
+utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }
 
 [dev-dependencies]
-serde_json.workspace = true
-tower.workspace = true
+tempfile = "3"
+figment = { version = "0.10", features = ["toml", "env", "test"] }
+tokio-tungstenite = "0.28"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 
 [lints]
 workspace = true

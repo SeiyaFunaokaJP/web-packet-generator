@@ -221,3 +221,62 @@ template-export-error = { $value }: { $error }
 template-import-done = Extracted { $count } template(s) from { $value } to { $detail }.
 template-import-exists = { $value }: already exists (use --force to overwrite)
 template-import-error = { $value }: { $error }
+
+## API errors (wpg-server)
+api-error-not-found = { $what } was not found.
+api-error-invalid-body = Invalid request body: { $error }
+api-error-invalid-query = Invalid request parameter: { $error }
+api-error-invalid-template = Invalid template: { $error }
+api-error-invalid-hex = Invalid hex input: { $error }
+api-error-parse-failed = The bytes could not be decoded: { $error }
+api-error-render-failed = Rendering failed: { $error }
+api-error-count-range = `count` must be between 1 and { $max } (got { $error }).
+api-error-read-only = Template { $id } belongs to a read-only library; duplicate it to edit.
+api-error-policy-iface = Sending on { $iface } is not allowed by the server policy (allowed: { $allowed }).
+api-error-policy-rate = The rate { $rate } exceeds the maximum allowed by the server policy ({ $max }).
+api-error-policy-unlimited = An unlimited rate is not allowed by the server policy (maximum { $max }).
+api-error-invalid-state = Job { $id } is { $state }; cannot { $action } it.
+api-error-job-spec = Invalid job: { $error }
+api-error-backend = Transmit backend error: { $error }
+api-error-internal = Internal server error: { $error }
+lint-parse-error = The template cannot be parsed: { $error }
+
+## Configuration (wpg.toml)
+config-issue-file-missing = file not found
+config-issue-tls-not-implemented = TLS is not served yet; put a reverse proxy in front for HTTPS
+config-issue-bad-url = must start with http:// or https://
+config-issue-not-argon2 = does not look like an argon2 hash ($argon2id$...)
+config-issue-password-both = both password_hash and password_file are set; password_hash wins
+config-issue-zero = must be greater than 0
+config-issue-exposed-without-password = listening on a non-loopback address without a password
+config-issue-dir-missing = directory not found
+config-issue-max-rate-percent = a link percentage cannot be a server-wide maximum; use pps or bps
+config-issue-bad-rate = invalid rate
+config-issue-unknown-backend = unknown backend
+config-issue-backend-unavailable = backend not available in this build / on this OS
+config-issue-bad-log-level = invalid log filter
+config-level-error = error
+config-level-warning = warning
+config-issue-line = { $level }: { $key }: { $message }{ $detail }
+config-load-error = Configuration error: { $error }
+config-init-written = Wrote { $path }. Edit it, then check it with `wpg config validate`.
+config-init-exists = { $path } already exists (use --force to overwrite).
+config-validate-ok = Configuration OK ({ $source }).
+config-validate-summary = { $errors } error(s), { $warnings } warning(s) ({ $source }).
+config-source-defaults = built-in defaults and environment
+
+## wpg serve
+serve-banner-title = { $app } { $version }
+serve-banner-listen = Listening on   http://{ $addr }/
+serve-banner-docs = API docs       http://{ $addr }/api/docs/
+serve-banner-config = Config         { $source }
+serve-banner-data = Data dir       { $path }
+serve-banner-library = Library        { $path }{ $state }
+serve-banner-user-dir = User templates { $path }
+serve-banner-templates = Templates      { $count }
+serve-banner-backends = Backends       { $list }
+serve-banner-missing = { " " }(missing)
+serve-banner-dev = Development mode: CORS allowed for { $origins }
+serve-banner-no-password = No password is configured: anyone who can reach { $addr } can send packets. Keep the server on localhost (authentication is coming in a later release).
+serve-failed = Server error: { $error }
+serve-log-error = Cannot set up logging: { $error }

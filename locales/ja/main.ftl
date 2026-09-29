@@ -221,3 +221,62 @@ template-export-error = { $value }: { $error }
 template-import-done = { $value } から { $count } 個のテンプレートを { $detail } に展開しました。
 template-import-exists = { $value }: 既に存在します (上書きするには --force)
 template-import-error = { $value }: { $error }
+
+## API errors (wpg-server)
+api-error-not-found = { $what } が見つかりません。
+api-error-invalid-body = リクエスト本文が不正です: { $error }
+api-error-invalid-query = リクエストパラメータが不正です: { $error }
+api-error-invalid-template = テンプレートが不正です: { $error }
+api-error-invalid-hex = 16 進入力が不正です: { $error }
+api-error-parse-failed = バイト列を解析できません: { $error }
+api-error-render-failed = パケット生成に失敗しました: { $error }
+api-error-count-range = `count` は 1 以上 { $max } 以下で指定してください (指定値 { $error })。
+api-error-read-only = テンプレート { $id } は読み取り専用ライブラリにあります。編集するには複製してください。
+api-error-policy-iface = サーバのポリシーにより { $iface } からの送出は許可されていません (許可: { $allowed })。
+api-error-policy-rate = レート { $rate } はサーバのポリシーの上限 ({ $max }) を超えています。
+api-error-policy-unlimited = サーバのポリシーにより無制限レートは許可されていません (上限 { $max })。
+api-error-invalid-state = ジョブ { $id } は { $state } 状態のため { $action } できません。
+api-error-job-spec = ジョブ指定が不正です: { $error }
+api-error-backend = 送出バックエンドのエラー: { $error }
+api-error-internal = サーバ内部エラー: { $error }
+lint-parse-error = テンプレートを解析できません: { $error }
+
+## Configuration (wpg.toml)
+config-issue-file-missing = ファイルが見つかりません
+config-issue-tls-not-implemented = TLS はまだ提供されていません。HTTPS にはリバースプロキシを前段に置いてください
+config-issue-bad-url = http:// または https:// で始めてください
+config-issue-not-argon2 = argon2 ハッシュ ($argon2id$...) ではないようです
+config-issue-password-both = password_hash と password_file の両方が設定されています (password_hash を優先)
+config-issue-zero = 0 より大きい値を指定してください
+config-issue-exposed-without-password = パスワード未設定のままループバック以外のアドレスで待ち受けます
+config-issue-dir-missing = ディレクトリが見つかりません
+config-issue-max-rate-percent = 回線率 (%) はサーバ全体の上限に使えません。pps か bps で指定してください
+config-issue-bad-rate = レートが不正です
+config-issue-unknown-backend = 不明なバックエンドです
+config-issue-backend-unavailable = このビルド / OS では使えないバックエンドです
+config-issue-bad-log-level = ログフィルタが不正です
+config-level-error = エラー
+config-level-warning = 警告
+config-issue-line = { $level }: { $key }: { $message }{ $detail }
+config-load-error = 設定エラー: { $error }
+config-init-written = { $path } を作成しました。編集後 `wpg config validate` で確認してください。
+config-init-exists = { $path } は既に存在します (上書きするには --force)。
+config-validate-ok = 設定に問題はありません ({ $source })。
+config-validate-summary = エラー { $errors } 件、警告 { $warnings } 件 ({ $source })。
+config-source-defaults = 組み込みの既定値と環境変数
+
+## wpg serve
+serve-banner-title = { $app } { $version }
+serve-banner-listen = 待ち受け         http://{ $addr }/
+serve-banner-docs = API ドキュメント  http://{ $addr }/api/docs/
+serve-banner-config = 設定ファイル      { $source }
+serve-banner-data = データ           { $path }
+serve-banner-library = ライブラリ        { $path }{ $state }
+serve-banner-user-dir = ユーザテンプレート { $path }
+serve-banner-templates = テンプレート数    { $count }
+serve-banner-backends = バックエンド      { $list }
+serve-banner-missing = { " " }(存在しません)
+serve-banner-dev = 開発モード: { $origins } からの CORS を許可
+serve-banner-no-password = パスワードが設定されていません: { $addr } に到達できる誰もがパケットを送出できます。サーバは localhost で運用してください (認証は今後のリリースで追加されます)。
+serve-failed = サーバエラー: { $error }
+serve-log-error = ログを初期化できません: { $error }

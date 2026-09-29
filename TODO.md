@@ -317,17 +317,17 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] CML2 上 Ubuntu (virtio-net) での実測・注意点ドキュメント化（注意点は docs/operations/cml2 に記載済み。実測は `lo` のみで CML2 実機は未計測）
 
 ### M3: サーバ & CLI（2–3 週）
-- [ ] axum サーバ骨格、`rust-embed` で静的資産埋め込み
-- [ ] REST API: templates CRUD / protocols catalog / render(preview) / jobs (create/start/stop/pause) / ifaces / stats / auth
-- [ ] WebSocket: ジョブ進捗・統計・ログ配信
-- [ ] `utoipa` OpenAPI + Swagger UI
+- [x] axum サーバ骨格、`rust-embed` で静的資産埋め込み
+- [x] REST API: templates CRUD / protocols catalog / render(preview) / jobs (create/start/stop/pause) / ifaces / stats / auth
+- [x] WebSocket: ジョブ進捗・統計・ログ配信
+- [x] `utoipa` OpenAPI + Swagger UI
 - [ ] 認証: パスワード (argon2id)、セッション、レート制限、未設定時 localhost 限定
 - [ ] TLS (`rustls`、自己署名自動生成)
-- [ ] 設定 (`wpg.toml` + env + CLI)、`wpg config init`
-- [ ] ジョブマネージャ (複数ストリーム混合、スケジュール、キャンセル安全性)
-- [ ] 送出制限ポリシー (許可インタフェース、最大レート)
-- [ ] CLI サブコマンド: serve / send / render / import / template / ifaces / doctor / bench
-- [ ] `tracing` ログ設定 (JSON / ローテーション)
+- [x] 設定 (`wpg.toml` + env + CLI)、`wpg config init`
+- [x] ジョブマネージャ (複数ストリーム混合、スケジュール、キャンセル安全性)
+- [x] 送出制限ポリシー (許可インタフェース、最大レート)
+- [x] CLI サブコマンド: serve / send / render / import / template / ifaces / doctor / bench
+- [x] `tracing` ログ設定 (JSON / ローテーション)
 
 ### M4: GUI MVP（4–6 週）
 - [ ] Leptos プロジェクト、Tailwind、ルーティング、i18n、テーマ
@@ -346,10 +346,10 @@ wpg bench   [--backend ...]                                # 送出性能計測
 ### M5: テンプレート形式 & 共有（1–2 週）
 - [x] YAML/JSON スキーマ (`schema: 1`)、JSON Schema 公開、`wpg template lint`
 - [x] テンプレ引数化 (変数)、実行時オーバーライド
-- [ ] `.wpgbundle` エクスポート/インポート (zip)
-- [ ] ライブラリパス複数指定 (Git 管理ディレクトリ読込)、ホットリロード
+- [x] `.wpgbundle` エクスポート/インポート (zip)
+- [x] ライブラリパス複数指定 (Git 管理ディレクトリ読込)、ホットリロード
 - [ ] 同梱サンプルテンプレ (P0 プロトコル + 代表シナリオ 5 本)
-- [ ] pcap/pcapng import → テンプレ化、Hex 貼付け import
+- [x] pcap/pcapng import → テンプレ化、Hex 貼付け import
 
 ### M6: P1 プロトコル群（4–6 週、並行可）
 - [ ] LLDP / CDP / STP,RSTP,MSTP / LACP / EAPOL / PPPoE / PPP

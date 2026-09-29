@@ -1,7 +1,7 @@
 //! `wpg` — Web Packet Generator command line (TODO §2.7).
 //!
-//! `serve` runs the HTTP server; the other subcommands live in [`cmd`]. Ones that
-//! are not implemented yet exit with status 2.
+//! Every subcommand lives in [`cmd`] (`serve`: the HTTP server, `config`:
+//! `wpg.toml` tools, ...). Ones that are not implemented yet exit with status 2.
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -41,14 +41,63 @@ enum Command {
     Doctor(DoctorArgs),
     /// Measure transmit performance.
     Bench(BenchArgs),
+    /// Configuration file tools (init, show, validate).
+    Config(ConfigArgs),
 }
 
 /// Arguments of `wpg serve`.
 #[derive(Debug, Args)]
 pub(crate) struct ServeArgs {
-    /// Address to listen on. Keep it on localhost until authentication lands.
-    #[arg(long, default_value = "127.0.0.1:8080", env = "WPG_BIND")]
-    pub(crate) bind: SocketAddr,
+    /// Address to listen on (default from the config: 127.0.0.1:8080). Keep it on
+    /// localhost until authentication lands.
+    #[arg(long, env = "WPG_BIND")]
+    pub(crate) bind: Option<SocketAddr>,
+    /// Configuration file (default: `wpg.toml` in the working directory, if any).
+    #[arg(long, env = "WPG_CONFIG", value_name = "FILE")]
+    pub(crate) config: Option<PathBuf>,
+    /// Development mode: allow CORS from the Trunk dev server (:8081).
+    #[arg(long)]
+    pub(crate) dev: bool,
+    /// Template library directory (repeatable; replaces `templates.library_paths`).
+    #[arg(long = "library-path", value_name = "DIR")]
+    pub(crate) library_paths: Vec<PathBuf>,
+    /// Data directory (user templates, history).
+    #[arg(long, value_name = "DIR")]
+    pub(crate) data_dir: Option<PathBuf>,
+}
+
+/// Arguments of `wpg config`.
+#[derive(Debug, Args)]
+pub(crate) struct ConfigArgs {
+    #[command(subcommand)]
+    pub(crate) action: ConfigAction,
+}
+
+/// Actions of `wpg config`.
+#[derive(Debug, Subcommand)]
+pub(crate) enum ConfigAction {
+    /// Write a fully commented example `wpg.toml`.
+    Init {
+        /// Output file.
+        #[arg(long, default_value = "wpg.toml", value_name = "FILE")]
+        path: PathBuf,
+        /// Overwrite an existing file.
+        #[arg(long)]
+        force: bool,
+    },
+    /// Print the effective configuration (file + environment) as TOML, secrets
+    /// redacted.
+    Show {
+        /// Configuration file (default: `wpg.toml` if present).
+        #[arg(long, env = "WPG_CONFIG", value_name = "FILE")]
+        config: Option<PathBuf>,
+    },
+    /// Check the configuration; exit status 1 on errors.
+    Validate {
+        /// Configuration file (default: `wpg.toml` if present).
+        #[arg(long, env = "WPG_CONFIG", value_name = "FILE")]
+        config: Option<PathBuf>,
+    },
 }
 
 /// Arguments of `wpg send`.
@@ -250,27 +299,7 @@ impl Command {
             Command::Ifaces(_) => "ifaces",
             Command::Doctor(_) => "doctor",
             Command::Bench(_) => "bench",
-        }
-    }
-}
-
-fn serve(bind: SocketAddr) -> ExitCode {
-    wpg_server::init_tracing();
-    let runtime = match tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-    {
-        Ok(rt) => rt,
-        Err(e) => {
-            eprintln!("failed to start tokio runtime: {e}");
-            return ExitCode::FAILURE;
-        }
-    };
-    match runtime.block_on(wpg_server::run(bind)) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(e) => {
-            tracing::error!("server error on {bind}: {e}");
-            ExitCode::FAILURE
+            Command::Config(_) => "config",
         }
     }
 }
@@ -278,7 +307,7 @@ fn serve(bind: SocketAddr) -> ExitCode {
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
-        Command::Serve(args) => serve(args.bind),
+        Command::Serve(args) => cmd::serve::run(&args),
         Command::Send(args) => cmd::send::run(args),
         Command::Render(args) => cmd::render::run(&args),
         Command::Import(args) => cmd::import::run(&args),
@@ -286,6 +315,7 @@ fn main() -> ExitCode {
         Command::Ifaces(args) => cmd::ifaces::run(&args),
         Command::Doctor(args) => cmd::doctor::run(&args),
         Command::Bench(args) => cmd::bench::run(args),
+        Command::Config(args) => cmd::config::run(args),
     }
 }
 
@@ -303,7 +333,10 @@ mod tests {
     fn serve_default_bind() {
         let cli = Cli::try_parse_from(["wpg", "serve"]).unwrap();
         match cli.command {
-            Command::Serve(a) => assert_eq!(a.bind, "127.0.0.1:8080".parse().unwrap()),
+            Command::Serve(a) => {
+                assert_eq!(a.bind, None);
+                assert!(!a.dev);
+            }
             other => panic!("unexpected {other:?}"),
         }
     }
@@ -317,6 +350,24 @@ mod tests {
             &["wpg", "template", "lint", "t.wpg.yaml"],
             &["wpg", "ifaces", "--json"],
             &["wpg", "doctor"],
+            &[
+                "wpg",
+                "serve",
+                "--bind",
+                "127.0.0.1:1",
+                "--config",
+                "x.toml",
+                "--dev",
+                "--library-path",
+                "a",
+                "--library-path",
+                "b",
+                "--data-dir",
+                "d",
+            ],
+            &["wpg", "config", "init", "--path", "w.toml", "--force"],
+            &["wpg", "config", "show", "--config", "w.toml"],
+            &["wpg", "config", "validate"],
             &["wpg", "bench", "--backend", "null"],
             &[
                 "wpg",

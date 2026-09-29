@@ -34,5 +34,11 @@ serde_json.workspace = true
 # Ctrl-C stops `wpg send` / `wpg bench` cleanly.
 ctrlc = "3"
 
+[dev-dependencies]
+# `tests/render_api.rs`: `wpg render` output == `POST /api/render`.
+axum.workspace = true
+tower.workspace = true
+tempfile = "3"
+
 [lints]
 workspace = true
