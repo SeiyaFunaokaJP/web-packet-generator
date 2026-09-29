@@ -308,13 +308,13 @@ wpg bench   [--backend ...]                                # 送出性能計測
 ### M2: 送出エンジン（2–3 週）
 - [x] `TxBackend` trait、`pcapfile` / `null` バックエンド
 - [x] `pcap` バックエンド (Linux libpcap / macOS BPF / Windows Npcap)
-- [ ] Linux `afpacket` (TPACKET_V3 + sendmmsg)、コア pin、複数キュー
+- [x] Linux `afpacket` (TPACKET_V3 + sendmmsg)、コア pin、複数キュー
 - [x] レート制御 (pps/bps/%)、バースト、IFG、精度計測
 - [x] 統計収集 (per-backend / per-stream) と 100ms スナップショット
 - [x] インタフェース列挙 (3 OS)
 - [x] `wpg doctor`（権限・Npcap・setcap・hugepages 診断）
-- [ ] `wpg bench` と性能ベースライン記録 (`docs/perf.md`)
-- [ ] CML2 上 Ubuntu (virtio-net) での実測・注意点ドキュメント化
+- [x] `wpg bench` と性能ベースライン記録 (`docs/perf.md`)
+- [x] CML2 上 Ubuntu (virtio-net) での実測・注意点ドキュメント化（注意点は docs/operations/cml2 に記載済み。実測は `lo` のみで CML2 実機は未計測）
 
 ### M3: サーバ & CLI（2–3 週）
 - [ ] axum サーバ骨格、`rust-embed` で静的資産埋め込み

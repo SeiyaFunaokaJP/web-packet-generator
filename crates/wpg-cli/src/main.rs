@@ -74,6 +74,12 @@ pub(crate) struct SendArgs {
     /// Frames sent back to back per rate-control grant.
     #[arg(long)]
     pub(crate) burst: Option<u32>,
+    /// Ramp the rate up linearly from 0 over this time, e.g. `5s`.
+    #[arg(long, value_name = "DURATION")]
+    pub(crate) ramp_up: Option<String>,
+    /// Start at this time: RFC 3339 (`2026-09-29T12:00:00Z`) or a delay (`+10s`).
+    #[arg(long, value_name = "TIME")]
+    pub(crate) start_at: Option<String>,
     /// Expansion strategy: auto, prerender or onthefly.
     #[arg(long, default_value = "auto")]
     pub(crate) plan: String,
@@ -187,6 +193,12 @@ pub(crate) struct BenchArgs {
     /// Frame size in bytes (without FCS).
     #[arg(long, default_value_t = 64)]
     pub(crate) frame_size: usize,
+    /// Benchmark on-the-fly generation of this template instead of a fixed frame.
+    #[arg(long, value_name = "FILE")]
+    pub(crate) template: Option<PathBuf>,
+    /// Template variable override (`name=value`), repeatable (with --template).
+    #[arg(long = "var", value_name = "NAME=VALUE")]
+    pub(crate) vars: Vec<String>,
     /// Output JSON.
     #[arg(long)]
     pub(crate) json: bool,

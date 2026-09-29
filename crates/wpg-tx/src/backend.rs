@@ -132,6 +132,49 @@ pub fn open_by_name(
     }
 }
 
+/// Whether the backend `name` can run several TX workers on one interface (one
+/// instance per worker). `pcapfile` writes one file and `pcap` is kept to a single
+/// handle, so they are limited to one worker.
+#[must_use]
+pub fn supports_workers(name: &str) -> bool {
+    !matches!(name, "pcapfile" | "pcap")
+}
+
+/// Opens `n` independent instances of the backend `name` on `iface`, one per TX
+/// worker (`afpacket`: one socket and TX ring each). The core in `opts.pin_core`
+/// is ignored here; workers pin themselves (see `JobConfig::pin_cores`).
+///
+/// # Errors
+/// [`TxError::Config`] when `n > 1` for a backend that is limited to one worker
+/// ([`supports_workers`]); otherwise the errors of [`open_by_name`]. Instances
+/// opened before a failure are closed.
+pub fn open_workers(
+    name: &str,
+    iface: &str,
+    opts: &TxOptions,
+    n: usize,
+) -> Result<Vec<Box<dyn TxBackend>>, TxError> {
+    let n = n.max(1);
+    if n > 1 && !supports_workers(name) {
+        return Err(TxError::Config(format!(
+            "backend `{name}` supports a single worker (got {n})"
+        )));
+    }
+    let mut out: Vec<Box<dyn TxBackend>> = Vec::with_capacity(n);
+    for _ in 0..n {
+        match open_by_name(name, iface, opts) {
+            Ok(b) => out.push(b),
+            Err(e) => {
+                for b in &mut out {
+                    let _ = b.close();
+                }
+                return Err(e);
+            }
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(all(feature = "afpacket", target_os = "linux"))]
 fn open_afpacket(iface: &str, opts: &TxOptions) -> Result<Box<dyn TxBackend>, TxError> {
     let mut b = crate::afpacket::AfPacketBackend::new();
@@ -179,6 +222,17 @@ mod tests {
                 other => panic!("{n}: {:?}", other.map(|b| b.name())),
             }
         }
+        assert_eq!(
+            open_workers("null", "x", &TxOptions::default(), 3)
+                .unwrap()
+                .len(),
+            3
+        );
+        assert!(matches!(
+            open_workers("pcapfile", "/tmp/x.pcapng", &TxOptions::default(), 2),
+            Err(TxError::Config(_))
+        ));
+        assert!(supports_workers("afpacket") && !supports_workers("pcap"));
         #[cfg(not(feature = "pcap"))]
         assert!(matches!(
             open_by_name("pcap", "eth0", &TxOptions::default()),

@@ -20,6 +20,9 @@ pub enum CoreError {
         /// Field name.
         field: String,
     },
+    /// A layer reference (see `Packet::layer_index`) matches no layer.
+    #[error("`{0}` does not match any layer of the packet")]
+    UnknownLayer(String),
     /// A field's bit width is outside what its type supports.
     #[error("field `{field}`: invalid bit width {bits} (allowed {min}..={max})")]
     InvalidWidth {

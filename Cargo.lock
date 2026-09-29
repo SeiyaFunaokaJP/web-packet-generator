@@ -3086,11 +3086,13 @@ version = "0.1.0"
 dependencies = [
  "libc",
  "pcap",
+ "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "wpg-core",
  "wpg-protocols",
+ "wpg-template",
  "wpg-testutil",
 ]
 

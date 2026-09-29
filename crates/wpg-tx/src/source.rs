@@ -1,8 +1,8 @@
 //! Frame sources: where the TX loop gets its bytes from.
 //!
 //! * [`PreRendered`]: frames rendered up front, replayed (optionally cycled);
-//! * [`OnTheFly`]: a base [`Packet`] plus a stream [`Expansion`]; each frame applies
-//!   the next override set to a working copy of the packet and builds it;
+//! * [`OnTheFly`]: a base [`Packet`] plus a stream [`Expansion`]; the packet is built
+//!   once ([`Prebuilt`]) and each frame patches the generated fields in place;
 //! * [`Rendered`]: picks one of the two from a [`Plan`] (TODO §2.1 "事前展開と
 //!   オンザフライ生成の自動選択");
 //! * [`Mixer`]: several sources mixed weighted / sequentially / round-robin (TODO
@@ -21,8 +21,8 @@ use std::sync::Arc;
 
 use thiserror::Error;
 use wpg_core::generator::{field_value_to_i128, GeneratorError};
-use wpg_core::stream::{Expansion, FieldRef, Plan, PlanConfig, Strategy};
-use wpg_core::{CoreError, FieldValue, Packet, Resolve};
+use wpg_core::stream::{partition, Expansion, FieldRef, Plan, PlanConfig, Strategy};
+use wpg_core::{CoreError, FieldValue, Packet, PatchTarget, Prebuilt, Resolve};
 
 /// Errors from building frame sources.
 #[derive(Debug, Error)]
@@ -89,9 +89,12 @@ impl<T: FrameSource + ?Sized> FrameSource for Box<T> {
 }
 
 /// Pre-rendered frames, replayed in order.
+///
+/// The frames are shared (`Arc`), so [`PreRendered::split`] for several TX workers
+/// does not copy them.
 #[derive(Debug, Clone)]
 pub struct PreRendered {
-    frames: Vec<Vec<u8>>,
+    frames: Arc<Vec<Vec<u8>>>,
     /// Frames still to emit (`None` = forever).
     left: Option<u64>,
     pos: usize,
@@ -108,7 +111,7 @@ impl PreRendered {
             repeat.map(|r| r.saturating_mul(n))
         };
         Self {
-            frames,
+            frames: Arc::new(frames),
             left,
             pos: 0,
         }
@@ -119,7 +122,7 @@ impl PreRendered {
     pub fn cycled(frames: Vec<Vec<u8>>, total: Option<u64>) -> Self {
         let left = if frames.is_empty() { Some(0) } else { total };
         Self {
-            frames,
+            frames: Arc::new(frames),
             left,
             pos: 0,
         }
@@ -134,7 +137,43 @@ impl PreRendered {
     /// Consumes the source, returning the distinct frames.
     #[must_use]
     pub fn into_frames(self) -> Vec<Vec<u8>> {
-        self.frames
+        Arc::try_unwrap(self.frames).unwrap_or_else(|a| (*a).clone())
+    }
+
+    /// Splits the remaining frames between `n` workers. A bounded source is cut into
+    /// contiguous, balanced parts (every frame is sent exactly once overall, see
+    /// [`partition`]); an endless one gives every worker an endless loop starting at
+    /// a different frame. Returns fewer than `n` sources when there are fewer frames
+    /// than workers (at least one).
+    #[must_use]
+    pub fn split(self, n: usize) -> Vec<PreRendered> {
+        let len = self.frames.len();
+        if len == 0 || n <= 1 {
+            return vec![self];
+        }
+        match self.left {
+            Some(total) => {
+                let parts = partition(total, n);
+                if parts.is_empty() {
+                    return vec![self];
+                }
+                parts
+                    .into_iter()
+                    .map(|r| PreRendered {
+                        frames: Arc::clone(&self.frames),
+                        left: Some(r.end - r.start),
+                        pos: usize::try_from((self.pos as u64 + r.start) % len as u64).unwrap_or(0),
+                    })
+                    .collect()
+            }
+            None => (0..n)
+                .map(|w| PreRendered {
+                    frames: Arc::clone(&self.frames),
+                    left: None,
+                    pos: (self.pos + w * len / n) % len,
+                })
+                .collect(),
+        }
     }
 }
 
@@ -201,27 +240,11 @@ impl<T: Resolve + Send + Sync + 'static> From<Arc<T>> for CatalogRef {
     }
 }
 
-/// Resolves a [`FieldRef::layer`] to a layer index (see the module docs).
+/// Resolves a [`FieldRef::layer`] to a layer index (see the module docs and
+/// [`Packet::layer_index`]).
 #[must_use]
 pub fn resolve_layer(packet: &Packet, layer: &str) -> Option<usize> {
-    if let Ok(i) = layer.parse::<usize>() {
-        return (i < packet.layers.len()).then_some(i);
-    }
-    let (proto, nth) = match layer
-        .strip_suffix(']')
-        .and_then(|s| s.rsplit_once('['))
-        .or_else(|| layer.rsplit_once('#'))
-    {
-        Some((p, n)) => (p, n.parse::<usize>().ok()?),
-        None => (layer, 0),
-    };
-    packet
-        .layers
-        .iter()
-        .enumerate()
-        .filter(|(_, l)| l.protocol == proto)
-        .nth(nth)
-        .map(|(i, _)| i)
+    packet.layer_index(layer)
 }
 
 /// Applies `targets[i] = values[i]` to `packet` (Manual values), resolving layers as
@@ -256,18 +279,23 @@ fn set_field(
 }
 
 /// On-the-fly frame generation from a base packet and a stream expansion.
+///
+/// The packet is built once ([`Prebuilt`]); every frame patches the generated
+/// fields in place and recomputes only the checksums that cover them, falling back
+/// to a full build for variable-length fields. The bytes are identical to building
+/// each packet from scratch.
 #[derive(Debug)]
 pub struct OnTheFly {
-    work: Packet,
+    pre: Prebuilt,
     exp: Expansion,
-    catalog: CatalogRef,
-    /// Layer index per expansion target.
-    slots: Vec<usize>,
+    targets: Vec<PatchTarget>,
     values: Vec<FieldValue>,
     /// Numeric Manual fields of the base packet for `$field` references in `expr`
     /// generators (`field` for the first occurrence and `layer.field`).
-    base_fields: HashMap<String, i128>,
+    base_fields: Arc<HashMap<String, i128>>,
     index: u64,
+    /// Index increment per frame (> 1 for strided workers, see [`Self::split`]).
+    step: u64,
     end: Option<u64>,
     /// Stream length when cycling.
     cycle: Option<u64>,
@@ -278,20 +306,20 @@ impl OnTheFly {
     /// Creates the source. Every packet of the expansion is produced once, in order.
     ///
     /// # Errors
-    /// [`SourceError::UnknownLayer`] if a stream target does not match a layer.
+    /// [`SourceError::UnknownLayer`] if a stream target does not match a layer;
+    /// [`SourceError::Build`] if the base packet cannot be built.
+    #[allow(clippy::needless_pass_by_value)] // owning signature kept for callers
     pub fn new(
         packet: Packet,
         exp: Expansion,
         catalog: impl Into<CatalogRef>,
     ) -> Result<Self, SourceError> {
-        let slots = exp
-            .targets()
-            .iter()
-            .map(|t| {
-                resolve_layer(&packet, &t.layer)
-                    .ok_or_else(|| SourceError::UnknownLayer(t.to_string()))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let catalog = catalog.into();
+        for t in exp.targets() {
+            if resolve_layer(&packet, &t.layer).is_none() {
+                return Err(SourceError::UnknownLayer(t.to_string()));
+            }
+        }
         let mut base_fields = HashMap::new();
         for layer in &packet.layers {
             for (name, v) in &layer.fields {
@@ -303,19 +331,55 @@ impl OnTheFly {
                 }
             }
         }
+        // Build from the first packet's values so every generated field is Manual
+        // in the base: patches then never flip a field between Auto and Manual.
+        let mut values = Vec::new();
+        let first = (!exp.is_empty())
+            .then(|| {
+                let lookup = |name: &str| base_fields.get(name).copied();
+                exp.values_at(0, &lookup, &mut values).ok()?;
+                let mut p = packet.clone();
+                apply_overrides(&mut p, exp.targets(), &values).ok()?;
+                Prebuilt::new(&p, catalog.get()).ok()
+            })
+            .flatten();
+        let pre = match first {
+            Some(p) => p,
+            None => Prebuilt::new(&packet, catalog.get())?,
+        };
+        let targets = exp
+            .targets()
+            .iter()
+            .map(|t| pre.target(t))
+            .collect::<Result<Vec<_>, _>>()?;
         let end = exp.len();
         Ok(Self {
-            work: packet,
+            pre,
             exp,
-            catalog: catalog.into(),
-            slots,
-            values: Vec::new(),
-            base_fields,
+            targets,
+            values,
+            base_fields: Arc::new(base_fields),
             index: 0,
+            step: 1,
             end,
             cycle: None,
             error: None,
         })
+    }
+
+    fn fork(&self) -> Self {
+        Self {
+            pre: self.pre.clone(),
+            exp: self.exp.clone(),
+            targets: self.targets.clone(),
+            values: Vec::new(),
+            base_fields: Arc::clone(&self.base_fields),
+            index: self.index,
+            step: self.step,
+            end: self.end,
+            cycle: self.cycle,
+            error: None,
+        }
     }
 
     /// Restricts the source to packet indices `range` (for partitioned workers).
@@ -335,6 +399,55 @@ impl OnTheFly {
         self
     }
 
+    /// Whether every stream target is patched in place (no per-frame full build).
+    #[must_use]
+    pub fn is_fast(&self) -> bool {
+        self.targets.iter().all(PatchTarget::is_fast)
+    }
+
+    /// Frames that needed a full build so far.
+    #[must_use]
+    pub fn fallbacks(&self) -> u64 {
+        self.pre.fallbacks()
+    }
+
+    /// Splits the source between `n` workers. A bounded stream is cut into
+    /// contiguous, balanced index ranges with [`partition`] (every packet exactly
+    /// once overall); a cycling or unbounded one is interleaved (worker `w` produces
+    /// indices `w, w + n, w + 2n, ...`). Returns fewer than `n` sources when the
+    /// stream has fewer packets than workers (at least one).
+    #[must_use]
+    pub fn split(self, n: usize) -> Vec<OnTheFly> {
+        if n <= 1 {
+            return vec![self];
+        }
+        match (self.end, self.cycle) {
+            (Some(end), None) => {
+                let parts = partition(end.saturating_sub(self.index), n);
+                if parts.is_empty() {
+                    return vec![self];
+                }
+                parts
+                    .into_iter()
+                    .map(|r| {
+                        let mut f = self.fork();
+                        f.index = self.index + r.start;
+                        f.end = Some(self.index + r.end);
+                        f
+                    })
+                    .collect()
+            }
+            _ => (0..n as u64)
+                .map(|w| {
+                    let mut f = self.fork();
+                    f.index = self.index + w * self.step;
+                    f.step = self.step * n as u64;
+                    f
+                })
+                .collect(),
+        }
+    }
+
     /// Builds packet `index` into `buf`.
     ///
     /// # Errors
@@ -343,16 +456,9 @@ impl OnTheFly {
         let base = &self.base_fields;
         let lookup = |name: &str| base.get(name).copied();
         self.exp.values_at(index, &lookup, &mut self.values)?;
-        for ((slot, target), v) in self
-            .slots
-            .iter()
-            .zip(self.exp.targets())
-            .zip(self.values.drain(..))
-        {
-            set_field(&mut self.work.layers[*slot].fields, &target.field, v);
-        }
-        let mut built = self.work.build(self.catalog.get())?;
-        std::mem::swap(buf, &mut built.bytes);
+        let bytes = self.pre.patch_targets(&self.targets, &self.values)?;
+        buf.clear();
+        buf.extend_from_slice(bytes);
         Ok(buf.len())
     }
 
@@ -380,7 +486,7 @@ impl FrameSource for OnTheFly {
         let idx = self.cycle.map_or(self.index, |n| self.index % n);
         match self.render(idx, buf) {
             Ok(n) => {
-                self.index += 1;
+                self.index += self.step;
                 Some(n)
             }
             Err(e) => {
@@ -391,7 +497,8 @@ impl FrameSource for OnTheFly {
     }
 
     fn remaining(&self) -> Option<u64> {
-        self.end.map(|e| e.saturating_sub(self.index))
+        self.end
+            .map(|e| e.saturating_sub(self.index).div_ceil(self.step))
     }
 
     fn take_error(&mut self) -> Option<SourceError> {
@@ -451,6 +558,22 @@ impl Rendered {
         };
         let plan = exp.plan(frame_len, cfg);
         Ok((Self::from_plan(packet, exp, catalog, &plan)?, plan))
+    }
+}
+
+impl Rendered {
+    /// Splits the source between `n` TX workers (see [`PreRendered::split`] and
+    /// [`OnTheFly::split`]).
+    #[must_use]
+    pub fn split(self, n: usize) -> Vec<Rendered> {
+        match self {
+            Rendered::Pre(p) => p.split(n).into_iter().map(Rendered::Pre).collect(),
+            Rendered::Fly(f) => f
+                .split(n)
+                .into_iter()
+                .map(|f| Rendered::Fly(Box::new(f)))
+                .collect(),
+        }
     }
 }
 
@@ -801,6 +924,86 @@ mod tests {
             OnTheFly::new(base_packet(), exp, catalog()),
             Err(SourceError::UnknownLayer(_))
         ));
+    }
+
+    #[test]
+    fn split_covers_every_index_exactly_once() {
+        // 1000 distinct packets (UDP source port sweep).
+        let sp = StreamSpec {
+            assignments: vec![Assignment {
+                target: FieldRef::new("udp", "src_port"),
+                ty: FieldType::UInt { bits: 16 },
+                generator: Generator::Range {
+                    start: "1000".into(),
+                    end: "1999".into(),
+                    step: 1,
+                },
+            }],
+            mode: Mode::Zip,
+            count: None,
+            seed: 0,
+        };
+        let exp = Expansion::new(&sp, None).unwrap();
+        let fly = OnTheFly::new(base_packet(), exp.clone(), catalog()).unwrap();
+        assert!(fly.is_fast());
+        let mut whole = drain(
+            &mut OnTheFly::new(base_packet(), exp.clone(), catalog()).unwrap(),
+            usize::MAX,
+        );
+        assert_eq!(whole.len(), 1000);
+        for n in [1, 2, 3, 7] {
+            let parts = fly.fork().split(n);
+            assert_eq!(parts.len(), n);
+            let mut all = Vec::new();
+            for mut p in parts {
+                all.extend(drain(&mut p, usize::MAX));
+            }
+            all.sort();
+            whole.sort();
+            assert_eq!(all, whole, "{n} workers");
+        }
+        // More workers than packets: fewer sources.
+        let two = fly.fork().with_range(10..12).split(8);
+        assert_eq!(two.len(), 2);
+
+        // Cycling: interleaved, the first k·n frames of n workers = the first k·n
+        // indices.
+        let parts = fly.fork().cycling().split(3);
+        let mut all = Vec::new();
+        for mut p in parts {
+            assert_eq!(p.remaining(), None);
+            all.extend(drain(&mut p, 400));
+        }
+        let ports = |v: &[Vec<u8>]| -> Vec<u16> {
+            let mut p: Vec<u16> = v
+                .iter()
+                .map(|f| u16::from_be_bytes([f[34], f[35]]))
+                .collect();
+            p.sort_unstable();
+            p
+        };
+        let mut want: Vec<u16> = (0..1200u16).map(|i| 1000 + i % 1000).collect();
+        want.sort_unstable();
+        assert_eq!(ports(&all), want);
+
+        // Pre-rendered.
+        let frames: Vec<Vec<u8>> = (0..10u8).map(|i| vec![i; 60]).collect();
+        let parts = PreRendered::new(frames.clone(), Some(3)).split(4);
+        assert_eq!(
+            parts.iter().map(|p| p.remaining().unwrap()).sum::<u64>(),
+            30
+        );
+        let mut all: Vec<Vec<u8>> = parts
+            .into_iter()
+            .flat_map(|mut p| drain(&mut p, usize::MAX))
+            .collect();
+        all.sort();
+        let mut want: Vec<Vec<u8>> = (0..3).flat_map(|_| frames.clone()).collect();
+        want.sort();
+        assert_eq!(all, want);
+        let endless = PreRendered::new(frames, None).split(3);
+        assert_eq!(endless.len(), 3);
+        assert!(endless.iter().all(|p| p.remaining().is_none()));
     }
 
     #[test]

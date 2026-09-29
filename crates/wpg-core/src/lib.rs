@@ -26,7 +26,9 @@ pub mod parse;
 pub mod stream;
 pub mod synth;
 
-pub use build::{Built, FieldLayout, LayerLayout, TrailerKind, TrailerLayout};
+pub use build::{
+    Built, FieldLayout, LayerLayout, PatchTarget, Prebuilt, TrailerKind, TrailerLayout,
+};
 pub use constraint::{Constraint, ConstraintRule};
 pub use diag::{DiagLevel, Diagnostic};
 pub use error::{CoreError, Result};

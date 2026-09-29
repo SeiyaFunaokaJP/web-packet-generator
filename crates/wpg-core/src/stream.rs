@@ -234,7 +234,16 @@ impl Expansion {
         let n = self.gens.len();
         out.clear();
         out.resize(n, FieldValue::UInt(0));
-        let mut local = vec_local(n);
+        // Per-generator indices; on the stack for the usual handful of generators
+        // (this runs once per packet on the on-the-fly TX path).
+        let mut small = [0u64; 8];
+        let mut heap = Vec::new();
+        let local: &mut [u64] = if n <= small.len() {
+            &mut small[..n]
+        } else {
+            heap.resize(n, 0);
+            &mut heap
+        };
         if self.zip {
             local.iter_mut().for_each(|l| *l = index);
         } else {
@@ -321,10 +330,6 @@ impl Expansion {
     pub fn plan(&self, frame_len: usize, cfg: &PlanConfig) -> Plan {
         Plan::decide(self.len(), frame_len, cfg)
     }
-}
-
-fn vec_local(n: usize) -> Vec<u64> {
-    vec![0; n]
 }
 
 struct StreamLookup<'a> {

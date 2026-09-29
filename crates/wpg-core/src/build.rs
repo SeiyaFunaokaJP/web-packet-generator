@@ -30,6 +30,9 @@ use crate::ir::{
 };
 use crate::packet::{FcsMode, FieldValue, Layer, Packet, TlvItem};
 
+mod prebuilt;
+pub use prebuilt::{PatchTarget, Prebuilt};
+
 /// Position and final value of one field in the built bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FieldLayout {
@@ -1100,7 +1103,7 @@ mod tests {
     use crate::ir::{Binding, BindingEntry, LengthOf, LengthUnit, ProtocolLayer, PseudoHeader};
 
     /// A tiny two-level stack: `outer` (IPv4-like) → `inner` (UDP-like).
-    fn defs() -> Vec<ProtocolDef> {
+    pub(super) fn defs() -> Vec<ProtocolDef> {
         let mut outer = ProtocolDef::new("outer", "Outer", ProtocolLayer::L3);
         outer.fields = vec![
             FieldDef::new("ver", FieldType::UInt { bits: 4 }).with_default(FieldValue::UInt(4)),
@@ -1158,7 +1161,7 @@ mod tests {
         vec![outer, inner]
     }
 
-    fn packet() -> Packet {
+    pub(super) fn packet() -> Packet {
         Packet::from_layers(vec![
             Layer::new("outer")
                 .with("src", Ipv4Addr::new(10, 0, 0, 1))

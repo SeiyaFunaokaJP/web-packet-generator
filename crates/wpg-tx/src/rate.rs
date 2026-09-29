@@ -16,7 +16,7 @@
 
 use std::fmt;
 use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
@@ -129,6 +129,92 @@ pub fn parse_duration(s: &str) -> Result<Duration, RateParseError> {
     };
     let secs = v * scale;
     Duration::try_from_secs_f64(secs).map_err(|_| RateParseError::OutOfRange(t.to_owned()))
+}
+
+/// Days since 1970-01-01 of a proleptic Gregorian date (H. Hinnant's algorithm).
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let mp = (m + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146_097 + doe - 719_468
+}
+
+/// Parses an RFC 3339 timestamp (`2026-09-29T12:00:00Z`,
+/// `2026-09-29 21:00:00.5+09:00`) into seconds since the Unix epoch.
+fn parse_rfc3339(s: &str) -> Option<f64> {
+    let b = s.as_bytes();
+    let num = |r: std::ops::Range<usize>| -> Option<i64> {
+        let t = s.get(r)?;
+        t.bytes()
+            .all(|c| c.is_ascii_digit())
+            .then(|| t.parse().ok())?
+    };
+    if b.len() < 19 || b[4] != b'-' || b[7] != b'-' || b[13] != b':' || b[16] != b':' {
+        return None;
+    }
+    if !matches!(b[10], b'T' | b't' | b' ') {
+        return None;
+    }
+    let (y, mo, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
+    let (h, mi, sec) = (num(11..13)?, num(14..16)?, num(17..19)?);
+    if !(1..=12).contains(&mo) || !(1..=31).contains(&d) || h > 23 || mi > 59 || sec > 60 {
+        return None;
+    }
+    let mut rest = &s[19..];
+    let mut frac = 0.0;
+    if let Some(r) = rest.strip_prefix('.') {
+        let end = r.find(|c: char| !c.is_ascii_digit()).unwrap_or(r.len());
+        if end == 0 {
+            return None;
+        }
+        frac = format!("0.{}", &r[..end]).parse().ok()?;
+        rest = &r[end..];
+    }
+    let offset = match rest {
+        "Z" | "z" => 0,
+        _ if rest.len() == 6 && rest.as_bytes()[3] == b':' => {
+            let sign = match rest.as_bytes()[0] {
+                b'+' => 1,
+                b'-' => -1,
+                _ => return None,
+            };
+            let oh: i64 = rest[1..3].parse().ok()?;
+            let om: i64 = rest[4..6].parse().ok()?;
+            sign * (oh * 3600 + om * 60)
+        }
+        _ => return None,
+    };
+    let days = days_from_civil(y, mo, d);
+    let secs = days * 86_400 + h * 3600 + mi * 60 + sec - offset;
+    Some(secs as f64 + frac)
+}
+
+/// Parses a scheduled start time: an RFC 3339 timestamp
+/// (`2026-09-29T12:00:00Z`, `2026-09-29T21:00:00+09:00`) or a delay relative to
+/// `now` (`+10s`, `+1.5m`, see [`parse_duration`]).
+///
+/// # Errors
+/// A message for anything else.
+pub fn parse_start_time(s: &str, now: SystemTime) -> Result<SystemTime, String> {
+    let t = s.trim();
+    if let Some(rel) = t.strip_prefix('+') {
+        let d = parse_duration(rel).map_err(|e| e.to_string())?;
+        return Ok(now + d);
+    }
+    let secs = parse_rfc3339(t).ok_or_else(|| {
+        format!(
+            "invalid start time `{t}` (expected RFC 3339 such as 2026-09-29T12:00:00Z, or +10s)"
+        )
+    })?;
+    let d = Duration::try_from_secs_f64(secs.abs()).map_err(|e| e.to_string())?;
+    Ok(if secs >= 0.0 {
+        SystemTime::UNIX_EPOCH + d
+    } else {
+        SystemTime::UNIX_EPOCH - d
+    })
 }
 
 impl Rate {
@@ -300,6 +386,23 @@ impl Rate {
             .map(|ns| Duration::from_secs_f64(ns / 1e9))
     }
 
+    /// This rate shared by `n` workers: each gets `1/n` of it (an IFG becomes `n`
+    /// times longer). `n = 0` is treated as 1.
+    #[must_use]
+    pub fn split(self, n: usize) -> Rate {
+        let k = n.max(1) as f64;
+        match self {
+            Rate::Unlimited => Rate::Unlimited,
+            Rate::Pps(p) => Rate::Pps(p / k),
+            Rate::Bps(b) => Rate::Bps(b / k),
+            Rate::LinkPercent { percent, link_bps } => Rate::LinkPercent {
+                percent: percent / k,
+                link_bps,
+            },
+            Rate::Ifg(d) => Rate::Ifg(d.mul_f64(k)),
+        }
+    }
+
     /// Frames per second for frames of `frame_len` octets (`None` = unlimited).
     #[must_use]
     pub fn frames_per_second(&self, frame_len: usize) -> Option<f64> {
@@ -391,6 +494,10 @@ pub struct PacerConfig {
     /// How far the pacer may fall behind before it forgets the backlog (instead of
     /// sending a catch-up burst). Default 10 ms.
     pub max_backlog: Duration,
+    /// Ramp-up: the rate grows linearly from 0 to the target over this much
+    /// active time (TODO §2.1 "ランプアップ"). `None` = full rate from the start.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ramp_up: Option<Duration>,
 }
 
 impl Default for PacerConfig {
@@ -400,7 +507,44 @@ impl Default for PacerConfig {
             wait: WaitMode::default(),
             yield_while_spinning: false,
             max_backlog: Duration::from_millis(10),
+            ramp_up: None,
         }
+    }
+}
+
+/// Fraction of `target × active` a pacer with a linear ramp-up of `ramp` should have
+/// sent after `active` time: `t / 2R` during the ramp, `1 − R / 2t` after it.
+#[must_use]
+pub fn ramp_fraction(active: Duration, ramp: Option<Duration>) -> f64 {
+    let t = active.as_secs_f64();
+    let r = ramp.map_or(0.0, |r| r.as_secs_f64());
+    if t <= 0.0 {
+        return 1.0;
+    }
+    if r <= 0.0 {
+        1.0
+    } else if t <= r {
+        t / (2.0 * r)
+    } else {
+        1.0 - r / (2.0 * t)
+    }
+}
+
+/// Next theoretical send time `u` (ns of active time) after a frame costing `cost`
+/// ns at full rate, with a linear ramp of `ramp` ns: the frame count is
+/// `u² / (2·ramp·cost)` inside the ramp and linear afterwards.
+fn ramp_step(u: f64, cost: f64, ramp: f64) -> f64 {
+    let u = u.max(0.0);
+    if u >= ramp {
+        return u + cost;
+    }
+    let next = (u * u + 2.0 * ramp * cost).sqrt();
+    if next <= ramp {
+        next
+    } else {
+        // The ramp ends inside this frame: the rest of it is paid at full rate.
+        let used = (ramp * ramp - u * u) / (2.0 * ramp * cost);
+        ramp + (1.0 - used) * cost
     }
 }
 
@@ -573,8 +717,15 @@ impl Pacer {
         self.frames += 1;
         self.wire_bits += wire_bits(frame_len);
         if let Some(cost) = self.rate.interval_ns(frame_len) {
-            self.tat += cost;
-            self.last_cost = cost;
+            let before = self.tat;
+            self.tat = match self.cfg.ramp_up {
+                Some(r) if !r.is_zero() => {
+                    let paused = self.paused_total.as_secs_f64() * 1e9;
+                    ramp_step(self.tat - paused, cost, r.as_secs_f64() * 1e9) + paused
+                }
+                _ => self.tat + cost,
+            };
+            self.last_cost = self.tat - before;
         }
     }
 
@@ -622,7 +773,7 @@ impl Pacer {
             target,
             achieved,
             unit,
-            ratio: target.map(|t| achieved / t),
+            ratio: target.map(|t| achieved / (t * ramp_fraction(active, self.cfg.ramp_up))),
             max_jitter: Duration::from_secs_f64(self.jitter_max / 1e9),
             mean_jitter: Duration::from_secs_f64(mean / 1e9),
             frames: self.frames,
@@ -804,6 +955,70 @@ mod tests {
             waited >= Duration::from_millis(40) && waited < Duration::from_millis(100),
             "{waited:?}"
         );
+    }
+
+    #[test]
+    fn start_times() {
+        let now = SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000);
+        assert_eq!(
+            parse_start_time("+10s", now).unwrap(),
+            now + Duration::from_secs(10)
+        );
+        let at = |s: &str| {
+            parse_start_time(s, now)
+                .unwrap()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs_f64()
+        };
+        assert_eq!(at("1970-01-01T00:00:00Z"), 0.0);
+        assert_eq!(at("2026-09-29T12:00:00Z"), 1_790_683_200.0);
+        assert_eq!(at("2026-09-29T21:00:00+09:00"), 1_790_683_200.0);
+        assert_eq!(at("2026-09-29 11:30:00.25-00:30"), 1_790_683_200.25);
+        for bad in [
+            "",
+            "tomorrow",
+            "2026-13-01T00:00:00Z",
+            "2026-09-29T12:00:00",
+            "+x",
+        ] {
+            assert!(parse_start_time(bad, now).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn ramp_math_and_split() {
+        // Inside the ramp the n-th frame is due at sqrt(2 R n c).
+        let (r, c) = (1e9, 1e6); // 1 s ramp, 1000 pps
+        let mut u = 0.0;
+        for _ in 0..50 {
+            u = ramp_step(u, c, r);
+        }
+        assert!((u - (2.0 * r * 50.0 * c).sqrt()).abs() < 1.0, "{u}");
+        // 500 frames fill the ramp exactly (1000 pps × 1 s / 2), then linear.
+        for _ in 50..500 {
+            u = ramp_step(u, c, r);
+        }
+        assert!((u - r).abs() < 1e3, "{u}");
+        assert!((ramp_step(u, c, r) - (u + c)).abs() < 1e-3);
+        assert!(
+            (ramp_fraction(Duration::from_secs(1), Some(Duration::from_secs(2))) - 0.25).abs()
+                < 1e-9
+        );
+        assert!(
+            (ramp_fraction(Duration::from_secs(4), Some(Duration::from_secs(2))) - 0.75).abs()
+                < 1e-9
+        );
+        assert_eq!(ramp_fraction(Duration::from_secs(4), None), 1.0);
+
+        assert_eq!(Rate::Pps(1000.0).split(4), Rate::Pps(250.0));
+        assert_eq!(Rate::Bps(1e9).split(2), Rate::Bps(5e8));
+        assert_eq!(
+            Rate::Ifg(Duration::from_micros(10)).split(3),
+            Rate::Ifg(Duration::from_micros(30))
+        );
+        assert_eq!(Rate::Unlimited.split(8), Rate::Unlimited);
+        assert_eq!(Rate::Pps(10.0).split(0), Rate::Pps(10.0));
     }
 
     #[test]

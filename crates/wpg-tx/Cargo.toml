@@ -33,6 +33,8 @@ libc = "0.2.186"
 
 [dev-dependencies]
 wpg-protocols.workspace = true
+wpg-template.workspace = true
+proptest = "1"
 wpg-testutil.workspace = true
 serde_json.workspace = true
 

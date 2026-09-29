@@ -1,4 +1,5 @@
-//! `wpg bench`: unlimited-rate transmission of one synthetic frame.
+//! `wpg bench`: unlimited-rate transmission of one synthetic frame (or of any frame
+//! sources, e.g. a template rendered on the fly), optionally on several workers.
 
 use std::time::Duration;
 
@@ -6,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::job::{JobConfig, JobHandle, JobReport, JobState, TxJob};
 use crate::rate::Rate;
-use crate::source::PreRendered;
-use crate::{backend, TxError, TxOptions};
+use crate::source::{FrameSource, PreRendered};
+use crate::{TxError, TxOptions};
 
 /// EtherType used by benchmark frames (IEEE 802 "local experimental 1").
 pub const BENCH_ETHERTYPE: u16 = 0x88b5;
@@ -25,6 +26,12 @@ pub struct BenchResult {
     pub frame_size: usize,
     /// Frames per `send_batch`.
     pub batch_size: usize,
+    /// TX workers (threads / backend instances).
+    #[serde(default = "one")]
+    pub workers: usize,
+    /// Template benchmarked on the fly (`None`: synthetic frame).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
     /// Frames accepted by the backend.
     pub packets: u64,
     /// Frames not accepted.
@@ -37,6 +44,10 @@ pub struct BenchResult {
     pub l1_bps: f64,
     /// Measured time.
     pub elapsed: Duration,
+}
+
+fn one() -> usize {
+    1
 }
 
 /// A synthetic Ethernet II frame of `frame_size` octets (min 14): locally
@@ -58,6 +69,10 @@ pub fn synthetic_frame(frame_size: usize) -> Vec<u8> {
 pub struct BenchOptions {
     /// Backend options (batch size, ring depth, qdisc bypass, core).
     pub tx: TxOptions,
+    /// TX workers, each with its own backend instance (default 1).
+    pub workers: usize,
+    /// Core per worker (see `JobConfig::pin_cores`).
+    pub pin_cores: Vec<usize>,
 }
 
 impl Default for BenchOptions {
@@ -67,6 +82,8 @@ impl Default for BenchOptions {
                 batch_size: 256,
                 ..TxOptions::default()
             },
+            workers: 1,
+            pin_cores: Vec::new(),
         }
     }
 }
@@ -118,16 +135,38 @@ pub fn start_bench(
     frame_size: usize,
     opts: &BenchOptions,
 ) -> Result<JobHandle, TxError> {
-    let tx = backend::open_by_name(backend_name, iface, &opts.tx)?;
-    let source = PreRendered::new(vec![synthetic_frame(frame_size)], None);
-    TxJob::start(
-        tx,
-        Box::new(source),
+    let sources = PreRendered::new(vec![synthetic_frame(frame_size)], None)
+        .split(opts.workers.max(1))
+        .into_iter()
+        .map(|s| Box::new(s) as Box<dyn FrameSource>)
+        .collect();
+    start_bench_sources(backend_name, iface, duration, sources, opts)
+}
+
+/// Like [`start_bench`] with caller-provided frame sources, one per worker (e.g. a
+/// template rendered on the fly, split with `Rendered::split`).
+///
+/// # Errors
+/// Backend open errors.
+pub fn start_bench_sources(
+    backend_name: &str,
+    iface: &str,
+    duration: Duration,
+    sources: Vec<Box<dyn FrameSource>>,
+    opts: &BenchOptions,
+) -> Result<JobHandle, TxError> {
+    TxJob::start_on(
+        backend_name,
+        iface,
+        &opts.tx,
+        sources,
         JobConfig {
             duration: Some(duration),
             rate: Rate::Unlimited,
             batch_size: opts.tx.batch_size.max(1),
             pin_core: opts.tx.pin_core,
+            pin_cores: opts.pin_cores.clone(),
+            workers: opts.workers.max(1),
             ..JobConfig::default()
         },
     )
@@ -152,6 +191,8 @@ pub fn bench_result(
         iface: iface.to_owned(),
         frame_size: frame_size.max(14),
         batch_size: opts.tx.batch_size.max(1),
+        workers: r.workers.len().max(1),
+        template: None,
         packets: r.stats.packets,
         dropped: r.stats.dropped,
         pps: r.stats.pps,
@@ -180,6 +221,17 @@ mod tests {
         assert!(r.packets > 1000, "{r:?}");
         assert!(r.pps > 10_000.0, "{r:?}");
         assert!(r.elapsed >= Duration::from_millis(100));
+    }
+
+    #[test]
+    fn null_bench_with_workers() {
+        let opts = BenchOptions {
+            workers: 3,
+            ..BenchOptions::default()
+        };
+        let r = run_bench_with("null", "null0", Duration::from_millis(100), 64, &opts).unwrap();
+        assert_eq!(r.workers, 3);
+        assert!(r.packets > 1000, "{r:?}");
     }
 
     #[test]

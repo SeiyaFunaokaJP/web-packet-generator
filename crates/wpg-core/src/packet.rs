@@ -323,6 +323,34 @@ impl Packet {
         self.layers.push(layer);
         self
     }
+
+    /// Resolves a layer reference (as used by `FieldRef::layer` in stream
+    /// overrides) to a layer index:
+    ///
+    /// * a plain index: `0`, `1`, ...;
+    /// * a protocol id: the first layer with that protocol (`ipv4`);
+    /// * a protocol id with a 0-based occurrence index: `ipv4[1]` or `ipv4#1` (the
+    ///   second IPv4 layer, e.g. the inner header of a tunnel).
+    #[must_use]
+    pub fn layer_index(&self, layer: &str) -> Option<usize> {
+        if let Ok(i) = layer.parse::<usize>() {
+            return (i < self.layers.len()).then_some(i);
+        }
+        let (proto, nth) = match layer
+            .strip_suffix(']')
+            .and_then(|s| s.rsplit_once('['))
+            .or_else(|| layer.rsplit_once('#'))
+        {
+            Some((p, n)) => (p, n.parse::<usize>().ok()?),
+            None => (layer, 0),
+        };
+        self.layers
+            .iter()
+            .enumerate()
+            .filter(|(_, l)| l.protocol == proto)
+            .nth(nth)
+            .map(|(i, _)| i)
+    }
 }
 
 #[cfg(test)]
