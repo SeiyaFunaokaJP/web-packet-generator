@@ -43,8 +43,10 @@ such as full TCP handshakes, and optimisation for attack tooling.
 
 Prerequisites: [rustup](https://rustup.rs), the WASM target
 (`rustup target add wasm32-unknown-unknown`), [trunk](https://trunkrs.dev) (`cargo install trunk --locked`),
-and optionally [just](https://github.com/casey/just). On Linux, `libpcap-dev` is recommended; on Windows
-install the Npcap SDK (not needed yet, the pcap backend is not used at this stage).
+and optionally [just](https://github.com/casey/just). The libpcap / Npcap transmit backend is optional
+(`cargo build --release --features pcap`, forwarded to `wpg-tx/pcap`): on Linux it needs `libpcap-dev`, macOS ships
+libpcap, and on Windows it needs the Npcap runtime plus the [Npcap SDK](https://npcap.com/#download) (`wpcap.lib` on
+`LIB`). Without the feature no pcap library is required. `wpg doctor` reports what is missing.
 
 ```sh
 # Build (frontend, then backend)

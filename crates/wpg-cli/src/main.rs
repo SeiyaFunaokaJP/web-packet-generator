@@ -68,12 +68,23 @@ pub(crate) struct SendArgs {
     /// Duration limit, e.g. `10s`, `2m`.
     #[arg(long)]
     pub(crate) duration: Option<String>,
-    /// Rate, e.g. `1Mpps`, `10Gbps`, `50%`.
+    /// Rate, e.g. `1Mpps`, `10Gbps`, `50%`, `ifg=10us`, `unlimited`.
     #[arg(long)]
     pub(crate) rate: Option<String>,
+    /// Frames sent back to back per rate-control grant.
+    #[arg(long)]
+    pub(crate) burst: Option<u32>,
+    /// Expansion strategy: auto, prerender or onthefly.
+    #[arg(long, default_value = "auto")]
+    pub(crate) plan: String,
+    /// Print the final report as JSON on stdout.
+    #[arg(long)]
+    pub(crate) json: bool,
     /// Template variable override (`name=value`), repeatable.
     #[arg(long = "var", value_name = "NAME=VALUE")]
     pub(crate) vars: Vec<String>,
+    #[command(flatten)]
+    pub(crate) tuning: cmd::send::TxTuningArgs,
 }
 
 /// Arguments of `wpg render`.
@@ -105,10 +116,44 @@ pub(crate) struct ImportArgs {
 /// Arguments of `wpg template`.
 #[derive(Debug, Args)]
 pub(crate) struct TemplateArgs {
-    /// Action: lint | list | export | import.
-    pub(crate) action: String,
-    /// Files / arguments for the action.
-    pub(crate) args: Vec<String>,
+    #[command(subcommand)]
+    pub(crate) action: TemplateAction,
+}
+
+/// Actions of `wpg template`.
+#[derive(Debug, Subcommand)]
+pub(crate) enum TemplateAction {
+    /// Check templates for errors and warnings (exit status 1 on errors).
+    Lint {
+        /// Template files.
+        #[arg(required = true)]
+        files: Vec<PathBuf>,
+    },
+    /// List the templates of a directory (default: `templates/`).
+    List {
+        /// Directory to scan recursively.
+        dir: Option<PathBuf>,
+    },
+    /// Print the built packet (hex dump and layout tree) of a template.
+    Show {
+        /// Template file.
+        file: PathBuf,
+        /// Template variable override (`name=value`), repeatable.
+        #[arg(long = "var", value_name = "NAME=VALUE")]
+        vars: Vec<String>,
+    },
+    /// Print the JSON Schema of the template format.
+    Schema,
+    /// Export templates (not implemented yet).
+    Export {
+        /// Arguments.
+        args: Vec<String>,
+    },
+    /// Import templates (not implemented yet).
+    Import {
+        /// Arguments.
+        args: Vec<String>,
+    },
 }
 
 /// Arguments of `wpg ifaces`.
@@ -139,12 +184,14 @@ pub(crate) struct BenchArgs {
     /// Duration in seconds.
     #[arg(long, default_value_t = 5.0)]
     pub(crate) duration: f64,
-    /// Frame size in bytes.
+    /// Frame size in bytes (without FCS).
     #[arg(long, default_value_t = 64)]
     pub(crate) frame_size: usize,
     /// Output JSON.
     #[arg(long)]
     pub(crate) json: bool,
+    #[command(flatten)]
+    pub(crate) tuning: cmd::send::TxTuningArgs,
 }
 
 #[cfg(test)]
@@ -189,11 +236,11 @@ fn main() -> ExitCode {
     match cli.command {
         Command::Serve(args) => serve(args.bind),
         Command::Send(args) => cmd::send::run(args),
-        Command::Render(args) => cmd::render::run(args),
+        Command::Render(args) => cmd::render::run(&args),
         Command::Import(args) => cmd::import::run(args),
         Command::Template(args) => cmd::template::run(args),
-        Command::Ifaces(args) => cmd::ifaces::run(args),
-        Command::Doctor(args) => cmd::doctor::run(args),
+        Command::Ifaces(args) => cmd::ifaces::run(&args),
+        Command::Doctor(args) => cmd::doctor::run(&args),
         Command::Bench(args) => cmd::bench::run(args),
     }
 }
@@ -227,6 +274,34 @@ mod tests {
             &["wpg", "ifaces", "--json"],
             &["wpg", "doctor"],
             &["wpg", "bench", "--backend", "null"],
+            &[
+                "wpg",
+                "bench",
+                "--backend",
+                "afpacket",
+                "-i",
+                "lo",
+                "--batch",
+                "128",
+                "--no-tx-ring",
+                "--qdisc-bypass",
+                "--pin-core",
+                "1",
+            ],
+            &[
+                "wpg",
+                "send",
+                "t.wpg.yaml",
+                "--backend",
+                "null",
+                "--burst",
+                "8",
+                "--plan",
+                "onthefly",
+                "--duration",
+                "2s",
+                "--json",
+            ],
         ] {
             let cli = Cli::try_parse_from(argv).unwrap();
             assert_eq!(cli.command.name(), argv[1]);

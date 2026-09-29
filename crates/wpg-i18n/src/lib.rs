@@ -268,6 +268,11 @@ mod tests {
                     "protocol",
                     "offset",
                     "available",
+                    "hint",
+                    "error",
+                    "ok",
+                    "warn",
+                    "fail",
                 ] {
                     args.set(name, "1");
                 }

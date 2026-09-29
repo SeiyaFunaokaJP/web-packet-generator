@@ -1,0 +1,38 @@
+# ARP requests ("who has ...") for every address of an IPv4 range.
+schema: 1
+
+meta:
+  name: arp-sweep
+  descriptions:
+    ja: IPv4 アドレス範囲に対する ARP 要求 (スイープ)
+    en: ARP requests sweeping an IPv4 address range
+  tags: [arp, sweep, l2, sample]
+
+variables:
+  - name: src_mac
+    default: 02:00:00:00:00:01
+  - name: src_ip
+    default: 192.168.1.10
+  - name: first
+    default: 192.168.1.1
+  - name: last
+    default: 192.168.1.254
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: ${src_mac}
+
+  - protocol: arp
+    fields:
+      oper: request
+      sha: ${src_mac}
+      spa: ${src_ip}
+      tha: 00:00:00:00:00:00
+    generators:
+      tpa: ${first}-${last} # shorthand for a range generator
+
+tx:
+  count: 254
+  rate: 1000pps

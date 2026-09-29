@@ -42,7 +42,7 @@ v1 の非ゴール: 本格的なキャプチャ/解析（Wireshark の代替で�
 
 前提: [rustup](https://rustup.rs)、WASM ターゲット（`rustup target add wasm32-unknown-unknown`）、
 [trunk](https://trunkrs.dev)（`cargo install trunk --locked`）、任意で [just](https://github.com/casey/just)。
-Linux では `libpcap-dev` 推奨、Windows では Npcap SDK（現段階では pcap バックエンド未使用のため不要）。
+libpcap / Npcap 送出バックエンドは任意です（`cargo build --release --features pcap`、`wpg-tx/pcap` に転送されます）。Linux では `libpcap-dev`、macOS は標準搭載、Windows では Npcap ランタイムと [Npcap SDK](https://npcap.com/#download)（`LIB` に `wpcap.lib`）が必要です。機能を有効にしなければ pcap ライブラリは不要です。不足しているものは `wpg doctor` で確認できます。
 
 ```sh
 # ビルド（フロントエンド → バックエンドの順）

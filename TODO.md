@@ -306,13 +306,13 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] `wpg-core` を `wasm32-unknown-unknown` でビルドできることを CI で保証
 
 ### M2: 送出エンジン（2–3 週）
-- [ ] `TxBackend` trait、`pcapfile` / `null` バックエンド
-- [ ] `pcap` バックエンド (Linux libpcap / macOS BPF / Windows Npcap)
+- [x] `TxBackend` trait、`pcapfile` / `null` バックエンド
+- [x] `pcap` バックエンド (Linux libpcap / macOS BPF / Windows Npcap)
 - [ ] Linux `afpacket` (TPACKET_V3 + sendmmsg)、コア pin、複数キュー
-- [ ] レート制御 (pps/bps/%)、バースト、IFG、精度計測
-- [ ] 統計収集 (per-backend / per-stream) と 100ms スナップショット
-- [ ] インタフェース列挙 (3 OS)
-- [ ] `wpg doctor`（権限・Npcap・setcap・hugepages 診断）
+- [x] レート制御 (pps/bps/%)、バースト、IFG、精度計測
+- [x] 統計収集 (per-backend / per-stream) と 100ms スナップショット
+- [x] インタフェース列挙 (3 OS)
+- [x] `wpg doctor`（権限・Npcap・setcap・hugepages 診断）
 - [ ] `wpg bench` と性能ベースライン記録 (`docs/perf.md`)
 - [ ] CML2 上 Ubuntu (virtio-net) での実測・注意点ドキュメント化
 
@@ -344,8 +344,8 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] E2E テスト (Playwright)
 
 ### M5: テンプレート形式 & 共有（1–2 週）
-- [ ] YAML/JSON スキーマ (`schema: 1`)、JSON Schema 公開、`wpg template lint`
-- [ ] テンプレ引数化 (変数)、実行時オーバーライド
+- [x] YAML/JSON スキーマ (`schema: 1`)、JSON Schema 公開、`wpg template lint`
+- [x] テンプレ引数化 (変数)、実行時オーバーライド
 - [ ] `.wpgbundle` エクスポート/インポート (zip)
 - [ ] ライブラリパス複数指定 (Git 管理ディレクトリ読込)、ホットリロード
 - [ ] 同梱サンプルテンプレ (P0 プロトコル + 代表シナリオ 5 本)

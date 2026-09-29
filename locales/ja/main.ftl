@@ -66,3 +66,80 @@ ndp-override-flag = 上書きフラグ (O)。
 ndp-router-flag = ルータフラグ (R)。
 ndp-solicited-flag = 要請応答フラグ (S)。
 ndp-target = ターゲットアドレス。
+
+## wpg ifaces
+ifaces-col-name = 名前
+ifaces-col-index = IDX
+ifaces-col-mac = MAC
+ifaces-col-ipv4 = IPV4
+ifaces-col-ipv6 = IPV6
+ifaces-col-mtu = MTU
+ifaces-col-state = 状態
+ifaces-col-speed = 速度
+ifaces-col-driver = ドライバ
+ifaces-state-up = up
+ifaces-state-down = down
+ifaces-state-no-carrier = キャリアなし
+ifaces-state-loopback = ループバック
+ifaces-none = ネットワークインタフェースが見つかりません。
+ifaces-error = ネットワークインタフェースを列挙できませんでした: { $error }
+
+## wpg doctor
+doctor-title = wpg doctor: 環境チェック
+doctor-summary = OK { $ok } 件、警告 { $warn } 件、失敗 { $fail } 件
+doctor-skip = このOSでは対象外です
+doctor-caps-ok = raw ソケットを利用できます
+doctor-caps-missing = パケット送出に必要な権限がありません (CAP_NET_RAW / root / 管理者)
+doctor-fix-caps = 権限を付与してください: { $hint }
+doctor-iface-ok = 利用可能なネットワークインタフェースが1つ以上あります
+doctor-iface-none = キャリアありで up のループバック以外のインタフェースがありません
+doctor-iface-error = ネットワークインタフェースを列挙できませんでした
+doctor-fix-iface = インタフェースを確認してください: { $hint }
+doctor-af-xdp-ok = カーネルは AF_XDP に対応しています (5.10 以降)
+doctor-af-xdp-old = カーネルが AF_XDP には古すぎます (5.10 以降が必要)。afpacket バックエンドは利用できます
+doctor-tpacket-v3-ok = カーネルは TPACKET_V3 に対応しています
+doctor-tpacket-v3-old = カーネルが TPACKET_V3 に対応していないため、afpacket は sendmmsg にフォールバックします
+doctor-hugepages-ok = ヒュージページが設定されています
+doctor-hugepages-none = ヒュージページが未設定です (DPDK バックエンドでのみ必要)
+doctor-fix-hugepages = ヒュージページを確保し NIC を DPDK にバインドしてください: { $hint }
+doctor-npcap-ok = Npcap がインストールされています (WinPcap 互換モード)
+doctor-npcap-missing = Npcap がインストールされていません。Windows での送出に必要です
+doctor-npcap-not-compat = Npcap は WinPcap API 互換モードではないため、wpcap.dll が見つからない場合があります
+doctor-fix-npcap = Npcap をインストールしてください: { $hint }
+doctor-fix-npcap-compat = { $hint }
+doctor-pcaplib-ok = libpcap を利用できます
+doctor-pcaplib-missing = libpcap が見つかりません。pcap バックエンドは利用できません
+doctor-fix-pcaplib = libpcap をインストールしてください: { $hint }
+
+## wpg template lint (wpg-template `LintIssue` keys)
+lint-level-error = エラー
+lint-level-warning = 警告
+lint-schema-version = 未対応のスキーマバージョン { $value } です (対応: { $expected })。
+lint-missing-name = `meta.name` が空です。
+lint-no-layers = テンプレートにレイヤがありません。
+lint-unknown-protocol = 不明なプロトコル `{ $protocol }` です。
+lint-unknown-field = プロトコル `{ $protocol }` にフィールド `{ $field }` はありません。
+lint-invalid-value = `{ $field }` の値が不正です: { $value }
+lint-invalid-generator = `{ $field }` のジェネレータが不正です: { $value }
+lint-unknown-variable = 不明な変数 `{ $value }` です。
+lint-missing-variable = 変数 `{ $value }` にはデフォルト値がなく、値も指定されていません。
+lint-unused-variable = 変数 `{ $value }` は使われていません。
+lint-duplicate-variable = 変数 `{ $value }` が複数回宣言されています。
+lint-var-syntax = `{ $value }` 内の変数プレースホルダが閉じられていません。
+lint-override-unknown = 不明な変数 `{ $value }` を上書きしようとしています。
+lint-field-and-generator = `{ $field }` に固定値とジェネレータの両方があります。ジェネレータが優先されます。
+lint-next-protocol-manual = `{ $next }` は `{ $protocol }` のバインディング表にないため、`{ $field }` は Manual になります。
+lint-unknown-order = ストリームの順序に指定された `{ $value }` にはジェネレータがありません。
+lint-invalid-stream = ストリーム設定が不正です: { $value }
+lint-build-error = パケットを構築できません: { $value }
+
+## wpg template / wpg render
+template-lint-ok = { $value }: 問題なし
+template-lint-load-error = { $value }: { $error }
+template-lint-summary = { $ok } ファイル中 エラー { $fail } 件、警告 { $warn } 件
+template-list-empty = { $value } にテンプレートが見つかりません。
+template-show-hex = Hex ダンプ ({ $len } バイト)
+template-show-layout = レイアウト
+render-done = { $len } パケットを { $value } に書き出しました。
+render-unbounded = ストリームが無限です。--count N を指定してください。
+cli-bad-var = --var `{ $value }` が不正です。NAME=VALUE 形式で指定してください。

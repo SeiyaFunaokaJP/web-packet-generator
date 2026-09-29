@@ -66,3 +66,80 @@ ndp-override-flag = Override flag (O).
 ndp-router-flag = Router flag (R).
 ndp-solicited-flag = Solicited flag (S).
 ndp-target = Target address.
+
+## wpg ifaces
+ifaces-col-name = NAME
+ifaces-col-index = IDX
+ifaces-col-mac = MAC
+ifaces-col-ipv4 = IPV4
+ifaces-col-ipv6 = IPV6
+ifaces-col-mtu = MTU
+ifaces-col-state = STATE
+ifaces-col-speed = SPEED
+ifaces-col-driver = DRIVER
+ifaces-state-up = up
+ifaces-state-down = down
+ifaces-state-no-carrier = no carrier
+ifaces-state-loopback = loopback
+ifaces-none = No network interfaces found.
+ifaces-error = Could not list network interfaces: { $error }
+
+## wpg doctor
+doctor-title = wpg doctor: environment check
+doctor-summary = { $ok } ok, { $warn } warning(s), { $fail } failure(s)
+doctor-skip = Not applicable on this operating system
+doctor-caps-ok = Raw sockets are available
+doctor-caps-missing = Missing privileges for raw packet transmission (CAP_NET_RAW / root / Administrator)
+doctor-fix-caps = Grant the privilege: { $hint }
+doctor-iface-ok = At least one usable network interface is up
+doctor-iface-none = No non-loopback interface is up with carrier
+doctor-iface-error = Could not enumerate network interfaces
+doctor-fix-iface = Inspect the interfaces: { $hint }
+doctor-af-xdp-ok = Kernel supports AF_XDP (5.10 or newer)
+doctor-af-xdp-old = Kernel is too old for AF_XDP (5.10 or newer required); the afpacket backend still works
+doctor-tpacket-v3-ok = Kernel supports TPACKET_V3
+doctor-tpacket-v3-old = Kernel does not support TPACKET_V3; afpacket falls back to sendmmsg
+doctor-hugepages-ok = Hugepages are configured
+doctor-hugepages-none = No hugepages configured (only needed for the DPDK backend)
+doctor-fix-hugepages = Reserve hugepages and bind the NIC to DPDK: { $hint }
+doctor-npcap-ok = Npcap is installed (WinPcap-compatible mode)
+doctor-npcap-missing = Npcap is not installed; it is required to transmit on Windows
+doctor-npcap-not-compat = Npcap is installed but not in WinPcap API-compatible mode, so wpcap.dll may not be found
+doctor-fix-npcap = Install Npcap: { $hint }
+doctor-fix-npcap-compat = { $hint }
+doctor-pcaplib-ok = libpcap is available
+doctor-pcaplib-missing = libpcap was not found; the pcap backend cannot be used
+doctor-fix-pcaplib = Install libpcap: { $hint }
+
+## wpg template lint (wpg-template `LintIssue` keys)
+lint-level-error = error
+lint-level-warning = warning
+lint-schema-version = Unsupported schema version { $value } (supported: { $expected }).
+lint-missing-name = `meta.name` is empty.
+lint-no-layers = The template has no layers.
+lint-unknown-protocol = Unknown protocol `{ $protocol }`.
+lint-unknown-field = Protocol `{ $protocol }` has no field `{ $field }`.
+lint-invalid-value = Invalid value for `{ $field }`: { $value }
+lint-invalid-generator = Invalid generator for `{ $field }`: { $value }
+lint-unknown-variable = Unknown variable `{ $value }`.
+lint-missing-variable = Variable `{ $value }` has no default and no value was given.
+lint-unused-variable = Variable `{ $value }` is never used.
+lint-duplicate-variable = Variable `{ $value }` is declared more than once.
+lint-var-syntax = Unterminated variable placeholder in `{ $value }`.
+lint-override-unknown = Unknown variable override `{ $value }`.
+lint-field-and-generator = `{ $field }` has both a fixed value and a generator; the generator wins.
+lint-next-protocol-manual = `{ $next }` is not in the binding table of `{ $protocol }`; `{ $field }` will be Manual.
+lint-unknown-order = `{ $value }` in the stream order has no generator.
+lint-invalid-stream = Invalid stream setting: { $value }
+lint-build-error = Cannot build the packet: { $value }
+
+## wpg template / wpg render
+template-lint-ok = { $value }: no issues
+template-lint-load-error = { $value }: { $error }
+template-lint-summary = { $fail } error(s), { $warn } warning(s) in { $ok } file(s)
+template-list-empty = No templates found in { $value }.
+template-show-hex = Hex dump ({ $len } bytes)
+template-show-layout = Layout
+render-done = Wrote { $len } packets to { $value }.
+render-unbounded = The stream is unbounded; pass --count N.
+cli-bad-var = Invalid --var `{ $value }`; expected NAME=VALUE.

@@ -1,0 +1,60 @@
+# 802.1Q-tagged TCP SYNs with a random source port and typed TCP options.
+schema: 1
+
+meta:
+  name: vlan-tcp-syn
+  descriptions:
+    ja: VLAN タグ付き TCP SYN (送信元ポートはランダム、型付き TCP オプション付き)
+    en: 802.1Q-tagged TCP SYN with random source port and typed TCP options
+  tags: [vlan, tcp, syn, sample]
+
+variables:
+  - name: vlan_id
+    default: 100
+  - name: dst_ip
+    default: 198.51.100.7
+  - name: dst_port
+    default: 443
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: 00:11:22:33:44:55
+      src: 66:77:88:99:aa:bb
+
+  - protocol: dot1q
+    fields:
+      pcp: 5
+      vid: ${vlan_id}
+
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.10
+      dst: ${dst_ip}
+      ttl: 64
+      flags: df
+
+  - protocol: tcp
+    fields:
+      dst_port: ${dst_port}
+      seq: 0x01020304
+      flags: syn # flag names: cwr ece urg ack psh rst syn fin, e.g. syn|ack
+      window: 64240
+      options:
+        - mss: 1460
+        - sack_permitted
+        - timestamps: { tsval: 1000, tsecr: 0 }
+        - nop
+        - ws: 7
+    generators:
+      src_port:
+        kind: random
+        min: 1024
+        max: 65535
+
+stream:
+  seed: 42
+  count: 1000
+
+tx:
+  rate: 10000pps

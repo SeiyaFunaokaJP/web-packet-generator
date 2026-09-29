@@ -1,0 +1,531 @@
+{
+  "$defs": {
+    "FcsChoice": {
+      "description": "Frame check sequence choice.",
+      "oneOf": [
+        {
+          "const": "auto",
+          "description": "Append the correct CRC-32.",
+          "type": "string"
+        },
+        {
+          "const": "bad",
+          "description": "Append a deliberately wrong CRC-32.",
+          "type": "string"
+        },
+        {
+          "const": "none",
+          "description": "No FCS (what capture / TX backends usually expect).",
+          "type": "string"
+        }
+      ]
+    },
+    "FieldInput": {
+      "anyOf": [
+        {
+          "description": "Empty (`~`): e.g. an option without value.",
+          "type": "null"
+        },
+        {
+          "description": "`true` / `false` (1 / 0).",
+          "type": "boolean"
+        },
+        {
+          "description": "Unsigned integer.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "description": "Negative integer.",
+          "format": "int64",
+          "type": "integer"
+        },
+        {
+          "description": "Text in human notation.",
+          "type": "string"
+        },
+        {
+          "description": "Sequence (TLV items, list elements).",
+          "items": {
+            "$ref": "#/$defs/FieldInput"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldInput"
+          },
+          "description": "Mapping (TLV item, field group).",
+          "type": "object"
+        }
+      ],
+      "description": "A field value as written in YAML / JSON: a scalar in human notation or a\nstructured value for TLV (`options`) and list fields.\n\n* scalars: `64`, `\"192.168.1.1\"`, `0x0800`, `syn|ack` (flag names), `ipv4` (enum\n  variant names), `auto`. Hex byte strings must be quoted (`\"00 01 02\"`);\n* TLV: a list of items, each a bare variant name (`nop`), a one-key map\n  (`{ mss: 1460 }`, `{ timestamps: { tsval: 1, tsecr: 0 } }`) or the explicit form\n  `{ type: 99, data: \"01 02\" }` / `{ name: mss, length: 4, fields: { value: 1 } }`;\n* list: a list of scalars, or of maps for lists of field groups."
+    },
+    "Generator": {
+      "description": "Field value generator, tagged by `kind`.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "end": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "kind": {
+              "const": "range"
+            },
+            "start": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "step": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "list"
+            },
+            "values": {
+              "items": {
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "values"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "random"
+            },
+            "max": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "min": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "seed": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "random_mac"
+            },
+            "oui": {
+              "type": "string"
+            },
+            "seed": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "counter"
+            },
+            "start": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "step": {
+              "default": 1,
+              "type": "integer"
+            },
+            "wrap": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "file"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "path"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expr": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "expr"
+            }
+          },
+          "required": [
+            "kind",
+            "expr"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "GeneratorSpec": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Generator",
+          "description": "Full form, e.g. `{ kind: range, start: 192.168.1.1, end: 192.168.1.254 }`."
+        },
+        {
+          "description": "Shorthand parsed with `wpg_core::notation::parse_generator`.",
+          "type": "string"
+        }
+      ],
+      "description": "A generator of a layer field: either a full [`Generator`] or the human shorthand\nof the GUI (`192.168.1.1-192.168.5.254`, `10.0.0.0/24`, `1,5,9`, `00:11:22:*`)."
+    },
+    "Meta": {
+      "description": "Template metadata.",
+      "properties": {
+        "author": {
+          "description": "Author.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created": {
+          "description": "Creation timestamp (RFC 3339 or a plain date).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "description": "Free-form description.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "descriptions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Localised descriptions keyed by language tag (`ja`, `en`).",
+          "type": "object"
+        },
+        "name": {
+          "description": "Display name.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags for search / grouping.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "PacketOptions": {
+      "additionalProperties": false,
+      "description": "Frame-level packet options.",
+      "properties": {
+        "fcs": {
+          "$ref": "#/$defs/FcsChoice",
+          "default": "none",
+          "description": "Frame check sequence."
+        },
+        "pad_to_min": {
+          "default": true,
+          "description": "Zero-pad to the minimum frame length (Ethernet: 60 octets).",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "Scalar": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "format": "int64",
+          "type": "integer"
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "description": "A YAML scalar; variable defaults may be written as numbers."
+    },
+    "StreamMode": {
+      "description": "How generators of several fields are combined (see `wpg_core::stream::Mode`).",
+      "oneOf": [
+        {
+          "const": "zip",
+          "description": "Advance all generators in lockstep.",
+          "type": "string"
+        },
+        {
+          "const": "product",
+          "description": "Cartesian product, the last generator varies fastest.",
+          "type": "string"
+        },
+        {
+          "const": "nested",
+          "description": "Product with an explicit priority given by [`StreamOptions::order`].",
+          "type": "string"
+        }
+      ]
+    },
+    "StreamOptions": {
+      "additionalProperties": false,
+      "description": "Stream expansion options.",
+      "properties": {
+        "count": {
+          "description": "Number of packets; defaults to `tx.count`, then to the natural length.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "mode": {
+          "$ref": "#/$defs/StreamMode",
+          "default": "zip",
+          "description": "Combination mode of the generators."
+        },
+        "order": {
+          "description": "For `nested`: fields from the slowest to the fastest, as `<layer>.<field>`\nwhere `<layer>` is a 0-based index or a protocol id (`ipv4.src`).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "seed": {
+          "description": "Seed for random generators.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "TemplateLayer": {
+      "additionalProperties": false,
+      "description": "One layer of the template's packet.",
+      "properties": {
+        "fields": {
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldInput"
+          },
+          "description": "Manually set fields in human notation (`192.168.1.1`, `0x0800`, `syn|ack`,\n`${src_ip}`). Unlisted fields use their default or Auto value; the literal\n`auto` also leaves a field Auto. TLV / list fields take structured values.",
+          "type": "object"
+        },
+        "generators": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GeneratorSpec"
+          },
+          "description": "Generators varying fields across the stream.",
+          "type": "object"
+        },
+        "protocol": {
+          "description": "Protocol id from the catalog (e.g. `ethernet2`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol"
+      ],
+      "type": "object"
+    },
+    "TxProfile": {
+      "additionalProperties": false,
+      "description": "How the stream is transmitted.",
+      "properties": {
+        "burst": {
+          "description": "Burst size in packets.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "count": {
+          "description": "Number of packets (`None` together with `duration_secs: None` = infinite).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "duration_secs": {
+          "description": "Duration limit in seconds.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "rate": {
+          "description": "Rate in human notation: `1000pps`, `1Mpps`, `10Gbps`, `50%`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Variable": {
+      "additionalProperties": false,
+      "description": "A template argument (`${name}` placeholder) overridable at run time.",
+      "properties": {
+        "default": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Scalar"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Default value (human notation; numbers and booleans are accepted too)."
+        },
+        "description": {
+          "description": "Description shown in the GUI / CLI.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "description": "Placeholder name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A `.wpg.yaml` template: one packet (+ generators) = one stream.",
+  "properties": {
+    "layers": {
+      "default": [],
+      "description": "Layer stack, outermost first.",
+      "items": {
+        "$ref": "#/$defs/TemplateLayer"
+      },
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta",
+      "description": "Metadata."
+    },
+    "packet": {
+      "$ref": "#/$defs/PacketOptions",
+      "description": "Frame-level options (padding, FCS)."
+    },
+    "schema": {
+      "description": "Schema version, see [`SCHEMA_VERSION`].",
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "stream": {
+      "$ref": "#/$defs/StreamOptions",
+      "description": "Stream expansion options."
+    },
+    "tx": {
+      "$ref": "#/$defs/TxProfile",
+      "description": "Transmit profile."
+    },
+    "variables": {
+      "description": "Template variables.",
+      "items": {
+        "$ref": "#/$defs/Variable"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "meta"
+  ],
+  "title": "Template",
+  "type": "object"
+}

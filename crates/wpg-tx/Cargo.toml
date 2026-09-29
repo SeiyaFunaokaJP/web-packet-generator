@@ -10,16 +10,31 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = []
-# Backends land in M2 / M8; the flags are declared now so that CI / scripts can refer
-# to them. Each will pull in its own optional dependencies.
-pcap = []
+# `afpacket` is on by default; on non-Linux targets the module is simply absent
+# (see `#[cfg(all(feature = "afpacket", target_os = "linux"))]` in lib.rs).
+default = ["afpacket"]
+# Each backend pulls in its own optional dependencies.
+pcap = ["dep:pcap"]
 afpacket = []
 afxdp = []
 dpdk = []
 
 [dependencies]
+wpg-core.workspace = true
 thiserror.workspace = true
+serde.workspace = true
+# libpcap / Npcap backend (feature `pcap`). Needs libpcap-dev (Linux), built in on macOS,
+# the Npcap SDK (`wpcap.lib` on LIB) on Windows.
+pcap = { version = "2", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# AF_PACKET backend and `sched_setaffinity` core pinning.
+libc = "0.2.186"
+
+[dev-dependencies]
+wpg-protocols.workspace = true
+wpg-testutil.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true
