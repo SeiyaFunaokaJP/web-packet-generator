@@ -38,6 +38,14 @@ run:
 test:
     cargo test --workspace
 
+# Regenerate tests/golden/*.hex and *.pcap (review the diff before committing).
+golden-update:
+    WPG_UPDATE_GOLDEN=1 cargo test -p wpg-golden-tests --test golden
+
+# Cross-check golden pcaps with Wireshark (requires tshark).
+tshark:
+    WPG_TSHARK=1 cargo test -p wpg-golden-tests --test tshark -- --ignored
+
 # Format all code.
 fmt:
     cargo fmt --all
@@ -52,7 +60,7 @@ lint:
 
 # Ensure the WASM-shared crates still compile for the browser.
 check-wasm:
-    cargo check -p wpg-core -p wpg-i18n --target wasm32-unknown-unknown
+    cargo check -p wpg-core -p wpg-protocols -p wpg-i18n --target wasm32-unknown-unknown
 
 # Security advisories (requires: cargo install cargo-audit --locked).
 audit:

@@ -1,0 +1,30 @@
+[package]
+name = "wpg-golden-tests"
+description = "Golden pcap tests and the optional tshark cross-check (not published)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# No library target: everything lives in the `[[test]]`s below.
+autotests = false
+
+[[test]]
+name = "golden"
+path = "golden.rs"
+
+[[test]]
+name = "tshark"
+path = "tshark.rs"
+
+[dev-dependencies]
+wpg-core.workspace = true
+wpg-protocols.workspace = true
+wpg-testutil.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

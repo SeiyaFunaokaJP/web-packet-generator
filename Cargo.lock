@@ -2717,12 +2717,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "wpg-golden-tests"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "wpg-core",
+ "wpg-protocols",
+ "wpg-testutil",
+]
+
+[[package]]
 name = "wpg-i18n"
 version = "0.1.0"
 dependencies = [
  "fluent-bundle",
  "fluent-syntax",
  "unic-langid",
+ "wpg-core",
+ "wpg-protocols",
 ]
 
 [[package]]
@@ -2766,6 +2778,10 @@ dependencies = [
  "thiserror 2.0.21",
  "wpg-core",
 ]
+
+[[package]]
+name = "wpg-testutil"
+version = "0.1.0"
 
 [[package]]
 name = "wpg-tx"
