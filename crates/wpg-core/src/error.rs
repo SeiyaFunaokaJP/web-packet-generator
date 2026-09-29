@@ -48,6 +48,17 @@ pub enum CoreError {
         /// Field name.
         field: String,
     },
+    /// A protocol definition is internally inconsistent.
+    #[error("invalid definition of protocol `{protocol}`: {reason}")]
+    InvalidDefinition {
+        /// Protocol id.
+        protocol: String,
+        /// Human readable reason.
+        reason: String,
+    },
+    /// A YAML protocol definition could not be read / written.
+    #[error("YAML protocol definition: {0}")]
+    Yaml(String),
     /// Placeholder for functionality that is planned but not written yet.
     #[error("not implemented yet: {0}")]
     NotImplemented(&'static str),

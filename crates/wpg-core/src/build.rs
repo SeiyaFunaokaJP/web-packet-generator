@@ -1,0 +1,906 @@
+//! Packet builder: [`Packet`] + protocol definitions → wire bytes (TODO §2.1).
+//!
+//! Two passes:
+//!
+//! 1. every layer header is serialised on its own, with placeholders (zero) for
+//!    Auto length / checksum fields and the default for Auto next-protocol fields;
+//! 2. the headers are concatenated and the Auto fields are filled in: lengths
+//!    (innermost first), next-protocol selectors from the [`Binding`] of each layer,
+//!    then checksums innermost first so that outer checksums (e.g. an outer IP
+//!    header covering a tunnelled packet) see the final inner bytes.
+//!
+//! A field present in [`Layer::fields`] is *Manual* and used verbatim, even if the
+//! result is inconsistent; the builder then emits a warning diagnostic instead of
+//! "fixing" it, which is how malformed packets are produced on purpose.
+//!
+//! [`Binding`]: crate::ir::Binding
+
+use std::net::{Ipv4Addr, Ipv6Addr};
+
+use serde::{Deserialize, Serialize};
+
+use crate::bits::{mask, put_bits, BitWriter};
+use crate::checksum::InternetSum;
+use crate::constraint::{evaluate, span_name, Spans};
+use crate::diag::{keys, DiagLevel, Diagnostic};
+use crate::error::{CoreError, Result};
+use crate::ir::{
+    raw_protocol, AutoCompute, ChecksumCoverage, ChecksumKind, FieldDef, FieldType, Length,
+    ProtocolDef, Resolve, RAW_PROTOCOL_ID,
+};
+use crate::packet::{FieldValue, Layer, Packet};
+
+/// Position and final value of one field in the built bytes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FieldLayout {
+    /// Field name.
+    pub name: String,
+    /// Offset in bits from the start of the packet.
+    pub bit_offset: usize,
+    /// Width in bits.
+    pub bit_len: usize,
+    /// Final value (after Auto computation).
+    pub value: FieldValue,
+    /// Whether the value was computed by the builder (Auto) rather than taken from
+    /// the layer (Manual) or the definition default.
+    pub auto: bool,
+}
+
+/// Position of one layer in the built bytes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LayerLayout {
+    /// Protocol id.
+    pub protocol: String,
+    /// Offset in octets from the start of the packet.
+    pub offset: usize,
+    /// Header length in octets.
+    pub header_len: usize,
+    /// Header plus payload length in octets (as present in the output bytes).
+    pub len: usize,
+    /// Whether the output was cut inside this layer (see [`Layer::truncate`]); fields
+    /// that do not fit completely are omitted from [`LayerLayout::fields`].
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub truncated: bool,
+    /// Fields in wire order.
+    pub fields: Vec<FieldLayout>,
+}
+
+/// Output of [`Packet::build`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Built {
+    /// Wire bytes (without FCS).
+    pub bytes: Vec<u8>,
+    /// Layer / field positions for hex-dump highlighting and the field tree.
+    pub layout: Vec<LayerLayout>,
+    /// Warnings and errors (constraints, inconsistent Manual values, ...).
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+impl Built {
+    /// Whether any diagnostic has [`DiagLevel::Error`].
+    #[must_use]
+    pub fn has_errors(&self) -> bool {
+        self.diagnostics.iter().any(|d| d.level == DiagLevel::Error)
+    }
+}
+
+impl Packet {
+    /// Serialises the packet to wire bytes, computing Auto fields.
+    ///
+    /// # Errors
+    /// [`CoreError::UnknownProtocol`] / [`CoreError::UnknownField`] for references
+    /// that do not resolve, [`CoreError::InvalidValue`] when a Manual or default
+    /// value does not match / fit its field type, and [`CoreError::NotImplemented`]
+    /// for field types the builder does not support yet (`tlv`, `list`).
+    /// Inconsistent-but-representable packets are *not* errors; see
+    /// [`Built::diagnostics`].
+    pub fn build(&self, catalog: &dyn Resolve) -> Result<Built> {
+        build(self, catalog)
+    }
+}
+
+/// Resolves a protocol id, falling back to the built-in `raw` protocol.
+pub(crate) fn resolve<'a>(
+    catalog: &'a dyn Resolve,
+    raw: &'a ProtocolDef,
+    id: &str,
+) -> Option<&'a ProtocolDef> {
+    catalog
+        .protocol(id)
+        .or_else(|| (id == RAW_PROTOCOL_ID).then_some(raw))
+}
+
+/// One encoded field.
+#[derive(Debug)]
+struct Slot {
+    /// Index into `ProtocolDef::fields`.
+    def: usize,
+    /// Bit offset within the layer header.
+    bit_off: usize,
+    bits: usize,
+    value: FieldValue,
+    manual: bool,
+    /// Auto rule to apply in pass 2 (`None` when Manual or not auto).
+    pending: Option<AutoCompute>,
+    computed: bool,
+}
+
+/// One encoded layer header.
+#[derive(Debug)]
+struct Enc<'a> {
+    def: &'a ProtocolDef,
+    header: Vec<u8>,
+    slots: Vec<Slot>,
+    offset: usize,
+}
+
+impl Enc<'_> {
+    fn value(&self, name: &str) -> Option<&FieldValue> {
+        self.slots
+            .iter()
+            .find(|s| self.def.fields[s.def].name == name)
+            .map(|s| &s.value)
+    }
+
+    fn header_len(&self) -> usize {
+        self.header.len()
+    }
+}
+
+fn invalid(field: &FieldDef, reason: impl Into<String>) -> CoreError {
+    CoreError::InvalidValue {
+        field: field.name.clone(),
+        reason: reason.into(),
+    }
+}
+
+/// The value used for a field that has neither a Manual value nor a default.
+pub(crate) fn zero_value(ty: &FieldType) -> FieldValue {
+    match ty {
+        FieldType::UInt { .. } | FieldType::Enum { .. } | FieldType::Flags { .. } => {
+            FieldValue::UInt(0)
+        }
+        FieldType::Int { .. } => FieldValue::Int(0),
+        FieldType::Bytes {
+            len: Length::Fixed { octets },
+        } => FieldValue::Bytes(vec![0; *octets as usize]),
+        FieldType::Mac => FieldValue::Mac([0; 6]),
+        FieldType::Ipv4 => FieldValue::Ipv4(Ipv4Addr::UNSPECIFIED),
+        FieldType::Ipv6 => FieldValue::Ipv6(Ipv6Addr::UNSPECIFIED),
+        FieldType::Nsap => FieldValue::Nsap(Vec::new()),
+        FieldType::Bytes { .. }
+        | FieldType::Tlv { .. }
+        | FieldType::List { .. }
+        | FieldType::Padding { .. }
+        | FieldType::Raw => FieldValue::Bytes(Vec::new()),
+    }
+}
+
+fn type_name(v: &FieldValue) -> &'static str {
+    match v {
+        FieldValue::UInt(_) => "uint",
+        FieldValue::Int(_) => "int",
+        FieldValue::Bytes(_) => "bytes",
+        FieldValue::Mac(_) => "mac",
+        FieldValue::Ipv4(_) => "ipv4",
+        FieldValue::Ipv6(_) => "ipv6",
+        FieldValue::Nsap(_) => "nsap",
+    }
+}
+
+/// Writes one value into the header writer.
+fn encode_value(w: &mut BitWriter, fd: &FieldDef, value: &FieldValue) -> Result<()> {
+    let mismatch = || {
+        invalid(
+            fd,
+            format!(
+                "a `{}` value does not fit this field type",
+                type_name(value)
+            ),
+        )
+    };
+    match (&fd.ty, value) {
+        (
+            FieldType::UInt { bits } | FieldType::Enum { bits, .. } | FieldType::Flags { bits, .. },
+            FieldValue::UInt(v),
+        ) => {
+            if *v > mask(u32::from(*bits)) {
+                return Err(invalid(fd, format!("{v} does not fit in {bits} bits")));
+            }
+            w.push_bits(u32::from(*bits), *v);
+        }
+        (FieldType::Int { bits }, FieldValue::Int(v)) => {
+            let half = 1i128 << (bits - 1);
+            if !(-half..half).contains(&i128::from(*v)) {
+                return Err(invalid(
+                    fd,
+                    format!("{v} does not fit in {bits} signed bits"),
+                ));
+            }
+            #[allow(clippy::cast_sign_loss)] // two's complement reinterpretation
+            let raw = *v as u64;
+            w.push_bits(u32::from(*bits), raw);
+        }
+        (FieldType::Bytes { len }, FieldValue::Bytes(b)) => {
+            if let Length::Fixed { octets } = len {
+                if b.len() != *octets as usize {
+                    return Err(invalid(
+                        fd,
+                        format!("expected {octets} octets, got {}", b.len()),
+                    ));
+                }
+            }
+            w.push_bytes(b);
+        }
+        (FieldType::Raw | FieldType::Padding { .. }, FieldValue::Bytes(b))
+        | (FieldType::Nsap, FieldValue::Nsap(b) | FieldValue::Bytes(b)) => w.push_bytes(b),
+        (FieldType::Mac, FieldValue::Mac(m)) => w.push_bytes(m),
+        (FieldType::Ipv4, FieldValue::Ipv4(a)) => w.push_bytes(&a.octets()),
+        (FieldType::Ipv6, FieldValue::Ipv6(a)) => w.push_bytes(&a.octets()),
+        (FieldType::Tlv { .. } | FieldType::List { .. }, _) => {
+            return Err(CoreError::NotImplemented("building tlv / list fields"))
+        }
+        _ => return Err(mismatch()),
+    }
+    Ok(())
+}
+
+/// Pass 1: serialise one layer header.
+fn encode_layer<'a>(def: &'a ProtocolDef, layer: &Layer) -> Result<Enc<'a>> {
+    if let Some(name) = layer.fields.keys().find(|k| def.field(k).is_none()) {
+        return Err(CoreError::UnknownField {
+            protocol: def.id.clone(),
+            field: name.clone(),
+        });
+    }
+    let mut w = BitWriter::default();
+    let mut slots = Vec::with_capacity(def.fields.len());
+    for (k, fd) in def.fields.iter().enumerate() {
+        let manual = layer.fields.get(&fd.name);
+        let pending = match (manual, &fd.auto) {
+            (None, Some(a)) if !matches!(a, AutoCompute::Counter) => Some(a.clone()),
+            _ => None,
+        };
+        let mut computed = false;
+        let value = match (manual, &pending, &fd.ty) {
+            (Some(v), _, _) => v.clone(),
+            (None, Some(AutoCompute::Length { .. } | AutoCompute::Checksum { .. }), _) => {
+                FieldValue::UInt(0)
+            }
+            (None, _, FieldType::Padding { align }) => {
+                let align = *align as usize;
+                let pad = if align == 0 {
+                    0
+                } else {
+                    (align - (w.bits / 8) % align) % align
+                };
+                computed = true;
+                FieldValue::Bytes(vec![0; pad])
+            }
+            (None, _, ty) => fd.default.clone().unwrap_or_else(|| zero_value(ty)),
+        };
+        let before = w.bits;
+        encode_value(&mut w, fd, &value)?;
+        slots.push(Slot {
+            def: k,
+            bit_off: before,
+            bits: w.bits - before,
+            value,
+            manual: manual.is_some(),
+            pending,
+            computed,
+        });
+    }
+    if !w.bits.is_multiple_of(8) {
+        return Err(CoreError::InvalidDefinition {
+            protocol: def.id.clone(),
+            reason: "header is not a whole number of octets".into(),
+        });
+    }
+    Ok(Enc {
+        def,
+        header: w.buf,
+        slots,
+        offset: 0,
+    })
+}
+
+struct Ctx<'a> {
+    packet: &'a Packet,
+    encs: Vec<Enc<'a>>,
+    bytes: Vec<u8>,
+    diags: Vec<Diagnostic>,
+}
+
+impl Ctx<'_> {
+    fn spans(&self, i: usize) -> Spans {
+        let e = &self.encs[i];
+        Spans {
+            header: e.header_len() as u64,
+            payload: (self.bytes.len() - e.offset - e.header_len()) as u64,
+        }
+    }
+
+    fn slot_abs_bit(&self, i: usize, s: usize) -> usize {
+        self.encs[i].offset * 8 + self.encs[i].slots[s].bit_off
+    }
+
+    fn field_name(&self, i: usize, s: usize) -> &str {
+        let e = &self.encs[i];
+        &e.def.fields[e.slots[s].def].name
+    }
+
+    /// Writes a computed unsigned value into slot `s` of layer `i`, clamping with
+    /// an error diagnostic when it does not fit.
+    fn store(&mut self, i: usize, s: usize, value: i128) {
+        let bits = self.encs[i].slots[s].bits;
+        let width = u32::try_from(bits).unwrap_or(64);
+        let m = mask(width);
+        let fits = (0..=i128::from(m)).contains(&value);
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let v = (value as u64) & m; // wrap on purpose; reported below
+        if !fits {
+            let name = self.field_name(i, s).to_owned();
+            self.diags.push(
+                Diagnostic::new(
+                    DiagLevel::Error,
+                    keys::AUTO_OVERFLOW,
+                    format!("computed value {value} does not fit in `{name}` ({bits} bits)"),
+                )
+                .at_layer(i)
+                .on_field(name)
+                .arg("value", value)
+                .arg("bits", bits),
+            );
+        }
+        let abs = self.slot_abs_bit(i, s);
+        put_bits(&mut self.bytes, abs, width, v);
+        let slot = &mut self.encs[i].slots[s];
+        slot.value = FieldValue::UInt(v);
+        slot.computed = true;
+    }
+
+    /// Value an auto Length rule yields for layer `i` (plus an alignment warning).
+    fn length_value(&self, i: usize, s: usize, auto: &AutoCompute) -> (i128, Option<Diagnostic>) {
+        let AutoCompute::Length { of, unit, adjust } = auto else {
+            return (0, None);
+        };
+        let len = self.spans(i).get(*of);
+        let u = unit.octets();
+        let diag = (!len.is_multiple_of(u)).then(|| {
+            let name = self.field_name(i, s).to_owned();
+            Diagnostic::new(
+                DiagLevel::Warning,
+                keys::LENGTH_NOT_ALIGNED,
+                format!(
+                    "{} length {len} is not a multiple of {u} octets (`{name}`)",
+                    span_name(*of)
+                ),
+            )
+            .at_layer(i)
+            .on_field(name)
+            .arg("len", len)
+            .arg("unit", u)
+        });
+        (i128::from(len / u) + i128::from(*adjust), diag)
+    }
+
+    /// Selector value announcing the next layer, if layer `i` has one it knows.
+    fn next_value(&self, i: usize) -> Option<u64> {
+        let next = self.packet.layers.get(i + 1)?;
+        self.encs[i].def.next.as_ref()?.value_for(&next.protocol)
+    }
+
+    /// Checksum for slot `s` of layer `i` over the current bytes (field zeroed),
+    /// plus a warning when a pseudo header was wanted but not available.
+    ///
+    /// `Err` when the algorithm is not implemented.
+    fn checksum_value(
+        &self,
+        i: usize,
+        s: usize,
+        auto: &AutoCompute,
+    ) -> Result<(u16, Option<Diagnostic>), Diagnostic> {
+        let AutoCompute::Checksum {
+            algorithm: kind,
+            covers,
+            nonzero,
+        } = auto
+        else {
+            return Ok((0, None));
+        };
+        let e = &self.encs[i];
+        let name = self.field_name(i, s).to_owned();
+        let mut warning = None;
+        let mut sum = InternetSum::new();
+        match kind {
+            ChecksumKind::Internet => {}
+            ChecksumKind::InternetPseudoHeader => match self.pseudo_header(i) {
+                Some(ph) => {
+                    sum.add(&ph);
+                }
+                None => {
+                    warning = Some(
+                        Diagnostic::new(
+                            DiagLevel::Warning,
+                            keys::NO_PSEUDO_HEADER,
+                            format!(
+                                "`{name}` needs an IPv4/IPv6 layer below for its pseudo header; computed without it"
+                            ),
+                        )
+                        .at_layer(i)
+                        .on_field(name.clone()),
+                    );
+                }
+            },
+            ChecksumKind::Fletcher | ChecksumKind::Crc32c | ChecksumKind::Crc32 => {
+                let what = match kind {
+                    ChecksumKind::Fletcher => "fletcher",
+                    ChecksumKind::Crc32c => "crc32c",
+                    _ => "crc32",
+                };
+                return Err(Diagnostic::new(
+                    DiagLevel::Error,
+                    keys::NOT_IMPLEMENTED,
+                    format!("{what} checksum for `{name}` is not implemented yet"),
+                )
+                .at_layer(i)
+                .on_field(name)
+                .arg("what", what));
+            }
+        }
+        let end = match covers {
+            ChecksumCoverage::Header => e.offset + e.header_len(),
+            ChecksumCoverage::HeaderAndPayload => self.bytes.len(),
+        };
+        let mut data = self.bytes[e.offset..end].to_vec();
+        let slot = &e.slots[s];
+        put_bits(
+            &mut data,
+            slot.bit_off,
+            u32::try_from(slot.bits).unwrap_or(64),
+            0,
+        );
+        sum.add(&data);
+        let mut c = sum.finish();
+        if *nonzero && c == 0 {
+            c = 0xffff;
+        }
+        Ok((c, warning))
+    }
+
+    /// IPv4 / IPv6 pseudo header for layer `i` from the nearest lower layer that
+    /// declares one.
+    fn pseudo_header(&self, i: usize) -> Option<Vec<u8>> {
+        let j = (0..i)
+            .rev()
+            .find(|&j| self.encs[j].def.pseudo_header.is_some())?;
+        let lower = &self.encs[j];
+        let ph = lower.def.pseudo_header.as_ref()?;
+        let binding = lower.def.next.as_ref()?;
+        let selector = lower.value(&binding.field).and_then(FieldValue::as_u64);
+        let proto = if j + 1 == i {
+            selector
+        } else {
+            binding
+                .value_for(&self.packet.layers[i].protocol)
+                .or(selector)
+        }
+        .unwrap_or(0);
+        let upper_len = (self.bytes.len() - self.encs[i].offset) as u64;
+        #[allow(clippy::cast_possible_truncation)] // wire widths, wrap on purpose
+        match (lower.value(&ph.src)?, lower.value(&ph.dst)?) {
+            (FieldValue::Ipv4(s), FieldValue::Ipv4(d)) => {
+                let mut v = Vec::with_capacity(12);
+                v.extend_from_slice(&s.octets());
+                v.extend_from_slice(&d.octets());
+                v.push(0);
+                v.push(proto as u8);
+                v.extend_from_slice(&(upper_len as u16).to_be_bytes());
+                Some(v)
+            }
+            (FieldValue::Ipv6(s), FieldValue::Ipv6(d)) => {
+                let mut v = Vec::with_capacity(40);
+                v.extend_from_slice(&s.octets());
+                v.extend_from_slice(&d.octets());
+                v.extend_from_slice(&(upper_len as u32).to_be_bytes());
+                v.extend_from_slice(&[0, 0, 0, proto as u8]);
+                Some(v)
+            }
+            _ => None,
+        }
+    }
+
+    fn slots_with<F: Fn(&AutoCompute) -> bool>(
+        &self,
+        i: usize,
+        pred: F,
+    ) -> Vec<(usize, AutoCompute)> {
+        self.encs[i]
+            .slots
+            .iter()
+            .enumerate()
+            .filter_map(|(s, slot)| {
+                slot.pending
+                    .as_ref()
+                    .filter(|a| pred(a))
+                    .map(|a| (s, a.clone()))
+            })
+            .collect()
+    }
+
+    fn fill_lengths(&mut self) {
+        for i in (0..self.encs.len()).rev() {
+            for (s, auto) in self.slots_with(i, |a| matches!(a, AutoCompute::Length { .. })) {
+                let (v, diag) = self.length_value(i, s, &auto);
+                self.diags.extend(diag);
+                self.store(i, s, v);
+            }
+        }
+    }
+
+    fn fill_next_protocols(&mut self) {
+        for i in 0..self.encs.len() {
+            let Some(v) = self.next_value(i) else {
+                continue;
+            };
+            for (s, _) in self.slots_with(i, |a| matches!(a, AutoCompute::NextProtocol)) {
+                self.store(i, s, i128::from(v));
+            }
+        }
+    }
+
+    fn fill_checksums(&mut self) {
+        for i in (0..self.encs.len()).rev() {
+            for (s, auto) in self.slots_with(i, |a| matches!(a, AutoCompute::Checksum { .. })) {
+                match self.checksum_value(i, s, &auto) {
+                    Ok((v, warning)) => {
+                        self.diags.extend(warning);
+                        self.store(i, s, i128::from(v));
+                    }
+                    Err(d) => self.diags.push(d),
+                }
+            }
+        }
+    }
+
+    /// Warns about Manual values of auto-capable fields that differ from what Auto
+    /// would have produced.
+    fn check_manual_autos(&mut self) {
+        for i in 0..self.encs.len() {
+            for s in 0..self.encs[i].slots.len() {
+                let slot = &self.encs[i].slots[s];
+                let Some(auto) = self.encs[i].def.fields[slot.def].auto.clone() else {
+                    continue;
+                };
+                if !slot.manual {
+                    continue;
+                }
+                let Some(actual) = slot.value.as_u64() else {
+                    continue;
+                };
+                let name = self.field_name(i, s).to_owned();
+                let (key, expected, what) = match &auto {
+                    AutoCompute::Length { .. } => {
+                        let (v, _) = self.length_value(i, s, &auto);
+                        (keys::LENGTH_MISMATCH, v, "length")
+                    }
+                    AutoCompute::Checksum { .. } => match self.checksum_value(i, s, &auto) {
+                        Ok((v, _)) => (keys::CHECKSUM_MISMATCH, i128::from(v), "checksum"),
+                        Err(_) => continue,
+                    },
+                    AutoCompute::NextProtocol => match self.next_value(i) {
+                        Some(v) => (keys::NEXT_PROTOCOL_MISMATCH, i128::from(v), "next protocol"),
+                        None => continue,
+                    },
+                    AutoCompute::Counter => continue,
+                };
+                if i128::from(actual) == expected {
+                    continue;
+                }
+                let mut d = Diagnostic::new(
+                    DiagLevel::Warning,
+                    key,
+                    format!("`{name}` is {actual:#x} but the correct {what} is {expected:#x}"),
+                )
+                .at_layer(i)
+                .on_field(name)
+                .arg("value", actual)
+                .arg("expected", expected);
+                if matches!(auto, AutoCompute::NextProtocol) {
+                    d = d.arg("next", &self.packet.layers[i + 1].protocol);
+                }
+                self.diags.push(d);
+            }
+        }
+    }
+
+    fn check_constraints(&mut self) {
+        for i in 0..self.encs.len() {
+            let spans = self.spans(i);
+            let e = &self.encs[i];
+            for c in &e.def.constraints {
+                if let Some(d) = evaluate(c, i, |n| e.value(n), spans) {
+                    self.diags.push(d);
+                }
+            }
+        }
+    }
+}
+
+fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
+    let raw = raw_protocol();
+    let mut encs = Vec::with_capacity(packet.layers.len());
+    let mut bytes = Vec::new();
+    for layer in &packet.layers {
+        let def = resolve(catalog, &raw, &layer.protocol)
+            .ok_or_else(|| CoreError::UnknownProtocol(layer.protocol.clone()))?;
+        let mut enc = encode_layer(def, layer)?;
+        enc.offset = bytes.len();
+        bytes.extend_from_slice(&enc.header);
+        encs.push(enc);
+    }
+    let mut ctx = Ctx {
+        packet,
+        encs,
+        bytes,
+        diags: Vec::new(),
+    };
+    ctx.fill_lengths();
+    ctx.fill_next_protocols();
+    ctx.fill_checksums();
+    ctx.check_manual_autos();
+    ctx.check_constraints();
+
+    // Deliberate truncation (after everything was computed on the full packet).
+    let total = ctx.bytes.len();
+    let mut cut = total;
+    for (i, layer) in packet.layers.iter().enumerate() {
+        if let Some(n) = layer.truncate {
+            let end = ctx.encs[i].offset.saturating_add(n);
+            if end < total {
+                ctx.diags.push(
+                    Diagnostic::new(
+                        DiagLevel::Info,
+                        keys::TRUNCATED,
+                        format!("layer truncated to {n} octets"),
+                    )
+                    .at_layer(i)
+                    .arg("len", n),
+                );
+            }
+            cut = cut.min(end);
+        }
+    }
+    let Ctx {
+        encs,
+        mut bytes,
+        diags,
+        ..
+    } = ctx;
+    bytes.truncate(cut);
+
+    let layout = encs
+        .into_iter()
+        .map(|e| {
+            let offset = e.offset.min(cut);
+            let len = total - e.offset;
+            let present = cut.saturating_sub(e.offset).min(len);
+            LayerLayout {
+                protocol: e.def.id.clone(),
+                offset,
+                header_len: e.header.len(),
+                len: present,
+                truncated: present < len,
+                fields: e
+                    .slots
+                    .into_iter()
+                    .map(|s| FieldLayout {
+                        name: e.def.fields[s.def].name.clone(),
+                        bit_offset: e.offset * 8 + s.bit_off,
+                        bit_len: s.bits,
+                        value: s.value,
+                        auto: s.computed,
+                    })
+                    .filter(|f| f.bit_offset + f.bit_len <= cut * 8)
+                    .collect(),
+            }
+        })
+        .collect();
+    Ok(Built {
+        bytes,
+        layout,
+        diagnostics: diags,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::checksum::internet_checksum;
+    use crate::constraint::{Constraint, ConstraintRule};
+    use crate::ir::{Binding, BindingEntry, LengthOf, LengthUnit, ProtocolLayer, PseudoHeader};
+
+    /// A tiny two-level stack: `outer` (IPv4-like) → `inner` (UDP-like).
+    fn defs() -> Vec<ProtocolDef> {
+        let mut outer = ProtocolDef::new("outer", "Outer", ProtocolLayer::L3);
+        outer.fields = vec![
+            FieldDef::new("ver", FieldType::UInt { bits: 4 }).with_default(FieldValue::UInt(4)),
+            FieldDef::new("hl", FieldType::UInt { bits: 4 }).with_auto(AutoCompute::Length {
+                of: LengthOf::Header,
+                unit: LengthUnit::Words32,
+                adjust: 0,
+            }),
+            FieldDef::new("proto", FieldType::UInt { bits: 8 })
+                .with_default(FieldValue::UInt(0xfd))
+                .with_auto(AutoCompute::NextProtocol),
+            FieldDef::new("total", FieldType::UInt { bits: 16 }).with_auto(AutoCompute::Length {
+                of: LengthOf::Total,
+                unit: LengthUnit::Bytes,
+                adjust: 0,
+            }),
+            FieldDef::new("id", FieldType::UInt { bits: 16 }),
+            FieldDef::new("csum", FieldType::UInt { bits: 16 }).with_auto(AutoCompute::Checksum {
+                algorithm: ChecksumKind::Internet,
+                covers: ChecksumCoverage::Header,
+                nonzero: false,
+            }),
+            FieldDef::new("src", FieldType::Ipv4),
+            FieldDef::new("dst", FieldType::Ipv4),
+        ];
+        outer.next = Some(Binding {
+            field: "proto".into(),
+            table: vec![BindingEntry {
+                value: 17,
+                protocol: "inner".into(),
+            }],
+        });
+        outer.pseudo_header = Some(PseudoHeader {
+            src: "src".into(),
+            dst: "dst".into(),
+        });
+        outer.constraints = vec![Constraint::new(
+            DiagLevel::Error,
+            ConstraintRule::FieldInRange {
+                field: "hl".into(),
+                min: 3,
+                max: 15,
+            },
+        )];
+        let mut inner = ProtocolDef::new("inner", "Inner", ProtocolLayer::L4);
+        inner.fields = vec![
+            FieldDef::new("len", FieldType::UInt { bits: 16 }).with_auto(AutoCompute::Length {
+                of: LengthOf::Total,
+                unit: LengthUnit::Bytes,
+                adjust: 0,
+            }),
+            FieldDef::new("csum", FieldType::UInt { bits: 16 }).with_auto(AutoCompute::Checksum {
+                algorithm: ChecksumKind::InternetPseudoHeader,
+                covers: ChecksumCoverage::HeaderAndPayload,
+                nonzero: true,
+            }),
+        ];
+        for d in [&outer, &inner] {
+            d.validate().unwrap();
+        }
+        vec![outer, inner]
+    }
+
+    fn packet() -> Packet {
+        Packet {
+            layers: vec![
+                Layer::new("outer")
+                    .with("src", Ipv4Addr::new(10, 0, 0, 1))
+                    .with("dst", Ipv4Addr::new(10, 0, 0, 2)),
+                Layer::new("inner"),
+                Layer::new("raw").with("data", vec![1u8, 2, 3]),
+            ],
+        }
+    }
+
+    #[test]
+    fn auto_fields_are_filled() {
+        let built = packet().build(&defs()).unwrap();
+        let b = &built.bytes;
+        assert_eq!(b.len(), 16 + 4 + 3);
+        assert_eq!(b[0], 0x44, "ver 4, hl 4 words");
+        assert_eq!(b[1], 17, "next protocol from binding");
+        assert_eq!(u16::from_be_bytes([b[2], b[3]]), 23);
+        let mut hdr = b[..16].to_vec();
+        hdr[6] = 0;
+        hdr[7] = 0;
+        assert_eq!(u16::from_be_bytes([b[6], b[7]]), internet_checksum(&hdr));
+        // Inner checksum with pseudo header.
+        let mut ph = vec![10, 0, 0, 1, 10, 0, 0, 2, 0, 17, 0, 7];
+        ph.extend_from_slice(&[0, 7, 0, 0, 1, 2, 3]);
+        assert_eq!(u16::from_be_bytes([b[18], b[19]]), internet_checksum(&ph));
+        assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+        assert_eq!(built.layout.len(), 3);
+        assert_eq!(built.layout[1].offset, 16);
+        assert_eq!(built.layout[1].header_len, 4);
+        let hl = &built.layout[0].fields[1];
+        assert_eq!((hl.name.as_str(), hl.bit_offset, hl.bit_len), ("hl", 4, 4));
+        assert!(hl.auto);
+        assert!(!built.layout[0].fields[0].auto);
+    }
+
+    #[test]
+    fn manual_values_are_verbatim_and_warned() {
+        let mut p = packet();
+        p.layers[0]
+            .fields
+            .insert("csum".into(), FieldValue::UInt(0xdead));
+        p.layers[0].fields.insert("hl".into(), FieldValue::UInt(2));
+        let built = p.build(&defs()).unwrap();
+        assert_eq!(&built.bytes[6..8], &[0xde, 0xad]);
+        assert_eq!(built.bytes[0], 0x42);
+        let keys: Vec<_> = built.diagnostics.iter().map(|d| d.key.as_str()).collect();
+        assert!(keys.contains(&keys::CHECKSUM_MISMATCH), "{keys:?}");
+        assert!(keys.contains(&keys::LENGTH_MISMATCH), "{keys:?}");
+        assert!(keys.contains(&keys::FIELD_OUT_OF_RANGE), "{keys:?}");
+        assert!(built.has_errors());
+    }
+
+    #[test]
+    fn missing_pseudo_header_is_a_warning() {
+        let p = Packet {
+            layers: vec![Layer::new("inner")],
+        };
+        let built = p.build(&defs()).unwrap();
+        assert_eq!(built.diagnostics[0].key, keys::NO_PSEUDO_HEADER);
+        assert_eq!(built.bytes[..2], [0, 4]);
+    }
+
+    #[test]
+    fn truncation_and_errors() {
+        let mut p = packet();
+        p.layers[1].truncate = Some(2);
+        let built = p.build(&defs()).unwrap();
+        assert_eq!(built.bytes.len(), 18);
+        assert!(built.layout[1].truncated);
+        assert_eq!(built.layout[1].fields.len(), 1);
+        assert!(built.layout[2].truncated);
+        assert_eq!(built.layout[2].len, 0);
+        assert_eq!(built.diagnostics[0].key, keys::TRUNCATED);
+
+        let p = Packet {
+            layers: vec![Layer::new("nope")],
+        };
+        assert!(matches!(
+            p.build(&defs()),
+            Err(CoreError::UnknownProtocol(_))
+        ));
+        let p = Packet {
+            layers: vec![Layer::new("inner").with("bogus", 1u8)],
+        };
+        assert!(matches!(
+            p.build(&defs()),
+            Err(CoreError::UnknownField { .. })
+        ));
+        let p = Packet {
+            layers: vec![Layer::new("outer").with("ver", 16u8)],
+        };
+        assert!(matches!(
+            p.build(&defs()),
+            Err(CoreError::InvalidValue { .. })
+        ));
+        let p = Packet {
+            layers: vec![Layer::new("outer").with("src", 1u8)],
+        };
+        assert!(matches!(
+            p.build(&defs()),
+            Err(CoreError::InvalidValue { .. })
+        ));
+    }
+
+    #[test]
+    fn auto_overflow_is_an_error_diagnostic() {
+        let mut p = packet();
+        p.layers[2] = Layer::new("raw").with("data", vec![0u8; 70_000]);
+        let built = p.build(&defs()).unwrap();
+        assert!(built
+            .diagnostics
+            .iter()
+            .any(|d| d.key == keys::AUTO_OVERFLOW && d.level == DiagLevel::Error));
+    }
+}

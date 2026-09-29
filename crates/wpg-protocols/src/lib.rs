@@ -1,14 +1,22 @@
 //! # wpg-protocols
 //!
-//! Built-in protocol definitions expressed in the `wpg-core` IR, plus the
-//! [`Catalog`] registry served to the GUI (`GET /api/protocols`).
+//! Built-in protocol definitions expressed in the `wpg-core` IR (written with the
+//! [`wpg_core::protocol!`] macro), plus the [`Catalog`] registry served to the GUI
+//! (`GET /api/protocols`) and used to build / parse packets ([`wpg_core::Resolve`]).
+//!
+//! Adding a protocol: write a `fn xyz() -> ProtocolDef` with `protocol!` in the
+//! module of its layer, list it in [`builtin`], and add its id to the binding table
+//! of the protocol(s) below it (e.g. an EtherType / IP protocol number entry).
 
 use std::sync::OnceLock;
 
 use serde::Serialize;
-use wpg_core::ProtocolDef;
+use wpg_core::{ProtocolDef, Resolve};
 
 pub mod l2;
+pub mod l3;
+pub mod l4;
+pub mod payload;
 
 /// Registry of protocol definitions, in palette order.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -67,11 +75,30 @@ impl Catalog {
     }
 }
 
+impl Resolve for Catalog {
+    fn protocol(&self, id: &str) -> Option<&ProtocolDef> {
+        self.get(id)
+    }
+}
+
+/// All built-in definitions, in palette order.
+#[must_use]
+pub fn builtin() -> Vec<ProtocolDef> {
+    vec![
+        l2::ethernet2(),
+        l2::dot1q(),
+        l3::ipv4(),
+        l4::tcp(),
+        l4::udp(),
+        payload::raw(),
+    ]
+}
+
 /// The built-in protocol catalog (built once, then shared).
 #[must_use]
 pub fn catalog() -> &'static Catalog {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
-    CATALOG.get_or_init(|| Catalog::new(vec![l2::ethernet2()]))
+    CATALOG.get_or_init(|| Catalog::new(builtin()))
 }
 
 #[cfg(test)]
@@ -85,6 +112,22 @@ mod tests {
         assert_eq!(cat.iter().next().map(|p| p.id.as_str()), Some("ethernet2"));
         assert!(cat.get("ethernet2").is_some());
         assert!(cat.get("no-such-proto").is_none());
+    }
+
+    #[test]
+    fn bindings_point_to_known_or_planned_protocols() {
+        // Planned P0 ids that are referenced before they exist.
+        const PLANNED: &[&str] = &["ipv6", "arp", "icmpv4"];
+        for def in catalog().iter() {
+            for e in def.next.iter().flat_map(|b| &b.table) {
+                assert!(
+                    catalog().get(&e.protocol).is_some() || PLANNED.contains(&e.protocol.as_str()),
+                    "{} binds to unknown `{}`",
+                    def.id,
+                    e.protocol
+                );
+            }
+        }
     }
 
     #[test]
