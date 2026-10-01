@@ -64,6 +64,7 @@ pub fn ipv4() -> ProtocolDef {
                 51 => ah,
                 58 => ipv6_icmp,
                 89 => ospf,
+                115 => l2tp,
                 132 => sctp,
                 253 => experimental,
             } = 253, auto = next_protocol;
@@ -79,6 +80,8 @@ pub fn ipv4() -> ProtocolDef {
             6 => "tcp",
             17 => "udp",
             41 => "ipv6",
+            47 => "gre",
+            115 => "l2tpv3",
         },
         pseudo_header: (src, dst),
         constraints: {

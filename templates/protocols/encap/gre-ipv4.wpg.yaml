@@ -1,0 +1,35 @@
+# GRE (RFC 2784): IPv4 tunnelled in GRE over IPv4 (IP protocol 47)
+schema: 1
+
+meta:
+  name: gre-ipv4
+  descriptions:
+    ja: "GRE (RFC 2784): IPv4 を GRE (IP プロトコル 47) で IPv4 上にトンネル"
+    en: "GRE (RFC 2784): IPv4 tunnelled in GRE over IPv4 (IP protocol 47)"
+  tags: ["protocol:gre", "layer:l3", encap, sample]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: gre
+    fields:
+      protocol_type: ipv4
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 10.0.0.2
+  - protocol: icmpv4
+    fields:
+      type: echo_request
+      rest: "00 01 00 01"
+
+tx:
+  count: 1

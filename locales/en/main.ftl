@@ -559,3 +559,74 @@ ui-set-license = wpg is dual-licensed under MIT or Apache-2.0.
 ui-builder-placeholder = The packet builder (protocol palette, layer stack, field editor, hex / tree view) arrives in the next milestone step.
 ui-builder-placeholder-template = The packet builder arrives in the next milestone step. Template “{ $id }” will open here.
 ui-rx-placeholder = Receive counters and verification arrive with milestone M9.
+
+# --- P1 L2/encap protocol field descriptions ---
+lldp-tlvs = LLDP TLVs (7-bit type + 9-bit length header).
+cdp-version = CDP protocol version (2).
+cdp-ttl = Time this advertisement stays valid, in seconds.
+cdp-checksum = Internet checksum over the CDP header and TLVs (Auto).
+cdp-tlvs = CDP TLVs (16-bit type, 16-bit length including the header).
+stp-protocol-id = Spanning Tree protocol identifier (always 0).
+stp-version = Protocol version (0 = STP, 2 = RSTP, 3 = MSTP).
+stp-type = BPDU type (0 = configuration, 2 = RST/MST, 0x80 = TCN).
+stp-flags = BPDU flags (topology change, proposal, role, learning, forwarding, agreement, TCA).
+stp-root-priority = Root bridge priority and system-id extension.
+stp-root-mac = Root bridge MAC address.
+stp-root-path-cost = Cost of the path to the root bridge.
+stp-bridge-priority = Sending bridge priority and system-id extension.
+stp-bridge-mac = Sending bridge MAC address.
+stp-port-id = Sending port identifier (priority + number).
+stp-message-age = Age of the BPDU, in 1/256 seconds.
+stp-max-age = Maximum BPDU age before timeout, in 1/256 seconds.
+stp-hello-time = Interval between configuration BPDUs, in 1/256 seconds.
+stp-forward-delay = Forwarding delay timer, in 1/256 seconds.
+stp-trailer = RSTP / MSTP extension (version-1 length, v3 length, MSTI records); opaque octets.
+lacp-subtype = Slow Protocols subtype (1 = LACP).
+lacp-actor-system = Actor system MAC address.
+lacp-actor-state = Actor state flags (activity, timeout, aggregation, sync, collecting, distributing, defaulted, expired).
+lacp-partner-system = Partner system MAC address.
+lacp-partner-state = Partner state flags.
+marker-subtype = Slow Protocols subtype (2 = Marker).
+eapol-version = EAPOL protocol version.
+eapol-type = EAPOL packet type (0 = EAP, 1 = Start, 2 = Logoff, 3 = Key).
+eapol-length = Length of the EAPOL body, in octets (Auto).
+eapol-body = EAPOL body (the EAP packet for type 0); opaque octets.
+pppoe-version = PPPoE protocol version (1).
+pppoe-type = PPPoE type (1).
+pppoe-code = PPPoE code (PADI / PADO / PADR / PADS / PADT, 0 = session data).
+pppoe-session-id = PPPoE session identifier.
+pppoe-length = Length of the PPPoE payload, in octets (Auto).
+pppoe-tags = PPPoE discovery TAGs (16-bit type, 16-bit length).
+ppp-protocol = PPP protocol identifier of the payload (LCP / IPCP / IP / IPv6 / ...).
+ppp-cp-code = PPP control-protocol code (Configure-Request / Ack / Nak / ...).
+ppp-cp-identifier = PPP control-protocol request identifier.
+ppp-cp-length = Length of the PPP control-protocol packet, in octets (Auto).
+ppp-cp-options = PPP control-protocol options (8-bit type / length TLVs).
+vxlan-flags = VXLAN flags (I bit = VNI is valid).
+vxlan-vni = 24-bit VXLAN Network Identifier.
+gre-flags = GRE flags and version (checksum / key / sequence present bits).
+gre-protocol-type = EtherType of the encapsulated payload.
+nvgre-vsid = 24-bit NVGRE Virtual Subnet ID.
+nvgre-flowid = NVGRE FlowID (entropy for load balancing).
+mpls-label = 20-bit MPLS label value.
+mpls-tc = 3-bit traffic class (QoS / ECN).
+mpls-s = Bottom-of-stack bit (1 = last label).
+mpls-ttl = MPLS time to live.
+gtpu-version = GTP version (1).
+gtpu-pt = Protocol type (1 = GTP, 0 = GTP').
+gtpu-e = Extension-header-present flag.
+gtpu-s = Sequence-number-present flag.
+gtpu-pn = N-PDU-number-present flag.
+gtpu-message-type = GTP-U message type (255 = G-PDU).
+gtpu-length = Length of the payload after the mandatory header, in octets (Auto).
+gtpu-teid = Tunnel Endpoint Identifier.
+geneve-version = Geneve version (0).
+geneve-opt-len = Length of the options region, in 4-octet words.
+geneve-o = OAM packet flag.
+geneve-c = Critical options present flag.
+geneve-protocol-type = EtherType of the encapsulated payload.
+geneve-vni = 24-bit Geneve Virtual Network Identifier.
+geneve-options = Geneve options (opaque; sized by opt_len).
+l2tp-flags = L2TP flags and version (type, length, sequence, offset, priority bits).
+l2tp-body = L2TP body (presence-conditional fields + payload); opaque octets.
+l2tpv3-session-id = L2TPv3 Session ID.

@@ -1,0 +1,33 @@
+# L2TPv3 (RFC 3931): a data packet with a Session ID directly over IP protocol 115; the body is opaque
+schema: 1
+
+meta:
+  name: l2tpv3
+  descriptions:
+    ja: "L2TPv3 (RFC 3931): IP プロトコル 115 上のセッション ID 付きデータ"
+    en: "L2TPv3 (RFC 3931): session data directly over IP protocol 115"
+  tags: ["protocol:l2tpv3", "layer:l4", encap, sample]
+  author: wpg
+  created: 2026-10-01
+
+variables:
+  - name: session_id
+    default: 0x11223344
+    description: L2TPv3 Session ID
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: l2tpv3 # ipv4.protocol: auto -> 115
+    fields:
+      session_id: ${session_id}
+      body: "02 aa 00 00 00 02 02 aa 00 00 00 01 08 00 45 00" # L2 payload (an Ethernet frame start)
+
+tx:
+  count: 1

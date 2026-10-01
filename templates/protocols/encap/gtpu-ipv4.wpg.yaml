@@ -1,0 +1,50 @@
+# GTP-U (3GPP TS 29.281): a G-PDU carrying IPv4/UDP over UDP port 2152
+schema: 1
+
+meta:
+  name: gtpu-ipv4
+  descriptions:
+    ja: "GTP-U (3GPP TS 29.281): G-PDU で IPv4/UDP を UDP 2152 上に転送"
+    en: "GTP-U (3GPP TS 29.281): a G-PDU carrying IPv4/UDP over UDP port 2152"
+  tags: ["protocol:gtpu", "layer:l4", encap, sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: teid
+    default: 0x00000001
+    description: Tunnel Endpoint Identifier
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 2152
+      dst_port: 2152
+  - protocol: gtpu
+    fields:
+      message_type: g_pdu
+      teid: ${teid}
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 10.0.0.2
+  - protocol: udp
+    fields:
+      src_port: 4000
+      dst_port: 4001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 16
+
+tx:
+  count: 1

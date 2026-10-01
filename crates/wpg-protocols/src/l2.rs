@@ -30,6 +30,7 @@ pub fn ethernet2() -> ProtocolDef {
                 0x0800 => ipv4,
                 0x0806 => arp,
                 0x8100 => vlan,
+                0x8809 => slow_protocols,
                 0x86dd => ipv6,
                 0x8847 => mpls,
                 0x8848 => mpls_multicast,
@@ -48,6 +49,13 @@ pub fn ethernet2() -> ProtocolDef {
             0x0806 => "arp",
             0x8100 => "dot1q",
             0x88a8 => "dot1ad",
+            0x88cc => "lldp",
+            0x8809 => "lacp",
+            0x888e => "eapol",
+            0x8863 => "pppoe_discovery",
+            0x8864 => "pppoe_session",
+            0x8847 => "mpls",
+            0x8848 => "mpls",
         },
     };
     if let Some(b) = d.next.as_mut() {
@@ -137,6 +145,7 @@ pub fn snap() -> ProtocolDef {
             pid: enum(16) {
                 0x0800 => ipv4,
                 0x0806 => arp,
+                0x2000 => cdp,
                 0x8100 => vlan,
                 0x86dd => ipv6,
                 0x88b5 => local_experimental,
@@ -146,6 +155,7 @@ pub fn snap() -> ProtocolDef {
             0x0800 => "ipv4",
             0x86dd => "ipv6",
             0x0806 => "arp",
+            0x2000 => "cdp",
             0x8100 => "dot1q",
         },
     }

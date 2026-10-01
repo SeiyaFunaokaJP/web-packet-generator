@@ -22,6 +22,7 @@ fields:
         - { value: 0x0800, name: ipv4 }
         - { value: 0x0806, name: arp }
         - { value: 0x8100, name: vlan }
+        - { value: 0x8809, name: slow_protocols }
         - { value: 0x86dd, name: ipv6 }
         - { value: 0x8847, name: mpls }
         - { value: 0x8848, name: mpls_multicast }
@@ -42,6 +43,13 @@ next:
     - { value: 0x0806, protocol: arp }
     - { value: 0x8100, protocol: dot1q }
     - { value: 0x88a8, protocol: dot1ad }
+    - { value: 0x88cc, protocol: lldp }
+    - { value: 0x8809, protocol: lacp }
+    - { value: 0x888e, protocol: eapol }
+    - { value: 0x8863, protocol: pppoe_discovery }
+    - { value: 0x8864, protocol: pppoe_session }
+    - { value: 0x8847, protocol: mpls }
+    - { value: 0x8848, protocol: mpls }
     - { value: 0, max: 0x5ff, protocol: dot3, reparse: true }
 min_frame_len: 60
 ";

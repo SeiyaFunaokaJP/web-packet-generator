@@ -1,0 +1,26 @@
+# Marker PDU (IEEE 802.3 clause 43): a Slow Protocols subtype 2 marker request (EtherType 0x8809)
+schema: 1
+
+meta:
+  name: marker
+  descriptions:
+    ja: "Marker PDU (IEEE 802.3 clause 43): Slow Protocols サブタイプ 2 の Marker 要求"
+    en: "Marker PDU (IEEE 802.3 clause 43): a Slow Protocols subtype 2 marker request"
+  tags: ["protocol:marker", "layer:l2", sample, "parse-as:marker=lacp"]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+      ethertype: 0x8809
+  - protocol: marker
+    fields:
+      requester_port: 1
+      requester_system: "02:00:00:00:00:01"
+      requester_transaction_id: 1
+
+tx:
+  count: 1

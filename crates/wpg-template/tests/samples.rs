@@ -228,11 +228,35 @@ fn well_formed_protocol_samples_parse_back_to_their_stack() {
         if t.meta.tags.iter().any(|x| x == "fragmentation") && t.layers.len() <= 3 {
             continue;
         }
+        // `parse-as:<id>=<other>`: the layer shares its demux key with another
+        // protocol (NVGRE and GRE are both IP protocol 47; Marker and LACP are both
+        // Slow Protocols EtherType 0x8809), so the parser picks `<other>`.
+        let parse_as: Vec<(&str, &str)> = t
+            .meta
+            .tags
+            .iter()
+            .filter_map(|x| x.strip_prefix("parse-as:")?.split_once('='))
+            .collect();
+        // `opaque-inner:<id>`: whatever follows the last `<id>` layer cannot be
+        // decoded back (MPLS has no first-nibble payload demux, since a `Binding`
+        // selects on a whole field, not a peeked nibble, so IPv4 after the bottom
+        // label parses as `raw`; NVGRE shares IP protocol 47 with GRE, which does
+        // not know its key field). Only the stack up to and including the last
+        // `<id>` layer is compared, and decode errors after it are tolerated.
+        let opaque_inner: Option<&str> = t
+            .meta
+            .tags
+            .iter()
+            .find_map(|x| x.strip_prefix("opaque-inner:"));
         let c = compile(&t, &VarOverrides::new(), catalog()).unwrap();
         let built = c.packet.build(catalog()).unwrap();
         let parsed = parse(&built.bytes, &t.layers[0].protocol, catalog())
             .unwrap_or_else(|e| panic!("{name}: {e}"));
-        assert!(!parsed.has_errors(), "{name}: {:?}", parsed.diagnostics);
+        assert!(
+            opaque_inner.is_some() || !parsed.has_errors(),
+            "{name}: {:?}",
+            parsed.diagnostics
+        );
         let norm = |ids: Vec<String>| -> Vec<String> {
             let mut v: Vec<String> = ids
                 .into_iter()
@@ -244,8 +268,18 @@ fn well_formed_protocol_samples_parse_back_to_their_stack() {
             }
             v
         };
-        let want = norm(t.layers.iter().map(|l| l.protocol.clone()).collect());
-        let got = norm(
+        let mut want = norm(
+            t.layers
+                .iter()
+                .map(|l| {
+                    parse_as
+                        .iter()
+                        .find(|(from, _)| *from == l.protocol)
+                        .map_or_else(|| l.protocol.clone(), |(_, to)| (*to).to_owned())
+                })
+                .collect(),
+        );
+        let mut got = norm(
             parsed
                 .packet
                 .layers
@@ -253,6 +287,15 @@ fn well_formed_protocol_samples_parse_back_to_their_stack() {
                 .map(|l| l.protocol.clone())
                 .collect(),
         );
+        if let Some(id) = opaque_inner {
+            let id = parse_as
+                .iter()
+                .find(|(from, _)| *from == id)
+                .map_or(id, |(_, to)| *to);
+            let end = want.iter().rposition(|p| p == id).unwrap() + 1;
+            want.truncate(end);
+            got.truncate(end);
+        }
         assert_eq!(got, want, "{name}");
     }
 }

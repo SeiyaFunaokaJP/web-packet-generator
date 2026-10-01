@@ -1,0 +1,32 @@
+# L2TPv2 (RFC 2661): a data message (T=0, L=1) over UDP port 1701; the body is opaque
+schema: 1
+
+meta:
+  name: l2tpv2
+  descriptions:
+    ja: "L2TPv2 (RFC 2661): UDP 1701 上の PPP データメッセージ"
+    en: "L2TPv2 (RFC 2661): a PPP data message over UDP port 1701"
+  tags: ["protocol:l2tpv2", "layer:l4", encap, sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 1701
+      dst_port: 1701
+  - protocol: l2tpv2
+    fields:
+      flags: 0x4002 # T=0 (data), L=1 (length present), version 2
+      body: "00 0c 00 01 00 02 ff 03 00 21 45 00" # length, tunnel 1, session 2, then PPP bytes
+
+tx:
+  count: 1

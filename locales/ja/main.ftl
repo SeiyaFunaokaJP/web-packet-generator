@@ -559,3 +559,74 @@ ui-set-license = wpg は MIT または Apache-2.0 のデュアルライセンス
 ui-builder-placeholder = パケットビルダー (プロトコルパレット、レイヤスタック、フィールドエディタ、Hex / ツリー表示) は次のステップで提供します。
 ui-builder-placeholder-template = パケットビルダーは次のステップで提供します。テンプレート「{ $id }」はここで開けるようになります。
 ui-rx-placeholder = 受信カウンタと検証機能はマイルストーン M9 で提供します。
+
+# --- P1 L2/encap protocol field descriptions ---
+lldp-tlvs = LLDP TLV 群 (7 ビット型 + 9 ビット長ヘッダ)。
+cdp-version = CDP プロトコルバージョン (2)。
+cdp-ttl = このアドバタイズの有効時間 (秒)。
+cdp-checksum = CDP ヘッダと TLV に対するインターネットチェックサム (自動)。
+cdp-tlvs = CDP TLV 群 (16 ビット型、ヘッダを含む 16 ビット長)。
+stp-protocol-id = スパニングツリープロトコル識別子 (常に 0)。
+stp-version = プロトコルバージョン (0 = STP、2 = RSTP、3 = MSTP)。
+stp-type = BPDU 種別 (0 = Configuration、2 = RST/MST、0x80 = TCN)。
+stp-flags = BPDU フラグ (トポロジ変更、Proposal、ロール、Learning、Forwarding、Agreement、TCA)。
+stp-root-priority = ルートブリッジの優先度とシステム ID 拡張。
+stp-root-mac = ルートブリッジの MAC アドレス。
+stp-root-path-cost = ルートブリッジまでの経路コスト。
+stp-bridge-priority = 送信ブリッジの優先度とシステム ID 拡張。
+stp-bridge-mac = 送信ブリッジの MAC アドレス。
+stp-port-id = 送信ポート識別子 (優先度 + 番号)。
+stp-message-age = BPDU の経過時間 (1/256 秒)。
+stp-max-age = タイムアウトまでの最大 BPDU 経過時間 (1/256 秒)。
+stp-hello-time = Configuration BPDU の送信間隔 (1/256 秒)。
+stp-forward-delay = 転送遅延タイマ (1/256 秒)。
+stp-trailer = RSTP / MSTP 拡張 (version1 長、v3 長、MSTI レコード)。不透明オクテット。
+lacp-subtype = Slow Protocols サブタイプ (1 = LACP)。
+lacp-actor-system = Actor システムの MAC アドレス。
+lacp-actor-state = Actor 状態フラグ (Activity、Timeout、Aggregation、Sync、Collecting、Distributing、Defaulted、Expired)。
+lacp-partner-system = Partner システムの MAC アドレス。
+lacp-partner-state = Partner 状態フラグ。
+marker-subtype = Slow Protocols サブタイプ (2 = Marker)。
+eapol-version = EAPOL プロトコルバージョン。
+eapol-type = EAPOL パケット種別 (0 = EAP、1 = Start、2 = Logoff、3 = Key)。
+eapol-length = EAPOL ボディの長さ (オクテット、自動)。
+eapol-body = EAPOL ボディ (種別 0 では EAP パケット)。不透明オクテット。
+pppoe-version = PPPoE プロトコルバージョン (1)。
+pppoe-type = PPPoE タイプ (1)。
+pppoe-code = PPPoE コード (PADI / PADO / PADR / PADS / PADT、0 = セッションデータ)。
+pppoe-session-id = PPPoE セッション識別子。
+pppoe-length = PPPoE ペイロードの長さ (オクテット、自動)。
+pppoe-tags = PPPoE ディスカバリ TAG (16 ビット型、16 ビット長)。
+ppp-protocol = ペイロードの PPP プロトコル識別子 (LCP / IPCP / IP / IPv6 など)。
+ppp-cp-code = PPP コントロールプロトコルのコード (Configure-Request / Ack / Nak など)。
+ppp-cp-identifier = PPP コントロールプロトコルの要求識別子。
+ppp-cp-length = PPP コントロールプロトコルパケットの長さ (オクテット、自動)。
+ppp-cp-options = PPP コントロールプロトコルのオプション (8 ビット型 / 長の TLV)。
+vxlan-flags = VXLAN フラグ (I ビット = VNI 有効)。
+vxlan-vni = 24 ビット VXLAN ネットワーク識別子。
+gre-flags = GRE フラグとバージョン (checksum / key / sequence の存在ビット)。
+gre-protocol-type = カプセル化ペイロードの EtherType。
+nvgre-vsid = 24 ビット NVGRE 仮想サブネット ID。
+nvgre-flowid = NVGRE FlowID (負荷分散用エントロピー)。
+mpls-label = 20 ビット MPLS ラベル値。
+mpls-tc = 3 ビットトラフィッククラス (QoS / ECN)。
+mpls-s = スタック最下位ビット (1 = 最後のラベル)。
+mpls-ttl = MPLS TTL。
+gtpu-version = GTP バージョン (1)。
+gtpu-pt = プロトコルタイプ (1 = GTP、0 = GTP')。
+gtpu-e = 拡張ヘッダ存在フラグ。
+gtpu-s = シーケンス番号存在フラグ。
+gtpu-pn = N-PDU 番号存在フラグ。
+gtpu-message-type = GTP-U メッセージ種別 (255 = G-PDU)。
+gtpu-length = 必須ヘッダ以降のペイロード長 (オクテット、自動)。
+gtpu-teid = トンネルエンドポイント識別子。
+geneve-version = Geneve バージョン (0)。
+geneve-opt-len = オプション領域の長さ (4 オクテット単位)。
+geneve-o = OAM パケットフラグ。
+geneve-c = クリティカルオプション存在フラグ。
+geneve-protocol-type = カプセル化ペイロードの EtherType。
+geneve-vni = 24 ビット Geneve 仮想ネットワーク識別子。
+geneve-options = Geneve オプション (不透明、opt_len で長さ決定)。
+l2tp-flags = L2TP フラグとバージョン (type、length、sequence、offset、priority ビット)。
+l2tp-body = L2TP ボディ (存在条件付きフィールド + ペイロード)。不透明オクテット。
+l2tpv3-session-id = L2TPv3 セッション ID。

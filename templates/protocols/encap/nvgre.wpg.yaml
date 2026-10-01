@@ -1,0 +1,51 @@
+# NVGRE (RFC 7637): an inner Ethernet frame in GRE with a Virtual Subnet ID (IP protocol 47)
+schema: 1
+
+meta:
+  name: nvgre
+  descriptions:
+    ja: "NVGRE (RFC 7637): 内側 Ethernet/IPv4/UDP を VSID 付き GRE (IP プロトコル 47) でトンネル"
+    en: "NVGRE (RFC 7637): an inner Ethernet/IPv4/UDP frame tunnelled in keyed GRE (IP protocol 47)"
+  tags: ["protocol:nvgre", "layer:l3", encap, sample, "parse-as:nvgre=gre", "opaque-inner:nvgre"]
+  author: wpg
+  created: 2026-10-01
+
+variables:
+  - name: vsid
+    default: 0x123456
+    description: Virtual Subnet ID
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      protocol: 47 # GRE; ipv4 binds 47 to `gre`, so it is set explicitly for nvgre
+  - protocol: nvgre
+    fields:
+      vsid: ${vsid}
+      flow_id: 0
+  - protocol: ethernet2
+    fields:
+      dst: "02:aa:00:00:00:02"
+      src: "02:aa:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 10.0.0.2
+  - protocol: udp
+    fields:
+      src_port: 4000
+      dst_port: 4001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 16
+
+tx:
+  count: 1

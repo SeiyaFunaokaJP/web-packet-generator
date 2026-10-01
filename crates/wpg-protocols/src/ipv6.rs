@@ -12,8 +12,10 @@ fn next_header_binding() -> Binding {
         (41, "ipv6"),
         (43, "ipv6_route"),
         (44, "ipv6_frag"),
+        (47, "gre"),
         (58, "icmpv6"),
         (60, "ipv6_dstopts"),
+        (115, "l2tpv3"),
     ];
     Binding::new(
         "next_header",

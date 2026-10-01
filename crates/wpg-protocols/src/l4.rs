@@ -52,6 +52,11 @@ pub fn tcp_options() -> FieldType {
 
 /// UDP (RFC 768): `length` and `checksum` (with IPv4/IPv6 pseudo header) are Auto.
 /// A computed checksum of zero is sent as `0xffff`.
+///
+/// The `next` binding demultiplexes well-known tunnelling ports on the
+/// **destination** port (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
+/// Geneve 6081); unknown ports have no default, so an ordinary UDP payload still
+/// parses as `raw`.
 #[must_use]
 pub fn udp() -> ProtocolDef {
     protocol! {
@@ -63,6 +68,13 @@ pub fn udp() -> ProtocolDef {
             dst_port: uint(16) = 9;
             length: uint(16), auto = length(total);
             checksum: uint(16), auto = checksum(internet_pseudo, header_payload, nonzero);
+        },
+        next: dst_port {
+            1701 => "l2tpv2",
+            2152 => "gtpu",
+            4789 => "vxlan",
+            6081 => "geneve",
+            6635 => "mpls",
         },
         constraints: {
             warning: min_length(total, 8);

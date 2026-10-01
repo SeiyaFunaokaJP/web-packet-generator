@@ -1,0 +1,31 @@
+# PPPoE Session + PPP + IPCP (RFC 1332): a Configure-Request with the IP-Address and DNS options
+schema: 1
+
+meta:
+  name: pppoe-ppp-ipcp
+  descriptions:
+    ja: "PPPoE Session + PPP + IPCP (RFC 1332): IP アドレス要求の Configure-Request"
+    en: "PPPoE Session + PPP + IPCP (RFC 1332): a Configure-Request asking for an IP address"
+  tags: ["protocol:pppoe_session", "protocol:ppp", "protocol:ppp_ipcp", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: pppoe_session
+    fields:
+      session_id: 1
+  - protocol: ppp # protocol: auto -> 0x8021 (IPCP)
+  - protocol: ppp_ipcp
+    fields:
+      code: configure_request
+      identifier: 1
+      options:
+        - { ip_address: { address: 0.0.0.0 } } # ask the peer to assign one
+        - { primary_dns: { address: 0.0.0.0 } }
+
+tx:
+  count: 1

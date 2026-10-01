@@ -14,9 +14,11 @@ use serde::Serialize;
 use wpg_core::{ProtocolDef, Resolve};
 
 pub mod arp;
+pub mod encap;
 pub mod icmp;
 pub mod ipv6;
 pub mod l2;
+pub mod l2control;
 pub mod l3;
 pub mod l4;
 pub mod payload;
@@ -111,6 +113,27 @@ pub fn builtin() -> Vec<ProtocolDef> {
         icmp::ndp_ns(),
         icmp::ndp_na(),
         icmp::ndp_redirect(),
+        // P1 L2 control protocols.
+        l2control::lldp(),
+        l2control::cdp(),
+        l2control::stp(),
+        l2control::lacp(),
+        l2control::marker(),
+        l2control::eapol(),
+        l2control::pppoe_discovery(),
+        l2control::pppoe_session(),
+        l2control::ppp(),
+        l2control::ppp_lcp(),
+        l2control::ppp_ipcp(),
+        // P1 encapsulation protocols.
+        encap::vxlan(),
+        encap::gre(),
+        encap::nvgre(),
+        encap::mpls(),
+        encap::gtpu(),
+        encap::geneve(),
+        encap::l2tpv2(),
+        encap::l2tpv3(),
         payload::payload(),
         payload::raw(),
     ]
@@ -138,8 +161,8 @@ mod tests {
 
     #[test]
     fn bindings_point_to_known_or_planned_protocols() {
-        // Planned P0 ids that are referenced before they exist.
-        const PLANNED: &[&str] = &["clnp", "stp"];
+        // Planned ids that are referenced before they exist (still on the roadmap).
+        const PLANNED: &[&str] = &["clnp"];
         for def in catalog().iter() {
             for e in def.next.iter().flat_map(|b| &b.table) {
                 assert!(
