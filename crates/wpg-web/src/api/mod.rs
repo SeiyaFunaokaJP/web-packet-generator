@@ -411,6 +411,50 @@ pub(crate) async fn lint_yaml(yaml: &str) -> Result<LintResponse, ApiError> {
     post("/api/lint", &serde_json::json!({ "template": yaml })).await
 }
 
+/// `POST /api/lint` with a template JSON object.
+pub(crate) async fn lint_json(template: &Value) -> Result<LintResponse, ApiError> {
+    post("/api/lint", &serde_json::json!({ "template": template })).await
+}
+
+// ---------------------------------------------------------------- builder
+
+/// `GET /api/protocols`: the palette catalog.
+pub(crate) async fn protocols() -> Result<Vec<ProtocolSummary>, ApiError> {
+    get("/api/protocols").await
+}
+
+/// `GET /api/templates/{id}` (loads a template into the builder).
+pub(crate) async fn template(id: &str) -> Result<TemplateDetail, ApiError> {
+    get(&format!("/api/templates/{}", enc(id))).await
+}
+
+/// `POST /api/render`: server-side render of a template (parity check + preview).
+pub(crate) async fn render(
+    template: &Value,
+    count: u64,
+    index: u64,
+) -> Result<RenderResponse, ApiError> {
+    post(
+        "/api/render",
+        &serde_json::json!({ "template": template, "count": count, "index": index }),
+    )
+    .await
+}
+
+/// `POST /api/templates`: create a new user template from its JSON form.
+pub(crate) async fn create_template(template: &Value) -> Result<TemplateDetail, ApiError> {
+    post("/api/templates", template).await
+}
+
+/// `PUT /api/templates/{id}` with a template JSON object.
+pub(crate) async fn update_template_json(
+    id: &str,
+    template: &Value,
+) -> Result<TemplateDetail, ApiError> {
+    let body = body_of(template)?;
+    json(request(Method::Put, &format!("/api/templates/{}", enc(id)), body).await?).await
+}
+
 // ---------------------------------------------------------------- jobs
 
 pub(crate) async fn jobs() -> Result<Vec<JobInfo>, ApiError> {

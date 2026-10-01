@@ -379,6 +379,54 @@ pub(crate) struct LogLine {
     pub(crate) fields: serde_json::Map<String, Value>,
 }
 
+/// One entry of `GET /api/protocols` (the palette).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct ProtocolSummary {
+    /// Stable id (`ethernet2`, `ipv4`, ...).
+    pub(crate) id: String,
+    /// Display name.
+    pub(crate) name: String,
+    /// Palette classification (`l2`, `l3`, `l4`, `l7`, `payload`).
+    pub(crate) layer: String,
+    /// Field names in wire order.
+    pub(crate) fields: Vec<String>,
+    /// Protocols this one can carry (its next-layer binding table).
+    pub(crate) next: Vec<String>,
+    /// Content generator instead of wire fields (payload).
+    pub(crate) synth: bool,
+}
+
+/// One packet of `POST /api/render`.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct RenderedPacket {
+    /// Stream index.
+    pub(crate) index: u64,
+    /// Frame bytes as lower-case hex.
+    pub(crate) bytes_hex: String,
+    /// Length in octets.
+    pub(crate) len: usize,
+    /// Layer / field positions (`wpg_core::LayerLayout`).
+    pub(crate) layout: Value,
+    /// Padding / FCS after the layers.
+    pub(crate) trailers: Value,
+    /// Builder findings with localised `message`.
+    pub(crate) diagnostics: Vec<Value>,
+}
+
+/// `POST /api/render` response.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct RenderResponse {
+    /// The packets.
+    pub(crate) packets: Vec<RenderedPacket>,
+    /// Packets in the whole stream (`null` = unbounded).
+    pub(crate) cardinality: Option<u64>,
+    /// How a job would expand the stream (pre-render vs on-the-fly).
+    pub(crate) plan: Value,
+}
+
 /// Server → client WebSocket message.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]

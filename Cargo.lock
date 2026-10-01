@@ -4856,7 +4856,10 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "wpg-core",
  "wpg-i18n",
+ "wpg-protocols",
+ "wpg-template",
 ]
 
 [[package]]

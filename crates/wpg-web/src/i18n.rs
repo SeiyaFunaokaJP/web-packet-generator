@@ -27,6 +27,20 @@ impl I18n {
         wpg_i18n::t_args(self.locale.get(), key, &a)
     }
 
+    /// Translates `key` with dynamic (owned) argument names, e.g. the arguments of a
+    /// `wpg_core::Diagnostic`.
+    pub(crate) fn t_dyn(
+        self,
+        key: &str,
+        args: &std::collections::BTreeMap<String, String>,
+    ) -> String {
+        let mut a = FluentArgs::new();
+        for (k, v) in args {
+            a.set(k.clone(), v.clone());
+        }
+        wpg_i18n::t_args(self.locale.get(), key, &a)
+    }
+
     /// The locale without tracking.
     pub(crate) fn current(self) -> Locale {
         self.locale.get_untracked()
@@ -66,6 +80,11 @@ mod tests {
             include_str!("api/mod.rs"),
             include_str!("auth.rs"),
             include_str!("builder/mod.rs"),
+            include_str!("builder/palette.rs"),
+            include_str!("builder/stack.rs"),
+            include_str!("builder/fields.rs"),
+            include_str!("builder/hex.rs"),
+            include_str!("builder/tree.rs"),
             include_str!("components/mod.rs"),
             include_str!("components/logs.rs"),
             include_str!("components/modal.rs"),

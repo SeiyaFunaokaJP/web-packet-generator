@@ -11,6 +11,12 @@ publish.workspace = true
 
 [dependencies]
 wpg-i18n.workspace = true
+# The very same crates the server builds packets with, compiled to WASM: the
+# in-browser preview calls `Packet::build` directly, so it matches the server
+# byte for byte (guarded by the parity badge / test).
+wpg-core.workspace = true
+wpg-protocols.workspace = true
+wpg-template.workspace = true
 leptos.workspace = true
 leptos_router = "0.8"
 console_error_panic_hook.workspace = true
@@ -28,7 +34,9 @@ web-sys = { workspace = true, features = [
     "BlobPropertyBag",
     "Document",
     "DomTokenList",
+    "DragEvent",
     "Element",
+    "EventTarget",
     "File",
     "FileList",
     "HtmlAnchorElement",
