@@ -1,0 +1,42 @@
+# [Malformed] IPv4 total_length forced to 20 so all following data looks like trailer bytes
+schema: 1
+
+meta:
+  name: bad-ipv4-total-length-short
+  descriptions:
+    ja: "[異常系] IPv4 total_length を 20 (ヘッダ長ちょうど) にし、後続データをトレーラ扱いにする"
+    en: "[Malformed] IPv4 total_length forced to 20 so all following data looks like trailer bytes"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "layer:l3", malformed, sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      total_length: 20
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

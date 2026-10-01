@@ -39,6 +39,8 @@ jobs:
       - name: Install libpcap
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
       - run: cargo clippy --workspace --all-targets -- -D warnings
+      # The optional libpcap backend (needs libpcap-dev, installed above).
+      - run: cargo clippy -p wpg-tx -p wpg-cli --all-targets --features wpg-tx/pcap,wpg-cli/pcap -- -D warnings
 
   test:
     name: test (${{ matrix.os }})
@@ -55,6 +57,10 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
       - run: cargo test --workspace
+      # Windows is left out on purpose: linking the pcap backend needs the Npcap SDK.
+      - name: Test the pcap backend (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: cargo test -p wpg-tx --features pcap
 
   wasm-check:
     name: wasm-check
@@ -65,7 +71,22 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check -p wpg-core -p wpg-i18n --target wasm32-unknown-unknown
+      - run: cargo check -p wpg-core -p wpg-protocols -p wpg-i18n --target wasm32-unknown-unknown
+
+  # Optional (M1): cross-check the golden pcaps against Wireshark's dissector.
+  tshark:
+    name: tshark cross-check
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install tshark
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
+      - run: WPG_TSHARK=1 cargo test -p wpg-golden-tests --test tshark -- --ignored
 
   deny:
     name: cargo-deny

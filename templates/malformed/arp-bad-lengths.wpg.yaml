@@ -1,0 +1,27 @@
+# [Malformed] ARP with hlen/plen forced to 8/16 instead of 6/4
+schema: 1
+
+meta:
+  name: arp-bad-address-lengths
+  descriptions:
+    ja: "[異常系] ARP の hlen/plen を 8/16 にした (Ethernet/IPv4 の 6/4 と不一致)"
+    en: "[Malformed] ARP with hlen/plen forced to 8/16 instead of 6/4"
+  tags: ["protocol:ethernet2", "protocol:arp", "layer:l2", malformed, sample]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: "02:00:00:00:00:01"
+  - protocol: arp
+    fields:
+      hlen: 8
+      plen: 16
+      oper: request
+      spa: 192.0.2.1
+      tpa: 192.0.2.2
+
+tx:
+  count: 1

@@ -1,0 +1,38 @@
+# ICMPv6 Neighbor Solicitation to the solicited-node multicast group of ${target}.
+schema: 1
+
+meta:
+  name: ipv6-ndp-ns
+  descriptions:
+    ja: IPv6 近隣要請 (NDP Neighbor Solicitation、送信元リンク層アドレスオプション付き)
+    en: IPv6 Neighbor Solicitation (NDP) with a source link-layer address option
+  tags: [ipv6, ndp, icmpv6, sample]
+
+variables:
+  - name: target
+    default: fe80::1
+    description: Address being resolved (the multicast addresses below match fe80::1)
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: 33:33:ff:00:00:01 # 33:33 + low 32 bits of the solicited-node group
+      src: 02:00:00:00:00:02
+
+  - protocol: ipv6
+    fields:
+      src: fe80::2
+      dst: ff02::1:ff00:1
+      hop_limit: 255 # NDP requires 255
+
+  - protocol: icmpv6
+    fields:
+      type: neighbor_solicitation
+
+  - protocol: ndp_ns
+    fields:
+      target: ${target}
+      options: "01 01 02 00 00 00 00 02" # source link-layer address option
+
+tx:
+  count: 1

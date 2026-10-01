@@ -1,0 +1,46 @@
+# Payload mode counter: a 4-octet sequence number embedded in every packet
+schema: 1
+
+meta:
+  name: payload-counter
+  descriptions:
+    ja: "payload モード counter: 4 オクテットのシーケンス番号をパケットごとに埋め込む"
+    en: "Payload mode counter: a 4-octet sequence number embedded in every packet"
+  tags: ["protocol:payload", "layer:l4", sample, payload]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: counter
+      data: "53 45 51 00 00 00 00 00 00 00 00 00" # "SEQ" + room for the counter
+      length: 64
+      counter_offset: 4
+      counter_width: u32
+    generators:
+      counter_value: { kind: counter, start: 1, step: 1 }
+
+tx:
+  count: 100
+  rate: 100pps

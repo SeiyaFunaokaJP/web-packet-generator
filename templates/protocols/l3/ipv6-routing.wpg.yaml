@@ -1,0 +1,41 @@
+# IPv6/UDP with a Type 2 (Mobile IPv6) Routing header carrying a home address
+schema: 1
+
+meta:
+  name: ipv6-routing-type2
+  descriptions:
+    ja: "ルーティングヘッダ Type 2 (Mobile IPv6、ホームアドレス付き) の IPv6/UDP"
+    en: "IPv6/UDP with a Type 2 (Mobile IPv6) Routing header carrying a home address"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:ipv6_route", "protocol:udp", "layer:l3", sample, ipv6-ext]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: 2001:db8::2
+  - protocol: ipv6_route
+    fields:
+      routing_type: mobile_ipv6
+      # 0 keeps ipv6.dst as the final destination, so the UDP pseudo-header
+      # checksum stays valid; with 1 the home address becomes the final destination.
+      segments_left: 0
+      # 4 reserved octets + home address 2001:db8::99
+      data: "00 00 00 00 20 01 0d b8 00 00 00 00 00 00 00 00 00 00 00 99"
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

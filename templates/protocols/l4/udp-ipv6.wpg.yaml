@@ -1,0 +1,33 @@
+# UDP over IPv6 (checksum computed with the IPv6 pseudo header)
+schema: 1
+
+meta:
+  name: udp-over-ipv6
+  descriptions:
+    ja: "IPv6 上の UDP (疑似ヘッダ経由のチェックサム自動計算)"
+    en: "UDP over IPv6 (checksum computed with the IPv6 pseudo header)"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:udp", "layer:l4", sample]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: 2001:db8::2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

@@ -1,0 +1,16 @@
+{
+  "backend": "null",
+  "detail": null,
+  "iface": "null0",
+  "frame_size": 64,
+  "batch_size": 256,
+  "packets": 129386752,
+  "dropped": 0,
+  "pps": 43128873.65816061,
+  "bps": 22081983312.978233,
+  "l1_bps": 30362727055.34507,
+  "elapsed": {
+    "secs": 3,
+    "nanos": 3038
+  }
+}

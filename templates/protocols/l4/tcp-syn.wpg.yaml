@@ -1,0 +1,50 @@
+# TCP SYN with the typical option set (MSS, SACK-permitted, Timestamps, NOP, WS)
+schema: 1
+
+meta:
+  name: tcp-syn-options
+  descriptions:
+    ja: "典型的な TCP オプション (MSS/SACK-permitted/Timestamps/NOP/WS) 付き SYN"
+    en: "TCP SYN with the typical option set (MSS, SACK-permitted, Timestamps, NOP, WS)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "layer:l4", sample, syn]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+  - name: dst_ip
+    default: 192.0.2.2
+  - name: dst_port
+    default: 443
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: ${dst_ip}
+      flags: df
+  - protocol: tcp
+    fields:
+      src_port: 50000
+      dst_port: ${dst_port}
+      seq: 0x01020304
+      flags: syn
+      window: 64240
+      options:
+        - mss: 1460
+        - sack_permitted
+        - timestamps: { tsval: 1000, tsecr: 0 }
+        - nop
+        - ws: 7
+
+tx:
+  count: 1

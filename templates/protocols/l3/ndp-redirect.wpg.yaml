@@ -1,0 +1,31 @@
+# NDP Redirect pointing destination 2001:db8:2::5 at the better next hop fe80::2
+schema: 1
+
+meta:
+  name: ndp-redirect
+  descriptions:
+    ja: "NDP リダイレクト (target = 新ネクストホップ、destination = 対象宛先)"
+    en: "NDP Redirect pointing destination 2001:db8:2::5 at the better next hop fe80::2"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:icmpv6", "protocol:ndp_redirect", "layer:l3", sample, ndp]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: fe80::2
+      hop_limit: 255 # NDP messages must arrive with hop limit 255
+  - protocol: icmpv6
+  - protocol: ndp_redirect
+    fields:
+      target: fe80::2
+      destination: 2001:db8:2::5
+      options: "02 01 02 00 00 00 00 02"
+
+tx:
+  count: 1

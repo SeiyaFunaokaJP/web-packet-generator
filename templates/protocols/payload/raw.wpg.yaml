@@ -1,0 +1,39 @@
+# Raw layer: arbitrary hex octets after the last modelled layer (stand-in for unsupported protocols)
+schema: 1
+
+meta:
+  name: raw-payload
+  descriptions:
+    ja: "raw レイヤ: 16 進バイト列をそのまま後続に置く (未対応プロトコルの代用)"
+    en: "Raw layer: arbitrary hex octets after the last modelled layer (stand-in for unsupported protocols)"
+  tags: ["protocol:raw", "layer:l4", sample, payload]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: raw
+    fields:
+      data: "01 02 03 04 05 06 07 08"
+
+tx:
+  count: 1

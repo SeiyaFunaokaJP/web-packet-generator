@@ -14,8 +14,8 @@
 
 - [チュートリアル: ARP スイープ](tutorials/arp-sweep.md)
 - [チュートリアル: VLAN タグ付き TCP SYN 大量送信](tutorials/vlan-syn-flood.md)
-- [チュートリアル: IS-IS IIH の生成](tutorials/isis-iih.md)
-- [チュートリアル: DHCP 負荷試験](tutorials/dhcp-load.md)
+- [チュートリアル: IPv6 と近隣探索 (NDP)](tutorials/ipv6-ndp.md)
+- [チュートリアル: 負荷とレート制御](tutorials/rate-control.md)
 - [チュートリアル: pcap からテンプレートへ変換して再生](tutorials/pcap-replay.md)
 
 # リファレンス
@@ -31,6 +31,7 @@
 - [DPDK / AF_XDP のセットアップ](operations/dpdk-afxdp.md)
 - [CML2 での注意点](operations/cml2.md)
 - [性能チューニング](operations/tuning.md)
+- [認証と TLS](operations/security.md)
 
 # 開発者ガイド
 

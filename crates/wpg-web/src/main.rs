@@ -1,57 +1,48 @@
-//! wpg web UI (Leptos CSR). Built for `wasm32-unknown-unknown` by Trunk; the output in
-//! `dist/` is embedded into `wpg-server`.
+//! wpg web UI (Leptos CSR + Tailwind). Built for `wasm32-unknown-unknown` by Trunk;
+//! the output in `dist/` is embedded into `wpg-server` (rust-embed) and served at `/`.
 //!
-//! The crate also compiles natively so `cargo clippy --workspace` covers it, but it is
-//! only meaningful in a browser.
+//! The crate also compiles natively so that `cargo clippy/test --workspace` cover
+//! it: the pure logic (rate validation, sparkline paths, shortcut parsing, number
+//! formatting, WebSocket back-off, ...) is unit tested on the host, while every
+//! browser API is only *called* on `wasm32`.
+//!
+//! Module layout (see `README.md`):
+//!
+//! * [`app`]: router, shell (sidebar, top bar, logs drawer, help overlay), auth guard;
+//! * [`api`]: typed REST client (`gloo-net`), CSRF header, 401 handling, errors;
+//! * [`ws`]: `/api/ws` client with reconnect / back-off, live signals;
+//! * [`auth`], [`i18n`], [`prefs`]: session, translations (Fluent), theme / locale;
+//! * [`components`]: icons, dialogs, badges, toasts, logs panel, sparkline;
+//! * [`pages`]: dashboard, jobs, templates, settings, login / setup, placeholders;
+//! * [`builder`]: the packet builder (phase 2; placeholder route for now);
+//! * [`fmt`], [`validate`], [`shortcuts`], [`sparkline`], [`dom`]: helpers.
 
-use leptos::prelude::*;
-use wpg_i18n::{negotiate, t, Locale};
+// `#[component]` expands to items the lint misreads in a binary crate.
+#![allow(unreachable_pub)]
+// Natively only the pure logic is exercised (tests, clippy); the browser glue
+// (`#[cfg(target_arch = "wasm32")]`) is what uses the rest.
+#![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 
-/// Initial locale from the browser (`navigator.language`), falling back to English.
-fn browser_locale() -> Locale {
-    web_sys::window()
-        .and_then(|w| w.navigator().language())
-        .map(|lang| negotiate(&lang))
-        .unwrap_or_default()
-}
-
-/// Root component.
-#[component]
-fn App() -> impl IntoView {
-    let (locale, set_locale) = signal(browser_locale());
-
-    // Keep <html lang> in sync for screen readers / fonts.
-    Effect::new(move |_| {
-        if let Some(root) = document().document_element() {
-            let _ = root.set_attribute("lang", locale.get().as_str());
-        }
-    });
-
-    view! {
-        <header>
-            <h1>{move || t(locale.get(), "app-name")}</h1>
-            <p>{move || t(locale.get(), "app-tagline")}</p>
-        </header>
-        <nav aria-label=move || t(locale.get(), "ui-language")>
-            {Locale::ALL
-                .into_iter()
-                .map(|l| {
-                    view! {
-                        <button
-                            type="button"
-                            aria-pressed=move || (locale.get() == l).to_string()
-                            on:click=move |_| set_locale.set(l)
-                        >
-                            {l.as_str()}
-                        </button>
-                    }
-                })
-                .collect_view()}
-        </nav>
-    }
-}
+mod api;
+mod app;
+mod auth;
+mod builder;
+mod components;
+mod dom;
+mod fmt;
+mod i18n;
+mod pages;
+mod prefs;
+mod shortcuts;
+mod sparkline;
+mod validate;
+mod ws;
 
 fn main() {
+    if cfg!(not(target_arch = "wasm32")) {
+        eprintln!("wpg-web is a browser application: build it with `trunk build` (see README.md).");
+        return;
+    }
     console_error_panic_hook::set_once();
-    mount_to_body(App);
+    leptos::mount::mount_to_body(app::App);
 }

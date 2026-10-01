@@ -1,0 +1,44 @@
+# MPLS (RFC 3032): a two-label stack over Ethernet carrying IPv4/UDP
+schema: 1
+
+meta:
+  name: mpls-ipv4
+  descriptions:
+    ja: "MPLS (RFC 3032): 2 ラベルスタックで IPv4/UDP を Ethernet 上に転送"
+    en: "MPLS (RFC 3032): a two-label stack over Ethernet carrying IPv4/UDP"
+  tags: ["protocol:mpls", "layer:l2", encap, sample, "opaque-inner:mpls"]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+      ethertype: mpls
+  - protocol: mpls
+    fields:
+      label: 100
+      s: 0
+      ttl: 64
+  - protocol: mpls
+    fields:
+      label: 200
+      s: 1
+      ttl: 64
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 10.0.0.2
+  - protocol: udp
+    fields:
+      src_port: 4000
+      dst_port: 4001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 16
+
+tx:
+  count: 1

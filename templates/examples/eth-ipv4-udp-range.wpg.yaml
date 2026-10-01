@@ -1,0 +1,58 @@
+# Ethernet / IPv4 / UDP whose source IP sweeps 192.168.1.1 - 192.168.5.254.
+schema: 1
+
+meta:
+  name: udp-src-sweep
+  descriptions:
+    ja: 送信元 IP を 192.168.1.1-192.168.5.254 で変化させる UDP パケット
+    en: UDP packets whose source IP sweeps 192.168.1.1-192.168.5.254
+  tags: [udp, sample, l3]
+  author: example
+  created: 2026-09-29
+
+# Overridable at run time: wpg render / send --var dst_ip=10.1.2.3
+variables:
+  - name: dst_ip
+    default: 10.0.0.1
+    description: Destination IPv4 address
+  - name: dst_port
+    default: 5001
+    description: Destination UDP port
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: "00:11:22:33:44:55"
+      ethertype: auto # announces the next layer (IPv4)
+
+  - protocol: ipv4
+    fields:
+      dst: ${dst_ip}
+      ttl: 64
+      dscp: 0
+    generators:
+      src:
+        kind: range
+        start: 192.168.1.1
+        end: 192.168.5.254
+        step: 1
+
+  - protocol: udp
+    fields:
+      src_port: 12345
+      dst_port: ${dst_port}
+
+  - protocol: payload
+    fields:
+      mode: pattern # repeat `data` up to `length` octets
+      data: "00 01 02 03"
+      length: 64
+
+stream:
+  mode: zip # product | nested (+ order) combine several generators
+
+tx:
+  count: 1278 # one pass over the range
+  rate: 100000pps
+  burst: 32

@@ -1,0 +1,29 @@
+# NDP Router Solicitation to ff02::2 with a source link-layer address option
+schema: 1
+
+meta:
+  name: ndp-router-solicitation
+  descriptions:
+    ja: "NDP ルータ要請 (RS、送信元リンク層アドレスオプション付き、宛先 ff02::2)"
+    en: "NDP Router Solicitation to ff02::2 with a source link-layer address option"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:icmpv6", "protocol:ndp_rs", "layer:l3", sample, ndp]
+  author: wpg
+  created: 2026-09-29
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::2
+      hop_limit: 255 # NDP messages must arrive with hop limit 255
+  - protocol: icmpv6
+  - protocol: ndp_rs
+    fields:
+      options: "01 01 02 00 00 00 00 01" # source link-layer address 02:00:00:00:00:01
+
+tx:
+  count: 1

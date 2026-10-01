@@ -1,0 +1,37 @@
+# NDP Neighbor Solicitation sweep of 2001:db8::1 - 2001:db8::100, sent to the all-nodes group
+schema: 1
+
+meta:
+  name: scenario-ndp-ns-sweep
+  descriptions:
+    ja: "NDP 近隣要請スイープ: 2001:db8::1 から ::100 までを全ノードマルチキャストへ"
+    en: "NDP Neighbor Solicitation sweep of 2001:db8::1 - 2001:db8::100, sent to the all-nodes group"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv6", "protocol:icmpv6", "protocol:ndp_ns", "layer:l3", ndp, ipv6, sweep]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+  - name: src_ip
+    default: fe80::1
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:01"
+      src: ${src_mac}
+  - protocol: ipv6
+    fields:
+      src: ${src_ip}
+      dst: ff02::1
+      hop_limit: 255
+  - protocol: icmpv6
+  - protocol: ndp_ns
+    fields:
+      options: "01 01 02 00 00 00 00 01"
+    generators:
+      target: 2001:db8::1-2001:db8::100
+
+tx:
+  rate: 1000pps

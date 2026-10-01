@@ -293,63 +293,63 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] 決定事項 (§3) を `docs/adr/0001`〜`0009` として ADR 化
 
 ### M1: コアエンジン MVP（3–4 週）
-- [ ] フィールド型システム & プロトコル定義 IR (`wpg-core`)
-- [ ] 定義マクロ (Rust) と YAML ローダ → 同一 IR
-- [ ] 合成器 (build): 長さ・チェックサム・次ヘッダ自動計算、Auto/Manual
-- [ ] 解析器 (parse): バイト列 → レイヤツリー (import 用)
-- [ ] 制約検査 (warning/error)
-- [ ] P0 プロトコル実装: Ethernet II / 802.3+LLC/SNAP / 802.1Q / QinQ / ARP / IPv4(+options) / IPv6(+ext hdr) / ICMPv4 / ICMPv6+NDP / TCP(+options) / UDP / Payload 各種
-- [ ] ジェネレータ: range / list / random / counter / file / expr、zip / product / nested
-- [ ] ストリーム展開器 (pre-render / on-the-fly 自動選択)
-- [ ] golden pcap テスト + `tshark -V` 突合テスト (CI optional job)
-- [ ] `proptest` による round-trip (build→parse→build) テスト
-- [ ] `wpg-core` を `wasm32-unknown-unknown` でビルドできることを CI で保証
+- [x] フィールド型システム & プロトコル定義 IR (`wpg-core`)
+- [x] 定義マクロ (Rust) と YAML ローダ → 同一 IR
+- [x] 合成器 (build): 長さ・チェックサム・次ヘッダ自動計算、Auto/Manual
+- [x] 解析器 (parse): バイト列 → レイヤツリー (import 用)
+- [x] 制約検査 (warning/error)
+- [x] P0 プロトコル実装: Ethernet II / 802.3+LLC/SNAP / 802.1Q / QinQ / ARP / IPv4(+options) / IPv6(+ext hdr) / ICMPv4 / ICMPv6+NDP / TCP(+options) / UDP / Payload 各種
+- [x] ジェネレータ: range / list / random / counter / file / expr、zip / product / nested
+- [x] ストリーム展開器 (pre-render / on-the-fly 自動選択)
+- [x] golden pcap テスト + `tshark -V` 突合テスト (CI optional job)
+- [x] `proptest` による round-trip (build→parse→build) テスト
+- [x] `wpg-core` を `wasm32-unknown-unknown` でビルドできることを CI で保証
 
 ### M2: 送出エンジン（2–3 週）
-- [ ] `TxBackend` trait、`pcapfile` / `null` バックエンド
-- [ ] `pcap` バックエンド (Linux libpcap / macOS BPF / Windows Npcap)
-- [ ] Linux `afpacket` (TPACKET_V3 + sendmmsg)、コア pin、複数キュー
-- [ ] レート制御 (pps/bps/%)、バースト、IFG、精度計測
-- [ ] 統計収集 (per-backend / per-stream) と 100ms スナップショット
-- [ ] インタフェース列挙 (3 OS)
-- [ ] `wpg doctor`（権限・Npcap・setcap・hugepages 診断）
-- [ ] `wpg bench` と性能ベースライン記録 (`docs/perf.md`)
-- [ ] CML2 上 Ubuntu (virtio-net) での実測・注意点ドキュメント化
+- [x] `TxBackend` trait、`pcapfile` / `null` バックエンド
+- [x] `pcap` バックエンド (Linux libpcap / macOS BPF / Windows Npcap)
+- [x] Linux `afpacket` (TPACKET_V3 + sendmmsg)、コア pin、複数キュー
+- [x] レート制御 (pps/bps/%)、バースト、IFG、精度計測
+- [x] 統計収集 (per-backend / per-stream) と 100ms スナップショット
+- [x] インタフェース列挙 (3 OS)
+- [x] `wpg doctor`（権限・Npcap・setcap・hugepages 診断）
+- [x] `wpg bench` と性能ベースライン記録 (`docs/perf.md`)
+- [x] CML2 上 Ubuntu (virtio-net) での実測・注意点ドキュメント化（注意点は docs/operations/cml2 に記載済み。実測は `lo` のみで CML2 実機は未計測）
 
 ### M3: サーバ & CLI（2–3 週）
-- [ ] axum サーバ骨格、`rust-embed` で静的資産埋め込み
-- [ ] REST API: templates CRUD / protocols catalog / render(preview) / jobs (create/start/stop/pause) / ifaces / stats / auth
-- [ ] WebSocket: ジョブ進捗・統計・ログ配信
-- [ ] `utoipa` OpenAPI + Swagger UI
-- [ ] 認証: パスワード (argon2id)、セッション、レート制限、未設定時 localhost 限定
-- [ ] TLS (`rustls`、自己署名自動生成)
-- [ ] 設定 (`wpg.toml` + env + CLI)、`wpg config init`
-- [ ] ジョブマネージャ (複数ストリーム混合、スケジュール、キャンセル安全性)
-- [ ] 送出制限ポリシー (許可インタフェース、最大レート)
-- [ ] CLI サブコマンド: serve / send / render / import / template / ifaces / doctor / bench
-- [ ] `tracing` ログ設定 (JSON / ローテーション)
+- [x] axum サーバ骨格、`rust-embed` で静的資産埋め込み
+- [x] REST API: templates CRUD / protocols catalog / render(preview) / jobs (create/start/stop/pause) / ifaces / stats / auth
+- [x] WebSocket: ジョブ進捗・統計・ログ配信
+- [x] `utoipa` OpenAPI + Swagger UI
+- [x] 認証: パスワード (argon2id)、セッション、レート制限、未設定時 localhost 限定
+- [x] TLS (`rustls`、自己署名自動生成)
+- [x] 設定 (`wpg.toml` + env + CLI)、`wpg config init`
+- [x] ジョブマネージャ (複数ストリーム混合、スケジュール、キャンセル安全性)
+- [x] 送出制限ポリシー (許可インタフェース、最大レート)
+- [x] CLI サブコマンド: serve / send / render / import / template / ifaces / doctor / bench
+- [x] `tracing` ログ設定 (JSON / ローテーション)
 
 ### M4: GUI MVP（4–6 週）
-- [ ] Leptos プロジェクト、Tailwind、ルーティング、i18n、テーマ
-- [ ] 認証画面・セッション処理
+- [x] Leptos プロジェクト、Tailwind、ルーティング、i18n、テーマ
+- [x] 認証画面・セッション処理
 - [ ] ビルダー: プロトコルパレット / レイヤスタック D&D / フィールドエディタ (型別 UI) / Auto-Manual トグル
 - [ ] Hex ダンプ + ツリーの双方向ハイライト、Hex 直接編集
 - [ ] ブラウザ内 WASM プレビュー (`wpg-core`)、サーバ結果との一致テスト
 - [ ] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示
-- [ ] ジョブ画面: ストリーム混合、レート設定、開始/停止、リアルタイム統計グラフ
-- [ ] テンプレート画面: 一覧 / 検索 / タグ / import / export / 複製
-- [ ] 設定画面
-- [ ] Undo/Redo、ショートカット、自動保存 (draft)
-- [ ] キーボードのみで D&D 相当操作、aria
+- [x] ジョブ画面: ストリーム混合、レート設定、開始/停止、リアルタイム統計グラフ
+- [x] テンプレート画面: 一覧 / 検索 / タグ / import / export / 複製
+- [x] 設定画面
+- [x] Undo/Redo、ショートカット、自動保存 (draft)
+- [x] キーボードのみで D&D 相当操作、aria
 - [ ] E2E テスト (Playwright)
 
 ### M5: テンプレート形式 & 共有（1–2 週）
-- [ ] YAML/JSON スキーマ (`schema: 1`)、JSON Schema 公開、`wpg template lint`
-- [ ] テンプレ引数化 (変数)、実行時オーバーライド
-- [ ] `.wpgbundle` エクスポート/インポート (zip)
-- [ ] ライブラリパス複数指定 (Git 管理ディレクトリ読込)、ホットリロード
+- [x] YAML/JSON スキーマ (`schema: 1`)、JSON Schema 公開、`wpg template lint`
+- [x] テンプレ引数化 (変数)、実行時オーバーライド
+- [x] `.wpgbundle` エクスポート/インポート (zip)
+- [x] ライブラリパス複数指定 (Git 管理ディレクトリ読込)、ホットリロード
 - [ ] 同梱サンプルテンプレ (P0 プロトコル + 代表シナリオ 5 本)
-- [ ] pcap/pcapng import → テンプレ化、Hex 貼付け import
+- [x] pcap/pcapng import → テンプレ化、Hex 貼付け import
 
 ### M6: P1 プロトコル群（4–6 週、並行可）
 - [ ] LLDP / CDP / STP,RSTP,MSTP / LACP / EAPOL / PPPoE / PPP

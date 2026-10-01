@@ -11,9 +11,44 @@ publish.workspace = true
 
 [dependencies]
 wpg-i18n.workspace = true
+# The very same crates the server builds packets with, compiled to WASM: the
+# in-browser preview calls `Packet::build` directly, so it matches the server
+# byte for byte (guarded by the parity badge / test).
+wpg-core.workspace = true
+wpg-protocols.workspace = true
+wpg-template.workspace = true
 leptos.workspace = true
+leptos_router = "0.8"
 console_error_panic_hook.workspace = true
-web-sys.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# HTTP (fetch) + WebSocket with futures; works with Leptos' `spawn_local`.
+gloo-net = { version = "0.6", default-features = false, features = ["http", "json", "websocket"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { workspace = true, features = [
+    "Blob",
+    "BlobPropertyBag",
+    "Document",
+    "DomTokenList",
+    "DragEvent",
+    "Element",
+    "EventTarget",
+    "File",
+    "FileList",
+    "HtmlAnchorElement",
+    "HtmlDocument",
+    "HtmlElement",
+    "HtmlInputElement",
+    "KeyboardEvent",
+    "Location",
+    "MediaQueryList",
+    "Storage",
+    "Url",
+] }
 
 [lints]
 workspace = true

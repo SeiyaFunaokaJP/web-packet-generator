@@ -1,0 +1,56 @@
+# 802.1ad QinQ frame (S-tag 0x88a8 + C-tag 0x8100) carrying IPv4/UDP
+schema: 1
+
+meta:
+  name: dot1ad-qinq-frame
+  descriptions:
+    ja: "802.1ad QinQ (S-tag 0x88a8 + C-tag 0x8100) の IPv4/UDP フレーム"
+    en: "802.1ad QinQ frame (S-tag 0x88a8 + C-tag 0x8100) carrying IPv4/UDP"
+  tags: ["protocol:ethernet2", "protocol:dot1ad", "protocol:dot1q", "protocol:ipv4", "protocol:udp", "layer:l2", sample, vlan, qinq]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+  - name: s_vid
+    default: 200
+    description: Service (outer) VLAN ID
+  - name: c_vid
+    default: 100
+    description: Customer (inner) VLAN ID
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: dot1ad
+    fields:
+      pcp: 3
+      dei: 0
+      vid: ${s_vid}
+  - protocol: dot1q
+    fields:
+      pcp: 0
+      vid: ${c_vid}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

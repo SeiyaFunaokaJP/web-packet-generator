@@ -1,0 +1,25 @@
+/* Tailwind v4 entry point, compiled by Trunk's standalone Tailwind CLI. */
+@import "tailwindcss";
+
+/* Class names are only ever written as complete literals in the Rust sources. */
+@source "../src";
+
+/* Theme is class based: `<html class="dark">` (see src/prefs.rs). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Hiragino Sans",
+    "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Noto Sans Mono", monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* Visible keyboard focus everywhere (a11y); mouse focus stays quiet. */
+:focus-visible {
+  outline: 2px solid var(--color-sky-500);
+  outline-offset: 2px;
+}

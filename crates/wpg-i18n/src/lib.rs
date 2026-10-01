@@ -199,6 +199,21 @@ pub fn t(locale: Locale, key: &str) -> String {
         .unwrap_or_else(|| key.to_owned())
 }
 
+/// Formats a [`wpg_core::Diagnostic`] in `locale` using its key and named arguments.
+///
+/// Falls back to English and finally to the diagnostic's own English `message`
+/// (e.g. for keys added to wpg-core before their translations).
+#[must_use]
+pub fn t_diag(locale: Locale, diag: &wpg_core::Diagnostic) -> String {
+    let mut args = FluentArgs::new();
+    for (k, v) in &diag.args {
+        args.set(k.as_str(), v.as_str());
+    }
+    format(locale, &diag.key, Some(&args))
+        .or_else(|| format(Locale::En, &diag.key, Some(&args)))
+        .unwrap_or_else(|| diag.message.clone())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,6 +253,77 @@ mod tests {
                 let mut args = FluentArgs::new();
                 args.set("addr", "127.0.0.1:8080");
                 args.set("command", "send");
+                for name in [
+                    "field",
+                    "value",
+                    "min",
+                    "max",
+                    "expected",
+                    "span",
+                    "len",
+                    "next",
+                    "bits",
+                    "unit",
+                    "what",
+                    "protocol",
+                    "offset",
+                    "available",
+                    "hint",
+                    "error",
+                    "ok",
+                    "warn",
+                    "fail",
+                    // wpg send / wpg bench
+                    "t",
+                    "packets",
+                    "pps",
+                    "bps",
+                    "dropped",
+                    "ratio",
+                    "secs",
+                    "backend",
+                    "iface",
+                    "rate",
+                    "burst",
+                    "limit",
+                    "strategy",
+                    "reason",
+                    "workers",
+                    "count",
+                    "duration",
+                    "time",
+                    "detail",
+                    "l1",
+                    "target",
+                    "mean",
+                    "index",
+                    "bytes",
+                    "core",
+                    "batch",
+                    "mode",
+                    // wpg-server API errors / wpg serve / wpg config
+                    "id",
+                    "state",
+                    "action",
+                    "allowed",
+                    "path",
+                    "source",
+                    "errors",
+                    "warnings",
+                    "level",
+                    "key",
+                    "message",
+                    "app",
+                    "version",
+                    "list",
+                    "origins",
+                    // authentication / TLS (wpg-server, wpg serve)
+                    "url",
+                    "fingerprint",
+                    "min",
+                ] {
+                    args.set(name, "1");
+                }
                 let text = t_args(locale, &key, &args);
                 assert_ne!(text, key, "{locale}:{key} did not resolve");
                 assert!(
@@ -285,5 +371,97 @@ mod tests {
             assert_eq!(locale.as_str().parse::<Locale>(), Ok(locale));
         }
         assert!("xx".parse::<Locale>().is_err());
+    }
+
+    /// Every `pub const X: &str = "diag-..."` in wpg-core's `diag::keys` (scanned from
+    /// the source, since the module exposes no list) has a message in every locale, and
+    /// each message uses exactly the arguments documented on the constant.
+    #[test]
+    fn diag_keys_are_translated_with_documented_args() {
+        const SRC: &str = include_str!("../../wpg-core/src/diag.rs");
+        let mut found = Vec::new(); // (key, documented args)
+        let mut args: Vec<String> = Vec::new();
+        let mut in_doc_args = false;
+        for line in SRC.lines().map(str::trim) {
+            if let Some(doc) = line.strip_prefix("///") {
+                if let Some((_, list)) = doc.split_once("Args:") {
+                    args.clear();
+                    in_doc_args = true;
+                    add_args(list, &mut args);
+                } else if in_doc_args {
+                    add_args(doc, &mut args);
+                }
+            } else if line.starts_with("pub const ") && line.contains("\"diag-") {
+                let key = line.split('"').nth(1).unwrap().to_owned();
+                found.push((key, std::mem::take(&mut args)));
+                in_doc_args = false;
+            } else {
+                args.clear();
+                in_doc_args = false;
+            }
+        }
+        assert!(found.len() >= 17, "scan found {} keys", found.len());
+        for locale in Locale::ALL {
+            let ids = message_ids(locale.source());
+            for (key, doc_args) in &found {
+                assert!(ids.contains(key), "{locale} lacks {key}");
+                let src = locale.source();
+                let start = src.find(&format!("\n{key} =")).unwrap();
+                // Diagnostic messages are single-line.
+                let end = src[start + 1..]
+                    .find('\n')
+                    .map_or(src.len(), |e| start + 1 + e);
+                let body = &src[start..end];
+                let used: BTreeSet<_> = body
+                    .split("{ $")
+                    .skip(1)
+                    .map(|r| r.split([' ', '}']).next().unwrap().to_owned())
+                    .collect();
+                let want: BTreeSet<_> = doc_args.iter().cloned().collect();
+                assert_eq!(used, want, "{locale}:{key} placeables vs documented args");
+            }
+        }
+    }
+
+    fn add_args(text: &str, out: &mut Vec<String>) {
+        for part in text.split('`').skip(1).step_by(2) {
+            out.push(part.to_owned());
+        }
+    }
+
+    #[test]
+    fn formats_diagnostics() {
+        use wpg_core::diag::keys;
+        use wpg_core::{DiagLevel, Diagnostic};
+        let d = Diagnostic::new(DiagLevel::Warning, keys::CHECKSUM_MISMATCH, "english")
+            .on_field("checksum")
+            .arg("value", "0xbeef")
+            .arg("expected", "0x1234");
+        let en = t_diag(Locale::En, &d);
+        assert!(en.contains("`checksum`") && en.contains("0xbeef") && en.contains("0x1234"));
+        let ja = t_diag(Locale::Ja, &d);
+        assert!(ja.contains("チェックサム") && ja.contains("0x1234"), "{ja}");
+        let unknown = Diagnostic::new(DiagLevel::Info, "diag-unknown", "fallback text");
+        assert_eq!(t_diag(Locale::Ja, &unknown), "fallback text");
+    }
+
+    /// Every field description key used by the protocol catalog exists in every locale.
+    #[test]
+    fn catalog_description_keys_are_translated() {
+        let mut used = BTreeSet::new();
+        for proto in wpg_protocols::catalog().iter() {
+            for field in &proto.fields {
+                if let Some(key) = &field.description_key {
+                    used.insert((proto.id.clone(), key.clone()));
+                }
+            }
+        }
+        assert!(!used.is_empty());
+        for locale in Locale::ALL {
+            let ids = message_ids(locale.source());
+            for (proto, key) in &used {
+                assert!(ids.contains(key), "{locale} lacks {key} (used by {proto})");
+            }
+        }
     }
 }

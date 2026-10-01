@@ -1,0 +1,44 @@
+# ICMP echo requests with a repeating payload pattern and an incrementing IP ID.
+schema: 1
+
+meta:
+  name: icmp-echo-pattern-payload
+  descriptions:
+    ja: パターン payload 付き ICMP エコー要求 (IP ID は連番)
+    en: ICMP echo requests with a pattern payload and an incrementing IP ID
+  tags: [icmp, ping, payload, sample]
+
+variables:
+  - name: dst_ip
+    default: 192.0.2.2
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: 00:11:22:33:44:55
+      src: 66:77:88:99:aa:bb
+
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: ${dst_ip}
+    generators:
+      identification:
+        kind: counter
+        start: 1
+        step: 1
+
+  - protocol: icmpv4
+    fields:
+      type: echo_request
+      rest: "00 01 00 01" # identifier 1, sequence 1
+
+  - protocol: payload
+    fields:
+      mode: pattern # repeat `data` up to `length` octets
+      data: "de ad be ef"
+      length: 48
+
+tx:
+  count: 10
+  rate: 10pps

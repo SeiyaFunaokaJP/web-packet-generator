@@ -1,0 +1,47 @@
+# TCP SYN port scan of destination ports 1-1024 (source port increments)
+schema: 1
+
+meta:
+  name: scenario-tcp-syn-port-scan
+  descriptions:
+    ja: "TCP SYN ポートスキャン: 宛先ポート 1-1024 へ SYN (送信元ポートは連番)"
+    en: "TCP SYN port scan of destination ports 1-1024 (source port increments)"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "layer:l4", tcp, syn, scan]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+  - name: dst_ip
+    default: 192.0.2.2
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: ${dst_ip}
+  - protocol: tcp
+    fields:
+      flags: syn
+      window: 1024
+      options:
+        - mss: 1460
+    generators:
+      dst_port: 1-1024
+      src_port: { kind: counter, start: 40000, step: 1 }
+
+stream:
+  mode: zip
+
+tx:
+  count: 1024
+  rate: 2000pps

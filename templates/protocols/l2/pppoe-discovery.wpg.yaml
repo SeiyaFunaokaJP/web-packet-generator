@@ -1,0 +1,27 @@
+# PPPoE Discovery (RFC 2516): a broadcast PADI (EtherType 0x8863)
+schema: 1
+
+meta:
+  name: pppoe-discovery
+  descriptions:
+    ja: "PPPoE Discovery (RFC 2516): Service-Name / Host-Uniq 付きの PADI (ブロードキャスト)"
+    en: "PPPoE Discovery (RFC 2516): a broadcast PADI with Service-Name and Host-Uniq tags"
+  tags: ["protocol:pppoe_discovery", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "ff:ff:ff:ff:ff:ff"
+      src: "02:00:00:00:00:01"
+  - protocol: pppoe_discovery
+    fields:
+      code: padi
+      session_id: 0
+      tags:
+        - { type: 0x0101, data: "" } # Service-Name: any
+        - { type: 0x0103, data: "de ad be ef" } # Host-Uniq
+
+tx:
+  count: 1

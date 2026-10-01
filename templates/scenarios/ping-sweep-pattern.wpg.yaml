@@ -1,0 +1,47 @@
+# ICMP echo sweep of 192.0.2.1-254 with a 56-octet pattern payload and an incrementing IP ID
+schema: 1
+
+meta:
+  name: scenario-ping-sweep-pattern
+  descriptions:
+    ja: "ICMP エコー スイープ: 192.0.2.1-254 へ 56 オクテットのパターン payload、IP ID は連番"
+    en: "ICMP echo sweep of 192.0.2.1-254 with a 56-octet pattern payload and an incrementing IP ID"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv4", "protocol:icmpv4", "protocol:payload", "layer:l3", icmp, ping, sweep]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.250
+    generators:
+      dst: 192.0.2.1-192.0.2.254
+      identification: { kind: counter, start: 1, step: 1, wrap: 65535 }
+  - protocol: icmpv4
+    fields:
+      type: echo_request
+      rest: "be ef 00 01"
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "de ad be ef"
+      length: 56
+
+stream:
+  mode: zip # destination and IP ID advance together
+
+tx:
+  count: 254
+  rate: 100pps

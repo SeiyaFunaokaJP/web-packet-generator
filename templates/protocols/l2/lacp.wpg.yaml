@@ -1,0 +1,28 @@
+# LACP (IEEE 802.3ad): a Slow Protocols LACPDU (EtherType 0x8809, subtype 1)
+schema: 1
+
+meta:
+  name: lacp
+  descriptions:
+    ja: "LACP (IEEE 802.3ad): Slow Protocols の LACPDU (Active / Aggregation / Collecting)"
+    en: "LACP (IEEE 802.3ad): a Slow Protocols LACPDU (active, aggregatable, collecting)"
+  tags: ["protocol:lacp", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02" # Slow Protocols multicast
+      src: "02:00:00:00:00:01"
+  - protocol: lacp
+    fields:
+      actor_system: "02:00:00:00:00:01"
+      actor_key: 1
+      actor_port: 1
+      partner_system: "02:00:00:00:00:02"
+      partner_key: 1
+      partner_port: 1
+
+tx:
+  count: 1

@@ -1,0 +1,37 @@
+# ARP request (who has ${target}? tell ${sender})
+schema: 1
+
+meta:
+  name: arp-request
+  descriptions:
+    ja: "ARP 要求 (who-has ${target}? tell ${sender})"
+    en: "ARP request (who has ${target}? tell ${sender})"
+  tags: ["protocol:ethernet2", "protocol:arp", "layer:l2", sample, arp]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+  - name: sender
+    default: 192.0.2.1
+    description: Sender protocol address
+  - name: target
+    default: 192.0.2.2
+    description: Address being resolved
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: ${src_mac}
+  - protocol: arp
+    fields:
+      oper: request
+      sha: ${src_mac}
+      spa: ${sender}
+      tha: "00:00:00:00:00:00"
+      tpa: ${target}
+
+tx:
+  count: 1

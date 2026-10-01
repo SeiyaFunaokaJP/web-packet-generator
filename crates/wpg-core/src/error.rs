@@ -20,6 +20,9 @@ pub enum CoreError {
         /// Field name.
         field: String,
     },
+    /// A layer reference (see `Packet::layer_index`) matches no layer.
+    #[error("`{0}` does not match any layer of the packet")]
+    UnknownLayer(String),
     /// A field's bit width is outside what its type supports.
     #[error("field `{field}`: invalid bit width {bits} (allowed {min}..={max})")]
     InvalidWidth {
@@ -48,6 +51,17 @@ pub enum CoreError {
         /// Field name.
         field: String,
     },
+    /// A protocol definition is internally inconsistent.
+    #[error("invalid definition of protocol `{protocol}`: {reason}")]
+    InvalidDefinition {
+        /// Protocol id.
+        protocol: String,
+        /// Human readable reason.
+        reason: String,
+    },
+    /// A YAML protocol definition could not be read / written.
+    #[error("YAML protocol definition: {0}")]
+    Yaml(String),
     /// Placeholder for functionality that is planned but not written yet.
     #[error("not implemented yet: {0}")]
     NotImplemented(&'static str),

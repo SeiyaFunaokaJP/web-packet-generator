@@ -14,12 +14,33 @@ default-run = "wpg"
 name = "wpg"
 path = "src/main.rs"
 
+[features]
+# Enables the libpcap / Npcap transmit backend (`--backend pcap`). Off by default because it
+# needs libpcap-dev (Linux) or the Npcap SDK (Windows) at build time.
+pcap = ["wpg-tx/pcap"]
+
 [dependencies]
 wpg-i18n.workspace = true
 wpg-server.workspace = true
+wpg-sys.workspace = true
+wpg-tx.workspace = true
+wpg-core.workspace = true
+wpg-protocols.workspace = true
+wpg-template.workspace = true
 clap.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+serde_json.workspace = true
+# Ctrl-C stops `wpg send` / `wpg bench` cleanly.
+ctrlc = "3"
+# `wpg config set-password`: read the password without echo.
+rpassword = "7"
+
+[dev-dependencies]
+# `tests/render_api.rs`: `wpg render` output == `POST /api/render`.
+axum.workspace = true
+tower.workspace = true
+tempfile = "3"
 
 [lints]
 workspace = true

@@ -1,0 +1,36 @@
+# ARP sweep across a whole /22 (the 1022 host addresses of 10.0.0.0/22)
+schema: 1
+
+meta:
+  name: scenario-arp-sweep-slash22
+  descriptions:
+    ja: "/22 (10.0.0.0/22 のホスト 1022 アドレス) 全体への ARP スイープ"
+    en: "ARP sweep across a whole /22 (the 1022 host addresses of 10.0.0.0/22)"
+  tags: [scenario, "protocol:ethernet2", "protocol:arp", "layer:l2", arp, sweep]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+  - name: src_ip
+    default: 10.0.3.250
+  - name: net
+    default: 10.0.0.0/22
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: ${src_mac}
+  - protocol: arp
+    fields:
+      oper: request
+      sha: ${src_mac}
+      spa: ${src_ip}
+      tha: "00:00:00:00:00:00"
+    generators:
+      tpa: ${net}
+
+tx:
+  rate: 5000pps

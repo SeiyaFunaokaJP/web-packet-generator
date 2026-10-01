@@ -14,9 +14,17 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 thiserror.workspace = true
+serde_yaml = { workspace = true, optional = true }
+
+[features]
+default = ["yaml"]
+# YAML (de)serialisation of protocol definitions (`ProtocolDef::from_yaml`), used by the
+# user-extension `protocols.d/` mechanism. Pure Rust, also builds for wasm32.
+yaml = ["dep:serde_yaml"]
 
 [dev-dependencies]
 serde_json.workspace = true
+proptest = "1"
 
 [lints]
 workspace = true

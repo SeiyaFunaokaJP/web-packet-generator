@@ -1,0 +1,46 @@
+# IEEE 802.3 + LLC + SNAP (OUI 0, PID = IPv4) carrying IPv4/UDP
+schema: 1
+
+meta:
+  name: dot3-llc-snap-frame
+  descriptions:
+    ja: "IEEE 802.3 + LLC + SNAP (OUI 0、PID = IPv4) で IPv4/UDP を運ぶフレーム"
+    en: "IEEE 802.3 + LLC + SNAP (OUI 0, PID = IPv4) carrying IPv4/UDP"
+  tags: ["protocol:dot3", "protocol:llc", "protocol:snap", "protocol:ipv4", "protocol:udp", "layer:l2", sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+      length: auto
+  - protocol: llc # dsap / ssap become 0xaa (SNAP) automatically
+  - protocol: snap
+    fields:
+      oui: 0 # pid: auto -> 0x0800
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 16
+
+tx:
+  count: 1

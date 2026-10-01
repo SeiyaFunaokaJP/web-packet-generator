@@ -1,0 +1,31 @@
+# PPPoE Session + PPP + LCP (RFC 2516 / 1661): a Configure-Request with MRU and Magic-Number options
+schema: 1
+
+meta:
+  name: pppoe-ppp-lcp
+  descriptions:
+    ja: "PPPoE Session + PPP + LCP (RFC 2516 / 1661): MRU とマジックナンバー付き Configure-Request"
+    en: "PPPoE Session + PPP + LCP (RFC 2516 / 1661): a Configure-Request with MRU and Magic-Number"
+  tags: ["protocol:pppoe_session", "protocol:ppp", "protocol:ppp_lcp", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: pppoe_session
+    fields:
+      session_id: 1
+  - protocol: ppp # protocol: auto -> 0xc021 (LCP)
+  - protocol: ppp_lcp
+    fields:
+      code: configure_request
+      identifier: 1
+      options:
+        - { mru: 1492 }
+        - { magic_number: 0x12345678 }
+
+tx:
+  count: 1

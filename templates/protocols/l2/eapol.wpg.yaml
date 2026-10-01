@@ -1,0 +1,25 @@
+# EAPOL (IEEE 802.1X): an EAPOL-EAP frame carrying an EAP Identity response (EtherType 0x888e)
+schema: 1
+
+meta:
+  name: eapol
+  descriptions:
+    ja: "EAPOL (IEEE 802.1X): EAP Identity 応答を運ぶ EAPOL-EAP フレーム"
+    en: "EAPOL (IEEE 802.1X): an EAPOL-EAP frame carrying an EAP Identity response"
+  tags: ["protocol:eapol", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:03" # PAE group address
+      src: "02:00:00:00:00:01"
+  - protocol: eapol
+    fields:
+      version: 2
+      type: eap
+      body: "02 01 00 0a 01 75 73 65 72 31" # EAP Response/Identity "user1"
+
+tx:
+  count: 1

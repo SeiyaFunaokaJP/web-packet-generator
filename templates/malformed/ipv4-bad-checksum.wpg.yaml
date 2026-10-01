@@ -1,0 +1,42 @@
+# [Malformed] IPv4 packet whose header checksum is forced to 0xdead (wrong on purpose)
+schema: 1
+
+meta:
+  name: bad-ipv4-checksum
+  descriptions:
+    ja: "[異常系] IPv4 ヘッダチェックサムを手動値 0xdead にした (正しくない) パケット"
+    en: "[Malformed] IPv4 packet whose header checksum is forced to 0xdead (wrong on purpose)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "layer:l3", malformed, sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      header_checksum: 0xdead # Manual: not recomputed, receivers must drop it
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

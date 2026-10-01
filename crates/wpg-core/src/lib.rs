@@ -2,7 +2,8 @@
 //!
 //! OS-independent heart of wpg: the declarative protocol definition IR
 //! ([`ProtocolDef`] / [`FieldDef`] / [`FieldType`]), packet instances
-//! ([`Packet`] / [`Layer`]) and field value generators ([`Generator`]).
+//! ([`Packet`] / [`Layer`]), the builder ([`Packet::build`]) and parser ([`parse()`])
+//! with [`Diagnostic`]s, and field value generators ([`Generator`]).
 //!
 //! The same IR is produced by Rust protocol definitions (`wpg-protocols`) and, later,
 //! by user YAML definitions, and drives build / parse / GUI / docs generation
@@ -10,15 +11,32 @@
 //!
 //! This crate must keep building for `wasm32-unknown-unknown`.
 
+mod bits;
+pub mod build;
+pub mod checksum;
+pub mod constraint;
+pub mod diag;
 pub mod error;
 pub mod generator;
 pub mod ir;
+mod macros;
+pub mod notation;
 pub mod packet;
+pub mod parse;
+pub mod stream;
+pub mod synth;
 
-pub use error::{CoreError, Result};
-pub use generator::Generator;
-pub use ir::{
-    AutoCompute, ChecksumKind, EnumVariant, FieldDef, FieldType, FlagBit, Length, ProtocolDef,
-    ProtocolLayer,
+pub use build::{
+    Built, FieldLayout, LayerLayout, PatchTarget, Prebuilt, TrailerKind, TrailerLayout,
 };
-pub use packet::{FieldValue, Layer, Packet};
+pub use constraint::{Constraint, ConstraintRule};
+pub use diag::{DiagLevel, Diagnostic};
+pub use error::{CoreError, Result};
+pub use generator::{CompiledGenerator, Generator, GeneratorError, GeneratorState};
+pub use ir::{
+    raw_protocol, AutoCompute, Binding, BindingEntry, ChecksumCoverage, ChecksumKind, EnumVariant,
+    FieldDef, FieldType, FlagBit, ItemDef, Length, LengthOf, LengthUnit, ProtocolDef,
+    ProtocolLayer, PseudoHeader, Resolve, Synthesizer, TlvDef, TlvVariant, RAW_PROTOCOL_ID,
+};
+pub use packet::{FcsMode, FieldValue, Layer, Packet, TlvItem};
+pub use parse::{parse, parse_with_fcs, Parsed};

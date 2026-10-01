@@ -1,0 +1,23 @@
+[package]
+name = "wpg-log"
+description = "wpg logging setup: tracing subscriber (pretty / JSON), rolling log files and a broadcast sink for live log streaming"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["json", "registry"] }
+tracing-appender = "0.2.3"
+# Only the broadcast channel is needed here (the server owns the runtime).
+tokio = { version = "1.48", default-features = false, features = ["sync"] }
+
+[lints]
+workspace = true

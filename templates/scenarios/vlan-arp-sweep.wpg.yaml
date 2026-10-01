@@ -1,0 +1,48 @@
+# ARP sweep across VLANs: resolve 10.0.0.1-10.0.0.254 in each of VLAN 100-103 (4 x 254 = 1016 frames)
+schema: 1
+
+meta:
+  name: scenario-vlan-arp-sweep
+  descriptions:
+    ja: "VLAN 越し ARP スイープ: VLAN 100-103 それぞれで 10.0.0.1-10.0.0.254 を引く (4 x 254 = 1016 個)"
+    en: "ARP sweep across VLANs: resolve 10.0.0.1-10.0.0.254 in each of VLAN 100-103 (4 x 254 = 1016 frames)"
+  tags: [scenario, "protocol:ethernet2", "protocol:dot1q", "protocol:arp", "layer:l2", vlan, arp, sweep]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+  - name: src_ip
+    default: 10.0.0.250
+  - name: vids
+    default: 100-103
+    description: VLAN ID range swept (outer loop)
+  - name: first
+    default: 10.0.0.1
+  - name: last
+    default: 10.0.0.254
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: ${src_mac}
+  - protocol: dot1q
+    generators:
+      vid: ${vids}
+  - protocol: arp
+    fields:
+      oper: request
+      sha: ${src_mac}
+      spa: ${src_ip}
+      tha: "00:00:00:00:00:00"
+    generators:
+      tpa: ${first}-${last}
+
+stream:
+  mode: nested
+  order: [dot1q.vid, arp.tpa] # VLAN is the slow loop, the address the fast one
+
+tx:
+  rate: 2000pps

@@ -1,0 +1,33 @@
+# Gratuitous ARP (request whose sender and target IP are the same)
+schema: 1
+
+meta:
+  name: arp-gratuitous
+  descriptions:
+    ja: "Gratuitous ARP (送信元 IP = 対象 IP の ARP 要求)"
+    en: "Gratuitous ARP (request whose sender and target IP are the same)"
+  tags: ["protocol:ethernet2", "protocol:arp", "layer:l2", sample, arp]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+  - name: ip
+    default: 192.0.2.1
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: ${src_mac}
+  - protocol: arp
+    fields:
+      oper: request
+      sha: ${src_mac}
+      spa: ${ip}
+      tha: "00:00:00:00:00:00"
+      tpa: ${ip}
+
+tx:
+  count: 1

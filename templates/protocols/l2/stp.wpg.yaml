@@ -1,0 +1,30 @@
+# STP (IEEE 802.1D): a Configuration BPDU from the root bridge over 802.3 + LLC (SAP 0x42)
+schema: 1
+
+meta:
+  name: stp
+  descriptions:
+    ja: "STP (IEEE 802.1D): ルートブリッジからの Configuration BPDU (802.3 + LLC)"
+    en: "STP (IEEE 802.1D): a Configuration BPDU from the root bridge (802.3 + LLC)"
+  tags: ["protocol:stp", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "01:80:c2:00:00:00" # bridge group address
+      src: "02:00:00:00:00:01"
+      length: auto
+  - protocol: llc # dsap / ssap become 0x42 automatically
+  - protocol: stp
+    fields:
+      root_priority: 0x8000
+      root_mac: "02:00:00:00:00:01"
+      root_path_cost: 0
+      bridge_priority: 0x8000
+      bridge_mac: "02:00:00:00:00:01"
+      port_id: 0x8001
+
+tx:
+  count: 1

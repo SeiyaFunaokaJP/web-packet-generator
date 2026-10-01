@@ -1,0 +1,42 @@
+# [Malformed] IPv4 IHL forced to 15 (60-octet header) although no options are present
+schema: 1
+
+meta:
+  name: bad-ipv4-ihl
+  descriptions:
+    ja: "[異常系] IPv4 IHL を 15 (60 オクテット) にしたが実際のオプションは無い"
+    en: "[Malformed] IPv4 IHL forced to 15 (60-octet header) although no options are present"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "layer:l3", malformed, sample]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      ihl: 15
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

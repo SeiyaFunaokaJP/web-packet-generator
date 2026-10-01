@@ -1,0 +1,28 @@
+# LLDP (IEEE 802.1AB): an LLDPDU to the nearest-bridge group address (EtherType 0x88cc)
+schema: 1
+
+meta:
+  name: lldp
+  descriptions:
+    ja: "LLDP (IEEE 802.1AB): Chassis ID / Port ID / TTL / System Name 付きの LLDPDU"
+    en: "LLDP (IEEE 802.1AB): an LLDPDU with Chassis ID, Port ID, TTL and System Name TLVs"
+  tags: ["protocol:lldp", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:0e" # nearest-bridge multicast group
+      src: "02:00:00:00:00:01"
+  - protocol: lldp
+    fields:
+      tlvs: # the TLV length is not auto-computed: it must match the value size
+        - { type: 1, length: 7, value: "04 02 00 00 00 00 01" } # Chassis ID: MAC
+        - { type: 2, length: 7, value: "03 02 00 00 00 00 01" } # Port ID: MAC
+        - { type: 3, length: 2, value: "00 78" } # TTL 120 s
+        - { type: 5, length: 3, value: "73 77 31" } # System Name "sw1"
+        - { type: 0, length: 0, value: "" } # End of LLDPDU
+
+tx:
+  count: 1

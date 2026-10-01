@@ -1,0 +1,47 @@
+# ICMPv4 echo request whose sequence number increments per packet
+schema: 1
+
+meta:
+  name: icmpv4-echo-request
+  descriptions:
+    ja: "ICMPv4 エコー要求 (識別子・シーケンス番号はカウンタで増加)"
+    en: "ICMPv4 echo request whose sequence number increments per packet"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:icmpv4", "layer:l3", sample, icmp, ping]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+  - name: src_ip
+    default: 192.0.2.1
+  - name: dst_ip
+    default: 192.0.2.2
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: ${src_ip}
+      dst: ${dst_ip}
+  - protocol: icmpv4
+    fields:
+      type: echo_request
+      code: 0
+      rest: "12 34 00 00" # identifier 0x1234, sequence 0
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "61 62 63 64 65 66 67 68" # abcdefgh
+      length: 32
+
+tx:
+  count: 4
+  rate: 10pps

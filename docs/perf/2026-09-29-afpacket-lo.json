@@ -1,0 +1,16 @@
+{
+  "backend": "afpacket",
+  "detail": "TPACKET_V3 TX ring, 1024 slots x 16384 B",
+  "iface": "lo",
+  "frame_size": 64,
+  "batch_size": 256,
+  "packets": 5687552,
+  "dropped": 0,
+  "pps": 1878896.7288785318,
+  "bps": 961995125.1858083,
+  "l1_bps": 1322743297.1304865,
+  "elapsed": {
+    "secs": 3,
+    "nanos": 27070042
+  }
+}

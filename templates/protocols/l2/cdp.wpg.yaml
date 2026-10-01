@@ -1,0 +1,33 @@
+# CDP (Cisco Discovery Protocol): 802.3 + LLC/SNAP (OUI 0x00000c, PID 0x2000), checksum auto
+schema: 1
+
+meta:
+  name: cdp
+  descriptions:
+    ja: "CDP (Cisco Discovery Protocol): 802.3 + LLC/SNAP 上の Device ID / Port ID 付き CDP"
+    en: "CDP (Cisco Discovery Protocol): Device ID and Port ID TLVs over 802.3 + LLC/SNAP"
+  tags: ["protocol:cdp", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-01
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "01:00:0c:cc:cc:cc" # CDP multicast
+      src: "02:00:00:00:00:01"
+      length: auto
+  - protocol: llc
+  - protocol: snap
+    fields:
+      oui: 0x00000c # Cisco; pid: auto -> 0x2000
+  - protocol: cdp
+    fields:
+      version: 2
+      ttl: 180
+      tlvs:
+        - { type: 1, data: "73 77 31" } # Device ID "sw1"
+        - { type: 3, data: "47 69 30 2f 31" } # Port ID "Gi0/1"
+        - { type: 4, data: "00 00 00 08" } # Capabilities: Switch
+
+tx:
+  count: 1

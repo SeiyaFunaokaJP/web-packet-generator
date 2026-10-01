@@ -1,0 +1,43 @@
+# Jumbo frame: IPv4 total length 9000 octets (9014-octet frame; needs an MTU-9000 link)
+schema: 1
+
+meta:
+  name: jumbo-frame-9000
+  descriptions:
+    ja: "ジャンボフレーム: IP 全長 9000 オクテット (MTU 9000 のリンク用、フレーム 9014 B)"
+    en: "Jumbo frame: IPv4 total length 9000 octets (9014-octet frame; needs an MTU-9000 link)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "layer:l3", sample, jumbo]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: dst_mac
+    default: "02:00:00:00:00:02"
+    description: Destination MAC address
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${dst_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      flags: df
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03 04 05 06 07"
+      length: 8972 # 9000 - 20 (IPv4) - 8 (UDP)
+
+tx:
+  count: 10
+  rate: 100pps

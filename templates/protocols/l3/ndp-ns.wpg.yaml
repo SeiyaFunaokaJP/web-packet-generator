@@ -1,0 +1,35 @@
+# NDP Neighbor Solicitation to the solicited-node multicast address
+schema: 1
+
+meta:
+  name: ndp-neighbor-solicitation
+  descriptions:
+    ja: "NDP 近隣要請 (NS、被請求ノードマルチキャスト宛)"
+    en: "NDP Neighbor Solicitation to the solicited-node multicast address"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:icmpv6", "protocol:ndp_ns", "layer:l3", sample, ndp]
+  author: wpg
+  created: 2026-09-29
+
+variables:
+  - name: target
+    default: 2001:db8::2
+    description: Address being resolved (the multicast addresses below match ::2)
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:ff:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: ff02::1:ff00:2
+      hop_limit: 255 # NDP messages must arrive with hop limit 255
+  - protocol: icmpv6
+  - protocol: ndp_ns
+    fields:
+      target: ${target}
+      options: "01 01 02 00 00 00 00 01"
+
+tx:
+  count: 1
