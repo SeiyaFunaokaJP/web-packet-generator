@@ -46,7 +46,7 @@ tower-http = { version = "0.6", features = ["compression-gzip", "compression-br"
 uuid = { version = "1", features = ["v4"] }
 # OpenAPI document + Swagger UI (vendored: no download at build time).
 utoipa = { version = "5", features = ["axum_extras"] }
-utoipa-axum = "0.2"
+utoipa-axum = "0.3"
 utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }
 # Authentication / TLS (TODO §2.6, §3): SQLite for users / sessions / history,
 # argon2id password hashes, rustls (ring provider: no C toolchain beyond cc) with
