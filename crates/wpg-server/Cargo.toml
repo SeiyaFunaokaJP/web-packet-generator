@@ -42,7 +42,7 @@ directories = "6"
 # Template library hot reload (TODO §2.4).
 notify = "8"
 notify-debouncer-mini = "0.7"
-tower-http = { version = "0.6", features = ["compression-gzip", "compression-br", "trace", "cors", "request-id", "util"] }
+tower-http = { version = "0.7", features = ["compression-gzip", "compression-br", "trace", "cors", "request-id", "util"] }
 uuid = { version = "1", features = ["v4"] }
 # OpenAPI document + Swagger UI (vendored: no download at build time).
 utoipa = { version = "5", features = ["axum_extras"] }
