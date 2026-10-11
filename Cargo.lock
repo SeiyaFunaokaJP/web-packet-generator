@@ -4850,6 +4850,7 @@ dependencies = [
  "wpg-i18n",
  "wpg-protocols",
  "wpg-template",
+ "wpg-tx",
 ]
 
 [[package]]

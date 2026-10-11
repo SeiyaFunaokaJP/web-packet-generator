@@ -52,3 +52,7 @@ web-sys = { workspace = true, features = [
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# Parity test of the builder's rate mirror (`builder::rate`) against the real parser.
+wpg-tx.workspace = true
