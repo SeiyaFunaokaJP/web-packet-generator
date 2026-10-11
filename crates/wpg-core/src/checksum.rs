@@ -26,11 +26,11 @@ impl InternetSum {
                 return self;
             }
         }
-        let mut chunks = data.chunks_exact(2);
-        for c in &mut chunks {
-            self.sum += u64::from(u16::from_be_bytes([c[0], c[1]]));
+        let (chunks, remainder) = data.as_chunks::<2>();
+        for c in chunks {
+            self.sum += u64::from(u16::from_be_bytes(*c));
         }
-        if let [last] = chunks.remainder() {
+        if let [last] = remainder {
             self.odd = Some(*last);
         }
         self
