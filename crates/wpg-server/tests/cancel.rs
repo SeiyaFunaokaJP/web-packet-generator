@@ -51,9 +51,16 @@ async fn dropping_the_state_stops_worker_threads() {
     assert!(st.packets > 0);
     assert_eq!(b.workers, 2);
 
-    // Deleting one job joins its threads.
+    // Deleting one job stops its threads (an exiting thread can stay listed in
+    // /proc for a moment, so allow a short grace period).
     state.jobs.delete(&a.id).await.unwrap();
     if cfg!(target_os = "linux") {
+        for _ in 0..100 {
+            if tx_threads() == 3 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
         assert_eq!(tx_threads(), 3);
     }
     // Dropping everything (e.g. an aborted server task) stops the rest.
