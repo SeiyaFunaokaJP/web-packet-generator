@@ -1,0 +1,36 @@
+# NTPv4 (RFC 5905): a client-mode request (LI 0, VN 4, mode 3) to UDP port 123
+schema: 1
+
+meta:
+  name: ntp-client
+  descriptions:
+    ja: "NTPv4 (RFC 5905): UDP 123 番ポートへのクライアントモード要求 (LI 0, VN 4, モード 3)"
+    en: "NTPv4 (RFC 5905): a client-mode request (LI 0, VN 4, mode 3) to UDP port 123"
+  tags: ["protocol:ntp", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.123
+  - protocol: udp
+    fields:
+      src_port: 123
+      dst_port: 123
+  - protocol: ntp
+    fields:
+      li: no_warning
+      version: 4
+      mode: client
+      poll: 6
+      precision: -20
+      transmit_ts: 0xeb0a1b2c80000000 # 32.32 fixed point seconds since 1900
+
+tx:
+  count: 1

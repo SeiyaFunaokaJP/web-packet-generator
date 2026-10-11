@@ -1,0 +1,44 @@
+# DHCPv4 relay (RFC 3046): a DHCPREQUEST relayed to the server with giaddr and Relay Agent Information
+schema: 1
+
+meta:
+  name: dhcpv4-relay
+  descriptions:
+    ja: "DHCPv4 リレー (RFC 3046): giaddr と Relay Agent Information (オプション 82) 付きで中継された DHCPREQUEST"
+    en: "DHCPv4 relay (RFC 3046): a DHCPREQUEST relayed with giaddr and Relay Agent Information (option 82)"
+  tags: ["protocol:dhcpv4", "layer:l4", app, sample, relay]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:fe"
+      src: "02:00:00:00:00:0a"
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1 # relay agent
+      dst: 192.0.2.67 # DHCP server
+  - protocol: udp
+    fields:
+      src_port: 67
+      dst_port: 67
+  - protocol: dhcpv4
+    fields:
+      op: boot_request
+      hops: 1
+      xid: 0x3903f326
+      giaddr: 10.0.0.1
+      chaddr: "02:00:00:00:00:01"
+      options:
+        - { message_type: request }
+        - { requested_ip: 10.0.0.50 }
+        - { server_id: 192.0.2.67 }
+        - relay_agent_info:
+            suboptions:
+              - { name: circuit_id, data: '"ge-0/0/1.100"' }
+              - { name: remote_id, data: "02 00 00 00 00 0a" }
+        - end
+
+tx:
+  count: 1

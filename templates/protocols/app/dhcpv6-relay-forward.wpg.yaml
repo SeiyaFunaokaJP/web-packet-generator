@@ -1,0 +1,42 @@
+# DHCPv6 Relay-Forward (RFC 8415 §9): a relayed Solicit with Interface-Id and Relay Message options
+schema: 1
+
+meta:
+  name: dhcpv6-relay-forward
+  descriptions:
+    ja: "DHCPv6 Relay-Forward (RFC 8415 §9): Interface-Id と Relay Message で Solicit を中継"
+    en: "DHCPv6 Relay-Forward (RFC 8415 §9): a Solicit relayed with Interface-Id and Relay Message"
+  tags: ["protocol:dhcpv6_relay", "layer:l4", app, sample, relay]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:fe"
+      src: "02:00:00:00:00:0a"
+  - protocol: ipv6
+    fields:
+      src: 2001:db8:1::1 # relay agent
+      dst: 2001:db8:ffff::547 # DHCPv6 server
+  - protocol: udp
+    fields:
+      src_port: 547
+      dst_port: 547
+  - protocol: dhcpv6_relay
+    fields:
+      msg_type: relay_forw
+      hop_count: 0
+      link_address: 2001:db8:1::1
+      peer_address: fe80::1
+      options:
+        - { name: interface_id, data: '"eth0"' }
+        - relay_message:
+            msg_type: solicit
+            transaction_id: 0x5a1b2c
+            options:
+              - { type: 1, data: "00 03 00 01 02 00 00 00 00 01" }
+              - { elapsed_time: 0 }
+
+tx:
+  count: 1

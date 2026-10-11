@@ -1,0 +1,32 @@
+# TFTP ACK (RFC 1350): the client acknowledges block 1 to the server's transfer port (TID)
+schema: 1
+
+meta:
+  name: tftp-ack
+  descriptions:
+    ja: "TFTP ACK (RFC 1350): クライアントがサーバの転送用ポート (TID) へブロック 1 を確認応答"
+    en: "TFTP ACK (RFC 1350): the client acknowledges block 1 to the server's transfer port (TID)"
+  # The transfer uses ephemeral ports, not 69, so nothing after UDP decodes back.
+  tags: ["protocol:tftp_ack", "layer:l4", app, sample, "opaque-inner:udp"]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.69
+  - protocol: udp
+    fields:
+      src_port: 50069 # client TID
+      dst_port: 51000 # server TID
+  - protocol: tftp_ack
+    fields:
+      block: 1
+
+tx:
+  count: 1

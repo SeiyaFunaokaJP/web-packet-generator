@@ -1,0 +1,33 @@
+# TFTP (RFC 1350 / 2348): an octet-mode read request with the blksize option to UDP port 69
+schema: 1
+
+meta:
+  name: tftp-rrq
+  descriptions:
+    ja: "TFTP (RFC 1350 / 2348): UDP 69 番ポートへの blksize オプション付き octet モード読み出し要求"
+    en: "TFTP (RFC 1350 / 2348): an octet-mode read request with the blksize option to UDP port 69"
+  tags: ["protocol:tftp", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.69
+  - protocol: udp
+    fields:
+      src_port: 50069
+      dst_port: 69
+  - protocol: tftp
+    fields:
+      opcode: rrq
+      # NUL-terminated filename, mode and option name / value strings
+      body: '"pxelinux.0\0octet\0blksize\01428\0"'
+
+tx:
+  count: 1

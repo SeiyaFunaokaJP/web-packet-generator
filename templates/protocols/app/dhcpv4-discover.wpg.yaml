@@ -1,0 +1,44 @@
+# DHCPv4 (RFC 2131): a broadcast DHCPDISCOVER from 0.0.0.0:68 to 255.255.255.255:67
+schema: 1
+
+meta:
+  name: dhcpv4-discover
+  descriptions:
+    ja: "DHCPv4 (RFC 2131): 0.0.0.0:68 から 255.255.255.255:67 へのブロードキャスト DHCPDISCOVER"
+    en: "DHCPv4 (RFC 2131): a broadcast DHCPDISCOVER from 0.0.0.0:68 to 255.255.255.255:67"
+  tags: ["protocol:dhcpv4", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+variables:
+  - name: client_mac
+    default: "02:00:00:00:00:01"
+    description: Client hardware address
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "ff:ff:ff:ff:ff:ff"
+      src: ${client_mac}
+  - protocol: ipv4
+    fields:
+      src: 0.0.0.0
+      dst: 255.255.255.255
+  - protocol: udp
+    fields:
+      src_port: 68
+      dst_port: 67
+  - protocol: dhcpv4
+    fields:
+      op: boot_request
+      xid: 0x3903f326
+      flags: broadcast
+      chaddr: ${client_mac}
+      options:
+        - { message_type: discover }
+        - { type: 61, data: "01 02 00 00 00 00 01" } # Client Identifier: htype 1 + MAC
+        - { parameter_request_list: [1, 3, 6, 15, 51] } # mask, router, DNS, domain, lease
+        - end
+
+tx:
+  count: 1
