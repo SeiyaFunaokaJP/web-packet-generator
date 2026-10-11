@@ -13,6 +13,7 @@ use std::sync::OnceLock;
 use serde::Serialize;
 use wpg_core::{ProtocolDef, Resolve};
 
+pub mod app;
 pub mod arp;
 pub mod encap;
 pub mod icmp;
@@ -134,6 +135,21 @@ pub fn builtin() -> Vec<ProtocolDef> {
         encap::geneve(),
         encap::l2tpv2(),
         encap::l2tpv3(),
+        // P1 application protocols.
+        app::dhcpv4(),
+        app::dhcpv6(),
+        app::dhcpv6_relay(),
+        app::dns(),
+        app::ntp(),
+        app::snmp(),
+        app::snmp_pdu(),
+        app::snmp_trap(),
+        app::syslog(),
+        app::radius(),
+        app::tftp(),
+        app::tftp_data(),
+        app::tftp_ack(),
+        app::tftp_error(),
         payload::payload(),
         payload::raw(),
     ]

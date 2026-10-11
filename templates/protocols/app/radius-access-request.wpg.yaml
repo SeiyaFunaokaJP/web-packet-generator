@@ -1,0 +1,40 @@
+# RADIUS (RFC 2865): an Access-Request to UDP 1812 with User-Name, NAS-IP-Address and NAS-Port
+schema: 1
+
+meta:
+  name: radius-access-request
+  descriptions:
+    ja: "RADIUS (RFC 2865): User-Name / NAS-IP-Address / NAS-Port 付きの Access-Request (UDP 1812)"
+    en: "RADIUS (RFC 2865): an Access-Request to UDP 1812 with User-Name, NAS-IP-Address and NAS-Port"
+  tags: ["protocol:radius", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.18
+  - protocol: udp
+    fields:
+      src_port: 50812
+      dst_port: 1812
+  - protocol: radius
+    fields:
+      code: access_request
+      identifier: 1
+      # Request Authenticator: random per request (not computed)
+      authenticator: "0f 40 3f 94 73 97 80 57 bd 83 d5 cb 98 f4 22 7a"
+      attributes:
+        - { name: user_name, data: '"alice"' }
+        - { name: user_password, data: "d8 b8 6a 6d 3c 0e 4a 31 23 7a 50 3f 0c 6a 30 17" } # hidden (opaque)
+        - { nas_ip_address: 192.0.2.1 }
+        - { nas_port: 1 }
+        - { nas_port_type: 15 } # Ethernet
+
+tx:
+  count: 1

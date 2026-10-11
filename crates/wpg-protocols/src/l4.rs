@@ -55,8 +55,9 @@ pub fn tcp_options() -> FieldType {
 ///
 /// The `next` binding demultiplexes well-known tunnelling ports on the
 /// **destination** port (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
-/// Geneve 6081); unknown ports have no default, so an ordinary UDP payload still
-/// parses as `raw`.
+/// Geneve 6081) and the P1 application protocols (DNS 53, `DHCPv4` 67/68, TFTP 69,
+/// NTP 123, SNMP 161/162, Syslog 514, `DHCPv6` 546/547, RADIUS 1812/1813); unknown
+/// ports have no default, so an ordinary UDP payload still parses as `raw`.
 #[must_use]
 pub fn udp() -> ProtocolDef {
     protocol! {
@@ -75,6 +76,19 @@ pub fn udp() -> ProtocolDef {
             4789 => "vxlan",
             6081 => "geneve",
             6635 => "mpls",
+            // P1 application protocols.
+            53 => "dns",
+            67 => "dhcpv4",
+            68 => "dhcpv4",
+            69 => "tftp",
+            123 => "ntp",
+            161 => "snmp",
+            162 => "snmp",
+            514 => "syslog",
+            546 => "dhcpv6",
+            547 => "dhcpv6",
+            1812 => "radius",
+            1813 => "radius",
         },
         constraints: {
             warning: min_length(total, 8);

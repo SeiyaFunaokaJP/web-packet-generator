@@ -1,0 +1,33 @@
+# TFTP ERROR (RFC 1350): "File not found" in answer to a read request on UDP port 69
+schema: 1
+
+meta:
+  name: tftp-error
+  descriptions:
+    ja: "TFTP ERROR (RFC 1350): 読み出し要求に対する File not found エラー"
+    en: "TFTP ERROR (RFC 1350): a File not found error answering a read request"
+  # The reply comes from a new server port (TID), so nothing after UDP decodes back.
+  tags: ["protocol:tftp_error", "layer:l4", app, sample, "opaque-inner:udp"]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.69
+      dst: 192.0.2.1
+  - protocol: udp
+    fields:
+      src_port: 51000 # server TID
+      dst_port: 50069 # client TID
+  - protocol: tftp_error
+    fields:
+      error_code: file_not_found
+      message: '"File not found\0"'
+
+tx:
+  count: 1

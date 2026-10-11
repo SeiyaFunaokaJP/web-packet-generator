@@ -696,3 +696,79 @@ ui-bld-help-redo = やり直し
 ui-bld-help-hex = キャレット位置のバイトを Hex 入力
 ui-bld-help-caret = Hex キャレットを移動
 ui-bld-suggest-prev = 上位レイヤを追加
+
+# --- P1 application protocol field descriptions ---
+dhcp-op = BOOTP メッセージ種別 (1 = BOOTREQUEST、2 = BOOTREPLY)。
+dhcp-htype = ハードウェアアドレス種別 (1 = Ethernet)。
+dhcp-hlen = ハードウェアアドレス長 (オクテット、Ethernet は 6)。
+dhcp-hops = リレーホップ数 (リレーエージェントごとに加算)。
+dhcp-xid = クライアントが選ぶトランザクション ID。
+dhcp-secs = クライアントが取得を開始してからの経過秒数。
+dhcp-flags = BOOTP フラグ (ビット 15 = ブロードキャスト応答を要求)。
+dhcp-ciaddr = クライアント IP アドレス (割り当て済みの場合)。
+dhcp-yiaddr = サーバが割り当てるクライアント ("your") IP アドレス。
+dhcp-siaddr = 次に使うサーバ (ブートサーバ) の IP アドレス。
+dhcp-giaddr = リレーエージェント (ゲートウェイ) の IP アドレス。リレー時は非 0。
+dhcp-chaddr = クライアントのハードウェア (MAC) アドレス。後ろに 10 オクテットのパディング。
+dhcp-sname = サーバホスト名 (任意、64 オクテット、NUL 埋め)。
+dhcp-file = ブートファイル名 (128 オクテット、NUL 埋め)。
+dhcp-magic-cookie = DHCP マジッククッキー (0x63825363)。
+dhcp-options = DHCP オプション (8 ビットコード / 長さ。Pad、End、Message Type、Relay Agent Information など)。
+dhcpv6-msg-type = DHCPv6 メッセージ種別 (Solicit、Advertise、Request、Reply、Relay-Forward など)。
+dhcpv6-transaction-id = 24 ビットのトランザクション ID。
+dhcpv6-options = DHCPv6 オプション (16 ビットコード / 長さ。Client ID、IA_NA、Relay Message など)。
+dhcpv6-hop-count = このメッセージを中継したリレーエージェントの数。
+dhcpv6-link-address = クライアントのリンクを識別するアドレス (リレー)。
+dhcpv6-peer-address = メッセージの送信元クライアントまたはリレーのアドレス。
+dns-id = クエリ識別子 (応答にコピーされる)。
+dns-qr = クエリ (0) または応答 (1)。
+dns-opcode = クエリ種別 (0 = 標準クエリ、4 = NOTIFY、5 = UPDATE)。
+dns-aa = 権威応答フラグ。
+dns-tc = 切り詰め (トランケーション) フラグ。
+dns-rd = 再帰要求フラグ。
+dns-ra = 再帰可能フラグ。
+dns-z = 予約ビット (0 でなければならない)。
+dns-ad = 認証済みデータフラグ (DNSSEC)。
+dns-cd = 検証無効フラグ (DNSSEC)。
+dns-rcode = 応答コード (0 = NOERROR、3 = NXDOMAIN など)。
+dns-qdcount = 質問セクションのエントリ数。
+dns-ancount = 回答セクションのリソースレコード数。
+dns-nscount = 権威セクションのリソースレコード数。
+dns-arcount = 追加セクションのリソースレコード数。
+dns-sections = 質問 / 回答 / 権威 / 追加セクション (長さ付きラベル形式の名前)。不透明なオクテット列。
+ntp-li = うるう秒指示子 (3 = 時刻未同期)。
+ntp-version = NTP バージョン番号 (4)。
+ntp-mode = アソシエーションモード (3 = クライアント、4 = サーバ、5 = ブロードキャスト)。
+ntp-stratum = 階層 (0 = 未指定、1 = 一次参照、2-15 = 二次)。
+ntp-poll = 最大ポーリング間隔 (log2 秒、符号付き)。
+ntp-precision = クロック精度 (log2 秒、符号付き)。
+ntp-root-delay = 参照クロックまでの往復遅延 (16.16 固定小数点秒)。
+ntp-root-dispersion = 参照クロックまでの分散 (16.16 固定小数点秒)。
+ntp-reference-id = 参照 ID (階層 1 は ASCII コード、それ以外は IPv4 アドレスまたはハッシュ)。
+ntp-reference-ts = システムクロックを最後に設定した時刻 (64 ビット NTP タイムスタンプ)。
+ntp-origin-ts = サーバが返すクライアント送信時刻 (64 ビット NTP タイムスタンプ)。
+ntp-receive-ts = 要求がサーバに到着した時刻 (64 ビット NTP タイムスタンプ)。
+ntp-transmit-ts = パケットが送信元を出た時刻 (64 ビット NTP タイムスタンプ)。
+ntp-extensions = 拡張フィールドと MAC。不透明なオクテット列。
+snmp-tag = BER タグオクテット (0x30 SEQUENCE、0x02 INTEGER、0x04 OCTET STRING)。
+snmp-msg-length = SNMP メッセージ SEQUENCE の BER 長 (自動。短形式、128 未満)。
+snmp-version-length = バージョン INTEGER の BER 長 (1)。
+snmp-version = SNMP バージョン (0 = v1、1 = v2c)。
+snmp-community-length = コミュニティ文字列の BER 長 (オクテット)。
+snmp-community = コミュニティ文字列 (例: "public")。
+snmp-pdu-type = PDU タグ (0xa0 GetRequest、0xa2 Response、0xa4 v1 Trap、0xa7 SNMPv2-Trap など)。
+snmp-pdu-length = PDU 内容の BER 長 (自動。短形式、128 未満)。
+snmp-pdu-body = BER TLV で表した PDU 内容: request-id、error-status、error-index と variable-bindings SEQUENCE。
+snmp-trap-body = BER TLV で表した Trap 内容: enterprise、agent-addr、generic-trap、specific-trap、time-stamp と variable-bindings。
+syslog-message = <PRI> (ファシリティ * 8 + 重大度) で始まる Syslog メッセージ本文。
+radius-code = RADIUS パケット種別 (Access-Request、Access-Accept、Accounting-Request など)。
+radius-identifier = 要求と応答を対応付ける識別子。
+radius-length = RADIUS パケット全体の長さ (オクテット、自動)。
+radius-authenticator = 16 オクテットの Request / Response Authenticator (手動)。
+radius-attributes = RADIUS 属性 (8 ビット型、ヘッダを含む 8 ビット長)。
+tftp-opcode = TFTP オペコード (1 = RRQ、2 = WRQ、3 = DATA、4 = ACK、5 = ERROR、6 = OACK)。
+tftp-body = NUL 終端のファイル名、モード、オプション文字列。不透明なオクテット列。
+tftp-block = ブロック番号 (1 から開始)。
+tftp-data = データオクテット (ブロックあたり 512。短いブロックで転送終了)。
+tftp-error-code = TFTP エラーコード (1 = ファイルなし、2 = アクセス違反 など)。
+tftp-error-message = NUL 終端のエラーメッセージ。不透明なオクテット列。

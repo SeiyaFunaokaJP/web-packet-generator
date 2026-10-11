@@ -696,3 +696,79 @@ ui-bld-help-redo = Redo
 ui-bld-help-hex = Type hex over the caret byte
 ui-bld-help-caret = Move the hex caret
 ui-bld-suggest-prev = Add layer above
+
+# --- P1 application protocol field descriptions ---
+dhcp-op = BOOTP message op code (1 = BOOTREQUEST, 2 = BOOTREPLY).
+dhcp-htype = Hardware address type (1 = Ethernet).
+dhcp-hlen = Hardware address length, in octets (6 for Ethernet).
+dhcp-hops = Relay hop count, incremented by each relay agent.
+dhcp-xid = Transaction ID chosen by the client.
+dhcp-secs = Seconds elapsed since the client began acquisition.
+dhcp-flags = BOOTP flags (bit 15 = broadcast reply requested).
+dhcp-ciaddr = Client IP address (when already bound).
+dhcp-yiaddr = "Your" (client) IP address assigned by the server.
+dhcp-siaddr = Next server IP address (boot server).
+dhcp-giaddr = Relay agent (gateway) IP address; non-zero when relayed.
+dhcp-chaddr = Client hardware (MAC) address; followed by 10 octets of padding.
+dhcp-sname = Optional server host name (64 octets, NUL padded).
+dhcp-file = Boot file name (128 octets, NUL padded).
+dhcp-magic-cookie = DHCP magic cookie (0x63825363).
+dhcp-options = DHCP options (8-bit code / length; Pad, End, Message Type, Relay Agent Information, ...).
+dhcpv6-msg-type = DHCPv6 message type (Solicit, Advertise, Request, Reply, Relay-Forward, ...).
+dhcpv6-transaction-id = 24-bit transaction ID.
+dhcpv6-options = DHCPv6 options (16-bit code / length; Client ID, IA_NA, Relay Message, ...).
+dhcpv6-hop-count = Number of relay agents that have relayed this message.
+dhcpv6-link-address = Address identifying the client's link (relay).
+dhcpv6-peer-address = Address of the client or relay the message came from.
+dns-id = Query identifier, copied into the response.
+dns-qr = Query (0) or response (1).
+dns-opcode = Kind of query (0 = standard query, 4 = NOTIFY, 5 = UPDATE).
+dns-aa = Authoritative answer flag.
+dns-tc = Truncation flag.
+dns-rd = Recursion desired flag.
+dns-ra = Recursion available flag.
+dns-z = Reserved bit (must be 0).
+dns-ad = Authentic data flag (DNSSEC).
+dns-cd = Checking disabled flag (DNSSEC).
+dns-rcode = Response code (0 = NOERROR, 3 = NXDOMAIN, ...).
+dns-qdcount = Number of entries in the question section.
+dns-ancount = Number of resource records in the answer section.
+dns-nscount = Number of resource records in the authority section.
+dns-arcount = Number of resource records in the additional section.
+dns-sections = Question / answer / authority / additional sections (length-prefixed label names); opaque octets.
+ntp-li = Leap indicator (3 = clock unsynchronized).
+ntp-version = NTP version number (4).
+ntp-mode = Association mode (3 = client, 4 = server, 5 = broadcast).
+ntp-stratum = Stratum (0 = unspecified, 1 = primary reference, 2-15 = secondary).
+ntp-poll = Maximum poll interval, log2 seconds (signed).
+ntp-precision = Clock precision, log2 seconds (signed).
+ntp-root-delay = Round-trip delay to the reference clock (16.16 fixed point seconds).
+ntp-root-dispersion = Dispersion to the reference clock (16.16 fixed point seconds).
+ntp-reference-id = Reference ID (ASCII code for stratum 1, else an IPv4 address or hash).
+ntp-reference-ts = Time the system clock was last set (64-bit NTP timestamp).
+ntp-origin-ts = Client transmit time echoed by the server (64-bit NTP timestamp).
+ntp-receive-ts = Time the request arrived at the server (64-bit NTP timestamp).
+ntp-transmit-ts = Time the packet left the sender (64-bit NTP timestamp).
+ntp-extensions = Extension fields and MAC; opaque octets.
+snmp-tag = BER tag octet (0x30 SEQUENCE, 0x02 INTEGER, 0x04 OCTET STRING).
+snmp-msg-length = BER length of the SNMP message SEQUENCE (Auto; short form, below 128).
+snmp-version-length = BER length of the version INTEGER (1).
+snmp-version = SNMP version (0 = v1, 1 = v2c).
+snmp-community-length = BER length of the community string, in octets.
+snmp-community = Community string (e.g. "public").
+snmp-pdu-type = PDU tag (0xa0 GetRequest, 0xa2 Response, 0xa4 v1 Trap, 0xa7 SNMPv2-Trap, ...).
+snmp-pdu-length = BER length of the PDU contents (Auto; short form, below 128).
+snmp-pdu-body = PDU contents as BER TLVs: request-id, error-status, error-index and the variable-bindings SEQUENCE.
+snmp-trap-body = Trap contents as BER TLVs: enterprise, agent-addr, generic-trap, specific-trap, time-stamp and variable bindings.
+syslog-message = Syslog message text, starting with <PRI> (facility * 8 + severity).
+radius-code = RADIUS packet type (Access-Request, Access-Accept, Accounting-Request, ...).
+radius-identifier = Identifier matching requests and replies.
+radius-length = Length of the whole RADIUS packet, in octets (Auto).
+radius-authenticator = 16-octet Request / Response Authenticator (Manual).
+radius-attributes = RADIUS attributes (8-bit type, 8-bit length including the header).
+tftp-opcode = TFTP opcode (1 = RRQ, 2 = WRQ, 3 = DATA, 4 = ACK, 5 = ERROR, 6 = OACK).
+tftp-body = NUL-terminated filename, mode and option strings; opaque octets.
+tftp-block = Block number (starting at 1).
+tftp-data = Data octets (512 per block; a shorter block ends the transfer).
+tftp-error-code = TFTP error code (1 = file not found, 2 = access violation, ...).
+tftp-error-message = NUL-terminated error message; opaque octets.

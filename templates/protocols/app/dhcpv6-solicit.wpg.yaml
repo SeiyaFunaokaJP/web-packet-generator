@@ -1,0 +1,38 @@
+# DHCPv6 (RFC 8415): a Solicit from fe80::1 port 546 to All_DHCP_Relay_Agents_and_Servers port 547
+schema: 1
+
+meta:
+  name: dhcpv6-solicit
+  descriptions:
+    ja: "DHCPv6 (RFC 8415): ff02::1:2 (全リレー/サーバ) の 547 番ポートへの Solicit"
+    en: "DHCPv6 (RFC 8415): a Solicit to All_DHCP_Relay_Agents_and_Servers (ff02::1:2) port 547"
+  tags: ["protocol:dhcpv6", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:01:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::1:2
+      hop_limit: 1
+  - protocol: udp
+    fields:
+      src_port: 546
+      dst_port: 547
+  - protocol: dhcpv6
+    fields:
+      msg_type: solicit
+      transaction_id: 0x5a1b2c
+      options:
+        - { type: 1, data: "00 03 00 01 02 00 00 00 00 01" } # Client ID: DUID-LL
+        - { elapsed_time: 0 }
+        - { ia_na: { iaid: 1, t1: 0, t2: 0, options: [] } }
+        - { oro: [23, 24] } # DNS servers, domain list
+
+tx:
+  count: 1
