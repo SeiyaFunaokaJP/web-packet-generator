@@ -22,6 +22,7 @@ pub mod l2control;
 pub mod l3;
 pub mod l4;
 pub mod payload;
+pub mod routing;
 
 /// Registry of protocol definitions, in palette order.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -134,6 +135,39 @@ pub fn builtin() -> Vec<ProtocolDef> {
         encap::geneve(),
         encap::l2tpv2(),
         encap::l2tpv3(),
+        // P1 routing protocols.
+        routing::ospfv2(),
+        routing::ospfv2_hello(),
+        routing::ospfv2_dbd(),
+        routing::ospfv2_lsr(),
+        routing::ospfv2_lsu(),
+        routing::ospfv2_lsack(),
+        routing::ospfv2_lsa(),
+        routing::ospfv2_router_lsa(),
+        routing::ospfv2_network_lsa(),
+        routing::ospfv2_summary_lsa(),
+        routing::ospfv2_external_lsa(),
+        routing::ospfv3(),
+        routing::ospfv3_hello(),
+        routing::ospfv3_dbd(),
+        routing::ospfv3_lsr(),
+        routing::ospfv3_lsu(),
+        routing::ospfv3_lsack(),
+        routing::ospfv3_lsa(),
+        routing::ospfv3_router_lsa(),
+        routing::ospfv3_network_lsa(),
+        routing::ospfv3_inter_area_prefix_lsa(),
+        routing::ospfv3_as_external_lsa(),
+        routing::ospfv3_link_lsa(),
+        routing::ospfv3_intra_area_prefix_lsa(),
+        routing::bgp(),
+        routing::bgp_open(),
+        routing::bgp_update(),
+        routing::bgp_notification(),
+        routing::bgp_route_refresh(),
+        routing::rip(),
+        routing::ripng(),
+        routing::eigrp(),
         payload::payload(),
         payload::raw(),
     ]

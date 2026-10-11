@@ -55,8 +55,8 @@ pub fn tcp_options() -> FieldType {
 ///
 /// The `next` binding demultiplexes well-known tunnelling ports on the
 /// **destination** port (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
-/// Geneve 6081); unknown ports have no default, so an ordinary UDP payload still
-/// parses as `raw`.
+/// Geneve 6081) and routing protocols (RIP 520, `RIPng` 521); unknown ports have
+/// no default, so an ordinary UDP payload still parses as `raw`.
 #[must_use]
 pub fn udp() -> ProtocolDef {
     protocol! {
@@ -70,6 +70,8 @@ pub fn udp() -> ProtocolDef {
             checksum: uint(16), auto = checksum(internet_pseudo, header_payload, nonzero);
         },
         next: dst_port {
+            520 => "rip",
+            521 => "ripng",
             1701 => "l2tpv2",
             2152 => "gtpu",
             4789 => "vxlan",
@@ -85,6 +87,9 @@ pub fn udp() -> ProtocolDef {
 /// TCP (RFC 9293) with typed options ([`tcp_options`]). `data_offset` (including
 /// options and automatic zero padding to 32 bits) and `checksum` (with pseudo
 /// header) are Auto.
+///
+/// The `next` binding demultiplexes BGP on **destination** port 179; other
+/// payloads parse as `raw`.
 #[must_use]
 pub fn tcp() -> ProtocolDef {
     protocol! {
@@ -114,6 +119,7 @@ pub fn tcp() -> ProtocolDef {
             options: ty(tcp_options());
             padding: padding(4);
         },
+        next: dst_port { 179 => "bgp" },
         constraints: {
             error: in_range(data_offset, 5, 15);
         },

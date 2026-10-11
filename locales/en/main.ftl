@@ -696,3 +696,91 @@ ui-bld-help-redo = Redo
 ui-bld-help-hex = Type hex over the caret byte
 ui-bld-help-caret = Move the hex caret
 ui-bld-suggest-prev = Add layer above
+
+# --- P1 routing protocol field descriptions ---
+ospf-version = OSPF version (2 = OSPFv2, 3 = OSPFv3).
+ospf-type = OSPF packet type (Hello / DB Description / LS Request / LS Update / LS Ack; Auto from the next layer).
+ospf-packet-length = Length of the OSPF packet including the header, in octets (Auto).
+ospf-router-id = Router ID of the sending router.
+ospf-area-id = Area the packet belongs to (0.0.0.0 = backbone).
+ospf-checksum = Internet checksum over the OSPF packet (Auto; exact when the authentication field is zero).
+ospf-au-type = Authentication type (0 = null, 1 = simple password, 2 = cryptographic).
+ospf-authentication = 64-bit authentication field (password, or key id / sequence for cryptographic auth).
+ospf-network-mask = Network mask of the interface or advertised network.
+ospf-hello-interval = Interval between Hello packets, in seconds.
+ospf-options = Optional capabilities (E, MC, N/P, L, DC, O, DN bits).
+ospf-router-priority = Router priority for the DR election (0 = never DR).
+ospf-router-dead-interval = Seconds without a Hello before the neighbor is declared down.
+ospf-designated-router = Designated Router (0.0.0.0 = none).
+ospf-backup-designated-router = Backup Designated Router (0.0.0.0 = none).
+ospf-neighbors = Router IDs of the neighbors seen on the link.
+ospf-interface-mtu = Largest IP datagram the interface can send without fragmentation.
+ospf-dbd-flags = Database Description flags (I = init, M = more, MS = master).
+ospf-dd-sequence = Database Description sequence number.
+ospf-lsa-headers = LSA headers (20 octets each; checksums and lengths are Manual).
+ospf-lsr-requests = Requested LSAs (LS type, Link State ID, advertising router).
+ospf-num-lsas = Number of LSAs in the update.
+ospf-ls-age = Time since the LSA was originated, in seconds (keep 0 for an exact Auto checksum).
+ospf-ls-type = LSA type (Auto from the LSA body layer).
+ospf-link-state-id = Link State ID identifying the described part of the network.
+ospf-advertising-router = Router ID of the router that originated the LSA.
+ospf-ls-sequence = LSA sequence number (0x80000001 = initial).
+ospf-ls-checksum = Fletcher checksum of the LSA (Auto; exact when LS age is 0).
+ospf-lsa-length = Length of the LSA including its header, in octets (Auto).
+ospf-router-lsa-flags = Router-LSA flags (V = virtual link endpoint, E = ASBR, B = ABR).
+ospf-num-links = Number of router links described.
+ospf-router-links = Router links (link ID, link data, type, TOS count, metric).
+ospf-attached-routers = Router IDs of the routers attached to the network.
+ospf-metric = Cost of the route.
+ospf-external-e = External metric type (1 = type 2, 0 = type 1).
+ospf-forwarding-address = Address traffic for the destination is forwarded to (0.0.0.0 = the ASBR).
+ospf-external-route-tag = 32-bit tag carried with the external route.
+ospfv3-checksum = Internet checksum over the OSPFv3 packet with the IPv6 pseudo header (Auto).
+ospfv3-instance-id = Instance ID (separates OSPFv3 instances on one link).
+ospfv3-interface-id = Interface ID of the sending interface.
+ospfv3-options = OSPFv3 options (V6, E, N, R, DC, AF bits).
+ospfv3-ls-type = LSA function code with U / S scope bits (Auto from the LSA body layer).
+ospfv3-router-links = Router interfaces (type, metric, interface IDs, neighbor router ID).
+ospfv3-prefix-length = Prefix length in bits.
+ospfv3-prefix-options = Prefix options (NU, LA, P, DN bits).
+ospfv3-address-prefix = Address prefix, padded to a multiple of 4 octets.
+ospfv3-external-flags = AS-External-LSA flags (E = type 2 metric, F = forwarding address present, T = route tag present).
+ospfv3-referenced-ls-type = LS type of the referenced LSA.
+ospfv3-link-local-address = Link-local address of the interface.
+ospfv3-num-prefixes = Number of prefixes that follow.
+ospfv3-prefixes = Prefix entries (length, options, metric / reserved, address prefix); opaque octets.
+ospfv3-referenced-link-state-id = Link State ID of the referenced LSA.
+ospfv3-referenced-advertising-router = Advertising router of the referenced LSA.
+bgp-marker = 16-octet marker (all ones).
+bgp-length = Length of the BGP message including the header, in octets (Auto).
+bgp-type = BGP message type (OPEN / UPDATE / NOTIFICATION / KEEPALIVE / ROUTE-REFRESH; Auto from the next layer).
+bgp-version = BGP version (4).
+bgp-my-as = Autonomous system number of the sender (23456 = AS_TRANS for 4-octet AS).
+bgp-hold-time = Proposed hold time, in seconds (0 or at least 3).
+bgp-identifier = BGP identifier (router ID) of the sender.
+bgp-opt-params-length = Length of the optional parameters, in octets (Auto).
+bgp-opt-params = Optional parameters (type 2 = capabilities).
+bgp-withdrawn-routes-length = Length of the withdrawn routes, in octets (Manual).
+bgp-withdrawn-routes = Withdrawn routes as (prefix length, prefix) octets.
+bgp-total-path-attribute-length = Length of the path attributes, in octets (Manual).
+bgp-path-attributes = Path attributes (flags + type code, 8-bit length).
+bgp-nlri = Network Layer Reachability Information as (prefix length, prefix) octets.
+bgp-error-code = NOTIFICATION error code.
+bgp-error-subcode = NOTIFICATION error subcode.
+bgp-error-data = Diagnostic data of the NOTIFICATION.
+bgp-afi = Address Family Identifier (1 = IPv4, 2 = IPv6).
+bgp-rr-subtype = ROUTE-REFRESH subtype (0 = normal, 1 = BoRR, 2 = EoRR).
+bgp-safi = Subsequent Address Family Identifier (1 = unicast, 2 = multicast).
+rip-command = RIP command (1 = request, 2 = response).
+rip-version = RIP version (1 or 2; RIPng uses 1).
+rip-entries = Route entries (AFI, route tag, address, mask, next hop, metric).
+ripng-entries = Route table entries (prefix, route tag, prefix length, metric; 0xff = next hop).
+eigrp-version = EIGRP header version (2).
+eigrp-opcode = EIGRP opcode (Update / Query / Reply / Hello / SIA-Query / SIA-Reply).
+eigrp-checksum = Internet checksum over the EIGRP packet (Auto).
+eigrp-flags = EIGRP flags (Init, Conditional Receive, Restart, End of Table).
+eigrp-sequence = Sequence number for reliable delivery.
+eigrp-acknowledge = Acknowledged sequence number (0 = none).
+eigrp-virtual-router-id = Virtual router ID (0 = unicast address family).
+eigrp-autonomous-system = EIGRP autonomous system number.
+eigrp-tlvs = EIGRP TLVs (16-bit type, 16-bit length including the header).

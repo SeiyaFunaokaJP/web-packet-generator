@@ -1,0 +1,44 @@
+# OSPFv3 (RFC 5340): a Link State Update carrying a Link-LSA
+schema: 1
+
+meta:
+  name: ospfv3-lsu-link-lsa
+  descriptions:
+    ja: "OSPFv3 (RFC 5340): リンクローカルアドレスとプレフィックス 1 つを含む Link-LSA を運ぶ Link State Update"
+    en: "OSPFv3 (RFC 5340): a Link State Update carrying a Link-LSA with the link-local address and one prefix"
+  tags: ["protocol:ospfv3", "protocol:ospfv3_lsu", "protocol:ospfv3_lsa", "protocol:ospfv3_link_lsa", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:05" # AllSPFRouters ff02::5
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::5
+      hop_limit: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv3
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv3_lsu
+    fields:
+      num_lsas: 1
+  - protocol: ospfv3_lsa
+    fields:
+      ls_age: 0 # the Auto LSA checksum is exact for LS age 0
+      link_state_id: 5
+      advertising_router: 192.0.2.1
+  - protocol: ospfv3_link_lsa
+    fields:
+      router_priority: 1
+      options: v6|e|r
+      link_local_address: fe80::1
+      num_prefixes: 1
+      prefixes: "40 00 00 00 20 01 0d b8 00 01 00 00" # 2001:db8:1::/64
+
+tx:
+  count: 1

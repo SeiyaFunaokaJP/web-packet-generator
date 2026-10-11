@@ -1,0 +1,41 @@
+# OSPFv3 (RFC 5340): a Link State Update carrying a Network-LSA
+schema: 1
+
+meta:
+  name: ospfv3-lsu-network-lsa
+  descriptions:
+    ja: "OSPFv3 (RFC 5340): Network-LSA (接続ルータ 2 台) を運ぶ Link State Update"
+    en: "OSPFv3 (RFC 5340): a Link State Update carrying a Network-LSA (two attached routers)"
+  tags: ["protocol:ospfv3", "protocol:ospfv3_lsu", "protocol:ospfv3_lsa", "protocol:ospfv3_network_lsa", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:05" # AllSPFRouters ff02::5
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::5
+      hop_limit: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv3
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv3_lsu
+    fields:
+      num_lsas: 1
+  - protocol: ospfv3_lsa
+    fields:
+      ls_age: 0 # the Auto LSA checksum is exact for LS age 0
+      link_state_id: 5
+      advertising_router: 192.0.2.1
+  - protocol: ospfv3_network_lsa
+    fields:
+      options: v6|e|r
+      attached_routers: [192.0.2.1, 192.0.2.2]
+
+tx:
+  count: 1

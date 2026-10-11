@@ -1,0 +1,50 @@
+# BGP-4 (RFC 4271): an UPDATE announcing 198.51.100.0/24 with ORIGIN, AS_PATH, NEXT_HOP and MED
+schema: 1
+
+meta:
+  name: bgp-update
+  descriptions:
+    ja: "BGP-4 (RFC 4271): ORIGIN / AS_PATH / NEXT_HOP / MED / COMMUNITIES 付きで 198.51.100.0/24 を広告する UPDATE"
+    en: "BGP-4 (RFC 4271): an UPDATE announcing 198.51.100.0/24 with ORIGIN, AS_PATH, NEXT_HOP, MED and COMMUNITIES"
+  tags: ["protocol:bgp", "protocol:bgp_update", "layer:l4", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      ttl: 1 # eBGP peers are directly connected
+      dscp: 48
+      flags: df
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 179
+      seq: 1001
+      ack: 5001
+      flags: psh|ack
+  - protocol: bgp
+  - protocol: bgp_update
+    fields:
+      withdrawn_routes_length: 0
+      withdrawn_routes: ""
+      # Manual: 4 (ORIGIN) + 9 (AS_PATH) + 7 (NEXT_HOP) + 7 (MED) + 7 (COMMUNITIES)
+      total_path_attribute_length: 34
+      path_attributes:
+        - { origin: 0 } # IGP
+        - as_path:
+            segments:
+              - { segment_type: as_sequence, segment_length: 1, asns: [65001] }
+        - { next_hop: 192.0.2.1 }
+        - { multi_exit_disc: 100 }
+        - { communities: [0xfde90064] } # 65001:100
+      nlri: "18 c6 33 64" # 198.51.100.0/24
+
+tx:
+  count: 1

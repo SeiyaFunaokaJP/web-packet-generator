@@ -1,0 +1,33 @@
+# OSPFv2 (RFC 2328): a Link State Acknowledgment for one LSA
+schema: 1
+
+meta:
+  name: ospfv2-lsack
+  descriptions:
+    ja: "OSPFv2 (RFC 2328): LSA 1 つを確認応答する Link State Acknowledgment"
+    en: "OSPFv2 (RFC 2328): a Link State Acknowledgment for one LSA"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_lsack", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:05" # AllSPFRouters 224.0.0.5
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.5
+      ttl: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv2_lsack
+    fields:
+      lsa_headers:
+        - { ls_age: 1, options: 0x02, ls_type: 1, link_state_id: 192.0.2.2, advertising_router: 192.0.2.2, ls_sequence: 0x80000001, ls_checksum: 0x1234, length: 36 }
+
+tx:
+  count: 1

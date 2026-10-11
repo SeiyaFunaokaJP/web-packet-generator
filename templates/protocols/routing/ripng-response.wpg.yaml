@@ -1,0 +1,36 @@
+# RIPng (RFC 2080): a multicast Response with a next-hop RTE and one route (UDP 521)
+schema: 1
+
+meta:
+  name: ripng-response
+  descriptions:
+    ja: "RIPng (RFC 2080): ネクストホップ RTE と経路 1 つを含むマルチキャスト Response (UDP 521、ff02::9)"
+    en: "RIPng (RFC 2080): a multicast Response with a next-hop RTE and one route (UDP 521 to ff02::9)"
+  tags: ["protocol:ripng", "protocol:udp", "layer:l4", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:09" # RIPng routers ff02::9
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::9
+      hop_limit: 255
+  - protocol: udp
+    fields:
+      src_port: 521
+      dst_port: 521
+  - protocol: ripng
+    fields:
+      command: response
+      version: 1
+      entries:
+        - { prefix: "::", route_tag: 0, prefix_length: 0, metric: 0xff } # next hop = sender
+        - { prefix: "2001:db8:1::", route_tag: 0, prefix_length: 64, metric: 1 }
+
+tx:
+  count: 1
