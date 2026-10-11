@@ -1,0 +1,33 @@
+# IGMPv2 (RFC 2236): a General Membership Query to 224.0.0.1 with Router Alert
+schema: 1
+
+meta:
+  name: igmpv2-query
+  descriptions:
+    ja: "IGMPv2 (RFC 2236): Router Alert 付きで 224.0.0.1 宛の一般メンバーシップクエリ"
+    en: "IGMPv2 (RFC 2236): a General Membership Query to 224.0.0.1 with Router Alert"
+  tags: ["protocol:igmp", "protocol:igmpv2", "layer:l3", multicast, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:01"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.1
+      ttl: 1
+      options:
+        - router_alert: 0 # RFC 2113; ihl / padding stay automatic
+  - protocol: igmp # type: auto -> 0x11 (membership query) from igmpv2
+    fields:
+      max_resp_code: 100 # 10 s
+  - protocol: igmpv2
+    fields:
+      group: 0.0.0.0 # general query
+
+tx:
+  count: 1

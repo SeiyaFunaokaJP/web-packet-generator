@@ -1,0 +1,43 @@
+# PIMv2 (RFC 7761): a Register from the DR to the RP encapsulating a multicast UDP packet
+schema: 1
+
+meta:
+  name: pim-register
+  descriptions:
+    ja: "PIMv2 (RFC 7761): DR から RP へのマルチキャスト UDP パケットをカプセル化した Register"
+    en: "PIMv2 (RFC 7761): a Register from the DR to the RP encapsulating a multicast UDP packet"
+  tags: ["protocol:pim_register", "layer:l3", multicast, sample, "parse-as:pim_register=pim", "opaque-inner:pim_register"]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 198.51.100.1 # the RP
+  - protocol: pim_register # checksum covers only these 8 octets
+    fields:
+      type: 1 # Register (the encapsulated packet follows; no binding table entry)
+      border: 0
+      null_register: 0
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.10
+      dst: 239.1.1.1
+      ttl: 16
+  - protocol: udp
+    fields:
+      src_port: 5000
+      dst_port: 5001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 16
+
+tx:
+  count: 1

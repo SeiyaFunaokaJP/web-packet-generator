@@ -15,12 +15,14 @@ use wpg_core::{ProtocolDef, Resolve};
 
 pub mod arp;
 pub mod encap;
+pub mod fhrp;
 pub mod icmp;
 pub mod ipv6;
 pub mod l2;
 pub mod l2control;
 pub mod l3;
 pub mod l4;
+pub mod mcast;
 pub mod payload;
 
 /// Registry of protocol definitions, in palette order.
@@ -134,6 +136,24 @@ pub fn builtin() -> Vec<ProtocolDef> {
         encap::geneve(),
         encap::l2tpv2(),
         encap::l2tpv3(),
+        // P1 redundancy and multicast protocols.
+        fhrp::vrrpv2(),
+        fhrp::vrrpv3(),
+        fhrp::vrrpv3_ipv6(),
+        fhrp::hsrp(),
+        fhrp::hsrpv2(),
+        fhrp::glbp(),
+        mcast::igmp(),
+        mcast::igmpv2(),
+        mcast::igmpv3_query(),
+        mcast::igmpv3_report(),
+        mcast::mld(),
+        mcast::mldv2_query(),
+        mcast::mldv2_report(),
+        mcast::pim(),
+        mcast::pim_hello(),
+        mcast::pim_join_prune(),
+        mcast::pim_register(),
         payload::payload(),
         payload::raw(),
     ]

@@ -1,0 +1,31 @@
+# VRRPv3 (RFC 5798): an IPv4 Advertisement; the checksum covers the IPv4 pseudo header
+schema: 1
+
+meta:
+  name: vrrpv3
+  descriptions:
+    ja: "VRRPv3 (RFC 5798): IPv4 の Advertisement (チェックサムは IPv4 疑似ヘッダを含む)"
+    en: "VRRPv3 (RFC 5798): an IPv4 Advertisement whose checksum covers the IPv4 pseudo header"
+  tags: ["protocol:vrrpv3", "layer:l3", fhrp, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:12"
+      src: "00:00:5e:00:01:0a"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.18
+      ttl: 255
+  - protocol: vrrpv3
+    fields:
+      vrid: 10
+      priority: 200
+      max_adver_int: 100 # centiseconds (1 s)
+      ip_addresses: [192.0.2.254]
+
+tx:
+  count: 1

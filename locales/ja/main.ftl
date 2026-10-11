@@ -696,3 +696,54 @@ ui-bld-help-redo = やり直し
 ui-bld-help-hex = キャレット位置のバイトを Hex 入力
 ui-bld-help-caret = Hex キャレットを移動
 ui-bld-suggest-prev = 上位レイヤを追加
+
+# --- P1 冗長 / マルチキャストプロトコルのフィールド説明 ---
+vrrp-version = VRRP バージョン (2 = RFC 3768、3 = RFC 5798)。
+vrrp-type = VRRP パケットタイプ (1 = Advertisement)。
+vrrp-vrid = 仮想ルータ識別子 (VRID)。
+vrrp-priority = 送信ルータの優先度 (255 = アドレス所有者、0 = 離脱)。
+vrrp-count = 広告に含まれる仮想アドレス数 (IPv4 では Auto)。
+vrrp-auth-type = VRRPv2 認証タイプ (0 = なし、1 = 平文、2 = IP AH)。
+vrrp-adver-int = VRRPv2 広告間隔 (秒)。
+vrrp-max-adver-int = VRRPv3 最大広告間隔 (センチ秒)。
+vrrp-checksum = VRRP メッセージのインターネットチェックサム (VRRPv3 は IP 疑似ヘッダを含む) (Auto)。
+vrrp-addresses = 仮想ルータアドレス。
+vrrp-auth-data = VRRPv2 認証データ (8 オクテット)。
+hsrp-version = HSRP バージョン (HSRPv1 は 0)。
+hsrp-op-code = HSRP オペレーション (0 = Hello、1 = Coup、2 = Resign、3 = Advertise)。
+hsrp-state = 送信者の状態 (1 = Learn、2 = Listen、4 = Speak、8 = Standby、16 = Active)。
+hsrp-hello-time = Hello 送信間隔 (秒)。
+hsrp-hold-time = Hello の有効時間 (秒)。
+hsrp-priority = グループ内のルータ優先度。
+hsrp-group = スタンバイグループ番号。
+hsrp-auth-data = 平文認証パスワード (8 オクテット、既定値 "cisco")。
+hsrp-virtual-ip = グループの仮想 IPv4 アドレス。
+hsrpv2-tlvs = HSRPv2 TLV (Group State、Interface State、テキスト / MD5 認証。8 ビットのタイプと長さ)。
+glbp-version = GLBP バージョン (1)。
+glbp-group = GLBP グループ番号。
+glbp-owner-id = 送信ルータの MAC アドレス。
+glbp-tlvs = GLBP TLV (Hello、Request/Response、認証。長さはヘッダを含む)。
+igmp-type = IGMP メッセージタイプ (ボディから Auto: 0x11 クエリ、0x12 / 0x16 レポート、0x17 離脱、0x22 v3 レポート)。
+igmp-max-resp-code = 最大応答時間 / コード (1/10 秒単位、クエリ用。レポートでは 0)。
+igmp-checksum = IGMP メッセージ全体のインターネットチェックサム (Auto)。
+igmp-group = マルチキャストグループアドレス (一般クエリでは 0.0.0.0)。
+igmp-s-flag = ルータ側処理抑止フラグ。
+igmp-qrv = クエリアのロバストネス変数 (QRV)。
+igmp-qqic = クエリアのクエリ間隔コード (QQIC)。
+igmp-num-sources = 送信元アドレス数。
+igmp-sources = 送信元アドレス。
+igmp-num-records = グループレコード数。
+igmp-records = グループレコード (レコードタイプ、補助データ長、送信元、マルチキャストアドレス)。
+mld-max-resp = 最大応答遅延 / コード (ミリ秒)。
+mld-address = IPv6 マルチキャストアドレス (一般クエリでは ::)。
+pim-version = PIM バージョン (2)。
+pim-type = PIM メッセージタイプ (ボディから Auto: 0 Hello、1 Register、3 Join/Prune)。
+pim-checksum = インターネットチェックサム (メッセージ全体。Register は先頭 8 オクテットのみ) (Auto)。
+pim-hello-options = PIM Hello オプション (Holdtime、LAN Prune Delay、DR Priority、Generation ID、Address List)。
+pim-addr-family = エンコードアドレスのアドレスファミリ (1 = IPv4)。
+pim-upstream-neighbor = Join/Prune の宛先となる上流ネイバーアドレス。
+pim-num-groups = グループセット数。
+pim-holdtime = Join/Prune 状態の保持時間 (秒)。
+pim-groups = グループセット (エンコードグループ、Join / Prune するエンコード送信元)。
+pim-register-border = Border ビット (送信者が PIM マルチキャスト境界ルータ)。
+pim-register-null = Null-Register ビット (カプセル化データパケットなし)。
