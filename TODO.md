@@ -332,10 +332,10 @@ wpg bench   [--backend ...]                                # 送出性能計測
 ### M4: GUI MVP（4–6 週）
 - [x] Leptos プロジェクト、Tailwind、ルーティング、i18n、テーマ
 - [x] 認証画面・セッション処理
-- [ ] ビルダー: プロトコルパレット / レイヤスタック D&D / フィールドエディタ (型別 UI) / Auto-Manual トグル
-- [ ] Hex ダンプ + ツリーの双方向ハイライト、Hex 直接編集
-- [ ] ブラウザ内 WASM プレビュー (`wpg-core`)、サーバ結果との一致テスト
-- [ ] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示
+- [x] ビルダー: プロトコルパレット / レイヤスタック D&D / フィールドエディタ (型別 UI) / Auto-Manual トグル
+- [x] Hex ダンプ + ツリーの双方向ハイライト、Hex 直接編集
+- [x] ブラウザ内 WASM プレビュー (`wpg-core`)、サーバ結果との一致テスト（実行時に `POST /api/render` と突合しバッジ表示）
+- [ ] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示（UI・展開件数・サイズ見積は実装済み。所要時間見積は未実装）
 - [x] ジョブ画面: ストリーム混合、レート設定、開始/停止、リアルタイム統計グラフ
 - [x] テンプレート画面: 一覧 / 検索 / タグ / import / export / 複製
 - [x] 設定画面
@@ -352,7 +352,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] pcap/pcapng import → テンプレ化、Hex 貼付け import
 
 ### M6: P1 プロトコル群（4–6 週、並行可）
-- [ ] LLDP / CDP / STP,RSTP,MSTP / LACP / EAPOL / PPPoE / PPP
+- [x] LLDP / CDP / STP,RSTP,MSTP / LACP / EAPOL / PPPoE / PPP（RST/MSTP 拡張部は opaque 領域で近似）
 - [ ] VXLAN / GRE / NVGRE / MPLS / MPLS-in-UDP / L2TP / GTP-U / Geneve / IP-in-IP
 - [ ] OSPFv2/v3 / BGP / RIP / RIPng / EIGRP(基本)
 - [ ] VRRP / HSRP / GLBP
