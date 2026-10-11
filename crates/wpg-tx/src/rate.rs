@@ -950,7 +950,13 @@ mod tests {
             }
         };
         let waited = t0.elapsed();
-        assert_eq!(g, 5);
+        // A late wake-up adds one catch-up frame per whole 10 ms interval of
+        // lateness (slow CI runners can oversleep), so allow that on top of 5.
+        let late_intervals = waited.saturating_sub(Duration::from_millis(50)).as_millis() / 10;
+        assert!(
+            g >= 5 && u128::from(g) <= 5 + late_intervals + 1,
+            "grant {g} after {waited:?}"
+        );
         assert!(
             waited >= Duration::from_millis(40) && waited < Duration::from_millis(100),
             "{waited:?}"
