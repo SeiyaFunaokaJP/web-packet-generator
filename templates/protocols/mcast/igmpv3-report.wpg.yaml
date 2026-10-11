@@ -1,0 +1,40 @@
+# IGMPv3 (RFC 3376): a Membership Report joining one group and allowing a source
+schema: 1
+
+meta:
+  name: igmpv3-report
+  descriptions:
+    ja: "IGMPv3 (RFC 3376): グループ参加と送信元許可のメンバーシップレポート (224.0.0.22 宛)"
+    en: "IGMPv3 (RFC 3376): a Membership Report to 224.0.0.22 joining a group and allowing a source"
+  tags: ["protocol:igmp", "protocol:igmpv3_report", "layer:l3", multicast, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:16"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.100
+      dst: 224.0.0.22
+      ttl: 1
+      options:
+        - router_alert: 0 # RFC 2113; ihl / padding stay automatic
+  - protocol: igmp # type: auto -> 0x22
+    fields:
+      max_resp_code: 0 # reserved in reports
+  - protocol: igmpv3_report
+    fields:
+      num_group_records: 2 # manual: must match the records below
+      group_records:
+        - record_type: change_to_exclude # EXCLUDE {} = join
+          multicast_address: 239.1.1.1
+        - record_type: allow_new_sources
+          num_sources: 1 # manual: must match `sources`
+          multicast_address: 232.1.1.1
+          sources: [192.0.2.10]
+
+tx:
+  count: 1

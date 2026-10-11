@@ -1,0 +1,37 @@
+# 6in4 (RFC 4213): IPv6/UDP tunnelled in IPv4 (protocol 41)
+schema: 1
+
+meta:
+  name: 6in4
+  descriptions:
+    ja: "6in4 (RFC 4213): IPv6/UDP を IPv4 (プロトコル 41) でトンネル"
+    en: "6in4 (RFC 4213): IPv6/UDP tunnelled in IPv4 (protocol 41)"
+  tags: ["protocol:ipv4", "protocol:ipv6", "layer:l3", encap, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4 # protocol: auto -> 41
+    fields:
+      src: 203.0.113.1
+      dst: 203.0.113.2
+  - protocol: ipv6
+    fields:
+      src: 2001:db8::1
+      dst: 2001:db8::2
+  - protocol: udp
+    fields:
+      src_port: 4000
+      dst_port: 4001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 16
+
+tx:
+  count: 1

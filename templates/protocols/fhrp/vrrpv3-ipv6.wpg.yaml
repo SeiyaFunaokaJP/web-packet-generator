@@ -1,0 +1,31 @@
+# VRRPv3 (RFC 5798) for IPv6: an Advertisement to ff02::12 (next header 112)
+schema: 1
+
+meta:
+  name: vrrpv3-ipv6
+  descriptions:
+    ja: "VRRPv3 (RFC 5798) IPv6 版: ff02::12 への Advertisement (次ヘッダ 112)"
+    en: "VRRPv3 (RFC 5798) for IPv6: an Advertisement to ff02::12 (next header 112)"
+  tags: ["protocol:vrrpv3_ipv6", "protocol:ipv6", "layer:l3", fhrp, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:12"
+      src: "00:00:5e:00:02:0a"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::12
+      hop_limit: 255
+  - protocol: vrrpv3_ipv6
+    fields:
+      vrid: 10
+      priority: 200
+      count_ipvx_addrs: 2 # manual: one per IPv6 address below
+      ip_addresses: [fe80::1, 2001:db8::1]
+
+tx:
+  count: 1

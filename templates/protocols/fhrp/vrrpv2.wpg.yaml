@@ -1,0 +1,36 @@
+# VRRPv2 (RFC 3768): an Advertisement from the master to 224.0.0.18 (IP protocol 112)
+schema: 1
+
+meta:
+  name: vrrpv2
+  descriptions:
+    ja: "VRRPv2 (RFC 3768): マスタから 224.0.0.18 への Advertisement (IP プロトコル 112、TTL 255)"
+    en: "VRRPv2 (RFC 3768): a master Advertisement to 224.0.0.18 (IP protocol 112, TTL 255)"
+  tags: ["protocol:vrrpv2", "layer:l3", fhrp, sample, "parse-as:vrrpv2=vrrpv3"]
+  author: wpg
+  created: 2026-10-11
+
+variables:
+  - name: vrid
+    default: 10
+    description: Virtual Router Identifier (the source MAC is 00:00:5e:00:01:<vrid>)
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:12"
+      src: "00:00:5e:00:01:0a"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.18
+      ttl: 255 # VRRP packets must be sent with TTL 255
+  - protocol: vrrpv2 # shares protocol 112 with VRRPv3, which decodes it
+    fields:
+      vrid: ${vrid}
+      priority: 200
+      adver_int: 1
+      ip_addresses: [192.0.2.254, 198.51.100.254] # count_ip_addrs: auto -> 2
+
+tx:
+  count: 1

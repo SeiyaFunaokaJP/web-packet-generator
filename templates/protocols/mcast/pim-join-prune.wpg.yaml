@@ -1,0 +1,39 @@
+# PIMv2 (RFC 7761): an (S,G) Join/Prune to the upstream neighbor
+schema: 1
+
+meta:
+  name: pim-join-prune
+  descriptions:
+    ja: "PIMv2 (RFC 7761): 上流ネイバー宛の (S,G) Join/Prune"
+    en: "PIMv2 (RFC 7761): an (S,G) Join/Prune towards the upstream neighbor"
+  tags: ["protocol:pim", "protocol:pim_join_prune", "layer:l3", multicast, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:0d"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.2
+      dst: 224.0.0.13
+      ttl: 1
+  - protocol: pim # type: auto -> 3 (Join/Prune)
+  - protocol: pim_join_prune
+    fields:
+      upstream_neighbor: 192.0.2.1
+      num_groups: 1 # manual: must match `groups`
+      holdtime: 210
+      groups:
+        - group_address: 239.1.1.1
+          num_joined: 1 # manual: must match `joined`
+          num_pruned: 1 # manual: must match `pruned`
+          joined:
+            - { flags: 0x04, address: 192.0.2.10 } # S bit
+          pruned:
+            - { flags: 0x05, address: 192.0.2.11 } # S + RPT bits
+
+tx:
+  count: 1

@@ -696,3 +696,54 @@ ui-bld-help-redo = Redo
 ui-bld-help-hex = Type hex over the caret byte
 ui-bld-help-caret = Move the hex caret
 ui-bld-suggest-prev = Add layer above
+
+# --- P1 redundancy / multicast protocol field descriptions ---
+vrrp-version = VRRP version (2 = RFC 3768, 3 = RFC 5798).
+vrrp-type = VRRP packet type (1 = Advertisement).
+vrrp-vrid = Virtual Router Identifier.
+vrrp-priority = Sending router priority (255 = address owner, 0 = stop participating).
+vrrp-count = Number of virtual addresses in the advertisement (Auto for IPv4).
+vrrp-auth-type = VRRPv2 authentication type (0 = none, 1 = simple text, 2 = IP AH).
+vrrp-adver-int = VRRPv2 advertisement interval, in seconds.
+vrrp-max-adver-int = VRRPv3 maximum advertisement interval, in centiseconds.
+vrrp-checksum = Internet checksum over the VRRP message (VRRPv3 includes the IP pseudo header) (Auto).
+vrrp-addresses = Virtual router addresses.
+vrrp-auth-data = VRRPv2 authentication data (8 octets).
+hsrp-version = HSRP version (0 for HSRPv1).
+hsrp-op-code = HSRP operation (0 = Hello, 1 = Coup, 2 = Resign, 3 = Advertise).
+hsrp-state = Sender state (1 = Learn, 2 = Listen, 4 = Speak, 8 = Standby, 16 = Active).
+hsrp-hello-time = Interval between Hello messages, in seconds.
+hsrp-hold-time = Time a Hello stays valid, in seconds.
+hsrp-priority = Router priority within the group.
+hsrp-group = Standby group number.
+hsrp-auth-data = Clear-text authentication password (8 octets, default "cisco").
+hsrp-virtual-ip = Virtual IPv4 address of the group.
+hsrpv2-tlvs = HSRPv2 TLVs (Group State, Interface State, Text / MD5 Authentication; 8-bit type and length).
+glbp-version = GLBP version (1).
+glbp-group = GLBP group number.
+glbp-owner-id = MAC address of the sending router.
+glbp-tlvs = GLBP TLVs (Hello, Request/Response, Authentication; length includes the header).
+igmp-type = IGMP message type (Auto from the body: 0x11 query, 0x12 / 0x16 report, 0x17 leave, 0x22 v3 report).
+igmp-max-resp-code = Maximum response time / code in 1/10 s (queries; zero in reports).
+igmp-checksum = Internet checksum over the whole IGMP message (Auto).
+igmp-group = Multicast group address (0.0.0.0 in a general query).
+igmp-s-flag = Suppress router-side processing flag.
+igmp-qrv = Querier's Robustness Variable.
+igmp-qqic = Querier's Query Interval Code.
+igmp-num-sources = Number of source addresses.
+igmp-sources = Source addresses.
+igmp-num-records = Number of group records.
+igmp-records = Group records (record type, aux data length, sources, multicast address).
+mld-max-resp = Maximum response delay / code, in milliseconds.
+mld-address = IPv6 multicast address (:: in a general query).
+pim-version = PIM version (2).
+pim-type = PIM message type (Auto from the body: 0 Hello, 1 Register, 3 Join/Prune).
+pim-checksum = Internet checksum (whole message; Register: first 8 octets only) (Auto).
+pim-hello-options = PIM Hello options (Holdtime, LAN Prune Delay, DR Priority, Generation ID, Address List).
+pim-addr-family = Address family of the encoded address (1 = IPv4).
+pim-upstream-neighbor = Upstream neighbor address the Join/Prune is addressed to.
+pim-num-groups = Number of group sets.
+pim-holdtime = Time the Join/Prune state is kept, in seconds.
+pim-groups = Group sets (encoded group, joined and pruned encoded sources).
+pim-register-border = Border bit (sender is a PIM Multicast Border Router).
+pim-register-null = Null-Register bit (no encapsulated data packet).

@@ -7,7 +7,8 @@
 //!   message body is a following `raw` layer.
 //! * `icmpv6` is only `type, code, checksum`; the message body is a separate
 //!   protocol chosen by the Auto `type` through the binding (`icmpv6_echo`,
-//!   `ndp_rs`, `ndp_ra`, `ndp_ns`, `ndp_na`, `ndp_redirect`). Each body starts
+//!   `ndp_rs`, `ndp_ra`, `ndp_ns`, `ndp_na`, `ndp_redirect`, and the MLD bodies
+//!   `mld`, `mldv2_query`, `mldv2_report` of [`crate::mcast`]). Each body starts
 //!   with its own 4 octets after the checksum. For any other type set `type`
 //!   manually and follow with a `raw` layer that includes those 4 octets.
 
@@ -85,6 +86,11 @@ pub fn icmpv6() -> ProtocolDef {
         next: type {
             128 => "icmpv6_echo",
             129 => "icmpv6_echo",
+            130 => "mld",
+            131 => "mld",
+            132 => "mld",
+            130 => "mldv2_query",
+            143 => "mldv2_report",
             133 => "ndp_rs",
             134 => "ndp_ra",
             135 => "ndp_ns",

@@ -1,0 +1,38 @@
+# GLBP: an Active Virtual Gateway Hello to 224.0.0.102, UDP 3222
+schema: 1
+
+meta:
+  name: glbp
+  descriptions:
+    ja: "GLBP: アクティブ仮想ゲートウェイの Hello (224.0.0.102、UDP 3222)"
+    en: "GLBP: an Active Virtual Gateway Hello to 224.0.0.102 (UDP 3222)"
+  tags: ["protocol:glbp", "layer:l4", fhrp, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:66"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.2
+      dst: 224.0.0.102
+      ttl: 255
+  - protocol: udp
+    fields:
+      src_port: 3222
+      dst_port: 3222
+  - protocol: glbp
+    fields:
+      group: 1
+      owner_id: "02:00:00:00:00:02"
+      tlvs:
+        - hello:
+            vg_state: 32 # Active
+            priority: 110
+            virtual_ip: 192.0.2.254
+
+tx:
+  count: 1

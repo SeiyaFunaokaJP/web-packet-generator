@@ -55,8 +55,9 @@ pub fn tcp_options() -> FieldType {
 ///
 /// The `next` binding demultiplexes well-known tunnelling ports on the
 /// **destination** port (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
-/// Geneve 6081); unknown ports have no default, so an ordinary UDP payload still
-/// parses as `raw`.
+/// Geneve 6081) and the first-hop redundancy ports (HSRP 1985, `HSRPv2` over IPv6
+/// 2029, GLBP 3222; UDP 1985 decodes as `HSRPv1`); unknown ports have no default, so
+/// an ordinary UDP payload still parses as `raw`.
 #[must_use]
 pub fn udp() -> ProtocolDef {
     protocol! {
@@ -71,7 +72,11 @@ pub fn udp() -> ProtocolDef {
         },
         next: dst_port {
             1701 => "l2tpv2",
+            1985 => "hsrp",
+            1985 => "hsrpv2",
+            2029 => "hsrpv2",
             2152 => "gtpu",
+            3222 => "glbp",
             4789 => "vxlan",
             6081 => "geneve",
             6635 => "mpls",
