@@ -823,3 +823,91 @@ tftp-block = ブロック番号 (1 から開始)。
 tftp-data = データオクテット (ブロックあたり 512。短いブロックで転送終了)。
 tftp-error-code = TFTP エラーコード (1 = ファイルなし、2 = アクセス違反 など)。
 tftp-error-message = NUL 終端のエラーメッセージ。不透明なオクテット列。
+
+# --- P1 ルーティングプロトコルのフィールド説明 ---
+ospf-version = OSPF バージョン (2 = OSPFv2、3 = OSPFv3)。
+ospf-type = OSPF パケットタイプ (Hello / DB Description / LS Request / LS Update / LS Ack。次レイヤから自動)。
+ospf-packet-length = ヘッダを含む OSPF パケット長 (オクテット、自動)。
+ospf-router-id = 送信ルータのルータ ID。
+ospf-area-id = パケットが属するエリア (0.0.0.0 = バックボーン)。
+ospf-checksum = OSPF パケットのインターネットチェックサム (自動。認証フィールドが 0 のとき正確)。
+ospf-au-type = 認証タイプ (0 = なし、1 = 平文パスワード、2 = 暗号認証)。
+ospf-authentication = 64 ビットの認証フィールド (パスワード、または暗号認証のキー ID / シーケンス)。
+ospf-network-mask = インタフェースまたは広告ネットワークのネットマスク。
+ospf-hello-interval = Hello パケットの送信間隔 (秒)。
+ospf-options = オプション機能 (E、MC、N/P、L、DC、O、DN ビット)。
+ospf-router-priority = DR 選出のルータ優先度 (0 = DR にならない)。
+ospf-router-dead-interval = Hello が途絶えてから隣接ルータをダウンと判断するまでの秒数。
+ospf-designated-router = 代表ルータ DR (0.0.0.0 = なし)。
+ospf-backup-designated-router = バックアップ代表ルータ BDR (0.0.0.0 = なし)。
+ospf-neighbors = リンク上で認識している隣接ルータのルータ ID。
+ospf-interface-mtu = フラグメントなしで送信できる最大 IP データグラム長。
+ospf-dbd-flags = Database Description フラグ (I = 初期、M = 続きあり、MS = マスタ)。
+ospf-dd-sequence = Database Description シーケンス番号。
+ospf-lsa-headers = LSA ヘッダ (各 20 オクテット。チェックサムと長さは手動)。
+ospf-lsr-requests = 要求する LSA (LS タイプ、リンクステート ID、広告ルータ)。
+ospf-num-lsas = アップデートに含まれる LSA の数。
+ospf-ls-age = LSA 生成からの経過秒数 (自動チェックサムを正確にするには 0 のまま)。
+ospf-ls-type = LSA タイプ (LSA 本体レイヤから自動)。
+ospf-link-state-id = 記述対象を識別するリンクステート ID。
+ospf-advertising-router = LSA を生成したルータのルータ ID。
+ospf-ls-sequence = LSA シーケンス番号 (0x80000001 = 初期値)。
+ospf-ls-checksum = LSA の Fletcher チェックサム (自動。LS age が 0 のとき正確)。
+ospf-lsa-length = ヘッダを含む LSA 長 (オクテット、自動)。
+ospf-router-lsa-flags = Router-LSA フラグ (V = 仮想リンク端点、E = ASBR、B = ABR)。
+ospf-num-links = 記述するルータリンクの数。
+ospf-router-links = ルータリンク (リンク ID、リンクデータ、タイプ、TOS 数、メトリック)。
+ospf-attached-routers = ネットワークに接続しているルータのルータ ID。
+ospf-metric = 経路のコスト。
+ospf-external-e = 外部メトリックタイプ (1 = タイプ 2、0 = タイプ 1)。
+ospf-forwarding-address = 宛先へのトラフィックの転送先アドレス (0.0.0.0 = ASBR 自身)。
+ospf-external-route-tag = 外部経路に付く 32 ビットのタグ。
+ospfv3-checksum = IPv6 疑似ヘッダを含む OSPFv3 パケットのインターネットチェックサム (自動)。
+ospfv3-instance-id = インスタンス ID (同一リンク上の OSPFv3 インスタンスを区別)。
+ospfv3-interface-id = 送信インタフェースのインタフェース ID。
+ospfv3-options = OSPFv3 オプション (V6、E、N、R、DC、AF ビット)。
+ospfv3-ls-type = U / S スコープビット付きの LSA 機能コード (LSA 本体レイヤから自動)。
+ospfv3-router-links = ルータインタフェース (タイプ、メトリック、インタフェース ID、隣接ルータ ID)。
+ospfv3-prefix-length = プレフィックス長 (ビット)。
+ospfv3-prefix-options = プレフィックスオプション (NU、LA、P、DN ビット)。
+ospfv3-address-prefix = 4 オクテット境界にパディングしたアドレスプレフィックス。
+ospfv3-external-flags = AS-External-LSA フラグ (E = タイプ 2 メトリック、F = 転送アドレスあり、T = ルートタグあり)。
+ospfv3-referenced-ls-type = 参照する LSA の LS タイプ。
+ospfv3-link-local-address = インタフェースのリンクローカルアドレス。
+ospfv3-num-prefixes = 後続のプレフィックス数。
+ospfv3-prefixes = プレフィックスエントリ (長さ、オプション、メトリック / 予約、アドレスプレフィックス)。不透明なオクテット列。
+ospfv3-referenced-link-state-id = 参照する LSA のリンクステート ID。
+ospfv3-referenced-advertising-router = 参照する LSA の広告ルータ。
+bgp-marker = 16 オクテットのマーカ (すべて 1)。
+bgp-length = ヘッダを含む BGP メッセージ長 (オクテット、自動)。
+bgp-type = BGP メッセージタイプ (OPEN / UPDATE / NOTIFICATION / KEEPALIVE / ROUTE-REFRESH。次レイヤから自動)。
+bgp-version = BGP バージョン (4)。
+bgp-my-as = 送信側の AS 番号 (4 オクテット AS では 23456 = AS_TRANS)。
+bgp-hold-time = 提案するホールドタイム (秒。0 または 3 以上)。
+bgp-identifier = 送信側の BGP 識別子 (ルータ ID)。
+bgp-opt-params-length = オプションパラメータ長 (オクテット、自動)。
+bgp-opt-params = オプションパラメータ (タイプ 2 = Capabilities)。
+bgp-withdrawn-routes-length = 撤回経路の長さ (オクテット、手動)。
+bgp-withdrawn-routes = 撤回経路 ((プレフィックス長, プレフィックス) のオクテット列)。
+bgp-total-path-attribute-length = パス属性の長さ (オクテット、手動)。
+bgp-path-attributes = パス属性 (フラグ + タイプコード、8 ビット長)。
+bgp-nlri = NLRI ((プレフィックス長, プレフィックス) のオクテット列)。
+bgp-error-code = NOTIFICATION のエラーコード。
+bgp-error-subcode = NOTIFICATION のエラーサブコード。
+bgp-error-data = NOTIFICATION の診断データ。
+bgp-afi = アドレスファミリ識別子 (1 = IPv4、2 = IPv6)。
+bgp-rr-subtype = ROUTE-REFRESH サブタイプ (0 = 通常、1 = BoRR、2 = EoRR)。
+bgp-safi = サブアドレスファミリ識別子 (1 = ユニキャスト、2 = マルチキャスト)。
+rip-command = RIP コマンド (1 = 要求、2 = 応答)。
+rip-version = RIP バージョン (1 または 2。RIPng は 1)。
+rip-entries = 経路エントリ (AFI、ルートタグ、アドレス、マスク、ネクストホップ、メトリック)。
+ripng-entries = 経路テーブルエントリ (プレフィックス、ルートタグ、プレフィックス長、メトリック。0xff = ネクストホップ)。
+eigrp-version = EIGRP ヘッダのバージョン (2)。
+eigrp-opcode = EIGRP オペコード (Update / Query / Reply / Hello / SIA-Query / SIA-Reply)。
+eigrp-checksum = EIGRP パケットのインターネットチェックサム (自動)。
+eigrp-flags = EIGRP フラグ (Init、Conditional Receive、Restart、End of Table)。
+eigrp-sequence = 信頼性のある配送のためのシーケンス番号。
+eigrp-acknowledge = 確認応答するシーケンス番号 (0 = なし)。
+eigrp-virtual-router-id = 仮想ルータ ID (0 = ユニキャストアドレスファミリ)。
+eigrp-autonomous-system = EIGRP の AS 番号。
+eigrp-tlvs = EIGRP TLV (16 ビットタイプ、ヘッダを含む 16 ビット長)。

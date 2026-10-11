@@ -1,0 +1,46 @@
+# BGP-4 (RFC 4271): an OPEN with Multiprotocol, Route Refresh and 4-octet AS capabilities
+schema: 1
+
+meta:
+  name: bgp-open
+  descriptions:
+    ja: "BGP-4 (RFC 4271): Multiprotocol / Route Refresh / 4 オクテット AS ケーパビリティ付きの OPEN (TCP 179)"
+    en: "BGP-4 (RFC 4271): an OPEN with Multiprotocol, Route Refresh and 4-octet AS capabilities (TCP 179)"
+  tags: ["protocol:bgp", "protocol:bgp_open", "protocol:tcp", "layer:l4", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      ttl: 1 # eBGP peers are directly connected
+      dscp: 48
+      flags: df
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 179
+      seq: 1001
+      ack: 5001
+      flags: psh|ack
+  - protocol: bgp
+  - protocol: bgp_open
+    fields:
+      version: 4
+      my_as: 65001
+      hold_time: 180
+      bgp_identifier: 192.0.2.1
+      opt_params:
+        - capabilities:
+            - { multiprotocol: { afi: 1, reserved: 0, safi: 1 } } # IPv4 unicast
+            - route_refresh
+            - { four_octet_as: 65001 }
+
+tx:
+  count: 1

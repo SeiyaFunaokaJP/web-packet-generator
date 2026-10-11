@@ -1,0 +1,46 @@
+# EIGRP (RFC 7868): an Update with an IPv4 internal route TLV
+schema: 1
+
+meta:
+  name: eigrp-update
+  descriptions:
+    ja: "EIGRP (RFC 7868): IPv4 内部経路 TLV (198.51.100.0/24) を含む Update (End of Table)"
+    en: "EIGRP (RFC 7868): an Update (End of Table) with an IPv4 internal route TLV for 198.51.100.0/24"
+  tags: ["protocol:eigrp", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      ttl: 1
+      dscp: 48
+  - protocol: eigrp
+    fields:
+      opcode: update
+      flags: end_of_table
+      sequence: 5
+      acknowledge: 0
+      autonomous_system: 100
+      tlvs:
+        - ipv4_internal:
+            next_hop: 0.0.0.0
+            delay: 2560
+            bandwidth: 256
+            mtu: 1500
+            hop_count: 0
+            reliability: 255
+            load: 1
+            internal_tag: 0
+            flags: 0
+            prefix_length: 24
+            destination: "c6 33 64" # 198.51.100
+
+tx:
+  count: 1

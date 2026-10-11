@@ -1,0 +1,37 @@
+# OSPFv3 (RFC 5340): a Database Description packet listing one LSA header
+schema: 1
+
+meta:
+  name: ospfv3-dbd
+  descriptions:
+    ja: "OSPFv3 (RFC 5340): LSA ヘッダを 1 つ列挙する Database Description"
+    en: "OSPFv3 (RFC 5340): a Database Description listing one LSA header"
+  tags: ["protocol:ospfv3", "protocol:ospfv3_dbd", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: fe80::2
+      hop_limit: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv3
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv3_dbd
+    fields:
+      options: v6|e|r
+      interface_mtu: 1500
+      flags: more|master
+      dd_sequence: 0x2001
+      lsa_headers:
+        - { ls_age: 1, ls_type: 0x2001, link_state_id: 0, advertising_router: 192.0.2.1, ls_sequence: 0x80000001, ls_checksum: 0x5d28, length: 40 }
+
+tx:
+  count: 1

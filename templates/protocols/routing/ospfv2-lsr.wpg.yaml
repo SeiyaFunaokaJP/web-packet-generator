@@ -1,0 +1,34 @@
+# OSPFv2 (RFC 2328): a Link State Request for a Router-LSA and a Network-LSA
+schema: 1
+
+meta:
+  name: ospfv2-lsr
+  descriptions:
+    ja: "OSPFv2 (RFC 2328): Router-LSA と Network-LSA を要求する Link State Request"
+    en: "OSPFv2 (RFC 2328): a Link State Request for a Router-LSA and a Network-LSA"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_lsr", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      ttl: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv2_lsr
+    fields:
+      requests:
+        - { ls_type: 1, link_state_id: 192.0.2.2, advertising_router: 192.0.2.2 }
+        - { ls_type: 2, link_state_id: 192.0.2.10, advertising_router: 192.0.2.2 }
+
+tx:
+  count: 1

@@ -1,0 +1,36 @@
+# RIPv2 (RFC 2453): a multicast Response with two routes (UDP 520)
+schema: 1
+
+meta:
+  name: ripv2-response
+  descriptions:
+    ja: "RIPv2 (RFC 2453): 経路 2 つを含むマルチキャスト Response (UDP 520、224.0.0.9)"
+    en: "RIPv2 (RFC 2453): a multicast Response with two routes (UDP 520 to 224.0.0.9)"
+  tags: ["protocol:rip", "protocol:udp", "layer:l4", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:09" # RIPv2 routers 224.0.0.9
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.9
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 520
+      dst_port: 520
+  - protocol: rip
+    fields:
+      command: response
+      version: 2
+      entries:
+        - { afi: 2, route_tag: 0, address: 192.0.2.0, subnet_mask: 255.255.255.0, next_hop: 0.0.0.0, metric: 1 }
+        - { afi: 2, route_tag: 7, address: 198.51.100.0, subnet_mask: 255.255.255.0, next_hop: 192.0.2.2, metric: 3 }
+
+tx:
+  count: 1

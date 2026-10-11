@@ -15,6 +15,8 @@ fn next_header_binding() -> Binding {
         (47, "gre"),
         (58, "icmpv6"),
         (60, "ipv6_dstopts"),
+        (88, "eigrp"),
+        (89, "ospfv3"),
         (112, "vrrpv3_ipv6"),
         (115, "l2tpv3"),
     ];
@@ -60,6 +62,8 @@ pub fn ipv6() -> ProtocolDef {
                 58 => icmpv6,
                 59 => no_next_header,
                 60 => destination_options,
+                88 => eigrp,
+                89 => ospf,
                 112 => vrrp,
                 253 => experimental,
             } = 253, auto = next_protocol;

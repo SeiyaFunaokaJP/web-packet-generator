@@ -251,7 +251,8 @@ fn hsrpv2_golden() {
     assert_eq!(&bytes[28..32], &[1, 40, 2, 0]);
     assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "udp", "hsrp", "raw"]);
 
-    assert_dissects(&bytes, Some(0x0800), "hsrp2");
+    // tshark files HSRPv2 under the `hsrp` protocol; `hsrp2.*` fields mark v2.
+    assert_dissects(&bytes, Some(0x0800), "hsrp2.version");
 }
 
 const GLBP: &str = "45000044 0005 0000 01 11 173d c0000201 e0000066 \
