@@ -958,7 +958,9 @@ mod tests {
             "grant {g} after {waited:?}"
         );
         assert!(
-            waited >= Duration::from_millis(40) && waited < Duration::from_millis(100),
+            // Lower bound: the pacer really waited. The upper bound only catches a
+            // hang; shared CI runners can oversleep by tens of milliseconds.
+            waited >= Duration::from_millis(40) && waited < Duration::from_millis(500),
             "{waited:?}"
         );
     }
