@@ -57,9 +57,8 @@ sha2 = "0.10"
 base64 = "0.22"
 getrandom = "0.3"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
-rustls-pemfile = "2"
 rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
-axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
+axum-server = { version = "0.8", features = ["tls-rustls-no-provider"] }
 
 [dev-dependencies]
 tempfile = "3"

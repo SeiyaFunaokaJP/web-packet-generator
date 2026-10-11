@@ -11,12 +11,12 @@
 //!
 //! rustls runs on the `ring` provider (no cmake / NASM needed to build).
 
-use std::io::BufReader;
 use std::net::{IpAddr, SocketAddr};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use rustls::pki_types::pem::{self, PemObject};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -73,6 +73,10 @@ fn io_err(path: &Path) -> impl FnOnce(std::io::Error) -> TlsError + '_ {
     }
 }
 
+fn pem_err(path: &Path) -> impl FnOnce(pem::Error) -> TlsError + '_ {
+    move |e| io_err(path)(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+}
+
 /// The TLS configuration for `config`, `None` when TLS is off.
 ///
 /// # Errors
@@ -103,19 +107,21 @@ pub fn setup(config: &Config) -> Result<Option<TlsSetup>, TlsError> {
 }
 
 fn load(cert: &Path, key: &Path, self_signed: bool, generated: bool) -> Result<TlsSetup, TlsError> {
-    let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut BufReader::new(
-        std::fs::File::open(cert).map_err(io_err(cert))?,
-    ))
-    .collect::<Result<_, _>>()
-    .map_err(io_err(cert))?;
+    let cert_pem = std::fs::read(cert).map_err(io_err(cert))?;
+    let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_slice_iter(&cert_pem)
+        .collect::<Result<_, _>>()
+        .map_err(pem_err(cert))?;
     if certs.is_empty() {
         return Err(TlsError::Empty(cert.display().to_string(), "certificate"));
     }
-    let key_der: PrivateKeyDer<'static> = rustls_pemfile::private_key(&mut BufReader::new(
-        std::fs::File::open(key).map_err(io_err(key))?,
-    ))
-    .map_err(io_err(key))?
-    .ok_or_else(|| TlsError::Empty(key.display().to_string(), "private key"))?;
+    let key_pem = std::fs::read(key).map_err(io_err(key))?;
+    let key_der = match PrivateKeyDer::from_pem_slice(&key_pem) {
+        Ok(k) => k,
+        Err(pem::Error::NoItemsFound) => {
+            return Err(TlsError::Empty(key.display().to_string(), "private key"));
+        }
+        Err(e) => return Err(pem_err(key)(e)),
+    };
     let fingerprint = fingerprint(&certs[0]);
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let mut cfg = rustls::ServerConfig::builder_with_provider(provider)
