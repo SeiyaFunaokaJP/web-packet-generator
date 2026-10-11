@@ -1,7 +1,0 @@
-# Seeds for failure cases proptest has generated in the past. It is
-# automatically read and these particular cases re-run before any
-# novel cases are generated.
-#
-# It is recommended to check this file in to source control so that
-# everyone who runs the test benefits from these saved cases.
-cc 1fc30173cfe2c74dacd307c51b43680fb60f95cec92bb08e17d43beb9bbb3a7c # shrinks to ip = Layer { protocol: "ipv6", fields: {"dscp": UInt(0), "dst": Ipv6(::), "ecn": UInt(0), "flow_label": UInt(0), "hop_limit": UInt(0), "src": Ipv6(::)}, truncate: None }, ext = [], is_tcp = false, data = [0], (sp, dp) = (0, 514)
