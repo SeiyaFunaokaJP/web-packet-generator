@@ -1,0 +1,50 @@
+# SNMPv2c (RFC 3416): a GetRequest for sysDescr.0 and sysName.0 with community "public"
+schema: 1
+
+meta:
+  name: snmp-get-request
+  descriptions:
+    ja: "SNMPv2c (RFC 3416): コミュニティ public で sysDescr.0 / sysName.0 を取得する GetRequest"
+    en: "SNMPv2c (RFC 3416): a GetRequest for sysDescr.0 and sysName.0 with community public"
+  tags: ["protocol:snmp", "protocol:snmp_pdu", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.161
+  - protocol: udp
+    fields:
+      src_port: 50161
+      dst_port: 161
+  - protocol: snmp # msg_length: auto (BER short form)
+    fields:
+      version: v2c
+      community_length: 6
+      community: '"public"'
+  - protocol: snmp_pdu # pdu_length: auto
+    fields:
+      pdu_type: get_request
+      body:
+        - { type: 0x02, data: "2a" } # request-id 42
+        - { type: 0x02, data: "00" } # error-status
+        - { type: 0x02, data: "00" } # error-index
+        - sequence: # variable-bindings
+            items:
+              - sequence:
+                  items:
+                    - { name: object_identifier, data: "2b 06 01 02 01 01 01 00" } # sysDescr.0
+                    - "null"
+              - sequence:
+                  items:
+                    - { name: object_identifier, data: "2b 06 01 02 01 01 05 00" } # sysName.0
+                    - "null"
+
+tx:
+  count: 1

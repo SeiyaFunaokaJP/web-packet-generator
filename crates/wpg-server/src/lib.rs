@@ -254,7 +254,7 @@ impl Server {
                     h.graceful_shutdown(Some(Duration::from_secs(5)));
                 });
                 let rustls = axum_server::tls_rustls::RustlsConfig::from_config(tls.config);
-                let res = axum_server::from_tcp_rustls(self.listener.into_std()?, rustls)
+                let res = axum_server::from_tcp_rustls(self.listener.into_std()?, rustls)?
                     .handle(handle)
                     .serve(make_service)
                     .await;

@@ -13,15 +13,19 @@ use std::sync::OnceLock;
 use serde::Serialize;
 use wpg_core::{ProtocolDef, Resolve};
 
+pub mod app;
 pub mod arp;
 pub mod encap;
+pub mod fhrp;
 pub mod icmp;
 pub mod ipv6;
 pub mod l2;
 pub mod l2control;
 pub mod l3;
 pub mod l4;
+pub mod mcast;
 pub mod payload;
+pub mod routing;
 
 /// Registry of protocol definitions, in palette order.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -134,6 +138,72 @@ pub fn builtin() -> Vec<ProtocolDef> {
         encap::geneve(),
         encap::l2tpv2(),
         encap::l2tpv3(),
+        // P1 routing protocols.
+        routing::ospfv2(),
+        routing::ospfv2_hello(),
+        routing::ospfv2_dbd(),
+        routing::ospfv2_lsr(),
+        routing::ospfv2_lsu(),
+        routing::ospfv2_lsack(),
+        routing::ospfv2_lsa(),
+        routing::ospfv2_router_lsa(),
+        routing::ospfv2_network_lsa(),
+        routing::ospfv2_summary_lsa(),
+        routing::ospfv2_external_lsa(),
+        routing::ospfv3(),
+        routing::ospfv3_hello(),
+        routing::ospfv3_dbd(),
+        routing::ospfv3_lsr(),
+        routing::ospfv3_lsu(),
+        routing::ospfv3_lsack(),
+        routing::ospfv3_lsa(),
+        routing::ospfv3_router_lsa(),
+        routing::ospfv3_network_lsa(),
+        routing::ospfv3_inter_area_prefix_lsa(),
+        routing::ospfv3_as_external_lsa(),
+        routing::ospfv3_link_lsa(),
+        routing::ospfv3_intra_area_prefix_lsa(),
+        routing::bgp(),
+        routing::bgp_open(),
+        routing::bgp_update(),
+        routing::bgp_notification(),
+        routing::bgp_route_refresh(),
+        routing::rip(),
+        routing::ripng(),
+        routing::eigrp(),
+        // P1 redundancy and multicast protocols.
+        fhrp::vrrpv2(),
+        fhrp::vrrpv3(),
+        fhrp::vrrpv3_ipv6(),
+        fhrp::hsrp(),
+        fhrp::hsrpv2(),
+        fhrp::glbp(),
+        mcast::igmp(),
+        mcast::igmpv2(),
+        mcast::igmpv3_query(),
+        mcast::igmpv3_report(),
+        mcast::mld(),
+        mcast::mldv2_query(),
+        mcast::mldv2_report(),
+        mcast::pim(),
+        mcast::pim_hello(),
+        mcast::pim_join_prune(),
+        mcast::pim_register(),
+        // P1 application protocols.
+        app::dhcpv4(),
+        app::dhcpv6(),
+        app::dhcpv6_relay(),
+        app::dns(),
+        app::ntp(),
+        app::snmp(),
+        app::snmp_pdu(),
+        app::snmp_trap(),
+        app::syslog(),
+        app::radius(),
+        app::tftp(),
+        app::tftp_data(),
+        app::tftp_ack(),
+        app::tftp_error(),
         payload::payload(),
         payload::raw(),
     ]

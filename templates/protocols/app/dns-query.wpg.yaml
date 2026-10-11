@@ -1,0 +1,40 @@
+# DNS (RFC 1035): a recursive A query for example.com (names are length-prefixed labels)
+schema: 1
+
+meta:
+  name: dns-query
+  descriptions:
+    ja: "DNS (RFC 1035): example.com の A レコードを問い合わせる再帰クエリ"
+    en: "DNS (RFC 1035): a recursive A query for example.com"
+  tags: ["protocol:dns", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+variables:
+  - name: query_id
+    default: 0x1234
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.53
+  - protocol: udp
+    fields:
+      src_port: 53000
+      dst_port: 53
+  - protocol: dns
+    fields:
+      id: ${query_id}
+      qr: query
+      rd: 1
+      qdcount: 1
+      # question: 07 "example" 03 "com" 00, QTYPE A (1), QCLASS IN (1)
+      sections: "07 65 78 61 6d 70 6c 65 03 63 6f 6d 00  00 01  00 01"
+
+tx:
+  count: 1

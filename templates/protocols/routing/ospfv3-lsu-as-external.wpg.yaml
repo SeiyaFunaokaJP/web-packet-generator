@@ -1,0 +1,43 @@
+# OSPFv3 (RFC 5340): a Link State Update carrying an AS-External-LSA
+schema: 1
+
+meta:
+  name: ospfv3-lsu-as-external-lsa
+  descriptions:
+    ja: "OSPFv3 (RFC 5340): AS-External-LSA (2001:db8:2::/64、E2 メトリック) を運ぶ Link State Update"
+    en: "OSPFv3 (RFC 5340): a Link State Update carrying an AS-External-LSA (2001:db8:2::/64, E2)"
+  tags: ["protocol:ospfv3", "protocol:ospfv3_lsu", "protocol:ospfv3_lsa", "protocol:ospfv3_as_external_lsa", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:05" # AllSPFRouters ff02::5
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::5
+      hop_limit: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv3
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv3_lsu
+    fields:
+      num_lsas: 1
+  - protocol: ospfv3_lsa
+    fields:
+      ls_age: 0 # the Auto LSA checksum is exact for LS age 0
+      link_state_id: 2
+      advertising_router: 192.0.2.1
+  - protocol: ospfv3_as_external_lsa
+    fields:
+      flags: e
+      metric: 20
+      prefix_length: 64
+      address_prefix: "20 01 0d b8 00 02 00 00" # 2001:db8:2::/64
+
+tx:
+  count: 1

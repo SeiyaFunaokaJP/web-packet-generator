@@ -1,0 +1,40 @@
+# OSPFv2 (RFC 2328): a Hello to AllSPFRouters (IPv4 protocol 89)
+schema: 1
+
+meta:
+  name: ospfv2-hello
+  descriptions:
+    ja: "OSPFv2 (RFC 2328): AllSPFRouters 宛ての Hello (DR 選出済み、隣接ルータ 1 台)"
+    en: "OSPFv2 (RFC 2328): a Hello to AllSPFRouters with an elected DR and one neighbor"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_hello", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:05" # AllSPFRouters 224.0.0.5
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.5
+      ttl: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+      area_id: 0.0.0.0
+  - protocol: ospfv2_hello
+    fields:
+      network_mask: 255.255.255.0
+      hello_interval: 10
+      options: e
+      router_priority: 1
+      router_dead_interval: 40
+      designated_router: 192.0.2.1
+      backup_designated_router: 192.0.2.2
+      neighbors: [192.0.2.2]
+
+tx:
+  count: 1

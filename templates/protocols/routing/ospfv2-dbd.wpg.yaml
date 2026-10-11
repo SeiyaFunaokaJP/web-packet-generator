@@ -1,0 +1,36 @@
+# OSPFv2 (RFC 2328): a Database Description packet listing one LSA header
+schema: 1
+
+meta:
+  name: ospfv2-dbd
+  descriptions:
+    ja: "OSPFv2 (RFC 2328): LSA ヘッダを 1 つ列挙する Database Description (マスタ、続きあり)"
+    en: "OSPFv2 (RFC 2328): a Database Description (master, more) listing one LSA header"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_dbd", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      ttl: 1
+      dscp: 48 # CS6 (network control)
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv2_dbd
+    fields:
+      interface_mtu: 1500
+      flags: more|master
+      dd_sequence: 0x1001
+      lsa_headers:
+        - { ls_age: 1, options: 0x02, ls_type: 1, link_state_id: 192.0.2.1, advertising_router: 192.0.2.1, ls_sequence: 0x80000001, ls_checksum: 0xb1b3, length: 48 }
+
+tx:
+  count: 1

@@ -1,0 +1,33 @@
+# MLDv1 (RFC 2710): a General Query to ff02::1 with a Hop-by-Hop Router Alert
+schema: 1
+
+meta:
+  name: mldv1-query
+  descriptions:
+    ja: "MLDv1 (RFC 2710): Hop-by-Hop Router Alert 付きで ff02::1 宛の一般クエリ"
+    en: "MLDv1 (RFC 2710): a General Query to ff02::1 with a Hop-by-Hop Router Alert"
+  tags: ["protocol:ipv6_hopopts", "protocol:icmpv6", "protocol:mld", "layer:l3", multicast, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "33:33:00:00:00:01"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: fe80::1
+      dst: ff02::1
+      hop_limit: 1
+  - protocol: ipv6_hopopts
+    fields:
+      options: "05 02 00 00 01 00" # Router Alert (MLD) + PadN
+  - protocol: icmpv6 # type: auto -> 130 (query) from mld
+  - protocol: mld
+    fields:
+      max_resp_delay: 10000 # ms
+      multicast_address: "::"
+
+tx:
+  count: 1

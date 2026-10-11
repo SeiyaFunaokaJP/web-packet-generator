@@ -262,7 +262,8 @@ proptest! {
         ext in ext_layers(),
         is_tcp in any::<bool>(),
         data in proptest::collection::vec(any::<u8>(), 0..48),
-        (sp, dp) in (any::<u16>(), any::<u16>()),
+        // Dynamic-range dst ports carry no `next` binding, so the payload stays `raw`.
+        (sp, dp) in (any::<u16>(), 49152u16..=65535),
     ) {
         let mut layers = vec![Layer::new("ethernet2"), ip];
         layers.extend(ext);

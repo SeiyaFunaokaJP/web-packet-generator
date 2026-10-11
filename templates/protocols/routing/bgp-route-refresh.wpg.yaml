@@ -1,0 +1,40 @@
+# BGP (RFC 2918): a ROUTE-REFRESH for IPv4 unicast
+schema: 1
+
+meta:
+  name: bgp-route-refresh
+  descriptions:
+    ja: "BGP (RFC 2918): IPv4 ユニキャストの ROUTE-REFRESH"
+    en: "BGP (RFC 2918): a ROUTE-REFRESH for IPv4 unicast"
+  tags: ["protocol:bgp", "protocol:bgp_route_refresh", "layer:l4", routing, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      ttl: 1 # eBGP peers are directly connected
+      dscp: 48
+      flags: df
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 179
+      seq: 1001
+      ack: 5001
+      flags: psh|ack
+  - protocol: bgp
+  - protocol: bgp_route_refresh
+    fields:
+      afi: 1
+      subtype: normal
+      safi: 1
+
+tx:
+  count: 1

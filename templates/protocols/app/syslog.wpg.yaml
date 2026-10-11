@@ -1,0 +1,31 @@
+# Syslog (RFC 5424 over UDP 514): a <PRI>-prefixed log line (facility 4, severity 2)
+schema: 1
+
+meta:
+  name: syslog
+  descriptions:
+    ja: "Syslog (RFC 5424, UDP 514): <PRI> 付きのログ行 (ファシリティ 4, 重大度 2)"
+    en: "Syslog (RFC 5424 over UDP 514): a <PRI>-prefixed log line (facility 4, severity 2)"
+  tags: ["protocol:syslog", "layer:l4", app, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.114
+  - protocol: udp
+    fields:
+      src_port: 514
+      dst_port: 514
+  - protocol: syslog
+    fields:
+      message: '"<34>1 2026-10-11T22:14:15.003Z host1 su - ID47 - su root failed on /dev/pts/8"'
+
+tx:
+  count: 1

@@ -332,10 +332,10 @@ wpg bench   [--backend ...]                                # 送出性能計測
 ### M4: GUI MVP（4–6 週）
 - [x] Leptos プロジェクト、Tailwind、ルーティング、i18n、テーマ
 - [x] 認証画面・セッション処理
-- [ ] ビルダー: プロトコルパレット / レイヤスタック D&D / フィールドエディタ (型別 UI) / Auto-Manual トグル
-- [ ] Hex ダンプ + ツリーの双方向ハイライト、Hex 直接編集
-- [ ] ブラウザ内 WASM プレビュー (`wpg-core`)、サーバ結果との一致テスト
-- [ ] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示
+- [x] ビルダー: プロトコルパレット / レイヤスタック D&D / フィールドエディタ (型別 UI) / Auto-Manual トグル
+- [x] Hex ダンプ + ツリーの双方向ハイライト、Hex 直接編集
+- [x] ブラウザ内 WASM プレビュー (`wpg-core`)、サーバ結果との一致テスト（実行時に `POST /api/render` と突合しバッジ表示）
+- [ ] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示（UI・展開件数・サイズ見積は実装済み。所要時間見積は未実装）
 - [x] ジョブ画面: ストリーム混合、レート設定、開始/停止、リアルタイム統計グラフ
 - [x] テンプレート画面: 一覧 / 検索 / タグ / import / export / 複製
 - [x] 設定画面
@@ -352,13 +352,14 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] pcap/pcapng import → テンプレ化、Hex 貼付け import
 
 ### M6: P1 プロトコル群（4–6 週、並行可）
-- [ ] LLDP / CDP / STP,RSTP,MSTP / LACP / EAPOL / PPPoE / PPP
-- [ ] VXLAN / GRE / NVGRE / MPLS / MPLS-in-UDP / L2TP / GTP-U / Geneve / IP-in-IP
-- [ ] OSPFv2/v3 / BGP / RIP / RIPng / EIGRP(基本)
-- [ ] VRRP / HSRP / GLBP
-- [ ] IGMP / MLD / PIM
-- [ ] DHCPv4/v6 / DNS / NTP / SNMP / Syslog / RADIUS / TFTP
-- [ ] 各プロトコルのサンプルテンプレ + golden pcap + ドキュメント (自動生成分 + 補足)
+- [x] LLDP / CDP / STP,RSTP,MSTP / LACP / EAPOL / PPPoE / PPP（RST/MSTP 拡張部は opaque 領域で近似）
+- [x] VXLAN / GRE / NVGRE / MPLS / MPLS-in-UDP / L2TP / GTP-U / Geneve / IP-in-IP
+- [x] OSPFv2/v3 / BGP / RIP / RIPng / EIGRP(基本)（制約: OSPFv2 チェックサムは null 認証時のみ正確、LSA は 1 LSU に 1 つ、BGP UPDATE の長さ 2 種は手動）
+- [x] VRRP / HSRP / GLBP（制約: VRRPv2/v3・HSRPv1/v2 は同一キー共有のため parse は前者に寄る）
+- [x] IGMP / MLD / PIM（制約: レコード/ソース数は手動、PIM は IPv4 のみチェックサム自動）
+- [x] DHCPv4/v6 / DNS / NTP / SNMP / Syslog / RADIUS / TFTP（制約: DNS セクション・TFTP 文字列は opaque、SNMP は短形式長 <128 octets、RADIUS Authenticator は手動）
+- [ ] 各プロトコルのサンプルテンプレ + golden pcap + ドキュメント (自動生成分 + 補足)（サンプルテンプレ・golden バイトテスト・tshark 突合・フィールド説明 ja/en は済。ドキュメント補足ページは未）
+- [ ] wpg-core 拡張で上記の近似を解消: 先頭ニブル/残長による demux、リスト件数の Auto、NUL 終端文字列型、チェックサム範囲の除外指定、送信元ポートでの demux
 
 ### M7: P2 OSI / マニアック領域（4–6 週）
 - [ ] 802.2 LLC (0xFE) / SNAP 上の OSI カプセル化基盤、NSAP 型とエディタ

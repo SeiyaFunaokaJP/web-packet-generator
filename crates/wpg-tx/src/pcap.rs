@@ -236,6 +236,7 @@ mod tests {
         assert_eq!(b.name(), "pcap");
     }
 
+    #[cfg(target_os = "linux")]
     fn broadcast_frame() -> Frame {
         let mut v = vec![0xff; 6];
         v.extend_from_slice(&[0x02, 0, 0, 0, 0, 1]);

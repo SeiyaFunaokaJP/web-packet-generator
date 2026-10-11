@@ -103,14 +103,16 @@ fn ipv4() -> impl Strategy<Value = Layer> {
         })
 }
 
+// Dynamic-range dst ports (49152..) carry no `next` binding, so a following
+// `raw` layer is not re-parsed as some application protocol.
 fn udp() -> impl Strategy<Value = Layer> {
-    (any::<u16>(), any::<u16>())
+    (any::<u16>(), 49152u16..=65535)
         .prop_map(|(s, d)| Layer::new("udp").with("src_port", s).with("dst_port", d))
 }
 
 fn tcp() -> impl Strategy<Value = Layer> {
     (
-        (any::<u16>(), any::<u16>(), any::<u32>(), any::<u32>()),
+        (any::<u16>(), 49152u16..=65535, any::<u32>(), any::<u32>()),
         (0u8..16, any::<u8>(), any::<u16>(), any::<u16>()),
         tcp_options(),
     )

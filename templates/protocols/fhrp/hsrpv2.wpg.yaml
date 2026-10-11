@@ -1,0 +1,40 @@
+# HSRPv2: a Group State TLV Hello with text authentication to 224.0.0.102, UDP 1985
+schema: 1
+
+meta:
+  name: hsrpv2
+  descriptions:
+    ja: "HSRPv2: Group State TLV とテキスト認証 TLV 付きの Hello (224.0.0.102、UDP 1985)"
+    en: "HSRPv2: a Hello with Group State and Text Authentication TLVs to 224.0.0.102 (UDP 1985)"
+  tags: ["protocol:hsrpv2", "layer:l4", fhrp, sample, "parse-as:hsrpv2=hsrp", "opaque-inner:hsrpv2"]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:66"
+      src: "00:00:0c:9f:f0:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.2
+      dst: 224.0.0.102
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 1985
+      dst_port: 1985 # shared with HSRPv1, which decodes it (v2 has its own port only over IPv6)
+  - protocol: hsrpv2
+    fields:
+      tlvs:
+        - group_state:
+            op_code: 0 # Hello
+            state: 6 # Active
+            group: 1
+            identifier: "02:00:00:00:00:02"
+            priority: 110
+            virtual_ip: "c0 00 02 fe 00 00 00 00 00 00 00 00 00 00 00 00" # 192.0.2.254, zero padded
+        - text_auth: "63 69 73 63 6f 00 00 00" # "cisco"
+
+tx:
+  count: 1

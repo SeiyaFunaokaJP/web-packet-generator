@@ -1177,6 +1177,7 @@ mod tests {
 
     #[test]
     fn lifecycle_pause_resume_stop() {
+        let started = Instant::now();
         let h = TxJob::start(
             null(),
             endless(),
@@ -1212,13 +1213,24 @@ mod tests {
         let r = h.stop_and_wait();
         assert!(t0.elapsed() < Duration::from_millis(500));
         assert_eq!(r.state, JobState::Finished(FinishReason::Stopped));
-        // ~2000 pps over ~200 ms active time, generously bounded.
+        // The sleeps above are minimums (CI runners oversleep), so bound against
+        // the measured times: the >=160 ms pause is excluded from `active`, and
+        // ~2000 pps over `active`, generously bounded.
+        let wall = started.elapsed();
         assert!(
-            (200..=700).contains(&r.stats.packets),
-            "{}",
-            r.stats.packets
+            r.active + Duration::from_millis(100) <= wall,
+            "{:?} vs {wall:?}",
+            r.active
         );
-        assert!(r.active < Duration::from_millis(400));
+        let expected = 2000.0 * r.active.as_secs_f64();
+        #[allow(clippy::cast_precision_loss)]
+        let got = r.stats.packets as f64;
+        assert!(
+            got >= expected * 0.5 && got <= expected * 1.5 + 50.0,
+            "{} packets in {:?}",
+            r.stats.packets,
+            r.active
+        );
     }
 
     #[test]

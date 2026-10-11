@@ -1,0 +1,36 @@
+# HSRPv1 (RFC 2281): an Active router Hello to 224.0.0.2, UDP 1985
+schema: 1
+
+meta:
+  name: hsrpv1
+  descriptions:
+    ja: "HSRPv1 (RFC 2281): Active ルータから 224.0.0.2 への Hello (UDP 1985)"
+    en: "HSRPv1 (RFC 2281): a Hello from the Active router to 224.0.0.2 (UDP 1985)"
+  tags: ["protocol:hsrp", "layer:l4", fhrp, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:02"
+      src: "00:00:0c:07:ac:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.2
+      dst: 224.0.0.2
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 1985
+      dst_port: 1985
+  - protocol: hsrp
+    fields:
+      op_code: hello
+      state: active
+      priority: 110
+      group: 1
+      virtual_ip: 192.0.2.254
+
+tx:
+  count: 1

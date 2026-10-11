@@ -482,6 +482,8 @@ fn json_schema_matches_golden() {
             path.display()
         )
     });
+    // A Windows checkout may convert the golden file to CRLF.
+    let want = want.replace("\r\n", "\n");
     assert!(
         want == text,
         "docs/schema/template.schema.json is stale; run WPG_UPDATE_GOLDEN=1 cargo test -p wpg-template --test templates"

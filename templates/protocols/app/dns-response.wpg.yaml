@@ -1,0 +1,45 @@
+# DNS (RFC 1035): an authoritative A response for example.com using a compressed owner name
+schema: 1
+
+meta:
+  name: dns-response
+  descriptions:
+    ja: "DNS (RFC 1035): 圧縮ポインタで名前を参照する example.com の権威 A 応答"
+    en: "DNS (RFC 1035): an authoritative A response for example.com with a compressed owner name"
+  # UDP is demultiplexed on the destination port only, so a reply from port 53
+  # does not decode back past UDP.
+  tags: ["protocol:dns", "layer:l4", app, sample, response, "opaque-inner:udp"]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.53
+      dst: 192.0.2.1
+  - protocol: udp
+    fields:
+      src_port: 53
+      dst_port: 53000
+  - protocol: dns
+    fields:
+      id: 0x1234
+      qr: response
+      aa: 1
+      rd: 1
+      ra: 1
+      rcode: no_error
+      qdcount: 1
+      ancount: 1
+      # question (example.com A IN), then the answer: name pointer c0 0c -> offset 12,
+      # TYPE A, CLASS IN, TTL 3600, RDLENGTH 4, RDATA 192.0.2.10
+      sections: >-
+        07 65 78 61 6d 70 6c 65 03 63 6f 6d 00 00 01 00 01
+        c0 0c 00 01 00 01 00 00 0e 10 00 04 c0 00 02 0a
+
+tx:
+  count: 1

@@ -1,0 +1,33 @@
+# PIMv2 (RFC 7761): a Hello to ALL-PIM-ROUTERS (224.0.0.13) with the usual options
+schema: 1
+
+meta:
+  name: pim-hello
+  descriptions:
+    ja: "PIMv2 (RFC 7761): ALL-PIM-ROUTERS (224.0.0.13) 宛の Hello (Holdtime / DR Priority / Generation ID)"
+    en: "PIMv2 (RFC 7761): a Hello to ALL-PIM-ROUTERS (224.0.0.13) with Holdtime, DR Priority and Generation ID"
+  tags: ["protocol:pim", "protocol:pim_hello", "layer:l3", multicast, sample]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:0d"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.13
+      ttl: 1
+  - protocol: pim # type: auto -> 0 (Hello)
+  - protocol: pim_hello
+    fields:
+      options:
+        - holdtime: 105
+        - lan_prune_delay: { propagation_delay: 500, override_interval: 2500 }
+        - dr_priority: 1
+        - generation_id: 0x12345678
+
+tx:
+  count: 1

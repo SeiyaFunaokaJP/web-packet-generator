@@ -696,3 +696,218 @@ ui-bld-help-redo = Redo
 ui-bld-help-hex = Type hex over the caret byte
 ui-bld-help-caret = Move the hex caret
 ui-bld-suggest-prev = Add layer above
+
+# --- P1 redundancy / multicast protocol field descriptions ---
+vrrp-version = VRRP version (2 = RFC 3768, 3 = RFC 5798).
+vrrp-type = VRRP packet type (1 = Advertisement).
+vrrp-vrid = Virtual Router Identifier.
+vrrp-priority = Sending router priority (255 = address owner, 0 = stop participating).
+vrrp-count = Number of virtual addresses in the advertisement (Auto for IPv4).
+vrrp-auth-type = VRRPv2 authentication type (0 = none, 1 = simple text, 2 = IP AH).
+vrrp-adver-int = VRRPv2 advertisement interval, in seconds.
+vrrp-max-adver-int = VRRPv3 maximum advertisement interval, in centiseconds.
+vrrp-checksum = Internet checksum over the VRRP message (VRRPv3 includes the IP pseudo header) (Auto).
+vrrp-addresses = Virtual router addresses.
+vrrp-auth-data = VRRPv2 authentication data (8 octets).
+hsrp-version = HSRP version (0 for HSRPv1).
+hsrp-op-code = HSRP operation (0 = Hello, 1 = Coup, 2 = Resign, 3 = Advertise).
+hsrp-state = Sender state (1 = Learn, 2 = Listen, 4 = Speak, 8 = Standby, 16 = Active).
+hsrp-hello-time = Interval between Hello messages, in seconds.
+hsrp-hold-time = Time a Hello stays valid, in seconds.
+hsrp-priority = Router priority within the group.
+hsrp-group = Standby group number.
+hsrp-auth-data = Clear-text authentication password (8 octets, default "cisco").
+hsrp-virtual-ip = Virtual IPv4 address of the group.
+hsrpv2-tlvs = HSRPv2 TLVs (Group State, Interface State, Text / MD5 Authentication; 8-bit type and length).
+glbp-version = GLBP version (1).
+glbp-group = GLBP group number.
+glbp-owner-id = MAC address of the sending router.
+glbp-tlvs = GLBP TLVs (Hello, Request/Response, Authentication; length includes the header).
+igmp-type = IGMP message type (Auto from the body: 0x11 query, 0x12 / 0x16 report, 0x17 leave, 0x22 v3 report).
+igmp-max-resp-code = Maximum response time / code in 1/10 s (queries; zero in reports).
+igmp-checksum = Internet checksum over the whole IGMP message (Auto).
+igmp-group = Multicast group address (0.0.0.0 in a general query).
+igmp-s-flag = Suppress router-side processing flag.
+igmp-qrv = Querier's Robustness Variable.
+igmp-qqic = Querier's Query Interval Code.
+igmp-num-sources = Number of source addresses.
+igmp-sources = Source addresses.
+igmp-num-records = Number of group records.
+igmp-records = Group records (record type, aux data length, sources, multicast address).
+mld-max-resp = Maximum response delay / code, in milliseconds.
+mld-address = IPv6 multicast address (:: in a general query).
+pim-version = PIM version (2).
+pim-type = PIM message type (Auto from the body: 0 Hello, 1 Register, 3 Join/Prune).
+pim-checksum = Internet checksum (whole message; Register: first 8 octets only) (Auto).
+pim-hello-options = PIM Hello options (Holdtime, LAN Prune Delay, DR Priority, Generation ID, Address List).
+pim-addr-family = Address family of the encoded address (1 = IPv4).
+pim-upstream-neighbor = Upstream neighbor address the Join/Prune is addressed to.
+pim-num-groups = Number of group sets.
+pim-holdtime = Time the Join/Prune state is kept, in seconds.
+pim-groups = Group sets (encoded group, joined and pruned encoded sources).
+pim-register-border = Border bit (sender is a PIM Multicast Border Router).
+pim-register-null = Null-Register bit (no encapsulated data packet).
+
+# --- P1 application protocol field descriptions ---
+dhcp-op = BOOTP message op code (1 = BOOTREQUEST, 2 = BOOTREPLY).
+dhcp-htype = Hardware address type (1 = Ethernet).
+dhcp-hlen = Hardware address length, in octets (6 for Ethernet).
+dhcp-hops = Relay hop count, incremented by each relay agent.
+dhcp-xid = Transaction ID chosen by the client.
+dhcp-secs = Seconds elapsed since the client began acquisition.
+dhcp-flags = BOOTP flags (bit 15 = broadcast reply requested).
+dhcp-ciaddr = Client IP address (when already bound).
+dhcp-yiaddr = "Your" (client) IP address assigned by the server.
+dhcp-siaddr = Next server IP address (boot server).
+dhcp-giaddr = Relay agent (gateway) IP address; non-zero when relayed.
+dhcp-chaddr = Client hardware (MAC) address; followed by 10 octets of padding.
+dhcp-sname = Optional server host name (64 octets, NUL padded).
+dhcp-file = Boot file name (128 octets, NUL padded).
+dhcp-magic-cookie = DHCP magic cookie (0x63825363).
+dhcp-options = DHCP options (8-bit code / length; Pad, End, Message Type, Relay Agent Information, ...).
+dhcpv6-msg-type = DHCPv6 message type (Solicit, Advertise, Request, Reply, Relay-Forward, ...).
+dhcpv6-transaction-id = 24-bit transaction ID.
+dhcpv6-options = DHCPv6 options (16-bit code / length; Client ID, IA_NA, Relay Message, ...).
+dhcpv6-hop-count = Number of relay agents that have relayed this message.
+dhcpv6-link-address = Address identifying the client's link (relay).
+dhcpv6-peer-address = Address of the client or relay the message came from.
+dns-id = Query identifier, copied into the response.
+dns-qr = Query (0) or response (1).
+dns-opcode = Kind of query (0 = standard query, 4 = NOTIFY, 5 = UPDATE).
+dns-aa = Authoritative answer flag.
+dns-tc = Truncation flag.
+dns-rd = Recursion desired flag.
+dns-ra = Recursion available flag.
+dns-z = Reserved bit (must be 0).
+dns-ad = Authentic data flag (DNSSEC).
+dns-cd = Checking disabled flag (DNSSEC).
+dns-rcode = Response code (0 = NOERROR, 3 = NXDOMAIN, ...).
+dns-qdcount = Number of entries in the question section.
+dns-ancount = Number of resource records in the answer section.
+dns-nscount = Number of resource records in the authority section.
+dns-arcount = Number of resource records in the additional section.
+dns-sections = Question / answer / authority / additional sections (length-prefixed label names); opaque octets.
+ntp-li = Leap indicator (3 = clock unsynchronized).
+ntp-version = NTP version number (4).
+ntp-mode = Association mode (3 = client, 4 = server, 5 = broadcast).
+ntp-stratum = Stratum (0 = unspecified, 1 = primary reference, 2-15 = secondary).
+ntp-poll = Maximum poll interval, log2 seconds (signed).
+ntp-precision = Clock precision, log2 seconds (signed).
+ntp-root-delay = Round-trip delay to the reference clock (16.16 fixed point seconds).
+ntp-root-dispersion = Dispersion to the reference clock (16.16 fixed point seconds).
+ntp-reference-id = Reference ID (ASCII code for stratum 1, else an IPv4 address or hash).
+ntp-reference-ts = Time the system clock was last set (64-bit NTP timestamp).
+ntp-origin-ts = Client transmit time echoed by the server (64-bit NTP timestamp).
+ntp-receive-ts = Time the request arrived at the server (64-bit NTP timestamp).
+ntp-transmit-ts = Time the packet left the sender (64-bit NTP timestamp).
+ntp-extensions = Extension fields and MAC; opaque octets.
+snmp-tag = BER tag octet (0x30 SEQUENCE, 0x02 INTEGER, 0x04 OCTET STRING).
+snmp-msg-length = BER length of the SNMP message SEQUENCE (Auto; short form, below 128).
+snmp-version-length = BER length of the version INTEGER (1).
+snmp-version = SNMP version (0 = v1, 1 = v2c).
+snmp-community-length = BER length of the community string, in octets.
+snmp-community = Community string (e.g. "public").
+snmp-pdu-type = PDU tag (0xa0 GetRequest, 0xa2 Response, 0xa4 v1 Trap, 0xa7 SNMPv2-Trap, ...).
+snmp-pdu-length = BER length of the PDU contents (Auto; short form, below 128).
+snmp-pdu-body = PDU contents as BER TLVs: request-id, error-status, error-index and the variable-bindings SEQUENCE.
+snmp-trap-body = Trap contents as BER TLVs: enterprise, agent-addr, generic-trap, specific-trap, time-stamp and variable bindings.
+syslog-message = Syslog message text, starting with <PRI> (facility * 8 + severity).
+radius-code = RADIUS packet type (Access-Request, Access-Accept, Accounting-Request, ...).
+radius-identifier = Identifier matching requests and replies.
+radius-length = Length of the whole RADIUS packet, in octets (Auto).
+radius-authenticator = 16-octet Request / Response Authenticator (Manual).
+radius-attributes = RADIUS attributes (8-bit type, 8-bit length including the header).
+tftp-opcode = TFTP opcode (1 = RRQ, 2 = WRQ, 3 = DATA, 4 = ACK, 5 = ERROR, 6 = OACK).
+tftp-body = NUL-terminated filename, mode and option strings; opaque octets.
+tftp-block = Block number (starting at 1).
+tftp-data = Data octets (512 per block; a shorter block ends the transfer).
+tftp-error-code = TFTP error code (1 = file not found, 2 = access violation, ...).
+tftp-error-message = NUL-terminated error message; opaque octets.
+
+# --- P1 routing protocol field descriptions ---
+ospf-version = OSPF version (2 = OSPFv2, 3 = OSPFv3).
+ospf-type = OSPF packet type (Hello / DB Description / LS Request / LS Update / LS Ack; Auto from the next layer).
+ospf-packet-length = Length of the OSPF packet including the header, in octets (Auto).
+ospf-router-id = Router ID of the sending router.
+ospf-area-id = Area the packet belongs to (0.0.0.0 = backbone).
+ospf-checksum = Internet checksum over the OSPF packet (Auto; exact when the authentication field is zero).
+ospf-au-type = Authentication type (0 = null, 1 = simple password, 2 = cryptographic).
+ospf-authentication = 64-bit authentication field (password, or key id / sequence for cryptographic auth).
+ospf-network-mask = Network mask of the interface or advertised network.
+ospf-hello-interval = Interval between Hello packets, in seconds.
+ospf-options = Optional capabilities (E, MC, N/P, L, DC, O, DN bits).
+ospf-router-priority = Router priority for the DR election (0 = never DR).
+ospf-router-dead-interval = Seconds without a Hello before the neighbor is declared down.
+ospf-designated-router = Designated Router (0.0.0.0 = none).
+ospf-backup-designated-router = Backup Designated Router (0.0.0.0 = none).
+ospf-neighbors = Router IDs of the neighbors seen on the link.
+ospf-interface-mtu = Largest IP datagram the interface can send without fragmentation.
+ospf-dbd-flags = Database Description flags (I = init, M = more, MS = master).
+ospf-dd-sequence = Database Description sequence number.
+ospf-lsa-headers = LSA headers (20 octets each; checksums and lengths are Manual).
+ospf-lsr-requests = Requested LSAs (LS type, Link State ID, advertising router).
+ospf-num-lsas = Number of LSAs in the update.
+ospf-ls-age = Time since the LSA was originated, in seconds (keep 0 for an exact Auto checksum).
+ospf-ls-type = LSA type (Auto from the LSA body layer).
+ospf-link-state-id = Link State ID identifying the described part of the network.
+ospf-advertising-router = Router ID of the router that originated the LSA.
+ospf-ls-sequence = LSA sequence number (0x80000001 = initial).
+ospf-ls-checksum = Fletcher checksum of the LSA (Auto; exact when LS age is 0).
+ospf-lsa-length = Length of the LSA including its header, in octets (Auto).
+ospf-router-lsa-flags = Router-LSA flags (V = virtual link endpoint, E = ASBR, B = ABR).
+ospf-num-links = Number of router links described.
+ospf-router-links = Router links (link ID, link data, type, TOS count, metric).
+ospf-attached-routers = Router IDs of the routers attached to the network.
+ospf-metric = Cost of the route.
+ospf-external-e = External metric type (1 = type 2, 0 = type 1).
+ospf-forwarding-address = Address traffic for the destination is forwarded to (0.0.0.0 = the ASBR).
+ospf-external-route-tag = 32-bit tag carried with the external route.
+ospfv3-checksum = Internet checksum over the OSPFv3 packet with the IPv6 pseudo header (Auto).
+ospfv3-instance-id = Instance ID (separates OSPFv3 instances on one link).
+ospfv3-interface-id = Interface ID of the sending interface.
+ospfv3-options = OSPFv3 options (V6, E, N, R, DC, AF bits).
+ospfv3-ls-type = LSA function code with U / S scope bits (Auto from the LSA body layer).
+ospfv3-router-links = Router interfaces (type, metric, interface IDs, neighbor router ID).
+ospfv3-prefix-length = Prefix length in bits.
+ospfv3-prefix-options = Prefix options (NU, LA, P, DN bits).
+ospfv3-address-prefix = Address prefix, padded to a multiple of 4 octets.
+ospfv3-external-flags = AS-External-LSA flags (E = type 2 metric, F = forwarding address present, T = route tag present).
+ospfv3-referenced-ls-type = LS type of the referenced LSA.
+ospfv3-link-local-address = Link-local address of the interface.
+ospfv3-num-prefixes = Number of prefixes that follow.
+ospfv3-prefixes = Prefix entries (length, options, metric / reserved, address prefix); opaque octets.
+ospfv3-referenced-link-state-id = Link State ID of the referenced LSA.
+ospfv3-referenced-advertising-router = Advertising router of the referenced LSA.
+bgp-marker = 16-octet marker (all ones).
+bgp-length = Length of the BGP message including the header, in octets (Auto).
+bgp-type = BGP message type (OPEN / UPDATE / NOTIFICATION / KEEPALIVE / ROUTE-REFRESH; Auto from the next layer).
+bgp-version = BGP version (4).
+bgp-my-as = Autonomous system number of the sender (23456 = AS_TRANS for 4-octet AS).
+bgp-hold-time = Proposed hold time, in seconds (0 or at least 3).
+bgp-identifier = BGP identifier (router ID) of the sender.
+bgp-opt-params-length = Length of the optional parameters, in octets (Auto).
+bgp-opt-params = Optional parameters (type 2 = capabilities).
+bgp-withdrawn-routes-length = Length of the withdrawn routes, in octets (Manual).
+bgp-withdrawn-routes = Withdrawn routes as (prefix length, prefix) octets.
+bgp-total-path-attribute-length = Length of the path attributes, in octets (Manual).
+bgp-path-attributes = Path attributes (flags + type code, 8-bit length).
+bgp-nlri = Network Layer Reachability Information as (prefix length, prefix) octets.
+bgp-error-code = NOTIFICATION error code.
+bgp-error-subcode = NOTIFICATION error subcode.
+bgp-error-data = Diagnostic data of the NOTIFICATION.
+bgp-afi = Address Family Identifier (1 = IPv4, 2 = IPv6).
+bgp-rr-subtype = ROUTE-REFRESH subtype (0 = normal, 1 = BoRR, 2 = EoRR).
+bgp-safi = Subsequent Address Family Identifier (1 = unicast, 2 = multicast).
+rip-command = RIP command (1 = request, 2 = response).
+rip-version = RIP version (1 or 2; RIPng uses 1).
+rip-entries = Route entries (AFI, route tag, address, mask, next hop, metric).
+ripng-entries = Route table entries (prefix, route tag, prefix length, metric; 0xff = next hop).
+eigrp-version = EIGRP header version (2).
+eigrp-opcode = EIGRP opcode (Update / Query / Reply / Hello / SIA-Query / SIA-Reply).
+eigrp-checksum = Internet checksum over the EIGRP packet (Auto).
+eigrp-flags = EIGRP flags (Init, Conditional Receive, Restart, End of Table).
+eigrp-sequence = Sequence number for reliable delivery.
+eigrp-acknowledge = Acknowledged sequence number (0 = none).
+eigrp-virtual-router-id = Virtual router ID (0 = unicast address family).
+eigrp-autonomous-system = EIGRP autonomous system number.
+eigrp-tlvs = EIGRP TLVs (16-bit type, 16-bit length including the header).

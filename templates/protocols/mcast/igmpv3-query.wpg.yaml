@@ -1,0 +1,36 @@
+# IGMPv3 (RFC 3376): a Group-and-Source-Specific Query with one source
+schema: 1
+
+meta:
+  name: igmpv3-query
+  descriptions:
+    ja: "IGMPv3 (RFC 3376): 送信元 1 つのグループ・送信元指定クエリ"
+    en: "IGMPv3 (RFC 3376): a Group-and-Source-Specific Query with one source"
+  tags: ["protocol:igmp", "protocol:igmpv3_query", "layer:l3", multicast, sample, "parse-as:igmpv3_query=igmpv2"]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:01:01:01"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 239.1.1.1
+      ttl: 1
+      options:
+        - router_alert: 0 # RFC 2113; ihl / padding stay automatic
+  - protocol: igmp # type 0x11 is shared with v1/v2 queries, which decode it
+    fields:
+      max_resp_code: 10
+  - protocol: igmpv3_query
+    fields:
+      group: 239.1.1.1
+      qrv: 2
+      qqic: 125
+      sources: [192.0.2.10] # num_sources: auto -> 1
+
+tx:
+  count: 1

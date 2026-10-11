@@ -1,0 +1,33 @@
+# TFTP DATA (RFC 1350): block 1 of a transfer, sent between the two transfer ports (TIDs)
+schema: 1
+
+meta:
+  name: tftp-data
+  descriptions:
+    ja: "TFTP DATA (RFC 1350): 転送用ポート (TID) 間で送られるブロック 1"
+    en: "TFTP DATA (RFC 1350): block 1 of a transfer, sent between the two transfer ports (TIDs)"
+  # The transfer uses ephemeral ports, not 69, so nothing after UDP decodes back.
+  tags: ["protocol:tftp_data", "layer:l4", app, sample, "opaque-inner:udp"]
+  author: wpg
+  created: 2026-10-11
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.69
+      dst: 192.0.2.1
+  - protocol: udp
+    fields:
+      src_port: 51000 # server TID
+      dst_port: 50069 # client TID
+  - protocol: tftp_data
+    fields:
+      block: 1
+      data: '"hello, tftp\n"'
+
+tx:
+  count: 1

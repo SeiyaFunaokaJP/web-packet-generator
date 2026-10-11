@@ -55,7 +55,11 @@ pub fn tcp_options() -> FieldType {
 ///
 /// The `next` binding demultiplexes well-known tunnelling ports on the
 /// **destination** port (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
-/// Geneve 6081); unknown ports have no default, so an ordinary UDP payload still
+/// Geneve 6081), routing protocols (RIP 520, `RIPng` 521), the first-hop
+/// redundancy ports (HSRP 1985, `HSRPv2` over IPv6 2029, GLBP 3222; UDP 1985
+/// decodes as `HSRPv1`) and the P1 application protocols (DNS 53, `DHCPv4` 67/68,
+/// TFTP 69, NTP 123, SNMP 161/162, Syslog 514, `DHCPv6` 546/547, RADIUS
+/// 1812/1813); unknown ports have no default, so an ordinary UDP payload still
 /// parses as `raw`.
 #[must_use]
 pub fn udp() -> ProtocolDef {
@@ -70,11 +74,30 @@ pub fn udp() -> ProtocolDef {
             checksum: uint(16), auto = checksum(internet_pseudo, header_payload, nonzero);
         },
         next: dst_port {
+            520 => "rip",
+            521 => "ripng",
             1701 => "l2tpv2",
+            1985 => "hsrp",
+            1985 => "hsrpv2",
+            2029 => "hsrpv2",
             2152 => "gtpu",
+            3222 => "glbp",
             4789 => "vxlan",
             6081 => "geneve",
             6635 => "mpls",
+            // P1 application protocols.
+            53 => "dns",
+            67 => "dhcpv4",
+            68 => "dhcpv4",
+            69 => "tftp",
+            123 => "ntp",
+            161 => "snmp",
+            162 => "snmp",
+            514 => "syslog",
+            546 => "dhcpv6",
+            547 => "dhcpv6",
+            1812 => "radius",
+            1813 => "radius",
         },
         constraints: {
             warning: min_length(total, 8);
@@ -85,6 +108,9 @@ pub fn udp() -> ProtocolDef {
 /// TCP (RFC 9293) with typed options ([`tcp_options`]). `data_offset` (including
 /// options and automatic zero padding to 32 bits) and `checksum` (with pseudo
 /// header) are Auto.
+///
+/// The `next` binding demultiplexes BGP on **destination** port 179; other
+/// payloads parse as `raw`.
 #[must_use]
 pub fn tcp() -> ProtocolDef {
     protocol! {
@@ -114,6 +140,7 @@ pub fn tcp() -> ProtocolDef {
             options: ty(tcp_options());
             padding: padding(4);
         },
+        next: dst_port { 179 => "bgp" },
         constraints: {
             error: in_range(data_offset, 5, 15);
         },
