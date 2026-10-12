@@ -1034,3 +1034,86 @@ bfd-desired-min-tx = Desired minimum TX interval in microseconds.
 bfd-required-min-rx = Required minimum RX interval in microseconds.
 bfd-required-min-echo-rx = Required minimum echo RX interval in microseconds (0 = no echo).
 bfd-authentication = Authentication section (8-bit type, 8-bit length including the header): simple password, keyed MD5 / SHA1 and their meticulous variants. The digest / hash is Manual.
+
+# --- P2 PTP / ESMC / CFM / R-APS / 802.3ah OAM field descriptions ---
+ptp-major-sdo-id = majorSdoId (transportSpecific in IEEE 1588-2008): 0 for the default profiles, 1 for IEEE 802.1AS (gPTP).
+ptp-message-type = Message type: 0 Sync, 1 Delay_Req, 2 Pdelay_Req, 3 Pdelay_Resp, 8 Follow_Up, 9 Delay_Resp, 10 Pdelay_Resp_Follow_Up, 11 Announce, 12 Signaling, 13 Management.
+ptp-minor-version = minorVersionPTP (0 in IEEE 1588-2008, 1 in IEEE 1588-2019).
+ptp-version = versionPTP (2).
+ptp-message-length = Length of the whole message in octets, including the TLVs (Auto).
+ptp-domain-number = Domain number.
+ptp-minor-sdo-id = minorSdoId (reserved, 0, in IEEE 1588-2008).
+ptp-flags = Flag field: alternateMaster, twoStep, unicast, the profile specific and security bits in the first octet; leap61, leap59, currentUtcOffsetValid, ptpTimescale, timeTraceable, frequencyTraceable and synchronizationUncertain in the second.
+ptp-correction-field = Correction in nanoseconds multiplied by 2^16 (signed).
+ptp-message-type-specific = Message type specific field (reserved, 0, in IEEE 1588-2008).
+ptp-clock-identity = Clock identity of the source port (EUI-64, e.g. a MAC address with ff:fe in the middle).
+ptp-port-number = Port number of the source port.
+ptp-sequence-id = Sequence ID; a Follow_Up / Delay_Resp / Pdelay_Resp copies the one of the message it answers.
+ptp-control-field = Control field (IEEE 1588 version 1 compatibility): 0 Sync, 1 Delay_Req, 2 Follow_Up, 3 Delay_Resp, 4 Management, 5 other messages.
+ptp-log-message-interval = Log2 of the message interval in seconds (signed; 0x7f when not applicable).
+ptp-timestamp-seconds = Timestamp: seconds (48 bits).
+ptp-timestamp-nanoseconds = Timestamp: nanoseconds (32 bits).
+ptp-port-identity-clock = Port identity: clock identity (all ones = every clock).
+ptp-port-identity-port = Port identity: port number (0xffff = every port).
+ptp-current-utc-offset = Current UTC offset in seconds (TAI - UTC).
+ptp-grandmaster-priority = Grandmaster priority (best master clock algorithm, lower wins).
+ptp-grandmaster-clock-class = Grandmaster clock class (6 = locked to a primary reference, 248 = default, 255 = slave only).
+ptp-grandmaster-clock-accuracy = Grandmaster clock accuracy (0x20 = within 25 ns ... 0xfe = unknown).
+ptp-grandmaster-variance = Grandmaster offsetScaledLogVariance.
+ptp-grandmaster-identity = Grandmaster clock identity.
+ptp-steps-removed = Number of boundary clocks between the grandmaster and the sender.
+ptp-time-source = Time source of the grandmaster: atomic clock, GPS, terrestrial radio, PTP, NTP, hand set, other, internal oscillator.
+ptp-starting-boundary-hops = Starting boundary hops of a Management message.
+ptp-boundary-hops = Remaining boundary hops.
+ptp-action = Management action: GET, SET, RESPONSE, COMMAND, ACKNOWLEDGE.
+ptp-tlvs = TLVs (16-bit type, 16-bit length of the value, Auto): Management, Management Error Status, Organization Extension, unicast negotiation (Request / Grant / Cancel / Acknowledge Cancel), Path Trace, Alternate Time Offset Indicator. They end at the message length.
+ptp-data = Rest of the message after the common header, as octets (up to the message length).
+esmc-subtype = Slow Protocols subtype (0x0a = organization specific).
+esmc-itu-oui = ITU-T OUI (00-19-a7).
+esmc-itu-subtype = ITU-T subtype (1 = ESMC).
+esmc-version = ESMC version (1).
+esmc-event-flag = Event flag: 1 for an event PDU sent at once after a QL change, 0 for the once-a-second information PDU.
+esmc-tlvs = TLVs (8-bit type, 16-bit length including the 3-octet header, Auto): QL TLV with the SSM code, Extended QL TLV with the enhanced SSM code, SyncE clock identity and cascaded clock counts. Octets after them (padding) are kept as one raw item.
+cfm-md-level = Maintenance domain / MEG level (0-7).
+cfm-version = CFM version (0; 1 for R-APS of G.8032v2).
+cfm-opcode = OpCode: 1 CCM, 2 LBR, 3 LBM, 4 LTR, 5 LTM, 33 AIS, 35 LCK, 37 TST, 39 Linear APS, 40 R-APS, 41 MCC, 42 LMR, 43 LMM, 45 1DM, 46 DMR, 47 DMM, 52 CSF, 53 1SL, 54 SLR, 55 SLM ...
+cfm-flags = Flags (OpCode specific).
+cfm-first-tlv-offset = Offset of the first TLV from the end of this field (constant for each OpCode).
+cfm-rdi = RDI: remote defect indication.
+cfm-period = Transmission period: 1 = 3.33 ms, 2 = 10 ms, 3 = 100 ms, 4 = 1 s, 5 = 10 s, 6 = 1 min, 7 = 10 min.
+cfm-sequence-number = Sequence number.
+cfm-mep-id = MEP ID (1-8191).
+cfm-maid = MAID / MEG ID, 48 octets: MD name format and name, short MA name format, length and name, zero padded (Y.1731: no MD name, format 32 ICC-based, length 13).
+cfm-frame-counter = Frame counter (loss measurement).
+cfm-transaction-id = Loopback / linktrace transaction identifier.
+cfm-use-fdb-only = UseFDBonly: the forwarding database alone decides the egress port.
+cfm-fwd-yes = FwdYes: the LTM was relayed.
+cfm-terminal-mep = TerminalMEP: the reply comes from the target MEP.
+cfm-ttl = Linktrace TTL.
+cfm-relay-action = Relay action: 1 RlyHit, 2 RlyFDB, 3 RlyMPDB.
+cfm-original-mac = MAC address of the MEP that started the linktrace.
+cfm-target-mac = Target MAC address of the linktrace.
+cfm-csf-type = Client signal fail type: 0 LOS, 1 FDI / AIS, 2 RDI, 3 DCI.
+cfm-timestamp = Timestamp in the IEEE 1588 format (32-bit seconds and nanoseconds).
+cfm-source-mep-id = Source MEP ID.
+cfm-responder-mep-id = Responder MEP ID (0 in an SLM).
+cfm-test-id = Test ID of the synthetic loss measurement.
+cfm-tlvs = TLVs (8-bit type, 16-bit length of the value, Auto): Sender ID, Port Status, Data, Interface Status, Reply Ingress / Egress, LTM / LTR Egress Identifier, Organization-Specific, Test, closed by the End TLV (type 0).
+cfm-data = Rest of the PDU after the first TLV offset, as octets (OpCode specific fields and TLVs).
+raps-request-state = Request / state: 0000 NR, 0111 MS, 1011 SF, 1101 FS, 1110 Event.
+raps-sub-code = Sub-code (0000 = flush request with the Event request).
+raps-rb = RB: the RPL is blocked.
+raps-dnf = DNF: do not flush the forwarding database.
+raps-bpr = BPR: blocked port reference (0 = ring link 0, 1 = ring link 1).
+raps-node-id = Node ID: MAC address of the sending ring node.
+efm-oam-subtype = Slow Protocols subtype (3 = OAM).
+efm-oam-flags = Flags: link fault, dying gasp, critical event, local / remote evaluating and stable.
+efm-oam-code = OAMPDU code: 0x00 Information, 0x01 Event Notification, 0x02 Variable Request, 0x03 Variable Response, 0x04 Loopback Control, 0xfe Organization Specific.
+efm-oam-information-tlvs = Information TLVs (8-bit type, 8-bit length including the header, Auto): Local / Remote Information, Organization Specific, closed by the End TLV (type 0).
+efm-oam-sequence-number = Event notification sequence number.
+efm-oam-event-tlvs = Link event TLVs (8-bit type, 8-bit length including the header, Auto): errored symbol period, errored frame, errored frame period, errored frame seconds summary, Organization Specific, closed by the End TLV (type 0).
+efm-oam-variable-descriptors = Variable descriptors as octets: branch (1 octet) and leaf (2 octets) each, closed by a zero branch.
+efm-oam-variable-containers = Variable containers as octets: branch, leaf, width and value each, closed by a zero branch.
+efm-oam-loopback-command = Remote loopback command: 1 enable, 2 disable.
+efm-oam-oui = Organizationally unique identifier.
+efm-oam-data = Rest of the OAMPDU, as octets.

@@ -1,0 +1,31 @@
+# PTP (IEEE 1588-2008 annex F): two-step Sync over Ethernet (EtherType 0x88f7), 8 per second
+schema: 1
+
+meta:
+  name: ptp-sync-two-step-l2
+  descriptions:
+    ja: "PTP (IEEE 1588-2008 附属書 F): Ethernet (EtherType 0x88f7) 上の 2 ステップ Sync (毎秒 8 回、シーケンス ID を加算、messageLength は自動)"
+    en: "PTP (IEEE 1588-2008 annex F): two-step Sync over Ethernet (EtherType 0x88f7), 8 per second, incrementing sequence ID, messageLength Auto"
+  tags: ["protocol:ethernet2", "protocol:ptp_sync", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:1b:19:00:00:00" # all PTP messages except the peer delay ones
+      src: "02:00:00:00:00:01"
+  - protocol: ptp_sync
+    fields:
+      domain_number: 0
+      flags: 0x0200 # twoStepFlag: the time is in the Follow_Up
+      clock_identity: 0x020000fffe000001
+      port_number: 1
+      log_message_interval: -3 # 2^-3 s
+      # message_length: Auto; origin timestamp left at 0 (two-step)
+    generators:
+      sequence_id: 0-65535
+
+tx:
+  count: 16
+  rate: 8pps

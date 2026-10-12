@@ -1,0 +1,34 @@
+# PTP over UDP/IPv4 (IEEE 1588-2008 annex D): a Delay_Req event message to 224.0.1.129, port 319
+schema: 1
+
+meta:
+  name: ptp-delay-req-udp
+  descriptions:
+    ja: "PTP over UDP/IPv4 (IEEE 1588-2008 附属書 D): 224.0.1.129、UDP 319 (イベントメッセージ) への Delay_Req"
+    en: "PTP over UDP/IPv4 (IEEE 1588-2008 annex D): a Delay_Req event message to 224.0.1.129, UDP 319"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:ptp_delay_req", "layer:l4", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:01:81"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.2
+      dst: 224.0.1.129 # PTP-primary
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 319
+      dst_port: 319 # event messages
+  - protocol: ptp_delay_req
+    fields:
+      clock_identity: 0x020000fffe000002
+      port_number: 1
+      sequence_id: 1
+
+tx:
+  count: 1

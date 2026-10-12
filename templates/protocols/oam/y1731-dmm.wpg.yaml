@@ -1,0 +1,27 @@
+# ITU-T Y.1731: two-way delay measurement (DMM) with a transmit timestamp
+schema: 1
+
+meta:
+  name: y1731-dmm
+  descriptions:
+    ja: "ITU-T Y.1731: 双方向遅延測定 (DMM、MEG レベル 5、送信タイムスタンプ付き、100 ms 周期)"
+    en: "ITU-T Y.1731: two-way delay measurement (DMM, MEG level 5, with a transmit timestamp, every 100 ms)"
+  tags: ["protocol:ethernet2", "protocol:cfm_dmm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_dmm
+    fields:
+      md_level: 5
+      tx_timestamp_f_seconds: 1700000000 # IEEE 1588 format: seconds + nanoseconds
+      tx_timestamp_f_nanoseconds: 0
+      # the other three timestamps are reserved (0) in a DMM
+
+tx:
+  count: 10
+  rate: 10pps

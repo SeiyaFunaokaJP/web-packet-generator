@@ -67,8 +67,8 @@ pub fn tcp_options() -> FieldType {
 /// redundancy ports (HSRP 1985, `HSRPv2` over IPv6 2029, GLBP 3222; UDP 1985
 /// decodes as `HSRPv1`) and the P1 application protocols (DNS 53, `DHCPv4` 67/68,
 /// TFTP 69, NTP 123, SNMP 161/162, Syslog 514, `DHCPv6` 546/547, RADIUS
-/// 1812/1813), LDP discovery (646) and BFD (3784 single hop, 4784 multihop,
-/// 6784 Micro-BFD); unknown ports have no default, so an ordinary UDP payload still
+/// 1812/1813), LDP discovery (646), BFD (3784 single hop, 4784 multihop,
+/// 6784 Micro-BFD) and PTP (319 event, 320 general messages); unknown ports have no default, so an ordinary UDP payload still
 /// parses as `raw`. Building announces through the destination port only.
 #[must_use]
 pub fn udp() -> ProtocolDef {
@@ -120,6 +120,13 @@ pub fn udp() -> ProtocolDef {
     };
     if let Some(b) = d.next.as_mut() {
         b.alt_field = Some("src_port".into());
+        // P2 PTP: event messages to 319, general messages to 320.
+        b.table
+            .extend(crate::ptp::bindings(crate::ptp::PTP_EVENT_PORT, Some(true)));
+        b.table.extend(crate::ptp::bindings(
+            crate::ptp::PTP_GENERAL_PORT,
+            Some(false),
+        ));
     }
     d
 }
