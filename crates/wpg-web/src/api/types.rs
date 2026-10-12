@@ -295,6 +295,12 @@ pub(crate) struct JobSpec {
     pub(crate) workers: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) dry_run: Option<String>,
+    /// Stamp frames with a receive-verification signature.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) signature: bool,
+    /// Signature stream id of the first stream (stream `i` gets `stream_id + i`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) stream_id: Option<u32>,
 }
 
 /// `POST /api/jobs` body.
@@ -427,6 +433,162 @@ pub(crate) struct RenderResponse {
     pub(crate) plan: Value,
 }
 
+/// One entry of `GET /api/captures/backends`.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct RxBackendInfo {
+    pub(crate) name: String,
+    pub(crate) available: bool,
+    pub(crate) reason: Option<String>,
+}
+
+/// `CaptureSpec` (`POST /api/captures`); also the `spec` of a capture.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub(crate) struct CaptureSpec {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) name: Option<String>,
+    /// `afpacket`, `pcap`, `pcapfile`, `null`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) backend: Option<String>,
+    /// Interface, or a capture file name for `pcapfile`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) iface: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) filter: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) duration: Option<String>,
+    /// Matching frames kept for display.
+    pub(crate) keep: usize,
+    /// pcapng file name under the server's capture directory.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) save: Option<String>,
+    pub(crate) verify: bool,
+    pub(crate) promisc: bool,
+    pub(crate) include_outgoing: bool,
+}
+
+/// Verification result of one signature stream (`wpg_rx::StreamReport`).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct StreamVerify {
+    pub(crate) stream_id: u32,
+    pub(crate) received: u64,
+    pub(crate) first_seq: u64,
+    pub(crate) last_seq: u64,
+    pub(crate) lost: u64,
+    pub(crate) out_of_order: u64,
+    pub(crate) duplicates: u64,
+    pub(crate) latency_min_ns: i64,
+    pub(crate) latency_avg_ns: i64,
+    pub(crate) latency_max_ns: i64,
+    pub(crate) jitter_ns: i64,
+}
+
+impl StreamVerify {
+    /// Lost / expected (0 when nothing is expected).
+    #[allow(clippy::cast_precision_loss)] // display only
+    pub(crate) fn loss_ratio(&self) -> f64 {
+        let expected = self
+            .last_seq
+            .saturating_sub(self.first_seq)
+            .saturating_add(1);
+        self.lost as f64 / expected as f64
+    }
+}
+
+/// Verification summary (`wpg_rx::VerifyReport`).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct VerifyReport {
+    pub(crate) signed: u64,
+    pub(crate) unsigned: u64,
+    pub(crate) streams: Vec<StreamVerify>,
+}
+
+impl VerifyReport {
+    /// Sum of the streams' estimated losses.
+    pub(crate) fn lost(&self) -> u64 {
+        self.streams.iter().map(|s| s.lost).sum()
+    }
+}
+
+/// Receive statistics (`wpg_rx::RxSnapshot`).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct RxStats {
+    pub(crate) t: Dur,
+    pub(crate) packets: u64,
+    pub(crate) bytes: u64,
+    pub(crate) matched: u64,
+    pub(crate) matched_bytes: u64,
+    pub(crate) pps: f64,
+    pub(crate) bps: f64,
+    pub(crate) matched_pps: f64,
+    pub(crate) matched_bps: f64,
+    pub(crate) dropped: u64,
+    pub(crate) saved: u64,
+    pub(crate) kept: usize,
+    pub(crate) verify: Option<VerifyReport>,
+    pub(crate) state: JobStatus,
+}
+
+/// `CaptureInfo`.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct CaptureInfo {
+    pub(crate) id: String,
+    pub(crate) name: String,
+    pub(crate) spec: CaptureSpec,
+    /// `running`, `finished` (detail: end reason), `failed` (detail: error).
+    pub(crate) status: JobStatus,
+    pub(crate) backend: String,
+    pub(crate) iface: String,
+    /// Normalised filter (empty = every frame).
+    pub(crate) filter: String,
+    pub(crate) started: u64,
+    pub(crate) finished: Option<u64>,
+    pub(crate) stats: Option<RxStats>,
+    /// A pcapng file was written.
+    pub(crate) saved: bool,
+}
+
+/// Signature fields of a kept frame.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub(crate) struct SignatureInfo {
+    pub(crate) stream_id: u32,
+    pub(crate) seq: u64,
+    pub(crate) ts_ns: u64,
+}
+
+/// One kept frame (`GET /api/captures/{id}/packets`).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct CapturedFrame {
+    pub(crate) index: u64,
+    /// Capture time, nanoseconds since the Unix epoch.
+    pub(crate) ts_ns: u64,
+    /// Original length.
+    pub(crate) len: usize,
+    /// Captured octets as hex.
+    pub(crate) hex: String,
+    pub(crate) signature: Option<SignatureInfo>,
+}
+
+/// `POST /api/captures/filter` response.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(default)]
+pub(crate) struct FilterCheck {
+    pub(crate) ok: bool,
+    pub(crate) normalized: Option<String>,
+    pub(crate) error: Option<String>,
+    /// Byte offset of the error.
+    pub(crate) pos: Option<usize>,
+}
+
 /// Server → client WebSocket message.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -441,6 +603,14 @@ pub(crate) enum ServerEvent {
     },
     Log(LogLine),
     TemplatesChanged,
+    RxStats {
+        capture_id: String,
+        snapshot: RxStats,
+    },
+    CaptureState {
+        capture_id: String,
+        state: JobStatus,
+    },
     #[serde(other)]
     Unknown,
 }
@@ -478,6 +648,33 @@ mod tests {
         assert!(matches!(ev, ServerEvent::Log(l) if l.message == "hi"));
         let ev: ServerEvent = serde_json::from_str(r#"{"type":"templates_changed"}"#).unwrap();
         assert_eq!(ev, ServerEvent::TemplatesChanged);
+        let ev: ServerEvent = serde_json::from_str(
+            r#"{"type":"rx_stats","capture_id":"c","snapshot":{"t":{"secs":2,"nanos":0},
+            "packets":5,"bytes":300,"matched":4,"matched_bytes":240,"pps":2.5,"bps":1200.0,
+            "matched_pps":2.0,"matched_bps":960.0,"dropped":0,"saved":4,"kept":4,
+            "verify":{"signed":4,"unsigned":0,"streams":[{"stream_id":7,"received":4,
+            "first_seq":0,"last_seq":4,"lost":1,"out_of_order":0,"duplicates":0,
+            "latency_min_ns":1000,"latency_avg_ns":1500,"latency_max_ns":2000,"jitter_ns":10}]},
+            "state":{"state":"running"}}}"#,
+        )
+        .unwrap();
+        let ServerEvent::RxStats {
+            capture_id,
+            snapshot,
+        } = ev
+        else {
+            panic!("{ev:?}")
+        };
+        assert_eq!(capture_id, "c");
+        assert_eq!(snapshot.matched, 4);
+        let v = snapshot.verify.unwrap();
+        assert_eq!(v.lost(), 1);
+        assert!((v.streams[0].loss_ratio() - 0.2).abs() < 1e-9);
+        let ev: ServerEvent = serde_json::from_str(
+            r#"{"type":"capture_state","capture_id":"c","state":{"state":"finished","detail":"end_of_input"}}"#,
+        )
+        .unwrap();
+        assert!(matches!(ev, ServerEvent::CaptureState { state, .. } if state.is_terminal()));
         let ev: ServerEvent = serde_json::from_str(r#"{"type":"future_thing","x":1}"#).unwrap();
         assert_eq!(ev, ServerEvent::Unknown);
     }
@@ -505,5 +702,47 @@ mod tests {
                 "mix": "weighted", "backend": "null", "rate": "1Mpps", "start": false
             })
         );
+    }
+
+    #[test]
+    fn capture_and_signature_bodies() {
+        let spec = CaptureSpec {
+            backend: Some("pcapfile".into()),
+            iface: Some("run.pcapng".into()),
+            keep: 100,
+            verify: true,
+            ..CaptureSpec::default()
+        };
+        assert_eq!(
+            serde_json::to_value(&spec).unwrap(),
+            serde_json::json!({
+                "backend": "pcapfile", "iface": "run.pcapng", "keep": 100,
+                "verify": true, "promisc": false, "include_outgoing": false
+            })
+        );
+        let job = JobSpec {
+            signature: true,
+            stream_id: Some(5),
+            ..JobSpec::default()
+        };
+        let v = serde_json::to_value(&job).unwrap();
+        assert_eq!(v["signature"], true);
+        assert_eq!(v["stream_id"], 5);
+        let v = serde_json::to_value(JobSpec::default()).unwrap();
+        assert!(v.get("signature").is_none() && v.get("stream_id").is_none());
+
+        let info: CaptureInfo = serde_json::from_str(
+            r#"{"id":"x","name":"pcapfile:run.pcapng","spec":{"backend":"pcapfile","iface":"run.pcapng","keep":100,"verify":true,"promisc":false,"include_outgoing":false},
+            "status":{"state":"failed","detail":"boom"},"backend":"pcapfile","iface":"/d/captures/run.pcapng","filter":"","started":1,"saved":false}"#,
+        )
+        .unwrap();
+        assert_eq!(info.status.detail.as_deref(), Some("boom"));
+        assert!(info.spec.verify && info.stats.is_none());
+        let f: Vec<CapturedFrame> = serde_json::from_str(
+            r#"[{"index":0,"ts_ns":5,"len":60,"hex":"ff","signature":{"stream_id":1,"seq":2,"ts_ns":3}},{"index":1,"ts_ns":6,"len":60,"hex":"00"}]"#,
+        )
+        .unwrap();
+        assert_eq!(f[0].signature.map(|s| s.seq), Some(2));
+        assert!(f[1].signature.is_none());
     }
 }

@@ -39,6 +39,7 @@ pub mod error;
 pub mod events;
 pub mod jobs;
 pub mod localize;
+pub mod rx;
 pub mod security;
 pub mod state;
 pub mod store;
@@ -239,6 +240,7 @@ impl Server {
             tracing::info!("shutting down: stopping jobs");
             signal_state.begin_shutdown();
             signal_state.jobs.shutdown().await;
+            signal_state.rx.shutdown().await;
         };
         let res = match self.tls {
             None => {
@@ -263,6 +265,7 @@ impl Server {
             }
         };
         state.jobs.shutdown().await;
+        state.rx.shutdown().await;
         res
     }
 

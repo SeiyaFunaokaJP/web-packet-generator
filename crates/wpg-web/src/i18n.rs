@@ -96,6 +96,7 @@ mod tests {
             include_str!("pages/job_form.rs"),
             include_str!("pages/jobs.rs"),
             include_str!("pages/mod.rs"),
+            include_str!("pages/rx.rs"),
             include_str!("pages/settings.rs"),
             include_str!("pages/templates.rs"),
             include_str!("prefs.rs"),

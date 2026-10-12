@@ -40,7 +40,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcap-dev
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # The optional libpcap backend (needs libpcap-dev, installed above).
-      - run: cargo clippy -p wpg-tx -p wpg-cli --all-targets --features wpg-tx/pcap,wpg-cli/pcap -- -D warnings
+      - run: cargo clippy -p wpg-tx -p wpg-rx -p wpg-cli --all-targets --features wpg-tx/pcap,wpg-rx/pcap,wpg-cli/pcap -- -D warnings
       # The optional AF_XDP backend (no extra build dependencies).
       - run: cargo clippy -p wpg-tx -p wpg-cli --all-targets --features wpg-tx/afxdp,wpg-cli/afxdp -- -D warnings
 
@@ -62,7 +62,7 @@ jobs:
       # Windows is left out on purpose: linking the pcap backend needs the Npcap SDK.
       - name: Test the pcap backend (Linux / macOS)
         if: runner.os != 'Windows'
-        run: cargo test -p wpg-tx --features pcap
+        run: cargo test -p wpg-tx -p wpg-rx --features wpg-tx/pcap,wpg-rx/pcap
       # AF_XDP compiles to nothing outside Linux; on Linux the socket tests run when
       # the runner may create XDP sockets (they skip without the privileges).
       - name: Test the AF_XDP backend

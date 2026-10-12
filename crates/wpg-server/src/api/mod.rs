@@ -12,6 +12,7 @@ use crate::error::ApiError;
 use crate::state::AppState;
 
 pub mod auth;
+pub mod captures;
 pub mod jobs;
 pub mod packets;
 pub mod protocols;
@@ -44,6 +45,7 @@ pub mod ws;
         (name = "packets", description = "Render / parse / lint"),
         (name = "templates", description = "Template library"),
         (name = "jobs", description = "Transmit jobs and statistics"),
+        (name = "captures", description = "Receive counters, captured frames and signature verification"),
         (name = "events", description = "WebSocket event stream"),
     ),
     components(schemas(
@@ -58,6 +60,8 @@ pub mod ws;
         crate::jobs::JobStream,
         crate::jobs::JobStatus,
         crate::jobs::Mix,
+        crate::rx::CaptureSpec,
+        crate::rx::CaptureInfo,
     ))
 )]
 struct ApiDoc;
@@ -123,6 +127,13 @@ fn parts() -> (Router<AppState>, utoipa::openapi::OpenApi) {
         .routes(routes!(jobs::stop))
         .routes(routes!(jobs::stats))
         .routes(routes!(jobs::overview))
+        .routes(routes!(captures::list, captures::create))
+        .routes(routes!(captures::backends))
+        .routes(routes!(captures::check_filter))
+        .routes(routes!(captures::get, captures::delete))
+        .routes(routes!(captures::stop))
+        .routes(routes!(captures::packets))
+        .routes(routes!(captures::pcapng))
         .routes(routes!(ws::ws))
         .split_for_parts()
 }

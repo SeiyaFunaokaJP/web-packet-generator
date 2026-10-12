@@ -38,6 +38,19 @@ pub(crate) fn rate_hint(i18n: I18n, input: &str) -> Result<String, &'static str>
     })
 }
 
+/// Signature stream id: empty = server default (0), else `0..=u32::MAX`.
+pub(crate) fn parse_stream_id(s: &str) -> Result<Option<u32>, validate::Invalid> {
+    let t = s.trim();
+    if t.is_empty() {
+        return Ok(None);
+    }
+    let cleaned: String = t.chars().filter(|c| *c != '_').collect();
+    cleaned
+        .parse::<u32>()
+        .map(Some)
+        .map_err(|_| "ui-valid-stream-id")
+}
+
 #[derive(Debug, Clone, Copy)]
 struct StreamRow {
     key: u32,
@@ -83,6 +96,8 @@ pub(crate) fn JobForm(
     let workers = RwSignal::new(String::new());
     let dry_run = RwSignal::new(String::new());
     let start = RwSignal::new(true);
+    let signature = RwSignal::new(false);
+    let stream_id = RwSignal::new(String::new());
     let submitted = RwSignal::new(false);
     let busy = RwSignal::new(false);
     let error = RwSignal::new(None::<ApiError>);
@@ -122,6 +137,13 @@ pub(crate) fn JobForm(
     let duration_check = move || validate::optional(&duration.get(), validate::parse_duration);
     let burst_check = move || validate::optional(&burst.get(), validate::parse_positive);
     let workers_check = move || validate::optional(&workers.get(), validate::parse_positive);
+    let stream_id_check = move || {
+        if signature.get() {
+            parse_stream_id(&stream_id.get()).map(|_| ())
+        } else {
+            Ok(())
+        }
+    };
     let capture_check = move || {
         if needs_capture() {
             validate::check_capture_name(&dry_run.get())
@@ -156,6 +178,7 @@ pub(crate) fn JobForm(
             && duration_check().is_ok()
             && burst_check().is_ok()
             && workers_check().is_ok()
+            && stream_id_check().is_ok()
             && capture_check().is_ok()
             && iface_check().is_ok()
             && streams_check().is_ok()
@@ -201,6 +224,12 @@ pub(crate) fn JobForm(
                     None
                 },
                 dry_run: dry,
+                signature: signature.get_untracked(),
+                stream_id: if signature.get_untracked() {
+                    parse_stream_id(&stream_id.get_untracked()).ok().flatten()
+                } else {
+                    None
+                },
             },
             start: start.get_untracked(),
         }
@@ -557,6 +586,37 @@ pub(crate) fn JobForm(
                     </div>
                 </fieldset>
 
+                // Receive verification (TODO M9)
+                <fieldset class="grid gap-4 sm:grid-cols-3">
+                    <legend class="mb-2 text-sm font-semibold sm:col-span-3">{tr("ui-jobs-verification")}</legend>
+                    <div class="sm:col-span-2">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input
+                                type="checkbox"
+                                aria-describedby="job-signature-hint"
+                                prop:checked=move || signature.get()
+                                on:change=move |ev| signature.set(event_target_checked(&ev))
+                            />
+                            {tr("ui-jobs-signature")}
+                        </label>
+                        <p id="job-signature-hint" class="mt-1 text-xs text-slate-500">{tr("ui-jobs-signature-hint")}</p>
+                    </div>
+                    <div>
+                        <label for="job-stream-id" class=LABEL>{tr("ui-jobs-stream-id")}</label>
+                        <input
+                            id="job-stream-id"
+                            class=move || input_class(stream_id_check().is_ok())
+                            inputmode="numeric"
+                            placeholder="0"
+                            disabled=move || !signature.get()
+                            aria-invalid=move || (stream_id_check().is_err() && submitted.get()).to_string()
+                            prop:value=move || stream_id.get()
+                            on:input=move |ev| stream_id.set(event_target_value(&ev))
+                        />
+                        {move || field_error(stream_id_check())}
+                    </div>
+                </fieldset>
+
                 <label class="flex items-center gap-2 text-sm">
                     <input
                         type="checkbox"
@@ -624,5 +684,10 @@ mod tests {
         assert!(!needs_confirmation("pcapfile", "", true));
         assert_eq!(opt("  x "), Some("x".to_owned()));
         assert_eq!(opt("  "), None);
+        assert_eq!(parse_stream_id(""), Ok(None));
+        assert_eq!(parse_stream_id(" 0 "), Ok(Some(0)));
+        assert_eq!(parse_stream_id("4_294_967_295"), Ok(Some(u32::MAX)));
+        assert_eq!(parse_stream_id("4294967296"), Err("ui-valid-stream-id"));
+        assert_eq!(parse_stream_id("-1"), Err("ui-valid-stream-id"));
     }
 }

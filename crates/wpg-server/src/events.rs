@@ -3,6 +3,7 @@
 use serde::Serialize;
 use tokio::sync::broadcast;
 use utoipa::ToSchema;
+use wpg_rx::capture::{CaptureState, RxSnapshot};
 use wpg_tx::job::StatsSnapshot;
 
 use crate::jobs::JobStatus;
@@ -38,6 +39,23 @@ pub enum ServerEvent {
     },
     /// The template index changed (file watcher or API write).
     TemplatesChanged,
+    /// Latest statistics of a capture (every 100 ms while it runs, once more at
+    /// the end).
+    RxStats {
+        /// Capture id.
+        capture_id: String,
+        /// Counters, rates and verification (`wpg_rx::RxSnapshot`).
+        #[schema(value_type = Object)]
+        snapshot: RxSnapshot,
+    },
+    /// A capture started or ended.
+    CaptureState {
+        /// Capture id.
+        capture_id: String,
+        /// New state (`{ "state": "running" | "finished" | "failed", "detail" }`).
+        #[schema(value_type = Object)]
+        state: CaptureState,
+    },
 }
 
 impl ServerEvent {

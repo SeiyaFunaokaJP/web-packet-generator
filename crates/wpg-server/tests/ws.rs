@@ -256,3 +256,66 @@ async fn raw_http(
     s.read_to_end(&mut out).await.unwrap();
     String::from_utf8_lossy(&out).into_owned()
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn capture_events_over_websocket() {
+    let dir = tempfile::tempdir().unwrap();
+    let server = Server::bind(common::config(&dir), ServeOptions::default())
+        .await
+        .unwrap();
+    let addr = server.local_addr().unwrap();
+    let serving = tokio::spawn(server.run_until(std::future::pending()));
+    let (_client, csrf, cookie) = common::http_login(&format!("http://{addr}")).await;
+    let auth = Auth {
+        cookie: &cookie,
+        csrf: &csrf,
+    };
+    let (mut ws, _) = tokio_tungstenite::connect_async(ws_request(addr, Some(&cookie)))
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let body = json!({ "backend": "null", "filter": "udp" }).to_string();
+    let resp = raw_http(addr, &auth, "POST", "/api/captures", Some(&body)).await;
+    assert!(resp.starts_with("HTTP/1.1 201"), "{resp}");
+    let cap: Value = serde_json::from_str(resp.split("\r\n\r\n").nth(1).unwrap()).unwrap();
+    let id = cap["id"].as_str().unwrap().to_owned();
+
+    let (mut running, mut stats) = (false, 0);
+    while !running || stats < 2 {
+        let ev = next_json(&mut ws).await;
+        match ev["type"].as_str() {
+            Some("capture_state") => {
+                assert_eq!(ev["capture_id"], id);
+                assert_eq!(ev["state"]["state"], "running");
+                running = true;
+            }
+            Some("rx_stats") => {
+                assert_eq!(ev["capture_id"], id);
+                assert_eq!(ev["snapshot"]["packets"], 0);
+                stats += 1;
+            }
+            _ => {}
+        }
+    }
+    let resp = raw_http(
+        addr,
+        &auth,
+        "POST",
+        &format!("/api/captures/{id}/stop"),
+        None,
+    )
+    .await;
+    assert!(resp.starts_with("HTTP/1.1 200"), "{resp}");
+    loop {
+        let ev = next_json(&mut ws).await;
+        if ev["type"] == "capture_state" {
+            assert_eq!(
+                ev["state"],
+                json!({ "state": "finished", "detail": "stopped" })
+            );
+            break;
+        }
+    }
+    serving.abort();
+}

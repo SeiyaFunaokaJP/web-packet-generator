@@ -14,7 +14,9 @@ use clap::Args;
 use wpg_core::stream::{Expansion, PlanConfig, PlanHint};
 use wpg_i18n::{t, t_args, FluentArgs, Locale};
 use wpg_protocols::catalog;
-use wpg_tx::job::{FinishReason, JobConfig, JobHandle, JobReport, JobState, TxJob};
+use wpg_tx::job::{
+    FinishReason, JobConfig, JobHandle, JobReport, JobState, SignatureConfig, TxJob,
+};
 use wpg_tx::rate::{link_speed_bps, parse_duration, parse_start_time, Rate, RateUnit};
 use wpg_tx::rate::{PacerConfig, WaitMode};
 use wpg_tx::source::{FrameSource, PreRendered, Rendered};
@@ -378,6 +380,9 @@ fn print_summary(r: &JobReport, locale: Locale) {
     line("summary-packets", &[("value", s.packets.to_string())]);
     line("summary-bytes", &[("value", s.bytes.to_string())]);
     line("summary-dropped", &[("value", s.dropped.to_string())]);
+    if s.unsigned > 0 {
+        line("summary-unsigned", &[("value", s.unsigned.to_string())]);
+    }
     line(
         "summary-elapsed",
         &[("secs", format!("{:.3}", r.active.as_secs_f64()))],
@@ -633,6 +638,9 @@ pub(crate) fn run(args: crate::SendArgs) -> ExitCode {
             batch_size: opts.batch_size,
             ramp_up: r.ramp_up,
             start_at: r.start_at,
+            signature: args.signature.then_some(SignatureConfig {
+                stream_id_base: args.stream_id,
+            }),
             pacer: PacerConfig {
                 wait: args.wait.unwrap_or(if opts.busy_poll {
                     WaitMode::BusyPoll

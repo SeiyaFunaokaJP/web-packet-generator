@@ -4,7 +4,10 @@
 real `wpg serve` (TODO.md M4). They cover login / logout, the packet builder
 (layer stack, hex / tree preview, browser-vs-server parity, generators, the
 stream and send-time estimates, undo / redo, saving and loading templates), job
-creation on the `null` backend, and the language switch.
+creation on the `null` backend, the receive page (a signed dry-run job replayed
+by a `pcapfile` capture with verification: counters, the per-stream loss table,
+the first frames with a decoded frame, live filter validation), and the
+language switch.
 
 ## Running
 

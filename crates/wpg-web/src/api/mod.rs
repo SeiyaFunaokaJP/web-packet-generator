@@ -521,6 +521,57 @@ pub(crate) async fn delete_job(id: &str) -> Result<(), ApiError> {
     .map(|_| ())
 }
 
+// ---------------------------------------------------------------- captures
+
+pub(crate) async fn captures() -> Result<Vec<CaptureInfo>, ApiError> {
+    get("/api/captures").await
+}
+
+pub(crate) async fn capture(id: &str) -> Result<CaptureInfo, ApiError> {
+    get(&format!("/api/captures/{}", enc(id))).await
+}
+
+pub(crate) async fn create_capture(spec: &CaptureSpec) -> Result<CaptureInfo, ApiError> {
+    post("/api/captures", spec).await
+}
+
+pub(crate) async fn stop_capture(id: &str) -> Result<CaptureInfo, ApiError> {
+    post(&format!("/api/captures/{}/stop", enc(id)), &Value::Null).await
+}
+
+pub(crate) async fn delete_capture(id: &str) -> Result<(), ApiError> {
+    request(
+        Method::Delete,
+        &format!("/api/captures/{}", enc(id)),
+        Body::Empty,
+    )
+    .await
+    .map(|_| ())
+}
+
+/// The first N matching frames of a capture.
+pub(crate) async fn capture_packets(id: &str) -> Result<Vec<CapturedFrame>, ApiError> {
+    get(&format!("/api/captures/{}/packets", enc(id))).await
+}
+
+/// URL of the pcapng download (a plain link downloads it).
+pub(crate) fn capture_pcapng_url(id: &str) -> String {
+    format!("/api/captures/{}/pcapng", enc(id))
+}
+
+/// `POST /api/captures/filter`: validates a capture filter.
+pub(crate) async fn check_filter(filter: &str) -> Result<FilterCheck, ApiError> {
+    post(
+        "/api/captures/filter",
+        &serde_json::json!({ "filter": filter }),
+    )
+    .await
+}
+
+pub(crate) async fn rx_backends() -> Result<Vec<RxBackendInfo>, ApiError> {
+    get("/api/captures/backends").await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -560,6 +611,7 @@ mod tests {
         assert_eq!(enc("a b/c"), "a%20b%2Fc");
         assert_eq!(enc("udp-src_sweep.1~"), "udp-src_sweep.1~");
         assert_eq!(enc("日"), "%E6%97%A5");
+        assert_eq!(capture_pcapng_url("ab 1"), "/api/captures/ab%201/pcapng");
         assert_eq!(templates_url(&TemplateQuery::default()), "/api/templates");
         let q = TemplateQuery {
             q: " arp sweep ".into(),

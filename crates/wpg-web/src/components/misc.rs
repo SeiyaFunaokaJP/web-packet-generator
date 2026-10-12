@@ -27,6 +27,7 @@ pub(crate) fn reason_key(detail: &str) -> Option<&'static str> {
         "duration_elapsed" => "ui-reason-duration-elapsed",
         "source_exhausted" => "ui-reason-source-exhausted",
         "stopped" => "ui-reason-stopped",
+        "end_of_input" => "ui-reason-end-of-input",
         _ => return None,
     })
 }
@@ -265,6 +266,7 @@ mod tests {
         }
         assert_eq!(state_key("zombie"), "ui-state-unknown");
         assert_eq!(reason_key("stopped"), Some("ui-reason-stopped"));
+        assert_eq!(reason_key("end_of_input"), Some("ui-reason-end-of-input"));
         assert_eq!(reason_key("x"), None);
     }
 }

@@ -834,6 +834,13 @@ async fn openapi_lists_every_route() {
         ("/api/jobs/{id}/stats", &["get"]),
         ("/api/jobs/history", &["get"]),
         ("/api/stats/overview", &["get"]),
+        ("/api/captures", &["get", "post"]),
+        ("/api/captures/backends", &["get"]),
+        ("/api/captures/filter", &["post"]),
+        ("/api/captures/{id}", &["get", "delete"]),
+        ("/api/captures/{id}/stop", &["post"]),
+        ("/api/captures/{id}/packets", &["get"]),
+        ("/api/captures/{id}/pcapng", &["get"]),
         ("/api/ws", &["get"]),
     ];
     for (path, methods) in expected {

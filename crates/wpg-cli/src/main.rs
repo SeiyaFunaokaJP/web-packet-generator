@@ -41,6 +41,8 @@ enum Command {
     Doctor(DoctorArgs),
     /// Measure transmit performance.
     Bench(BenchArgs),
+    /// Receive: counters, the first frames, pcapng output, signature verification.
+    Capture(cmd::capture::CaptureArgs),
     /// Configuration file tools (init, show, validate).
     Config(ConfigArgs),
 }
@@ -175,6 +177,14 @@ pub(crate) struct SendArgs {
     /// Template variable override (`name=value`), repeatable.
     #[arg(long = "var", value_name = "NAME=VALUE")]
     pub(crate) vars: Vec<String>,
+    /// Stamp every frame with a receive-verification signature (magic, stream id,
+    /// sequence number, TX time over the last 24 payload octets; see `wpg capture
+    /// --verify`).
+    #[arg(long)]
+    pub(crate) signature: bool,
+    /// Signature stream id (with `--signature`).
+    #[arg(long, value_name = "ID", default_value_t = 0, requires = "signature")]
+    pub(crate) stream_id: u32,
     #[command(flatten)]
     pub(crate) tuning: cmd::send::TxTuningArgs,
 }
@@ -352,6 +362,7 @@ impl Command {
             Command::Ifaces(_) => "ifaces",
             Command::Doctor(_) => "doctor",
             Command::Bench(_) => "bench",
+            Command::Capture(_) => "capture",
             Command::Config(_) => "config",
         }
     }
@@ -368,6 +379,7 @@ fn main() -> ExitCode {
         Command::Ifaces(args) => cmd::ifaces::run(&args),
         Command::Doctor(args) => cmd::doctor::run(&args),
         Command::Bench(args) => cmd::bench::run(args),
+        Command::Capture(args) => cmd::capture::run(args),
         Command::Config(args) => cmd::config::run(args),
     }
 }
@@ -403,6 +415,27 @@ mod tests {
             &["wpg", "template", "lint", "t.wpg.yaml"],
             &["wpg", "ifaces", "--json"],
             &["wpg", "doctor"],
+            &[
+                "wpg",
+                "capture",
+                "-i",
+                "lo",
+                "-f",
+                "udp port 53",
+                "--count",
+                "10",
+                "--verify",
+                "-w",
+                "x.pcapng",
+            ],
+            &[
+                "wpg",
+                "send",
+                "t.wpg.yaml",
+                "--signature",
+                "--stream-id",
+                "3",
+            ],
             &[
                 "wpg",
                 "serve",

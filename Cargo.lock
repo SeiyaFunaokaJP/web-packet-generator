@@ -4706,6 +4706,7 @@ dependencies = [
  "wpg-core",
  "wpg-i18n",
  "wpg-protocols",
+ "wpg-rx",
  "wpg-server",
  "wpg-sys",
  "wpg-template",
@@ -4772,6 +4773,16 @@ dependencies = [
 [[package]]
 name = "wpg-rx"
 version = "0.1.0"
+dependencies = [
+ "libc",
+ "pcap",
+ "serde",
+ "thiserror 2.0.21",
+ "wpg-core",
+ "wpg-protocols",
+ "wpg-template",
+ "wpg-tx",
+]
 
 [[package]]
 name = "wpg-server"
@@ -4815,6 +4826,7 @@ dependencies = [
  "wpg-i18n",
  "wpg-log",
  "wpg-protocols",
+ "wpg-rx",
  "wpg-sys",
  "wpg-template",
  "wpg-tx",

@@ -2,7 +2,7 @@
 
 Status: draft
 
-`wpg` バイナリは serve、send、render、import、template、ifaces、doctor、bench の各サブコマンドを提供します。サーバとヘッドレス送出が同一バイナリで動くため、CI や ssh 先での実行に向いています。例えば `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` でテンプレートを送出します。以下のコードブロックは現行ビルドの `--help` 出力そのままです。ここに載せていないサブコマンド (`serve`、`import`) は未整備で、`wpg <command> --help` を参照してください。
+`wpg` バイナリは serve、send、render、import、template、ifaces、doctor、bench、capture、config の各サブコマンドを提供します。サーバとヘッドレス送出が同一バイナリで動くため、CI や ssh 先での実行に向いています。例えば `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` でテンプレートを送出します。以下のコードブロックは現行ビルドの `--help` 出力そのままです。ここに載せていないサブコマンド (`serve`、`import`) は未整備で、`wpg <command> --help` を参照してください。
 
 ## コマンド
 
@@ -18,10 +18,12 @@ Commands:
   send      Send a template headlessly
   render    Render a template to a pcapng file without transmitting
   import    Convert a pcap/pcapng capture into a template
-  template  Template tools (lint, list, export, import)
+  template  Template tools (lint, list, migrate, export, import)
   ifaces    List network interfaces usable for transmission
   doctor    Diagnose privileges, drivers, hugepages and Npcap
   bench     Measure transmit performance
+  capture   Receive: counters, the first frames, pcapng output, signature verification
+  config    Configuration file tools (init, show, validate)
   help      Print this message or the help of the given subcommand(s)
 
 Options:
@@ -31,7 +33,7 @@ Options:
 
 ### `wpg send`
 
-テンプレートを送出します。`--plan` は、全フレームを先に展開する (`prerender`) か、送出しながら組み立てる (`onthefly`) かを選びます。`--json` は最終レポートを標準出力に JSON で出します。
+テンプレートを送出します。`--plan` は、全フレームを先に展開する (`prerender`) か、送出しながら組み立てる (`onthefly`) かを選びます。`--json` は最終レポートを標準出力に JSON で出します。`--signature` は各フレームに受信検証用のシグネチャを埋め込み、`wpg capture --verify` で照合できます ([受信と検証](../operations/rx-verify.md))。
 
 ```text
 Send a template headlessly
@@ -55,6 +57,8 @@ Options:
       --plan <PLAN>          Expansion strategy: auto, prerender or onthefly [default: auto]
       --json                 Print the final report as JSON on stdout
       --var <NAME=VALUE>     Template variable override (`name=value`), repeatable
+      --signature            Stamp every frame with a receive-verification signature (magic, stream id, sequence number, TX time over the last 24 payload octets; see `wpg capture --verify`)
+      --stream-id <ID>       Signature stream id (with `--signature`) [default: 0]
       --batch <N>            Frames per `send_batch` call
       --ring-depth <N>       TX ring depth in frames (`afpacket`)
       --pin-core <CORE>      Pin the TX thread to this CPU core (Linux; the first worker)
@@ -120,6 +124,32 @@ Options:
       --busy-poll                Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
   -h, --help                     Print help
   -V, --version                  Print version
+```
+
+### `wpg capture`
+
+受信カウンタ (pps / bps、フィルタ一致数) を取り、最初の N フレームの表示、pcapng 保存、`wpg send --signature` で埋め込んだシグネチャの照合 (ロス / 順序逆転 / 重複 / 遅延) を行います。フィルタの書式と結果の読み方は [受信と検証](../operations/rx-verify.md) を参照してください。`--json` は `{ "report": …, "packets": [...] }` を標準出力に出します。
+
+```text
+Receive: counters, the first frames, pcapng output, signature verification
+
+Usage: wpg capture [OPTIONS]
+
+Options:
+  -i, --iface <IFACE>        Interface to receive on (`any` = every interface with `afpacket`); for the `pcapfile` backend the capture file to replay
+      --backend <BACKEND>    Receive backend: afpacket (Linux), pcap (feature `pcap`), pcapfile, null
+  -f, --filter <EXPR>        tcpdump-style filter, e.g. `udp port 5001 and wpg` (default: every frame)
+  -c, --count <COUNT>        Stop after this many matching frames
+      --duration <DURATION>  Stop after this long, e.g. `10s`
+      --show <N>             Print the first N matching frames [default: 5]
+      --hex                  Also print a hex dump of the shown frames
+  -w, --write <FILE>         Write the matching frames to this pcapng file
+      --verify               Check the signatures stamped by `wpg send --signature` (loss / order / latency)
+      --promisc              Promiscuous mode
+      --include-outgoing     Also count frames this host transmits
+      --json                 Machine-readable output
+  -h, --help                 Print help
+  -V, --version              Print version
 ```
 
 ### `wpg ifaces`

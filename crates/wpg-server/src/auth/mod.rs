@@ -15,7 +15,7 @@
 //! * [`require`] is the middleware in front of the API; public paths:
 //!   [`is_public`].
 //! * Audit trail: `tracing` events with target `wpg::audit` (login, logout,
-//!   setup, job actions) carrying the user and the client address.
+//!   setup, job and capture actions) carrying the user and the client address.
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
@@ -606,6 +606,23 @@ pub async fn require(State(st): State<AppState>, mut req: Request, next: Next) -
             path = %path,
             status = resp.status().as_u16(),
             "job {action}"
+        );
+    }
+    if is_mutating(&method) && path.starts_with("/api/captures") && path != "/api/captures/filter" {
+        let action = match (method.as_str(), path.rsplit('/').next().unwrap_or("")) {
+            ("POST", "captures") => "start",
+            ("DELETE", _) => "delete",
+            ("POST", a) => a,
+            _ => "other",
+        };
+        tracing::info!(
+            target: AUDIT,
+            user = %principal.user,
+            ip = %principal.ip,
+            action,
+            path = %path,
+            status = resp.status().as_u16(),
+            "capture {action}"
         );
     }
     resp

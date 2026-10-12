@@ -382,10 +382,10 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] 性能レグレッションテスト (`wpg bench` を CI nightly)（`.github/workflows/nightly-bench.yml`: 毎日 + 手動、release で null（1 / 2 ワーカー）・afpacket `lo`（ring / sendmmsg）・afxdp `lo`（copy、使えなければ省略）と pacer 精度を計測し、`scripts/bench-check.py` が `scripts/bench-thresholds.json` のしきい値と比較してジョブのサマリと 90 日の artifact に残す。しきい値は共有ランナー向けに緩め。前回値との自動比較・グラフ化は対象外）
 
 ### M9: 受信 / 検証（2–3 週）
-- [ ] 受信カウンタ (pps/bps、BPF フィルタ一致)
-- [ ] 送出シグネチャ照合 (ロス / 順序 / 遅延概算)
-- [ ] 最初の N パケットの表示、pcapng 保存
-- [ ] GUI 受信画面
+- [x] 受信カウンタ (pps/bps、BPF フィルタ一致)（`wpg-rx`: `RxBackend` trait と `afpacket` (Linux、`any` 対応、自ホスト送出分は既定で除外、カーネルドロップ数)・`pcap` (feature)・`pcapfile` (ファイル再生、NIC なしの試験用)・`null`。フィルタは tcpdump 構文のサブセット (ether / vlan / ip / ip6 / arp / tcp / udp / sctp / icmp / host / net / port / portrange / len / `wpg`) をユーザ空間で評価し全 OS で同じ結果。全受信と一致分の pps / bps、`wpg capture`、`/api/captures`、WS `rx_stats`。カーネル BPF へのコンパイル、AF_XDP / DPDK 受信、数十万 pps 超の受信性能は対象外）
+- [x] 送出シグネチャ照合 (ロス / 順序 / 遅延概算)（`wpg_core::signature`: フレーム末尾 24 オクテットに magic + stream id + seq + 送出時刻 ns を送出直前に書き込み、UDP / TCP / ICMP / ICMPv6 チェックサムは差分更新。余地のないフレームは `unsigned` に計上。`wpg send --signature [--stream-id]` / ジョブの `signature`。受信側はストリームごとに受信数・ロス概算・順序逆転・重複 (直近 65536 連番)・遅延 min/avg/max・ジッタ。遅延は時計が一致する場合のみ有効。ハードウェアタイムスタンプ、OSPF / GRE 等その他のチェックサム補正は対象外）
+- [x] 最初の N パケットの表示、pcapng 保存（CLI `--show N` / `--hex` / `-w`、API `keep` (既定 100、上限 10000) と `save` (`<data_dir>/captures` 配下)、`GET /api/captures/{id}/packets` / `pcapng`。pcapng のタイムスタンプはマイクロ秒。リングバッファ・ファイル分割は対象外）
+- [x] GUI 受信画面（`/rx`: 開始フォーム (フィルタの入力中検査)、キャプチャ一覧、WS によるカウンタのリアルタイム更新、ストリーム別照合表、先頭 N フレームの一覧と Hex / ツリー表示 (ブラウザ内 wpg-core で解析)、pcapng ダウンロード。ジョブ画面にシグネチャ設定。E2E `e2e/specs/rx.spec.ts`）
 
 ### M10: デプロイ・配布・運用（2 週）
 - [x] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション（ホスト側は `scripts/lib/deploy-remote.sh`。`--service` で `wpg` ユーザ / `/etc/wpg/wpg.env` / unit 投入、パスワード無しの非ループバック起動を拒否、`/api/health` 待ち、`wpg.prev` と `--rollback`。systemd + sshd の Ubuntu 24.04 コンテナで確認、shellcheck 済み。`--dpdk` は hugepages / hugetlbfs / vfio-pci / IOMMU 確認の準備のみで NIC バインドと DPDK 本体は対象外 (M8)。CML2 実機は未確認）

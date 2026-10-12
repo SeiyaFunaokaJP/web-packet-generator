@@ -2,7 +2,7 @@
 
 Status: draft
 
-The `wpg` binary provides the subcommands serve, send, render, import, template, ifaces, doctor and bench. The same binary runs the server and headless sending, which suits CI and ssh sessions. For example, `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` transmits a template. The blocks below are the verbatim `--help` output of the current build. Subcommands not listed here (`serve`, `import`) are not documented yet; run `wpg <command> --help`.
+The `wpg` binary provides the subcommands serve, send, render, import, template, ifaces, doctor, bench, capture and config. The same binary runs the server and headless sending, which suits CI and ssh sessions. For example, `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` transmits a template. The blocks below are the verbatim `--help` output of the current build. Subcommands not listed here (`serve`, `import`) are not documented yet; run `wpg <command> --help`.
 
 ## Commands
 
@@ -18,10 +18,12 @@ Commands:
   send      Send a template headlessly
   render    Render a template to a pcapng file without transmitting
   import    Convert a pcap/pcapng capture into a template
-  template  Template tools (lint, list, export, import)
+  template  Template tools (lint, list, migrate, export, import)
   ifaces    List network interfaces usable for transmission
   doctor    Diagnose privileges, drivers, hugepages and Npcap
   bench     Measure transmit performance
+  capture   Receive: counters, the first frames, pcapng output, signature verification
+  config    Configuration file tools (init, show, validate)
   help      Print this message or the help of the given subcommand(s)
 
 Options:
@@ -31,7 +33,7 @@ Options:
 
 ### `wpg send`
 
-Sends a template. `--plan` chooses between expanding all frames up front (`prerender`) and building them while sending (`onthefly`). `--json` prints the final report on stdout.
+Sends a template. `--plan` chooses between expanding all frames up front (`prerender`) and building them while sending (`onthefly`). `--json` prints the final report on stdout. `--signature` stamps every frame with a receive-verification signature that `wpg capture --verify` checks (see [Receive and verification](../operations/rx-verify.md)).
 
 ```text
 Send a template headlessly
@@ -55,6 +57,8 @@ Options:
       --plan <PLAN>          Expansion strategy: auto, prerender or onthefly [default: auto]
       --json                 Print the final report as JSON on stdout
       --var <NAME=VALUE>     Template variable override (`name=value`), repeatable
+      --signature            Stamp every frame with a receive-verification signature (magic, stream id, sequence number, TX time over the last 24 payload octets; see `wpg capture --verify`)
+      --stream-id <ID>       Signature stream id (with `--signature`) [default: 0]
       --batch <N>            Frames per `send_batch` call
       --ring-depth <N>       TX ring depth in frames (`afpacket`)
       --pin-core <CORE>      Pin the TX thread to this CPU core (Linux; the first worker)
@@ -120,6 +124,32 @@ Options:
       --busy-poll                Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
   -h, --help                     Print help
   -V, --version                  Print version
+```
+
+### `wpg capture`
+
+Receive counters (pps / bps, frames matching the filter), the first N frames, pcapng output and verification of the signatures stamped by `wpg send --signature` (loss / reordering / duplicates / latency). See [Receive and verification](../operations/rx-verify.md) for the filter syntax and how to read the results. `--json` prints `{ "report": …, "packets": [...] }` on stdout.
+
+```text
+Receive: counters, the first frames, pcapng output, signature verification
+
+Usage: wpg capture [OPTIONS]
+
+Options:
+  -i, --iface <IFACE>        Interface to receive on (`any` = every interface with `afpacket`); for the `pcapfile` backend the capture file to replay
+      --backend <BACKEND>    Receive backend: afpacket (Linux), pcap (feature `pcap`), pcapfile, null
+  -f, --filter <EXPR>        tcpdump-style filter, e.g. `udp port 5001 and wpg` (default: every frame)
+  -c, --count <COUNT>        Stop after this many matching frames
+      --duration <DURATION>  Stop after this long, e.g. `10s`
+      --show <N>             Print the first N matching frames [default: 5]
+      --hex                  Also print a hex dump of the shown frames
+  -w, --write <FILE>         Write the matching frames to this pcapng file
+      --verify               Check the signatures stamped by `wpg send --signature` (loss / order / latency)
+      --promisc              Promiscuous mode
+      --include-outgoing     Also count frames this host transmits
+      --json                 Machine-readable output
+  -h, --help                 Print help
+  -V, --version              Print version
 ```
 
 ### `wpg ifaces`
