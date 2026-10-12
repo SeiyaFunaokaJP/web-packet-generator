@@ -175,6 +175,7 @@ fn avp(code: u64, name: &str, m: bool, fields: Vec<FieldDef>) -> TlvVariant {
     let mut all = vec![
         u("v", 1).with_auto(AutoCompute::Count {
             field: "vendor_id".into(),
+            adjust: 0,
         }),
         uint("m", 1, u64::from(m)),
         uint("p", 1, 0),

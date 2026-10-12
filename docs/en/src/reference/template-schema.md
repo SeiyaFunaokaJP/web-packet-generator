@@ -123,6 +123,7 @@ Command-line options of `wpg send` override these.
 | `examples/` | five small starting points |
 | `protocols/l2`, `l3`, `l4`, `payload`, `frame` | one or more samples for every protocol in the catalog, plus jumbo, minimum-size, runt and FCS cases |
 | `scenarios/` | ready-made tests: ARP sweeps, SYN flood and port scan, QinQ, NDP and RA, ping and TTL sweeps, QoS matrix, MTU probe, frame-size sweep, MAC flood |
+| `interop/` | interop checks against real devices and FRR: OSPFv2 2-Way, RIPv2 routes, IS-IS adjacency Up, VRRPv3 preemption, PIM neighbor, LDP discovery, BFD session Up (`interop` tag; procedure in the operations guide, "Interop checks") |
 | `malformed/` | deliberately broken packets (bad checksums, wrong lengths, truncation, bad FCS); they lint with warnings by design and are tagged `malformed` |
 
 List them with `wpg template list templates`.

@@ -91,9 +91,9 @@ pub enum Length {
         /// Octets per unit of the field value.
         #[serde(default = "one_u32", skip_serializing_if = "is_one")]
         unit: u32,
-        /// Octets added to `value * unit` (a length that leaves out the first
-        /// octets of the group: GTPv2-C counts from octet 5, RTCP in 32-bit words
-        /// minus one).
+        /// Octets added after multiplying (IPv6 extension headers: the length
+        /// counts 8-octet units beyond the first, so `unit = 8, adjust = 8`;
+        /// GTPv2-C counts from octet 5, RTCP in 32-bit words minus one).
         #[serde(default, skip_serializing_if = "is_zero")]
         adjust: i64,
     },
@@ -709,6 +709,10 @@ pub enum AutoCompute {
     Count {
         /// The counted `list` / `tlv` field.
         field: String,
+        /// Added to the element count (`SRv6` SRH `last_entry`: `-1`, the index of
+        /// the last element). A negative result is written as 0.
+        #[serde(default, skip_serializing_if = "is_zero")]
+        adjust: i64,
     },
     /// Encoded size in octets of a later variable-size field of the same field
     /// group (a sub-TLV length inside a TLV value). Like [`AutoCompute::Count`] it
@@ -875,7 +879,11 @@ pub struct Peek {
     /// Selector value of [`Binding::field`] under which the payload is peeked; the
     /// builder writes it when the next layer is one of the peeked protocols.
     pub on: u64,
-    /// Number of leading payload bits read (1..=64, MSB first).
+    /// Payload bits skipped before reading (the IPv6 Routing header type is the
+    /// third octet of the header that follows: `skip = 16`).
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
+    pub skip: u32,
+    /// Number of payload bits read after `skip` (1..=64, MSB first).
     pub bits: u8,
     /// Peeked value → protocol (exact entries first, then ranges).
     pub table: Vec<BindingEntry>,
@@ -890,10 +898,18 @@ impl Peek {
     pub fn new(on: u64, bits: u8, table: Vec<BindingEntry>) -> Self {
         Self {
             on,
+            skip: 0,
             bits,
             table,
             default: None,
         }
+    }
+
+    /// Builder: skips `bits` payload bits before reading (see [`Peek::skip`]).
+    #[must_use]
+    pub fn skipping(mut self, bits: u32) -> Self {
+        self.skip = bits;
+        self
     }
 }
 
@@ -991,7 +1007,7 @@ impl Binding {
         let n = payload.len();
         if let Some(p) = self.peek.as_ref().filter(|p| p.on == v) {
             let bits = u32::from(p.bits);
-            return match crate::bits::get_bits(payload, 0, bits) {
+            return match crate::bits::get_bits(payload, usize::try_from(p.skip).ok()?, bits) {
                 Some(x) => pick(&p.table, x, n)
                     .map(|e| (e.protocol.as_str(), e.reparse))
                     .or_else(|| p.default.as_deref().map(|d| (d, false))),
@@ -1020,6 +1036,22 @@ pub struct PseudoHeader {
     pub dst: String,
 }
 
+/// Final destination announced by a routing header (RFC 8200 §8.1: upper-layer
+/// checksums use the address of the last hop, not the IPv6 destination of the
+/// packet while segments are left).
+///
+/// When the integer field `when` of the routing header is non-zero, the first
+/// element of the address list `list` replaces the destination address of the
+/// pseudo header of the network layer below (`SRv6` SRH: `segments_left` and
+/// `segment_list`, whose element 0 is the last segment).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FinalDestination {
+    /// List field of addresses of the same type as the pseudo header.
+    pub list: String,
+    /// Integer field that enables the replacement when non-zero.
+    pub when: String,
+}
+
 /// A declarative protocol definition.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProtocolDef {
@@ -1037,6 +1069,10 @@ pub struct ProtocolDef {
     /// Pseudo header supplied to upper-layer checksums.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pseudo_header: Option<PseudoHeader>,
+    /// Routing headers: the final destination that replaces the destination
+    /// address of the lower pseudo header (see [`FinalDestination`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_destination: Option<FinalDestination>,
     /// Declarative checks run after building.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub constraints: Vec<Constraint>,
@@ -1101,7 +1137,7 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
             ));
         }
         match &field.auto {
-            Some(AutoCompute::Count { field: target }) => {
+            Some(AutoCompute::Count { field: target, .. }) => {
                 let counted = fields.iter().any(|f| {
                     &f.name == target && matches!(f.ty, FieldType::List { .. } | FieldType::Tlv(_))
                 });
@@ -1278,6 +1314,7 @@ impl ProtocolDef {
             fields: Vec::new(),
             next: None,
             pseudo_header: None,
+            final_destination: None,
             constraints: Vec::new(),
             min_frame_len: None,
             synth: None,
@@ -1349,6 +1386,20 @@ impl ProtocolDef {
                 return Err(def_err(
                     &self.id,
                     "pseudo header needs two IPv4 or two IPv6 address fields and a binding",
+                ));
+            }
+        }
+        if let Some(fd) = &self.final_destination {
+            let list_ok = matches!(
+                self.field(&fd.list).map(|f| &f.ty),
+                Some(FieldType::List { item: ItemDef::Field { ty }, .. })
+                    if matches!(**ty, FieldType::Ipv4 | FieldType::Ipv6)
+            );
+            let when_ok = self.field(&fd.when).is_some_and(|f| f.ty.is_unsigned_int());
+            if !list_ok || !when_ok {
+                return Err(def_err(
+                    &self.id,
+                    "final destination needs a list of IPv4 / IPv6 addresses and an unsigned integer field",
                 ));
             }
         }

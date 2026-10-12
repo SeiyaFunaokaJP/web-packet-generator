@@ -74,6 +74,7 @@ fn header_extension() -> FieldType {
                 uint("profile", 16, 0xbede),
                 u("length", 16).with_auto(AutoCompute::Count {
                     field: "data".into(),
+                    adjust: 0,
                 }),
                 FieldDef::new(
                     "data",
@@ -169,7 +170,10 @@ fn common_header(count_name: &str, counted: Option<&str>, pt: u64) -> Vec<FieldD
     let mut count =
         u(count_name, 5).with_description(format!("rtcp-{}", count_name.replace('_', "-")));
     count = match counted {
-        Some(f) => count.with_auto(AutoCompute::Count { field: f.into() }),
+        Some(f) => count.with_auto(AutoCompute::Count {
+            field: f.into(),
+            adjust: 0,
+        }),
         None => count.with_default(FieldValue::UInt(0)),
     };
     vec![

@@ -43,7 +43,10 @@ fn u(name: &str, bits: u8, default: u64) -> FieldDef {
 
 /// An Auto element count of the `list` field `of` (same field group).
 fn count(name: &str, bits: u8, of: &str) -> FieldDef {
-    FieldDef::new(name, FieldType::UInt { bits }).with_auto(AutoCompute::Count { field: of.into() })
+    FieldDef::new(name, FieldType::UInt { bits }).with_auto(AutoCompute::Count {
+        field: of.into(),
+        adjust: 0,
+    })
 }
 
 fn from_field(field: &str, unit: u32) -> Length {

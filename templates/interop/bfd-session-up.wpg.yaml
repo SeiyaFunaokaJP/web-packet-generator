@@ -1,0 +1,60 @@
+# Interop: BFD control packets in state Up that answer the peer's discriminator
+schema: 1
+
+meta:
+  name: interop-bfd-session-up
+  descriptions:
+    ja: "相互接続確認: 相手の Discriminator を Your Discriminator に入れた状態 Up の BFD 制御パケットを 300 ms 間隔で送り、相手のセッションを Up にする (相手の Discriminator は変数で渡す。送出を止めると検出時間後に Down)"
+    en: "Interop check: BFD control packets in state Up every 300 ms that carry the peer's discriminator as Your Discriminator, bringing the peer's session Up (pass the peer's discriminator as a variable; the session goes Down one detection time after wpg stops)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:bfd", "layer:l4", interop, bfd]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: src_ip
+    default: 10.99.0.1
+    description: Source address of wpg (the peer's configured BFD neighbor)
+  - name: peer_ip
+    default: 10.99.0.2
+    description: Address of the device under test
+  - name: peer_mac
+    default: "02:00:00:00:00:02"
+    description: MAC of the peer's interface
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC of wpg
+  - name: state
+    default: up
+    description: "BFD state sent: down to start the three-way handshake, then up"
+  - name: peer_discriminator
+    default: 0
+    description: The peer's My Discriminator (0 while unknown, with state down)
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: ${peer_mac}
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: ${src_ip}
+      dst: ${peer_ip}
+      dscp: 48
+      ttl: 255 # RFC 5881 §5: GTSM
+  - protocol: udp
+    fields:
+      src_port: 49152
+      dst_port: 3784
+  - protocol: bfd
+    fields:
+      state: ${state}
+      detect_mult: 3
+      my_discriminator: 0x00000101
+      your_discriminator: ${peer_discriminator}
+      desired_min_tx_interval: 300000 # microseconds
+      required_min_rx_interval: 300000
+      required_min_echo_rx_interval: 0
+
+tx:
+  count: 400 # two minutes
+  rate: ifg=300ms

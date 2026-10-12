@@ -256,6 +256,7 @@ pub fn clnp() -> ProtocolDef {
         u("sp", 1)
             .with_auto(AutoCompute::Count {
                 field: "segmentation".into(),
+                adjust: 0,
             })
             .with_description("clnp-sp"),
         uint("ms", 1, 0, "clnp-ms"),
@@ -348,6 +349,7 @@ pub fn esis_esh() -> ProtocolDef {
             u("number_of_source_addresses", 8)
                 .with_auto(AutoCompute::Count {
                     field: "source_addresses".into(),
+                    adjust: 0,
                 })
                 .with_description("esis-number-of-source-addresses"),
             nsap_list(

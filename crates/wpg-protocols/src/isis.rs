@@ -273,6 +273,7 @@ fn prefix_entry(head: Vec<FieldDef>) -> Vec<FieldDef> {
 fn sub_tlvs_present() -> FieldDef {
     u("sub_tlvs_present", 1).with_auto(wpg_core::AutoCompute::Count {
         field: "sub_tlv_block".into(),
+        adjust: 0,
     })
 }
 

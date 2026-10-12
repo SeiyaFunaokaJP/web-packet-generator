@@ -73,6 +73,7 @@ fn prefix_def() -> ProtocolDef {
             uint("metric", 8),
             uint("s", 1).with_auto(AutoCompute::Count {
                 field: "block".into(),
+                adjust: 0,
             }),
             uint("plen", 7),
             FieldDef::new(
@@ -842,6 +843,7 @@ fn null_terminated_item_lists_with_padding() {
     d.fields = vec![
         uint("n", 8).with_auto(AutoCompute::Count {
             field: "chunks".into(),
+            adjust: 0,
         }),
         FieldDef::new(
             "pad0",

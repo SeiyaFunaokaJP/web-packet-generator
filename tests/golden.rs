@@ -8,7 +8,7 @@
 //! To add a protocol: write one `fn case_xxx() -> Packet`, add one line to [`cases`],
 //! regenerate, and (optionally) add expectations in `tests/tshark.rs`.
 
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use wpg_core::{FieldValue, Layer, Packet, TlvItem};
 use wpg_protocols::{bgp_mp, catalog, gtpv2};
@@ -377,6 +377,80 @@ fn case_eth_ipv4_udp_bfd() -> Packet {
     ])
 }
 
+fn ipv6_list(list: &[&str]) -> FieldValue {
+    FieldValue::List(
+        list.iter()
+            .map(|a| FieldValue::Ipv6(a.parse::<Ipv6Addr>().unwrap()))
+            .collect(),
+    )
+}
+
+/// `SRv6` SRH (RFC 8754) with three segments, two left, carrying UDP: the UDP
+/// checksum uses the last segment as the pseudo-header destination.
+fn case_eth_ipv6_srh_udp() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        Layer::new("ipv6")
+            .with("src", "2001:db8::1".parse::<Ipv6Addr>().unwrap())
+            .with("dst", "fc00:0:2::".parse::<Ipv6Addr>().unwrap()),
+        Layer::new("ipv6_srh")
+            .with("segments_left", 2u8)
+            .with("tag", 0x10u16)
+            .with(
+                "segment_list",
+                ipv6_list(&["2001:db8:0:9::1", "fc00:0:3::", "fc00:0:2::"]),
+            ),
+        Layer::new("udp")
+            .with("src_port", 40000u16)
+            .with("dst_port", 40001u16),
+        Layer::new("raw").with("data", b"srv6".to_vec()),
+    ])
+}
+
+/// `SRv6` `H.Encaps` (RFC 8986): outer IPv6 + SRH with an HMAC TLV, inner IPv4/UDP.
+fn case_eth_ipv6_srh_hmac_ipv4() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        Layer::new("ipv6")
+            .with("src", "2001:db8::1".parse::<Ipv6Addr>().unwrap())
+            .with("dst", "fc00:0:2:e000::".parse::<Ipv6Addr>().unwrap()),
+        Layer::new("ipv6_srh")
+            .with(
+                "segment_list",
+                ipv6_list(&["fc00:0:3:e000::", "fc00:0:2:e000::"]),
+            )
+            .with(
+                "tlvs",
+                vec![TlvItem::named("hmac")
+                    .with("hmac_key_id", 1u32)
+                    .with("hmac", vec![0x5a; 32])],
+            ),
+        ipv4(0x0020, [10, 1, 0, 1], [10, 2, 0, 1]),
+        Layer::new("udp")
+            .with("src_port", 1024u16)
+            .with("dst_port", 4000u16),
+        Layer::new("raw").with("data", b"vpn".to_vec()),
+    ])
+}
+
+/// SR-MPLS: prefix SID 16101 (SRGB 16000 + index 101), adjacency SID 24001, the
+/// entropy label indicator and an entropy label (RFC 6790), then IPv4/UDP.
+fn case_eth_mpls_sr_eli_ipv4_udp() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        Layer::new("mpls").with("label", 16101u32),
+        Layer::new("mpls").with("label", 24001u32),
+        Layer::new("mpls").with("label", 7u32),
+        Layer::new("mpls")
+            .with("label", 0x5_4321u32)
+            .with("ttl", 0u8),
+        ipv4(0x0030, [10, 0, 0, 1], [10, 0, 0, 2]),
+        Layer::new("udp")
+            .with("src_port", 1024u16)
+            .with("dst_port", 4000u16),
+    ])
+}
+
 /// OSPFv2 LSU with an area-scope Router Information opaque LSA: SR algorithms,
 /// SRGB and SRLB (3-octet SID/Label sub-TLVs padded to 4 octets).
 fn case_eth_ipv4_ospfv2_opaque_ri() -> Packet {
@@ -708,6 +782,9 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ),
         ("eth_ipv4_rsvp_path", case_eth_ipv4_rsvp_path()),
         ("eth_ipv4_udp_bfd", case_eth_ipv4_udp_bfd()),
+        ("eth_ipv6_srh_udp", case_eth_ipv6_srh_udp()),
+        ("eth_ipv6_srh_hmac_ipv4", case_eth_ipv6_srh_hmac_ipv4()),
+        ("eth_mpls_sr_eli_ipv4_udp", case_eth_mpls_sr_eli_ipv4_udp()),
         ("eth_macsec", case_eth_macsec()),
         (
             "eth_ipv4_udp_gtpv2_create_session",

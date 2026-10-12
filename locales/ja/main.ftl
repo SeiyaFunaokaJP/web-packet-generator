@@ -60,6 +60,12 @@ ipv6-options = 生の TLV オプション (8 バイトの倍数にパディン�
 ipv6-routing-data = ルーティングタイプ固有のデータ。
 ipv6-routing-type = ルーティングヘッダ種別 (例: 2 = Mobile IPv6、4 = SRH)。
 ipv6-segments-left = 残りのルートセグメント数。
+srh-segments-left = Segments Left: 次に向かうセグメントのセグメントリスト上の位置。最後のセグメントで 0。
+srh-last-entry = Last Entry: セグメントリスト最後の要素の位置 (= セグメント数 - 1、Auto)。
+srh-flags = フラグ (RFC 8754 では未定義。0)。
+srh-tag = Tag: パケットをクラスやグループで分類するための値 (0 = 未使用)。
+srh-segment-list = セグメントリスト (SID) を経路の逆順で: 要素 0 が最後のセグメント、最後の要素が最初のセグメント。Segments Left が 0 でない間は、上位層チェックサムの宛先に要素 0 を使用。
+srh-tlvs = 省略可能な TLV (8 ビット型、8 ビット長): Pad1、PadN、HMAC (HMAC 値は手動)。ヘッダは Pad1 で 8 オクテットの倍数まで自動で詰める。
 ndp-destination = リダイレクト先の宛先アドレス。
 ndp-managed = 管理アドレス設定フラグ (M)。
 ndp-options = 生の NDP オプション (TLV)。
@@ -610,7 +616,7 @@ gre-flags = GRE フラグとバージョン (checksum / key / sequence の存在
 gre-protocol-type = カプセル化ペイロードの EtherType。
 nvgre-vsid = 24 ビット NVGRE 仮想サブネット ID。
 nvgre-flowid = NVGRE FlowID (負荷分散用エントロピー)。
-mpls-label = 20 ビット MPLS ラベル値。
+mpls-label = 20 ビット MPLS ラベル値。0〜15 は予約 (0 / 2 Explicit Null、1 Router Alert、3 Implicit Null、7 エントロピーラベル指示子、13 GAL、14 OAM Alert、15 拡張)。SR-MPLS の SID は SRGB ベース + SID インデックス。
 mpls-tc = 3 ビットトラフィッククラス (QoS / ECN)。
 mpls-s = スタック最下位ビット (1 = 最後のラベル。次レイヤから自動)。
 mpls-ttl = MPLS TTL。

@@ -255,6 +255,11 @@ pub(crate) fn element_count(ty: &FieldType, value: &FieldValue) -> Option<u64> {
     u64::try_from(n).ok()
 }
 
+/// An element count plus the [`AutoCompute::Count`] adjustment, floored at 0.
+pub(crate) fn adjusted_count(n: u64, adjust: i64) -> u64 {
+    u64::try_from((i128::from(n) + i128::from(adjust)).max(0)).unwrap_or(u64::MAX)
+}
+
 /// Value of a [`AutoCompute::Count`] field of a group whose (Manual or default)
 /// values `get` returns; `None` when the count cannot be known.
 fn count_for<'v>(
@@ -295,7 +300,9 @@ fn group_auto<'v>(
     get: impl Fn(&'v FieldDef) -> Option<&'v FieldValue>,
 ) -> Option<u64> {
     match auto? {
-        AutoCompute::Count { field } => count_for(fields, field, get),
+        AutoCompute::Count { field, adjust } => {
+            count_for(fields, field, get).map(|n| adjusted_count(n, *adjust))
+        }
         AutoCompute::Size { field } => size_for(fields, field, get),
         _ => None,
     }
@@ -1147,8 +1154,22 @@ impl Ctx<'_> {
         (u64::from(c), warning)
     }
 
+    /// The final destination announced by layer `k` (a routing header with
+    /// segments left), see [`crate::FinalDestination`].
+    fn final_destination(&self, k: usize) -> Option<&FieldValue> {
+        let e = &self.encs[k];
+        let fd = e.def.final_destination.as_ref()?;
+        if e.value(&fd.when).and_then(FieldValue::as_u64)? == 0 {
+            return None;
+        }
+        match e.value(&fd.list)? {
+            FieldValue::List(v) => v.first(),
+            _ => None,
+        }
+    }
+
     /// IPv4 / IPv6 pseudo header for layer `i` from the nearest lower layer that
-    /// declares one.
+    /// declares one (with the final destination of a routing header in between).
     fn pseudo_header(&self, i: usize) -> Option<Vec<u8>> {
         let j = (0..i)
             .rev()
@@ -1166,8 +1187,11 @@ impl Ctx<'_> {
         }
         .unwrap_or(0);
         let upper_len = (self.bytes.len() - self.encs[i].offset) as u64;
+        let dst = (j + 1..i)
+            .find_map(|k| self.final_destination(k))
+            .or_else(|| lower.value(&ph.dst))?;
         #[allow(clippy::cast_possible_truncation)] // wire widths, wrap on purpose
-        match (lower.value(&ph.src)?, lower.value(&ph.dst)?) {
+        match (lower.value(&ph.src)?, dst) {
             (FieldValue::Ipv4(s), FieldValue::Ipv4(d)) => {
                 let mut v = Vec::with_capacity(12);
                 v.extend_from_slice(&s.octets());
@@ -1276,12 +1300,13 @@ impl Ctx<'_> {
                             None => continue,
                         }
                     }
-                    AutoCompute::Count { field } => {
+                    AutoCompute::Count { field, adjust } => {
                         let e = &self.encs[i];
                         let target = e.def.fields.iter().position(|f| &f.name == field);
                         let n = target
                             .and_then(|k| e.slots.iter().find(|x| x.def == k))
-                            .and_then(|x| element_count(&e.def.fields[x.def].ty, &x.value));
+                            .and_then(|x| element_count(&e.def.fields[x.def].ty, &x.value))
+                            .map(|n| adjusted_count(n, *adjust));
                         match n {
                             Some(n) => (keys::COUNT_MISMATCH, i128::from(n), "count"),
                             None => continue,

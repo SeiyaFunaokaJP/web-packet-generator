@@ -306,6 +306,33 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
             ],
         ),
         (
+            "eth_ipv6_srh_udp",
+            vec![
+                ("ipv6.routing.type", "4"),
+                ("ipv6.routing.segleft", "2"),
+                ("ipv6.routing.srh.last_entry", "2"),
+                ("ipv6.routing.srh.tag", "00:10"),
+                ("udp.dstport", "40001"),
+            ],
+        ),
+        (
+            "eth_ipv6_srh_hmac_ipv4",
+            vec![
+                ("ipv6.routing.segleft", "1"),
+                ("ipv6.routing.srh.last_entry", "1"),
+                ("ipv6.nxt", "43"),
+                ("ip.dst", "10.2.0.1"),
+                ("udp.dstport", "4000"),
+            ],
+        ),
+        (
+            "eth_mpls_sr_eli_ipv4_udp",
+            vec![
+                ("mpls.label", "344865"), // the last (entropy) label wins in the JSON
+                ("ip.dst", "10.0.0.2"),
+            ],
+        ),
+        (
             "eth_macsec",
             vec![
                 ("eth.type", "0x88e5"),

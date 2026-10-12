@@ -107,6 +107,10 @@ struct Pseudo {
     v6: bool,
     src_bit: usize,
     dst_bit: usize,
+    /// Final destination of a routing header in between (see
+    /// [`crate::FinalDestination`]): `(when bit, when bits, first list element bit)`;
+    /// the list element replaces `dst_bit` while the `when` field is non-zero.
+    final_dst: Option<(usize, usize, usize)>,
     proto: Proto,
     upper_len: u64,
     /// Bit ranges the pseudo header reads.
@@ -403,6 +407,25 @@ impl Prebuilt {
             _ => return None,
         };
         let mut deps = vec![(src_bit, src_bit + src_len), (dst_bit, dst_bit + dst_len)];
+        let addr_bits = if v6 { 128 } else { 32 };
+        let final_dst = (j + 1..i).find_map(|k| {
+            let fd = def_of(k)?.final_destination.as_ref()?;
+            let at = |name: &str| {
+                core.layout[k]
+                    .fields
+                    .iter()
+                    .find(|f| f.name == name)
+                    .map(|f| (f.bit_offset, f.bit_len))
+            };
+            let (when_bit, when_bits) = at(&fd.when)?;
+            let (list_bit, list_len) = at(&fd.list)?;
+            // An empty list stays empty (variable-size fields are never patched).
+            (list_len >= addr_bits).then_some((when_bit, when_bits, list_bit))
+        });
+        if let Some((when_bit, when_bits, list_bit)) = final_dst {
+            deps.push((when_bit, when_bit + when_bits));
+            deps.push((list_bit, list_bit + addr_bits));
+        }
         let selector = match lower.field(&binding.field).map(|f| &f.ty) {
             Some(FieldType::UInt { .. } | FieldType::Enum { .. } | FieldType::Flags { .. }) => {
                 field(&binding.field)
@@ -426,6 +449,7 @@ impl Prebuilt {
             v6,
             src_bit,
             dst_bit,
+            final_dst,
             proto,
             upper_len: (total - core.layout[i].offset) as u64,
             deps,
@@ -601,15 +625,23 @@ impl Prebuilt {
                             get_bits(&self.out, bit, width(bits)).unwrap_or(0)
                         }
                     };
+                    let dst_bit = match p.final_dst {
+                        Some((bit, bits, list_bit))
+                            if get_bits(&self.out, bit, width(bits)).unwrap_or(0) != 0 =>
+                        {
+                            list_bit
+                        }
+                        _ => p.dst_bit,
+                    };
                     #[allow(clippy::cast_possible_truncation)] // wire widths, wrap on purpose
                     if p.v6 {
                         sum.add(&get_octets::<16>(&self.out, p.src_bit));
-                        sum.add(&get_octets::<16>(&self.out, p.dst_bit));
+                        sum.add(&get_octets::<16>(&self.out, dst_bit));
                         sum.add(&(p.upper_len as u32).to_be_bytes());
                         sum.add(&[0, 0, 0, proto as u8]);
                     } else {
                         sum.add(&get_octets::<4>(&self.out, p.src_bit));
-                        sum.add(&get_octets::<4>(&self.out, p.dst_bit));
+                        sum.add(&get_octets::<4>(&self.out, dst_bit));
                         sum.add(&[0, proto as u8]);
                         sum.add(&(p.upper_len as u16).to_be_bytes());
                     }

@@ -121,6 +121,7 @@ pub fn builtin() -> Vec<ProtocolDef> {
         ipv6::ipv6(),
         ipv6::ipv6_hopopts(),
         ipv6::ipv6_route(),
+        ipv6::ipv6_srh(),
         ipv6::ipv6_frag(),
         ipv6::ipv6_dstopts(),
         icmp::icmpv4(),
