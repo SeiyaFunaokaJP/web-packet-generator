@@ -44,3 +44,21 @@ accessible name, add one in the UI rather than reaching for a selector.
 
 On failure, traces are kept under `test-results/`
 (`npx playwright show-trace <trace.zip>`); CI uploads them with the HTML report.
+
+## Documentation screenshots
+
+`screenshots/capture.spec.ts` takes the screenshots and the builder GIF used in
+the README and the user guide (`docs/{en,ja}/src/images/`), each screen in
+English and Japanese from the same run. It has its own config, so
+`npx playwright test` does not run it:
+
+```sh
+just screenshots
+# or, with the UI and the server built as above:
+cd e2e && npx playwright test -c screenshots.config.ts
+```
+
+The GIF is assembled by `ffmpeg` (skipped with a message when it is not
+installed). Shots show the machine they were taken on (interfaces, `wpg doctor`
+warnings), so take them on a Linux host and look through the diff before
+committing.

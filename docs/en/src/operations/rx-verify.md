@@ -130,6 +130,8 @@ A capture taken elsewhere (a switch mirror port, …) can be verified offline th
 
 On the "Receive" page choose the backend, interface, filter (checked while you type), packet / time limits, how many leading frames to keep, a file name to save to and whether to verify signatures, then start. While it runs, counters and rates update live over the WebSocket, with the per-stream verification results and the list of the first N frames (hex and decoded view of the selected one). A saved pcapng file can be downloaded once the capture has ended.
 
+![A pcapfile capture of a signed dry run: counters, per-stream verification and the first frames with one decoded](../images/receive.png)
+
 For the `pcapfile` backend the input file and the save file are file names under `captures/` in the server's data directory (where job dry runs are written too).
 
 ## Limitations

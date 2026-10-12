@@ -402,7 +402,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] DPDK / AF_XDP / CML2 セットアップガイド、性能チューニング
 - [x] 開発者ガイド (プロトコル追加、i18n 追加、リリース)（crate 構成・プロトコル追加の手順と部品・i18n キー追加・リリースゲートを ja/en で整備し、CONTRIBUTING.ja.md と整合）
 - [x] FAQ / トラブルシュート、法的注意（`wpg doctor` チェック表とよくある質問、責任ある利用 / デュアルライセンス / 第三者コンポーネントの法的注意を ja/en で整備）
-- [ ] スクリーンショット・動画 GIF
+- [x] スクリーンショット・動画 GIF（`e2e/screenshots/capture.spec.ts` + `screenshots.config.ts`（`just screenshots`）が実際の `wpg serve` からログイン / ダッシュボード / テンプレート / ビルダー / 新しいジョブ / ジョブ詳細 / 受信 (シグネチャ照合) の 7 画面を ja / en で撮り、ビルダー操作の GIF を 1 手順 1 コマの静止画から ffmpeg で組み立てて `docs/{ja,en}/src/images/` に出力。README (ja/en)、はじめに、初回ログイン、受信と照合のページに掲載し、リリース手順に UI 変更時の再生成を追記。撮影は Linux コンテナ上 (インタフェースと doctor の警告はその環境のもの)。ダークテーマ版・動画 (MP4 / WebM)・チュートリアルごとの画面は対象外）
 
 ### M12: v1.0 リリース判定
 - [ ] P0 + P1 プロトコル全 golden pcap 緑、tshark 突合緑

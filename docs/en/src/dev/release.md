@@ -29,6 +29,7 @@ The v1.0 release gate (TODO.md §4, M12) additionally requires:
 - All P0 + P1 protocol golden pcaps and tshark cross-checks green.
 - Build, start and pcap-backend transmission confirmed on all three OSes.
 - The web UI end-to-end tests (`just e2e`) green, and zero ja / en i18n gaps (`cargo test -p wpg-i18n`).
+- The screenshots and the builder GIF in `docs/{ja,en}/src/images/` regenerated with `just screenshots` when the UI changed (review them before committing).
 - Documentation complete in ja and en, with `docs/build.sh` passing.
 - The `CHANGELOG` updated.
 
