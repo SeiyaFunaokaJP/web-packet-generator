@@ -46,6 +46,12 @@ golden-update:
 tshark:
     WPG_TSHARK=1 cargo test -p wpg-golden-tests --test tshark -- --ignored
 
+# Playwright E2E tests of the web UI (requires trunk and Node.js 18+).
+e2e:
+    cd crates/wpg-web && trunk build --release
+    cargo build -p wpg-cli
+    cd e2e && npm ci && npx playwright test
+
 # Format all code.
 fmt:
     cargo fmt --all

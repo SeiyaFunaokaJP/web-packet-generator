@@ -74,3 +74,7 @@ locales have the same keys).
 
 `l` toggles the server log, `?` shows the shortcuts, `Esc` closes dialogs.
 Narrow screens (< 768 px) are view-only (TODO §2.5).
+
+## End-to-end tests
+
+Playwright tests of these screens against a real `wpg serve` live in [`e2e/`](../../e2e/README.md) (`just e2e`).

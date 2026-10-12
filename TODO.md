@@ -341,7 +341,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] 設定画面
 - [x] Undo/Redo、ショートカット、自動保存 (draft)
 - [x] キーボードのみで D&D 相当操作、aria
-- [ ] E2E テスト (Playwright)
+- [x] E2E テスト (Playwright)（`e2e/`: 認証・ビルダー・テンプレート・ジョブ (null バックエンド)・i18n/狭幅画面、`just e2e` / CI `e2e` ジョブ）
 
 ### M5: テンプレート形式 & 共有（1–2 週）
 - [x] YAML/JSON スキーマ (`schema: 1`)、JSON Schema 公開、`wpg template lint`

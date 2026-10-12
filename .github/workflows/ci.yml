@@ -73,6 +73,46 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check -p wpg-core -p wpg-protocols -p wpg-i18n --target wasm32-unknown-unknown
 
+  # M4: Playwright end-to-end tests of the web UI against a real `wpg serve`.
+  e2e:
+    name: e2e (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Build the front-end
+        working-directory: crates/wpg-web
+        run: trunk build --release
+      - name: Build wpg (embeds crates/wpg-web/dist)
+        run: cargo build -p wpg-cli
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run the E2E tests
+        working-directory: e2e
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
+
   # Optional (M1): cross-check the golden pcaps against Wireshark's dissector.
   tshark:
     name: tshark cross-check

@@ -260,27 +260,28 @@ fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
     let idle =
         "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300";
     let name_h = name.clone();
+    let name_group = name.clone();
     let fd_manual = fd.clone();
     let fd_gen = fd.clone();
     let name_auto = name.clone();
 
     view! {
-        <div class="rounded-md border border-slate-200 p-2 dark:border-slate-800" on:click=select_field>
+        <div class="rounded-md border border-slate-200 p-2 dark:border-slate-800" role="group" aria-label=name_group on:click=select_field>
             <div class="flex items-center gap-2">
                 <span class="min-w-0 flex-1 truncate text-sm font-medium">{name_h}</span>
                 <code class="shrink-0 rounded bg-slate-100 px-1 font-mono text-[10px] text-slate-500 dark:bg-slate-800">{tybadge}</code>
                 <div class="flex shrink-0 gap-0.5" on:click=|ev| ev.stop_propagation()>
                     {has_auto.then(|| {
                         let cls = move || format!("{btn} {}", if mode.get() == Mode::Auto { active } else { idle });
-                        view! { <button type="button" class=cls on:click=to_auto>{tr("ui-bld-auto")}</button> }
+                        view! { <button type="button" class=cls aria-pressed=move || (mode.get() == Mode::Auto).to_string() on:click=to_auto>{tr("ui-bld-auto")}</button> }
                     })}
                     {
                         let cls = move || format!("{btn} {}", if mode.get() == Mode::Manual { active } else { idle });
-                        view! { <button type="button" class=cls on:click=to_manual>{tr("ui-bld-manual")}</button> }
+                        view! { <button type="button" class=cls aria-pressed=move || (mode.get() == Mode::Manual).to_string() on:click=to_manual>{tr("ui-bld-manual")}</button> }
                     }
                     {can_gen.then(|| {
                         let cls = move || format!("{btn} {}", if mode.get() == Mode::Gen { active } else { idle });
-                        view! { <button type="button" class=cls on:click=to_gen>{tr("ui-bld-gen")}</button> }
+                        view! { <button type="button" class=cls aria-pressed=move || (mode.get() == Mode::Gen).to_string() on:click=to_gen>{tr("ui-bld-gen")}</button> }
                     })}
                 </div>
             </div>

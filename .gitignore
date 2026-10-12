@@ -8,6 +8,11 @@
 # Trunk output of the Leptos front-end (embedded into wpg-server at build time)
 /crates/wpg-web/dist/
 
+# Playwright E2E (e2e/)
+/e2e/node_modules/
+/e2e/test-results/
+/e2e/playwright-report/
+
 # Editors / OS
 .idea/
 .vscode/
