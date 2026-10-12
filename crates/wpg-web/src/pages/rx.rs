@@ -1230,20 +1230,18 @@ fn PacketView(frame: CapturedFrame) -> impl IntoView {
         })
         .collect_view();
 
-    let title = i18n.ta("ui-rx-frame-title", &[("index", frame.index.to_string())]);
-    let group_label = title.clone();
-    let truncated = (bytes.len() < frame.len).then(|| {
+    let index = frame.index;
+    let title = move || i18n.ta("ui-rx-frame-title", &[("index", index.to_string())]);
+    let (kept, len) = (bytes.len(), frame.len);
+    let truncated = (kept < len).then_some(move || {
         i18n.ta(
             "ui-rx-truncated",
-            &[
-                ("bytes", bytes.len().to_string()),
-                ("len", frame.len.to_string()),
-            ],
+            &[("bytes", kept.to_string()), ("len", len.to_string())],
         )
     });
     view! {
-        <div class="space-y-3" role="group" aria-label=group_label>
-            <h4 class="text-sm font-semibold">{title}" · "{format!("{} B", frame.len)}</h4>
+        <div class="space-y-3" role="group" aria-label=title>
+            <h4 class="text-sm font-semibold">{title}" · "{format!("{len} B")}</h4>
             {truncated.map(|t| view! { <p class="text-xs text-amber-700 dark:text-amber-400">{t}</p> })}
             <section aria-label=tr("ui-bld-hex") class="max-h-80 overflow-auto rounded-md border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-950">
                 {hex_rows}
