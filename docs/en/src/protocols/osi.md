@@ -11,9 +11,9 @@ Notes on the OSI network-layer encapsulation shared by CLNP / ES-IS / IS-IS, and
 | `llc` | DSAP / SSAP `0xfe` | chosen by the PDU's leading NLPID octet |
 | `ppp` | protocol `0x0023` (RFC 1377) | same |
 
-No "next protocol" number precedes an OSI PDU: its own first octet, the NLPID (ISO/IEC TR 9577), says what it is (`0x81` CLNP, `0x82` ES-IS, `0x83` IS-IS). `llc` and `ppp` therefore peek at the first 8 payload bits (`Binding::peek`) to pick the next layer. NLPIDs without a dedicated definition yet decode as the generic `osi` PDU (the NLPID plus the rest as opaque octets). Dedicated definitions are registered in that peek table as they are added: IS-IS (`0x83`) is, see [IS-IS](isis.md); CLNP / ES-IS follow.
+No "next protocol" number precedes an OSI PDU: its own first octet, the NLPID (ISO/IEC TR 9577), says what it is (`0x81` CLNP, `0x82` ES-IS, `0x83` IS-IS). `llc` and `ppp` therefore peek at the first 8 payload bits (`Binding::peek`) to pick the next layer. The dedicated definitions are registered in that peek table: CLNP (`0x81`) and ES-IS (`0x82`), see [CLNP / ES-IS](clnp.md), and IS-IS (`0x83`), see [IS-IS](isis.md). Other NLPIDs (for example `0x00`, the inactive subset of ISO 8473), and PDUs too short for their definition, decode as the generic `osi` PDU (the NLPID plus the rest as opaque octets).
 
-When building, stack `osi` or a dedicated PDU (`isis_l1_lan_hello`, ...; later `clnp`) on top of `llc`; DSAP / SSAP become `0xfe` automatically. The PPP `protocol` likewise becomes `0x0023` automatically.
+When building, stack `osi` or a dedicated PDU (`clnp`, `esis_ish`, `isis_l1_lan_hello`, ...) on top of `llc`; DSAP / SSAP become `0xfe` automatically. The PPP `protocol` likewise becomes `0x0023` automatically.
 
 ## The NSAP type
 
@@ -24,5 +24,5 @@ When building, stack `osi` or a dedicated PDU (`isis_l1_lan_hello`, ...; later `
 
 ## Limits
 
-- The `osi` NLPID is not Auto. Until the CLNP / ES-IS definitions land, give their body as hex in `data`.
-- A PDU with NLPID `0x83` always decodes as IS-IS, so a generic `osi` layer carrying `0x83` reads back as `isis` / an IS-IS PDU.
+- The `osi` NLPID is not Auto.
+- A PDU with NLPID `0x81` / `0x82` / `0x83` always decodes as CLNP / ES-IS / IS-IS (when long enough), so a generic `osi` layer carrying one of them reads back as the dedicated protocol.

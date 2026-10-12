@@ -95,6 +95,7 @@ fn take(data: &[u8], bit: usize, n: usize) -> Option<&[u8]> {
 }
 
 /// Octets a `Length` announces, clamped to `remaining` (with a diagnostic).
+/// `offset` is where the region starts in its field group.
 #[allow(clippy::too_many_arguments)]
 fn region_len(
     len: &Length,
@@ -103,6 +104,7 @@ fn region_len(
     remaining: usize,
     who: Who<'_>,
     at: usize,
+    offset: usize,
     diags: &mut Vec<Diagnostic>,
 ) -> Result<usize, Diagnostic> {
     match len {
@@ -117,15 +119,20 @@ fn region_len(
         Length::ToEnd => Ok(remaining),
         // Count lists are bounded by their elements (see `decode_counted`).
         Length::Count { .. } => Ok(remaining),
-        Length::FromField {
-            field,
-            unit,
-            adjust,
-            div,
-        } => {
+        Length::FromField { field, .. } | Length::UntilOffset { field, .. } => {
             let v = fields.get(field).and_then(FieldValue::as_u64).unwrap_or(0);
-            let want = (i128::from(v) * i128::from(*unit) + i128::from(*adjust))
-                / i128::from((*div).max(1));
+            let want = match len {
+                Length::FromField {
+                    unit, adjust, div, ..
+                } => {
+                    (i128::from(v) * i128::from(*unit) + i128::from(*adjust))
+                        / i128::from((*div).max(1))
+                }
+                Length::UntilOffset { unit, .. } => {
+                    i128::from(v) * i128::from(*unit) - offset as i128
+                }
+                _ => 0,
+            };
             let want = usize::try_from(want.max(0)).unwrap_or(usize::MAX);
             if want > remaining {
                 diags.push(
@@ -216,7 +223,7 @@ fn decode_fields(
                 }
             }
             FieldType::Bytes { len } => {
-                let n = region_len(len, fd, &fields, remaining, who, at, diags)?;
+                let n = region_len(len, fd, &fields, remaining, who, at, bit / 8, diags)?;
                 let b = take(data, bit, n).ok_or_else(|| short(who, at))?;
                 bit += n * 8;
                 FieldValue::Bytes(b.to_vec())
@@ -250,7 +257,7 @@ fn decode_fields(
                 FieldValue::Bytes(b.to_vec())
             }
             FieldType::Tlv(t) => {
-                let n = region_len(&t.length, fd, &fields, remaining, who, at, diags)?;
+                let n = region_len(&t.length, fd, &fields, remaining, who, at, bit / 8, diags)?;
                 let region = take(data, bit, n).ok_or_else(|| short(who, at))?;
                 bit += n * 8;
                 let items = decode_tlv(fd, t, region, Some((who, at, &mut *diags)));
@@ -278,7 +285,7 @@ fn decode_fields(
                 }
             }
             FieldType::List { item, length } => {
-                let n = region_len(length, fd, &fields, remaining, who, at, diags)?;
+                let n = region_len(length, fd, &fields, remaining, who, at, bit / 8, diags)?;
                 let region = take(data, bit, n).ok_or_else(|| short(who, at))?;
                 bit += n * 8;
                 match decode_list(who, fd, item, region, at).map(FieldValue::List) {

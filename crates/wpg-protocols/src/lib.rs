@@ -15,6 +15,7 @@ use wpg_core::{ProtocolDef, Resolve};
 
 pub mod app;
 pub mod arp;
+pub mod clnp;
 pub mod encap;
 pub mod fhrp;
 pub mod icmp;
@@ -207,8 +208,13 @@ pub fn builtin() -> Vec<ProtocolDef> {
         app::tftp_ack(),
         app::tftp_error(),
         app::tftp_oack(),
-        // P2 OSI encapsulation and IS-IS.
+        // P2 OSI encapsulation, CLNP, ES-IS and IS-IS.
         osi::osi(),
+        clnp::clnp(),
+        clnp::esis(),
+        clnp::esis_esh(),
+        clnp::esis_ish(),
+        clnp::esis_rd(),
         isis::isis(),
         isis::isis_l1_lan_hello(),
         isis::isis_l2_lan_hello(),

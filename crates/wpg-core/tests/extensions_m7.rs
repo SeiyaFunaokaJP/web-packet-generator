@@ -1,7 +1,8 @@
 //! IR extensions for the IS-IS TLVs (M7): rounded-up prefix lengths
 //! (`Length::FromField { div }`), count-bounded lists of variable-size elements
 //! (`Length::Count`), octet-size Auto fields (`AutoCompute::Size`) and TLV filler
-//! items up to a requested PDU size (`TlvFill`).
+//! items up to a requested PDU size (`TlvFill`); for CLNP / ES-IS, regions that
+//! end at a header length indicator (`Length::UntilOffset`).
 
 use std::collections::BTreeMap;
 
@@ -319,4 +320,82 @@ fn invalid_m7_extensions_are_rejected() {
         },
     };
     assert!(d.validate().is_err(), "count length on bytes");
+}
+
+/// A CLNP-like header: `li` (Auto header length), a variable-size NSAP, then
+/// options up to `li`; anything after belongs to the next layer.
+fn until_def() -> ProtocolDef {
+    let d = protocol! {
+        id: "until",
+        name: "Until",
+        layer: L3,
+        fields: {
+            li: uint(8), auto = length(header);
+            address: nsap = vec![0x49, 0, 1];
+            options: ty(FieldType::Tlv(tlv(
+                vec![TlvVariant::new(0xcd, "priority", vec![uint("value", 8)])],
+                Length::UntilOffset { field: "li".into(), unit: 1 },
+            ))) = Vec::<TlvItem>::new();
+        },
+    };
+    d.validate().unwrap();
+    d
+}
+
+#[test]
+fn regions_end_at_the_header_length() {
+    let defs = vec![until_def(), wpg_core::raw_protocol()];
+    let p = Packet::from_layers(vec![
+        Layer::new("until").with(
+            "options",
+            vec![TlvItem::named("priority").with("value", 3u8)],
+        ),
+        Layer::new("raw").with("data", vec![0xee; 4]),
+    ]);
+    let built = p.build(&defs).unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    assert_eq!(
+        built.bytes,
+        [8, 3, 0x49, 0, 1, 0xcd, 1, 3, 0xee, 0xee, 0xee, 0xee]
+    );
+
+    let parsed = parse(&built.bytes, "until", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let l = &parsed.packet.layers;
+    assert_eq!(l.len(), 2);
+    assert!(matches!(&l[0].fields["options"], FieldValue::Tlv(t) if t.len() == 1));
+    assert_eq!(l[1].fields["data"], FieldValue::Bytes(vec![0xee; 4]));
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, built.bytes);
+
+    // No options: the region is empty, everything after the header is payload.
+    let parsed = parse(&[5, 3, 0x49, 0, 1, 0xcd, 1, 3], "until", &defs).unwrap();
+    assert_eq!(
+        parsed.packet.layers[0].fields["options"],
+        FieldValue::Tlv(Vec::new())
+    );
+    assert_eq!(
+        parsed.packet.layers[1].fields["data"],
+        FieldValue::Bytes(vec![0xcd, 1, 3])
+    );
+    // A length pointing inside the address: empty region, not an underflow.
+    let parsed = parse(&[1, 3, 0x49, 0, 1], "until", &defs).unwrap();
+    assert_eq!(
+        parsed.packet.layers[0].fields["options"],
+        FieldValue::Tlv(Vec::new())
+    );
+    // A length beyond the data: clamped, reported.
+    let parsed = parse(&[20, 3, 0x49, 0, 1, 0xcd, 1, 3], "until", &defs).unwrap();
+    assert!(parsed
+        .diagnostics
+        .iter()
+        .any(|d| d.key == keys::LENGTH_EXCEEDS_DATA));
+
+    let mut d = until_def();
+    if let FieldType::Tlv(t) = &mut d.fields[2].ty {
+        t.length = Length::UntilOffset {
+            field: "nope".into(),
+            unit: 1,
+        };
+    }
+    assert!(d.validate().is_err(), "until an unknown field");
 }

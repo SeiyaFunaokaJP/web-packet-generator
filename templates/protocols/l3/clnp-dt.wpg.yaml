@@ -1,0 +1,37 @@
+# CLNP (ISO 8473-1): a DT PDU over 802.3 + LLC with segmentation permitted and 32 octets of data
+schema: 1
+
+meta:
+  name: clnp-dt
+  descriptions:
+    ja: "CLNP (ISO 8473-1): 802.3 + LLC 上のセグメント化許可付き DT PDU (データ 32 オクテット)"
+    en: "CLNP (ISO 8473-1): a DT PDU over 802.3 + LLC with segmentation permitted and 32 octets of data"
+  tags: ["protocol:dot3", "protocol:llc", "protocol:clnp", "protocol:payload", "layer:l3", sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+      length: auto
+  - protocol: llc # dsap / ssap become 0xfe automatically
+  - protocol: clnp
+    fields:
+      lifetime: 64 # 32 s
+      pdu_type: dt
+      destination: "49.0001.0000.0000.0002.00"
+      source: "49.0001.0000.0000.0001.00"
+      # sp: Auto (set by the segmentation part); total length = header 37 + data 32
+      segmentation:
+        - { data_unit_identifier: 1, segment_offset: 0, total_length: 69 }
+      # length_indicator, segment_length and checksum: Auto
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

@@ -925,6 +925,34 @@ eigrp-tlvs = EIGRP TLV (16 ビットタイプ、ヘッダを含む 16 ビット�
 # --- P2 OSI カプセル化 フィールド説明 ---
 osi-nlpid = ネットワーク層プロトコル識別子 (ISO/IEC TR 9577): 0x81 CLNP、0x82 ES-IS、0x83 IS-IS。
 osi-data = NLPID 以降の OSI PDU の残り (不透明なオクテット列)。
+clnp-nlpid = ネットワーク層プロトコル識別子（0x81 = CLNP）。
+clnp-length-indicator = オプションの終わりまでのヘッダ長（オクテット、Auto）。
+clnp-version = バージョン / プロトコル ID 拡張（1）。
+clnp-lifetime = 残り寿命（500 ms 単位）。
+clnp-sp = SP: セグメント化許可。セグメンテーション部が存在します（セグメンテーション部から Auto）。
+clnp-ms = MS: 後続セグメントあり。
+clnp-er = E/R: PDU が破棄されたらエラーレポートを送る。
+clnp-pdu-type = PDU 種別: 0x1c DT（データ）、0x1d MD（マルチキャストデータ）、0x01 ER（エラーレポート）、0x1e ERQ / 0x1f ERP（エコー要求 / 応答）。
+clnp-segment-length = ヘッダとデータを含む PDU 全体の長さ（Auto）。
+clnp-checksum = ヘッダの ISO 8473 Fletcher チェックサム（Auto）。0 = チェックサム不使用。
+clnp-destination = 宛先 NSAP アドレス。
+clnp-source = 送信元 NSAP アドレス。
+clnp-segmentation = セグメンテーション部（データユニット識別子、セグメントオフセット、全長）。SP が立っているときに存在します。全長は計算しません。
+clnp-options = 長さ指示子までのオプション（8 ビットコード / 8 ビット長）: セキュリティ、QoS 維持、優先度、ソースルーティング、経路記録、パディング、破棄理由。
+esis-nlpid = ネットワーク層プロトコル識別子（0x82 = ES-IS）。
+esis-length-indicator = PDU の長さ（オクテット、Auto）。
+esis-version = バージョン / プロトコル ID 拡張（1）。
+esis-pdu-type = PDU 種別: 2 ESH（エンドシステム Hello）、4 ISH（中間システム Hello）、6 RD（リダイレクト）。
+esis-holding-time = 保持時間（秒）。
+esis-checksum = PDU の ISO 8473 Fletcher チェックサム（Auto）。0 = チェックサム不使用。
+esis-number-of-source-addresses = 送信元アドレスの数（Auto）。
+esis-source-addresses = エンドシステムが受け持つ NSAP アドレス。
+esis-net = 中間システムのネットワークエンティティタイトル（リダイレクト: 次ホップがエンドシステムなら空）。
+esis-destination = リダイレクト対象の宛先 NSAP アドレス。
+esis-bsnpa-length = サブネットワークアドレスの長さ（Auto）。
+esis-bsnpa = より良い次ホップのサブネットワークアドレス（MAC アドレスなど）。
+esis-options = 長さ指示子までのオプション（8 ビットコード / 8 ビット長）: セキュリティ、QoS 維持、優先度、アドレスマスク、SNPA マスク、推奨 ES 設定タイマ。
+esis-data = 固定部以降の PDU（不透明なオクテット列）。
 isis-irpd = ドメイン内ルーティングプロトコル識別子（0x83 = IS-IS）。
 isis-header-length = 固定ヘッダの長さ（オクテット）。PDU 種別ごとに一定（LAN Hello / LSP 27、P2P Hello 20、CSNP 33、PSNP 17）。
 isis-version-ext = バージョン / プロトコル ID 拡張（1）。

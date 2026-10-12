@@ -70,6 +70,18 @@ pub enum Length {
         /// Name of the (earlier) field holding the element count.
         field: String,
     },
+    /// Ends where an earlier integer field of the same group says the group ends:
+    /// at `value * unit` octets from the start of the group, whatever the size of
+    /// the fields in between (CLNP / ES-IS options end at the header length
+    /// indicator, after variable-size addresses). A value pointing before the field
+    /// gives an empty region.
+    UntilOffset {
+        /// Name of the (earlier) field holding the group length.
+        field: String,
+        /// Octets per unit of the field value.
+        #[serde(default = "one_u32", skip_serializing_if = "is_one")]
+        unit: u32,
+    },
     /// Consumes the rest of the enclosing PDU.
     ToEnd,
 }
@@ -949,6 +961,7 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
                 }
                 Some(src)
             }
+            Some(Length::UntilOffset { field: src, .. }) => Some(src),
             Some(Length::Count { field: src }) => {
                 if !matches!(field.ty, FieldType::List { .. }) {
                     return Err(def_err(

@@ -925,6 +925,34 @@ eigrp-tlvs = EIGRP TLVs (16-bit type, 16-bit length including the header).
 # --- P2 OSI encapsulation field descriptions ---
 osi-nlpid = Network layer protocol identifier (ISO/IEC TR 9577): 0x81 CLNP, 0x82 ES-IS, 0x83 IS-IS.
 osi-data = Rest of the OSI PDU after the NLPID (opaque octets).
+clnp-nlpid = Network layer protocol identifier (0x81 = CLNP).
+clnp-length-indicator = Header length in octets, up to the end of the options (Auto).
+clnp-version = Version / protocol ID extension (1).
+clnp-lifetime = Remaining lifetime in units of 500 ms.
+clnp-sp = SP: segmentation permitted; the segmentation part is present (Auto from the segmentation part).
+clnp-ms = MS: more segments follow.
+clnp-er = E/R: send an error report if the PDU is discarded.
+clnp-pdu-type = PDU type: 0x1c DT (data), 0x1d MD (multicast data), 0x01 ER (error report), 0x1e ERQ / 0x1f ERP (echo request / reply).
+clnp-segment-length = Length of the whole PDU, header and data (Auto).
+clnp-checksum = ISO 8473 Fletcher checksum of the header (Auto). 0 = checksum not used.
+clnp-destination = Destination NSAP address.
+clnp-source = Source NSAP address.
+clnp-segmentation = Segmentation part (data unit identifier, segment offset, total length), present when SP is set. The total length is not computed.
+clnp-options = Options (8-bit code / 8-bit length) up to the length indicator: security, QoS maintenance, priority, source routing, recording of route, padding, reason for discard.
+esis-nlpid = Network layer protocol identifier (0x82 = ES-IS).
+esis-length-indicator = Length of the PDU in octets (Auto).
+esis-version = Version / protocol ID extension (1).
+esis-pdu-type = PDU type: 2 ESH (end system hello), 4 ISH (intermediate system hello), 6 RD (redirect).
+esis-holding-time = Holding time in seconds.
+esis-checksum = ISO 8473 Fletcher checksum of the PDU (Auto). 0 = checksum not used.
+esis-number-of-source-addresses = Number of source addresses (Auto).
+esis-source-addresses = NSAP addresses served by the end system.
+esis-net = Network entity title of the intermediate system (redirect: empty when the next hop is an end system).
+esis-destination = Destination NSAP address being redirected.
+esis-bsnpa-length = Length of the subnetwork address (Auto).
+esis-bsnpa = Subnetwork address (e.g. MAC address) of the better next hop.
+esis-options = Options (8-bit code / 8-bit length) up to the length indicator: security, QoS maintenance, priority, address mask, SNPA mask, suggested ES configuration timer.
+esis-data = Rest of the PDU after the fixed part (opaque octets).
 isis-irpd = Intradomain routing protocol discriminator (0x83 = IS-IS).
 isis-header-length = Length of the fixed header in octets (constant for each PDU type: LAN Hello / LSP 27, P2P Hello 20, CSNP 33, PSNP 17).
 isis-version-ext = Version / protocol ID extension (1).

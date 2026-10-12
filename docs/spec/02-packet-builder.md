@@ -17,7 +17,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 | `cstring` | NUL 終端文字列 (値は終端なし、合成時に `0x00` を付加。TFTP のファイル名など) |
 | `enum` | 名前付き値 |
 | `flags(bit set)` | ビット集合 |
-| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) |
+| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) / 前のフィールドが示すグループ先頭からのオフセットまで (`値 × unit`、CLNP / ES-IS の長さ指示子で終わるオプション) |
 | `padding` / `raw` | 詰め物 / 生バイト |
 
 ### 自動計算フィールド (GUI で Auto / Manual トグル)

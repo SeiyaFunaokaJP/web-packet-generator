@@ -1,11 +1,11 @@
-# OSI encapsulation: a generic OSI network PDU over 802.3 + LLC (SAP 0xfe), selected by its NLPID
+# OSI encapsulation: a generic OSI network PDU over 802.3 + LLC (SAP 0xfe), selected by its NLPID (here the inactive subset)
 schema: 1
 
 meta:
   name: dot3-llc-osi
   descriptions:
-    ja: "OSI カプセル化: 802.3 + LLC (SAP 0xfe) 上の汎用 OSI ネットワーク PDU (NLPID で判別)"
-    en: "OSI encapsulation: a generic OSI network PDU over 802.3 + LLC (SAP 0xfe), told apart by its NLPID"
+    ja: "OSI カプセル化: 802.3 + LLC (SAP 0xfe) 上の汎用 OSI ネットワーク PDU (NLPID で判別、ここでは非活性サブセット)"
+    en: "OSI encapsulation: a generic OSI network PDU over 802.3 + LLC (SAP 0xfe), told apart by its NLPID (here the inactive subset)"
   tags: ["protocol:dot3", "protocol:llc", "protocol:osi", "layer:l3", sample]
   author: wpg
   created: 2026-10-12
@@ -19,10 +19,10 @@ layers:
   - protocol: llc # dsap / ssap become 0xfe automatically
   - protocol: osi
     fields:
-      nlpid: esis
-      # ES-IS ISH after the NLPID (opaque until ES-IS lands): length indicator 20,
-      # version 1, type ISH, holding time 30 s, checksum 0, NET 49.0001.1921.6800.1001.00
-      data: "14 01 00 04 00 1e 00 00 0a 49 00 01 19 21 68 00 10 01 00"
+      # NLPID 0x00: the inactive subset of ISO 8473, a transport PDU with no network
+      # header (CLNP, ES-IS and IS-IS have dedicated protocols)
+      nlpid: "null"
+      data: "06 e0 0000 0001 00" # a TP class 0 CR TPDU (dst-ref 0, src-ref 1)
 
 tx:
   count: 1

@@ -15,6 +15,7 @@ Before falling back to an approximation (opaque octets or a Manual value), check
 | Octet size of a later variable field | `auto = size(field)` (also inside list elements and TLV values) | IS-IS sub-TLV lengths |
 | Prefix of `ceil(bits / 8)` octets | `bytes(from = len, adjust = 7, div = 8)` (`Length::FromField { div }`) | IS-IS extended IP / IPv6 reachability |
 | List of N variable-size elements | `Length::Count { field }` | IS-IS optional sub-TLV block (S bit) |
+| Region ending at a header length field, after variable-size fields | `Length::UntilOffset { field, unit }` | CLNP / ES-IS options up to the length indicator |
 | Pad to a requested PDU size with filler TLVs | `TlvDef::fill` (`TlvFill { variant, until }`) | IS-IS Hello Padding TLVs |
 | NUL-terminated string | `cstring` type | TFTP `filename` / `mode` |
 | OSI address with length indicator | `nsap` type (length octet is automatic) | CLNP / ES-IS / IS-IS NSAP / NET |
