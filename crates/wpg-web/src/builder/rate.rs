@@ -135,6 +135,18 @@ pub(crate) fn estimate_secs(
     }
 }
 
+/// A send time: milliseconds below one second (`< 1 ms`, `254 ms`), else
+/// [`crate::fmt::duration`].
+pub(crate) fn format_secs(secs: f64) -> String {
+    if secs < 0.001 {
+        "< 1 ms".to_owned()
+    } else if secs < 1.0 {
+        format!("{:.0} ms", secs * 1000.0)
+    } else {
+        crate::fmt::duration(secs)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,5 +220,12 @@ mod tests {
             estimate_secs(&tx(Some("bogus"), None, None), Some(10), 64),
             None
         );
+    }
+
+    #[test]
+    fn secs_formatting() {
+        assert_eq!(format_secs(0.000_5), "< 1 ms");
+        assert_eq!(format_secs(0.254), "254 ms");
+        assert_eq!(format_secs(12.34), "12.3 s");
     }
 }
