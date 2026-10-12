@@ -45,7 +45,7 @@ notify-debouncer-mini = "0.7"
 tower-http = { version = "0.6", features = ["compression-gzip", "compression-br", "trace", "cors", "request-id", "util"] }
 uuid = { version = "1", features = ["v4"] }
 # OpenAPI document + Swagger UI (vendored: no download at build time).
-utoipa = { version = "5", features = ["axum_extras"] }
+utoipa = { version = "6", features = ["axum_extras"] }
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }
 # Authentication / TLS (TODO §2.6, §3): SQLite for users / sessions / history,
