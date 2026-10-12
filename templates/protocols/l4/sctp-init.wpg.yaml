@@ -1,0 +1,44 @@
+# SCTP (RFC 9260): an INIT with address, supported address types, ECN, FORWARD TSN and supported extensions parameters
+schema: 1
+
+meta:
+  name: sctp-init
+  descriptions:
+    ja: "SCTP (RFC 9260): アドレス・対応アドレス種別・ECN・FORWARD TSN・拡張チャンクのパラメータ付き INIT"
+    en: "SCTP (RFC 9260): an INIT with address, supported address types, ECN, FORWARD TSN and supported extensions parameters"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:sctp", "layer:l4", sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4 # protocol 132 is Auto
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: sctp
+    fields:
+      src_port: 5001
+      dst_port: 5001
+      verification_tag: 0 # always 0 with INIT
+      # checksum (CRC32c): Auto
+      chunks:
+        - init:
+            initiate_tag: 0x3a5c7e91
+            a_rwnd: 106496
+            outbound_streams: 10
+            inbound_streams: 65535
+            initial_tsn: 0x3a5c7e91
+            # Lengths and padding are Auto; the last parameter's padding is the chunk's.
+            parameters:
+              - ipv4_address: 192.0.2.1
+              - supported_address_types: [ipv4, ipv6]
+              - ecn_capable
+              - forward_tsn_supported
+              - supported_extensions: [0xc0, 0xc1, 0x80, 0x82]
+
+tx:
+  count: 1

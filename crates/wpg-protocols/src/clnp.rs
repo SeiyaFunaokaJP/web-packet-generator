@@ -151,6 +151,9 @@ fn options(list: Vec<TlvVariant>, key: &str) -> FieldDef {
                 unit: 1,
             },
             fill: None,
+            head_octets: 0,
+            align: 0,
+            unpadded_last: false,
         }),
     )
     .with_default(FieldValue::Tlv(Vec::new()))

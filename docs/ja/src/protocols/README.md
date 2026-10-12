@@ -22,6 +22,7 @@ Status: draft
 | [OSI カプセル化 (P2)](osi.md) | 802.2 LLC `0xfe` / PPP `0x0023` 上の OSI PDU、NSAP 型 |
 | [CLNP / ES-IS (P2)](clnp.md) | オプション・セグメンテーション付きの CLNP DT / ER / エコー、ES-IS ESH / ISH / リダイレクト |
 | [IS-IS (P2)](isis.md) | LAN / P2P Hello、LSP、CSNP / PSNP、主要 TLV とサブ TLV |
+| [SCTP (P2)](sctp.md) | CRC32c 付き共通ヘッダ、バンドルされたチャンク (DATA、INIT、SACK、HEARTBEAT、ABORT、ASCONF、RE-CONFIG など)、パラメータとエラー原因 |
 
 ## 共通の考え方
 

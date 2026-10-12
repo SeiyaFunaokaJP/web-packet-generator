@@ -391,8 +391,12 @@ fn decode_tlv(
     mut top: Option<(Who<'_>, usize, &mut Vec<Diagnostic>)>,
 ) -> Vec<TlvItem> {
     let tb = usize::from(t.type_bits / 8);
-    let hl = tb + usize::from(t.len_bits / 8);
+    let head = usize::from(t.head_octets);
+    let hl = tb + head + usize::from(t.len_bits / 8);
     let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
+    let align = t.align.max(1) as usize;
+    // Item size with its padding (the last item may lack it).
+    let padded = |n: usize, left: usize| (n + (align - n % align) % align).min(left);
     let mut items = Vec::new();
     let mut pos = 0;
     // `want`: octets the item needs, or `None` when its length value is invalid.
@@ -435,7 +439,7 @@ fn decode_tlv(
                 name: variant.map(|v| v.name.clone()),
                 ..TlvItem::default()
             });
-            pos += tb;
+            pos += padded(tb, rest.len());
             continue;
         }
         if variant.is_none() && !t.unknown_as_raw {
@@ -446,7 +450,7 @@ fn decode_tlv(
             malformed(pos, Some(hl), &mut items);
             break;
         }
-        let len = be(&rest[tb..hl]);
+        let len = be(&rest[tb + head..hl]);
         let total = usize::try_from(len)
             .ok()
             .and_then(|l| l.checked_mul(unit))
@@ -461,14 +465,23 @@ fn decode_tlv(
             malformed(pos, total, &mut items);
             break;
         };
-        let bytes = &rest[..total];
-        items.push(decode_item(fd, t, ty, len, variant, bytes, hl));
-        pos += total;
+        let total_padded = padded(total, rest.len());
+        // Verified with its full padding: the last item may lack it.
+        let mut bytes = rest[..total_padded].to_vec();
+        bytes.resize(padded(total, usize::MAX), 0);
+        items.push(decode_item(fd, t, ty, len, variant, &bytes, total, hl));
+        pos += total_padded;
+        if t.unpadded_last && pos == region.len() && total_padded > total {
+            // The last item is padded after all: an empty item after it keeps that.
+            items.push(TlvItem::raw([]));
+        }
     }
     items
 }
 
-/// Typed decoding of one framed item, verified by re-encoding it.
+/// Typed decoding of one framed item (`bytes`: the item and its padding, `total`
+/// octets without it), verified by re-encoding it.
+#[allow(clippy::too_many_arguments)]
 fn decode_item(
     fd: &FieldDef,
     t: &TlvDef,
@@ -476,11 +489,15 @@ fn decode_item(
     len: u64,
     variant: Option<&crate::ir::TlvVariant>,
     bytes: &[u8],
+    total: usize,
     hl: usize,
 ) -> TlvItem {
-    let value = &bytes[hl..];
+    // The value octets: the head (between type and length) and what follows the length.
+    let tb = usize::from(t.type_bits / 8);
+    let head = &bytes[tb..tb + usize::from(t.head_octets)];
+    let value = &[head, &bytes[hl..total]].concat()[..];
     let same = |item: &TlvItem| {
-        encode_tlv_item(fd, t, 0, item, &mut Vec::new()).is_ok_and(|(b, _)| b == bytes)
+        encode_tlv_item(fd, t, 0, item, true, &mut Vec::new()).is_ok_and(|(b, _)| b == bytes)
     };
     let with_length = |mut item: TlvItem| {
         if same(&item) {
@@ -949,6 +966,9 @@ mod tests {
             unknown_as_raw: true,
             length: Length::ToEnd,
             fill: None,
+            head_octets: 0,
+            align: 0,
+            unpadded_last: false,
         };
         let outer = TlvDef {
             type_bits: 8,
@@ -987,6 +1007,9 @@ mod tests {
                 div: 1,
             },
             fill: None,
+            head_octets: 0,
+            align: 0,
+            unpadded_last: false,
         };
         let mut p = ProtocolDef::new("tlvs", "TLVs", ProtocolLayer::L7);
         p.fields = vec![

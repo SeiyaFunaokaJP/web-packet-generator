@@ -2,7 +2,9 @@
 //! (`Length::FromField { div }`), count-bounded lists of variable-size elements
 //! (`Length::Count`), octet-size Auto fields (`AutoCompute::Size`) and TLV filler
 //! items up to a requested PDU size (`TlvFill`); for CLNP / ES-IS, regions that
-//! end at a header length indicator (`Length::UntilOffset`).
+//! end at a header length indicator (`Length::UntilOffset`); for SCTP, TLV value
+//! octets between the type and the length (`TlvDef::head_octets`) and items padded
+//! to a multiple of 4 octets (`TlvDef::align`).
 
 use std::collections::BTreeMap;
 
@@ -27,6 +29,9 @@ fn tlv(variants: Vec<TlvVariant>, length: Length) -> TlvDef {
         unknown_as_raw: true,
         length,
         fill: None,
+        head_octets: 0,
+        align: 0,
+        unpadded_last: false,
     }
 }
 
@@ -398,4 +403,99 @@ fn regions_end_at_the_header_length() {
         };
     }
     assert!(d.validate().is_err(), "until an unknown field");
+}
+
+/// Chunks shaped like SCTP: 8-bit type, 8-bit flags (head), 16-bit length counting
+/// the header but not the padding to 4 octets.
+fn chunk_def() -> ProtocolDef {
+    let mut chunks = tlv(
+        vec![
+            TlvVariant::new(
+                0,
+                "data",
+                vec![
+                    uint("flags", 8).with_default(FieldValue::UInt(3)),
+                    uint("tsn", 32),
+                    FieldDef::new("user_data", FieldType::Bytes { len: Length::ToEnd }),
+                ],
+            ),
+            TlvVariant::new(11, "cookie_ack", vec![uint("flags", 8)]),
+        ],
+        Length::ToEnd,
+    );
+    chunks.len_bits = 16;
+    chunks.len_includes_header = true;
+    chunks.head_octets = 1;
+    chunks.align = 4;
+    let mut d = ProtocolDef::new("chunks", "Chunks", wpg_core::ProtocolLayer::L4);
+    d.fields = vec![FieldDef::new("chunks", FieldType::Tlv(chunks))];
+    d
+}
+
+#[test]
+fn head_octets_and_aligned_items() {
+    let defs = vec![chunk_def()];
+    let p = Packet::from_layers(vec![Layer::new("chunks").with(
+        "chunks",
+        vec![
+            TlvItem::named("data")
+                .with("tsn", 1u32)
+                .with("user_data", vec![0xaa, 0xbb, 0xcc]),
+            TlvItem::named("cookie_ack"),
+            TlvItem::with_type(0xc0, vec![0x01, 0x02]),
+        ],
+    )]);
+    let built = p.build(&defs).unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    assert_eq!(
+        built.bytes,
+        [
+            0, 3, 0, 11, 0, 0, 0, 1, 0xaa, 0xbb, 0xcc, 0, // data + 1 octet of padding
+            11, 0, 0, 4, // cookie ack
+            0xc0, 0x01, 0, 5, 0x02, 0, 0, 0, // unknown: flags 0x01, value 0x02
+        ]
+    );
+    // Layout: flags right after the type, then the length, then the value.
+    let data = &built.layout[0].fields[0].children[0];
+    let names: Vec<_> = data
+        .children
+        .iter()
+        .map(|c| (c.name.as_str(), c.bit_offset / 8, c.bit_len / 8))
+        .collect();
+    assert_eq!(
+        names,
+        [
+            ("type", 0, 1),
+            ("flags", 1, 1),
+            ("length", 2, 2),
+            ("tsn", 4, 4),
+            ("user_data", 8, 3),
+            ("padding", 11, 1)
+        ]
+    );
+    assert_eq!(data.bit_len, 12 * 8);
+
+    let parsed = parse(&built.bytes, "chunks", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["chunks"] else {
+        panic!("not decoded as items");
+    };
+    assert_eq!(items.len(), 3);
+    assert_eq!(items[0].fields["flags"], FieldValue::UInt(3));
+    assert_eq!(
+        items[0].fields["user_data"],
+        FieldValue::Bytes(vec![0xaa, 0xbb, 0xcc])
+    );
+    assert_eq!(items[2].data.as_deref(), Some(&[0x01, 0x02][..]));
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, built.bytes);
+
+    // Non-zero padding cannot be reproduced: the region stays opaque.
+    let mut odd = built.bytes.clone();
+    odd[11] = 0xff;
+    let parsed = parse(&odd, "chunks", &defs).unwrap();
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, odd);
+    // The last item may lack its padding (it is added back when building).
+    let short = &built.bytes[..11];
+    let parsed = parse(short, "chunks", &defs).unwrap();
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, short);
 }

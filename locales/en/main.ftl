@@ -980,3 +980,10 @@ isis-snp-source-id = System ID of the sender and circuit ID (0).
 isis-start-lsp-id = First LSP ID covered by the CSNP.
 isis-end-lsp-id = Last LSP ID covered by the CSNP.
 isis-data = Rest of the PDU after the common header (opaque octets).
+
+# --- P2 SCTP field descriptions ---
+sctp-src-port = Source port.
+sctp-dst-port = Destination port.
+sctp-verification-tag = Verification tag: the peer's initiate tag (0 in a packet carrying INIT).
+sctp-checksum = CRC32c of the whole SCTP packet with this field zeroed (Auto), sent least significant octet first.
+sctp-chunks = Chunks (8-bit type, 8-bit flags, 16-bit length including the 4-octet header, zero padding to 4 octets): DATA, INIT, INIT ACK, SACK, HEARTBEAT, ABORT, SHUTDOWN, ERROR, COOKIE ECHO / ACK, AUTH, I-DATA, ASCONF, RE-CONFIG, FORWARD TSN, PAD. Lengths, padding and SACK counts are Auto.

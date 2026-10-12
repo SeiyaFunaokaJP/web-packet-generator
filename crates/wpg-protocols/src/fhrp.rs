@@ -244,6 +244,9 @@ pub fn hsrpv2_tlvs() -> FieldType {
         unknown_as_raw: true,
         length: Length::ToEnd,
         fill: None,
+        head_octets: 0,
+        align: 0,
+        unpadded_last: false,
     })
 }
 
@@ -303,6 +306,9 @@ pub fn glbp_tlvs() -> FieldType {
         unknown_as_raw: true,
         length: Length::ToEnd,
         fill: None,
+        head_octets: 0,
+        align: 0,
+        unpadded_last: false,
     })
 }
 

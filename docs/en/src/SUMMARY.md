@@ -31,6 +31,7 @@
   - [OSI encapsulation (P2)](protocols/osi.md)
   - [CLNP / ES-IS (P2)](protocols/clnp.md)
   - [IS-IS (P2)](protocols/isis.md)
+  - [SCTP (P2)](protocols/sctp.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)

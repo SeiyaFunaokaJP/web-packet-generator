@@ -225,6 +225,55 @@ fn case_dot3_llc_esis_ish() -> Packet {
     ])
 }
 
+/// SCTP INIT over IPv4: CRC-32C, chunk flags between type and length, an
+/// unpadded last parameter covered by the chunk padding.
+fn case_eth_ipv4_sctp_init() -> Packet {
+    let types = vec![FieldValue::UInt(5)];
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0007, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("sctp")
+            .with("src_port", 36412u16)
+            .with("dst_port", 36412u16)
+            .with(
+                "chunks",
+                vec![TlvItem::named("init")
+                    .with("initiate_tag", 0x0102_0304u32)
+                    .with(
+                        "parameters",
+                        vec![
+                            TlvItem::named("ipv4_address")
+                                .with("address", Ipv4Addr::new(192, 0, 2, 1)),
+                            TlvItem::named("ecn_capable"),
+                            TlvItem::named("supported_address_types").with("types", types),
+                        ],
+                    )],
+            ),
+    ])
+}
+
+/// SCTP DATA (5 octets of user data, padded) bundled with a SACK.
+fn case_eth_ipv4_sctp_data_sack() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0008, [192, 0, 2, 2], [192, 0, 2, 1]),
+        Layer::new("sctp")
+            .with("src_port", 5002u16)
+            .with("dst_port", 5001u16)
+            .with("verification_tag", 0x0102_0304u32)
+            .with(
+                "chunks",
+                vec![
+                    TlvItem::named("sack").with("cumulative_tsn_ack", 41u32),
+                    TlvItem::named("data")
+                        .with("tsn", 7u32)
+                        .with("stream_identifier", 1u16)
+                        .with("user_data", b"hello".to_vec()),
+                ],
+            ),
+    ])
+}
+
 /// The golden table: `(file stem, packet)`. One line per case.
 fn cases() -> Vec<(&'static str, Packet)> {
     vec![
@@ -238,6 +287,8 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ("dot3_llc_isis_lsp", case_dot3_llc_isis_lsp()),
         ("dot3_llc_clnp_er", case_dot3_llc_clnp_er()),
         ("dot3_llc_esis_ish", case_dot3_llc_esis_ish()),
+        ("eth_ipv4_sctp_init", case_eth_ipv4_sctp_init()),
+        ("eth_ipv4_sctp_data_sack", case_eth_ipv4_sctp_data_sack()),
     ]
 }
 

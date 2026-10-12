@@ -22,6 +22,7 @@ Per-field descriptions (ja/en) come with the GUI field editor and `GET /api/prot
 | [OSI encapsulation (P2)](osi.md) | OSI PDUs over 802.2 LLC `0xfe` / PPP `0x0023`, the NSAP type |
 | [CLNP / ES-IS (P2)](clnp.md) | CLNP DT / ER / echo with options and segmentation, ES-IS ESH / ISH / Redirect |
 | [IS-IS (P2)](isis.md) | LAN / P2P Hellos, LSPs, CSNP / PSNP, main TLVs and sub-TLVs |
+| [SCTP (P2)](sctp.md) | Common header with CRC32c, bundled chunks (DATA, INIT, SACK, HEARTBEAT, ABORT, ASCONF, RE-CONFIG, ...), parameters and error causes |
 
 ## Common patterns
 

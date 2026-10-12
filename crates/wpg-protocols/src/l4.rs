@@ -49,6 +49,9 @@ pub fn tcp_options() -> FieldType {
             div: 1,
         },
         fill: None,
+        head_octets: 0,
+        align: 0,
+        unpadded_last: false,
     })
 }
 
@@ -58,7 +61,7 @@ pub fn tcp_options() -> FieldType {
 /// The `next` binding demultiplexes on the **destination** port, falling back to
 /// the **source** port when the destination is not a known one (so replies from
 /// a well-known port decode too): tunnelling ports (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
-/// Geneve 6081), routing protocols (RIP 520, `RIPng` 521), the first-hop
+/// Geneve 6081, SCTP over UDP 9899), routing protocols (RIP 520, `RIPng` 521), the first-hop
 /// redundancy ports (HSRP 1985, `HSRPv2` over IPv6 2029, GLBP 3222; UDP 1985
 /// decodes as `HSRPv1`) and the P1 application protocols (DNS 53, `DHCPv4` 67/68,
 /// TFTP 69, NTP 123, SNMP 161/162, Syslog 514, `DHCPv6` 546/547, RADIUS
@@ -88,6 +91,7 @@ pub fn udp() -> ProtocolDef {
             4789 => "vxlan",
             6081 => "geneve",
             6635 => "mpls",
+            9899 => "sctp",
             // P1 application protocols.
             53 => "dns",
             67 => "dhcpv4",
