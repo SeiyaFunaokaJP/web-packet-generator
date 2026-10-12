@@ -76,6 +76,30 @@ pub(crate) fn percent(ratio: f64) -> String {
     format!("{:.1} %", ratio * 100.0)
 }
 
+/// A signed nanosecond interval (latency, jitter) as `850 ns`, `12.3 µs`,
+/// `1.50 ms`, `2.00 s` (three significant digits).
+pub(crate) fn nanos(ns: i64) -> String {
+    const UNITS: [(f64, &str); 3] = [(1e9, "s"), (1e6, "ms"), (1e3, "µs")];
+    let sign = if ns < 0 { "-" } else { "" };
+    #[allow(clippy::cast_precision_loss)] // display only
+    let a = ns.unsigned_abs() as f64;
+    for (div, unit) in UNITS {
+        // Round first so 999 999 ns shows as `1.00 ms`, not `1000 µs`.
+        if a >= div * 0.9995 {
+            let v = a / div;
+            let digits = if v < 10.0 {
+                2
+            } else if v < 100.0 {
+                1
+            } else {
+                0
+            };
+            return format!("{sign}{v:.digits$} {unit}");
+        }
+    }
+    format!("{sign}{a} ns")
+}
+
 /// Integer with the locale's grouping (`Intl.NumberFormat`).
 pub(crate) fn int(locale: Locale, n: u64) -> String {
     #[cfg(target_arch = "wasm32")]
@@ -213,6 +237,14 @@ mod tests {
         assert_eq!(duration(3723.0), "1h 02m 03s");
         assert_eq!(duration(-1.0), "–");
         assert_eq!(percent(0.99871), "99.9 %");
+        assert_eq!(nanos(0), "0 ns");
+        assert_eq!(nanos(850), "850 ns");
+        assert_eq!(nanos(-850), "-850 ns");
+        assert_eq!(nanos(12_345), "12.3 µs");
+        assert_eq!(nanos(999_999), "1.00 ms");
+        assert_eq!(nanos(1_500_000), "1.50 ms");
+        assert_eq!(nanos(2_000_000_000), "2.00 s");
+        assert_eq!(nanos(i64::MIN), "-9223372037 s");
         assert_eq!(
             time_of(Locale::En, "2026-09-29T12:00:01.123Z"),
             "12:00:01.123"
