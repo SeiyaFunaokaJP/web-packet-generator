@@ -4,7 +4,8 @@
 //! The crate is empty unless the `link` feature is on; then `build.rs` finds DPDK with
 //! pkg-config (24.11 LTS primary, 23.11 LTS also checked), links it and generates the
 //! bindings with bindgen. Covered: EAL, ethdev, mempool / mbuf and lcore control-path
-//! functions, their types, and the `RTE_*` constants.
+//! functions, their types, the `RTE_*` constants, non-EAL thread registration
+//! (`rte_thread_register`) and device hotplug (`rte_dev_probe`).
 //!
 //! DPDK's fast path (`rte_eth_tx_burst`, `rte_pktmbuf_alloc`, ...) is `static inline`
 //! in its headers and has no symbol to link against, and `rte_errno` is a macro.

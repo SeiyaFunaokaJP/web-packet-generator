@@ -1318,6 +1318,7 @@ docgen-config-tx = 送出のポリシーと既定値。
 docgen-config-tx-allowed-ifaces = ジョブが送出してよいインタフェース。空ならすべて。`null` バックエンドとドライランは制限しません。
 docgen-config-tx-max-rate = ジョブが指定できる最大レート (`100kpps`、`1Gbps`)。レート指定のないジョブはこのレートで送出します。
 docgen-config-tx-default-backend = ジョブがバックエンドを指定しないときのバックエンド (`null`、`pcapfile`、`afpacket`、`pcap`、`afxdp`、`dpdk`)。未設定なら Linux は `afpacket`、それ以外は `pcap`、使えなければ `null`。
+docgen-config-tx-dpdk-eal-args = `dpdk` バックエンドの DPDK EAL 引数 (例: `["-a", "0000:00:04.0"]`)。指定がなければ wpg が `-l <先頭の CPU>` と `--in-memory` を加えます。EAL はプロセスごとに最初の `dpdk` ジョブで 1 度だけ起動するため、変更には再起動が必要です。
 docgen-config-log = ログ。
 docgen-config-log-level = フィルタ指定 (`RUST_LOG` が優先)。例: `info`、`wpg_tx=debug,info`。
 docgen-config-log-format = 行の形式: `pretty` (人が読む形式) または `json` (1 行に 1 オブジェクト)。

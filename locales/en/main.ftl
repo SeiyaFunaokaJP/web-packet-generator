@@ -1318,6 +1318,7 @@ docgen-config-tx = Transmit policy and defaults.
 docgen-config-tx-allowed-ifaces = Interfaces jobs may send on; empty = all. The `null` backend and dry runs are not restricted.
 docgen-config-tx-max-rate = Highest rate a job may request (`100kpps`, `1Gbps`); jobs without a rate are sent at this rate.
 docgen-config-tx-default-backend = Backend used when a job names none (`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`); unset = `afpacket` on Linux, else `pcap`, else `null`.
+docgen-config-tx-dpdk-eal-args = DPDK EAL arguments for the `dpdk` backend, e.g. `["-a", "0000:00:04.0"]`. wpg adds `-l <first CPU>` and `--in-memory` unless given. EAL starts once per process with the first `dpdk` job; changing them needs a restart.
 docgen-config-log = Logging.
 docgen-config-log-level = Filter directives (`RUST_LOG` overrides them), for example `info` or `wpg_tx=debug,info`.
 docgen-config-log-format = Line format: `pretty` (human readable) or `json` (one object per line).

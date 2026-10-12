@@ -45,11 +45,12 @@ When the interval between frames is shorter than the wait resolution, the limite
 
 ## Multi-queue, multi-core sending (`--workers`)
 
-`--workers N` starts N TX workers. Each has its own thread and backend instance (afpacket: socket and TX ring; afxdp: socket and UMEM) and gets 1/N of the stream and of the rate (`--rate 1Mpps --workers 4` is 250 kpps per worker). Counters are summed and the final report lists every worker. `pcap` and `pcapfile` are limited to one worker.
+`--workers N` starts N TX workers. Each has its own thread and backend instance (afpacket: socket and TX ring; afxdp: socket and UMEM; dpdk: a TX queue of the shared port) and gets 1/N of the stream and of the rate (`--rate 1Mpps --workers 4` is 250 kpps per worker). Counters are summed and the final report lists every worker. `pcap` and `pcapfile` are limited to one worker.
 
 Queue assignment:
 
 - **afxdp**: worker `i` binds NIC queue `--queue` + `i`. Create the queues with `ethtool -L <if> combined N` ([DPDK / AF_XDP](dpdk-afxdp.md)).
+- **dpdk**: the port is configured with `--queue` + N TX queues and worker `i` sends on TX queue `--queue` + `i`; the mbuf pool lives on the NIC's NUMA socket ([DPDK](dpdk-afxdp.md#dpdk)).
 - **afpacket**: the queue cannot be chosen directly; the kernel derives it from the sending CPU. With XPS configured (`/sys/class/net/<if>/queues/tx-<n>/xps_cpus`) it follows that map, otherwise with `--qdisc-bypass` it is "CPU number mod queue count". Pinning the workers to different cores spreads them over different queues.
 
 ```sh

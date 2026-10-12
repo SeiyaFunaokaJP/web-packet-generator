@@ -67,7 +67,7 @@ scripts/deploy.sh ubuntu@192.0.2.10 --service --dry-run
 
 ## `--dpdk`: ホストの準備のみ
 
-> **DPDK バックエンドはまだ実装されていません (マイルストーン M8)。** `--dpdk` はバックエンドの実装に備えてホストを準備するだけです。wpg の送信は引き続き `afpacket` で行います。
+> `--dpdk` はホストを準備するだけです。`dpdk` バックエンドを使うには、`--features dpdk` 付きでビルドしたバイナリ (`scripts/build.sh --dpdk`)、`vfio-pci` にバインドした NIC、`tx.dpdk_eal_args` の EAL 引数が必要です。[DPDK / AF_XDP のセットアップ](dpdk-afxdp.md#dpdk) を参照してください。
 
 `--dpdk` を付けると、スクリプトは次を行います。
 

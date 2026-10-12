@@ -71,6 +71,7 @@ HTTPS で使う証明書チェーンと秘密鍵 (PEM)。`self_signed_tls` よ�
 |---|---|---|---|---|
 | `allowed_ifaces` | `string[]` | `[]` | `WPG_TX__ALLOWED_IFACES` | ジョブが送出してよいインタフェース。空ならすべて。`null` バックエンドとドライランは制限しません。 |
 | `default_backend` | `string` |   | `WPG_TX__DEFAULT_BACKEND` | ジョブがバックエンドを指定しないときのバックエンド (`null`、`pcapfile`、`afpacket`、`pcap`、`afxdp`、`dpdk`)。未設定なら Linux は `afpacket`、それ以外は `pcap`、使えなければ `null`。 |
+| `dpdk_eal_args` | `string[]` | `[]` | `WPG_TX__DPDK_EAL_ARGS` | `dpdk` バックエンドの DPDK EAL 引数 (例: `["-a", "0000:00:04.0"]`)。指定がなければ wpg が `-l <先頭の CPU>` と `--in-memory` を加えます。EAL はプロセスごとに最初の `dpdk` ジョブで 1 度だけ起動するため、変更には再起動が必要です。 |
 | `max_rate` | `string` |   | `WPG_TX__MAX_RATE` | ジョブが指定できる最大レート (`100kpps`、`1Gbps`)。レート指定のないジョブはこのレートで送出します。 |
 
 ## 設定例 (`wpg config init`)
@@ -134,6 +135,10 @@ allowed_ifaces = []
 # Backend when a job names none: null, pcapfile, afpacket, pcap, afxdp, dpdk.
 # Default: afpacket on Linux, else pcap, else null.
 # default_backend = "afpacket"
+# DPDK EAL arguments for the dpdk backend (wpg adds "-l <first CPU>" and
+# "--in-memory" unless given). EAL starts with the first dpdk job; changing them
+# needs a restart.
+# dpdk_eal_args = ["-a", "0000:00:04.0"]
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".

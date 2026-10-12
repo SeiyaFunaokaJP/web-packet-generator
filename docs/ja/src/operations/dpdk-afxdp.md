@@ -2,7 +2,7 @@
 
 Status: draft
 
-> **`afxdp` バックエンドは実装済み (M8) ですが、任意機能です。** `--features afxdp` を付けてビルドしたときだけ有効になります (`cargo build --release -p wpg-cli --features afxdp`)。**copy モードは `lo` と `veth` で動作を確認済み、zero-copy は実機 (物理 NIC) では未確認です。** `dpdk` バックエンドはまだ実装されていません ("not implemented yet" で失敗します)。DPDK の節は事前準備用の想定手順で、wpg では検証していません。
+> **`afxdp` バックエンドは実装済み (M8) ですが、任意機能です。** `--features afxdp` を付けてビルドしたときだけ有効になります (`cargo build --release -p wpg-cli --features afxdp`)。**copy モードは `lo` と `veth` で動作を確認済み、zero-copy は実機 (物理 NIC) では未確認です。** `dpdk` バックエンド (M8) も任意機能 (`--features dpdk`) で、確認済みなのは DPDK の仮想デバイス (`net_null`、`net_ring`、`net_pcap`) のみです。物理 NIC と CML2 の virtio PMD は未確認です。
 
 ## AF_XDP
 
@@ -78,30 +78,95 @@ AF_XDP の copy モードは、どのネットワークデバイスでも動き�
 
 ## DPDK
 
-`scripts/deploy.sh <host> --dpdk [--hugepages N]` が以下のホスト側の準備 (hugepages の確保と起動時の設定、`hugetlbfs`、`vfio-pci`、IOMMU の確認) を行います。NIC のバインドは行いません。[scripts/deploy.sh によるデプロイ](deploy.md) を参照してください。
-
-要件 (ADR 0004 の決定に基づく):
-
-- DPDK **24.11 LTS** (23.11 LTS も CI で確認)。ビルド時に DPDK の開発パッケージと libclang が必要です ([バインディングのビルド](#バインディングのビルド-dpdk-sys)を参照)。
-- Hugepages (`wpg doctor` のチェック `hugepages`。未設定なら警告):
+`dpdk` バックエンドは DPDK のポーリングモードドライバ (PMD) で送出します。NIC はカーネルから外れ、wpg 自身のスレッドがバッチごとのシステムコールなしで直接扱います。任意機能なので `--features dpdk` を付けてビルドします (DPDK の開発パッケージと libclang が必要。[ビルド](#バインディングのビルド-dpdk-sys)を参照)。
 
 ```sh
-echo 1024 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-grep Huge /proc/meminfo
+cargo build --release -p wpg-cli --features dpdk
 ```
 
-- NIC を DPDK 対応ドライバにバインドします。NIC はカーネルから外れるため、管理用に別のインタフェースを残してください。
+**確認済みの範囲** (2026-10、Ubuntu 24.04 + DPDK 23.11.4、hugepages と NIC のないコンテナ): `--no-huge` での EAL 起動、仮想デバイス `net_null` (`wpg bench`、2 ワーカー)・`net_ring`・`net_pcap`。テンプレートを `net_pcap` 経由で `wpg send` すると、`pcapfile` バックエンドと同じフレームが書き出されました。単体テストは CI で DPDK 24.11 と 23.11 に対して実行します。**物理 NIC (`vfio-pci`)、hugepages、CML2 上の virtio PMD は未確認です。**
+
+### 仕組み
+
+- **EAL** (DPDK の環境層) は wpg のプロセスごとに 1 度だけ、最初の `dpdk` ジョブで起動します。引数は指定した EAL 引数に、上書きできる既定値 2 つを足したものです: `-l <wpg が使える先頭の CPU>` (メイン lcore のみ。送出ワーカーは wpg 自身のスレッドで、非 EAL lcore として DPDK に登録します) と `--in-memory` (`/var/run/dpdk` にファイルを作らない。`--no-huge` を指定したときは代わりに `--no-shconf`)。EAL はプロセス内で再起動できません。失敗したときや引数を変えたいときは `wpg serve` を再起動してください (`wpg send` / `wpg bench` は毎回新しいプロセスです)。
+- **インタフェースには DPDK のポートを指定します**: ポート番号 (`0`)、デバイス名 (バインドした NIC の PCI アドレス `0000:00:04.0`)、または仮想デバイス。仮想デバイスは devargs 付きで書けて、初回に追加されます: `net_tap0,iface=dtap0` (カーネルの TAP インタフェース。試験に便利)、`net_pcap0,tx_pcap=/tmp/out.pcap` (pcap ファイルに書き出す)、`net_null0` (捨てる。ベンチマーク用)。見つからない名前は、EAL が見つけたポートの一覧付きでエラーになります。
+- **ワーカー** (`--workers N`) は 1 つのポートを共有します。ポートを `--queue` + N 本の TX キューで設定し、ワーカー `i` は TX キュー `--queue` + `i` で送ります。1 つのポートを同時に使えるジョブは 1 つです。ジョブが終わるとポートを停止します。
+- **バッファ**: ポートごとに NIC の NUMA ソケット上の mbuf プールを 1 つ作り、大きさは `--ring-depth` (キューあたりの TX ディスクリプタ数。ドライバの上下限に丸めます) と `--batch` から決めます。フレームは mbuf にコピーします (データ領域 2048 オクテット。それより長いフレームは `dropped`。ジャンボフレームは非対応)。TX リングが一杯なら最大 10 ms 再試行し、残りは `dropped` に数えます。ドライバが対応していれば `MBUF_FAST_FREE` を有効にします。
+- `wpg send` / `wpg bench` の `backend` 行に、DPDK のバージョン、ポート、ドライバ、キュー、ディスクリプタ数、プール、NUMA ソケット、リンク状態、EAL 引数の全体を表示します。
+
+### ホストの準備
+
+`scripts/deploy.sh <host> --dpdk [--hugepages N]` が最初の 2 手順 (hugepages の確保と起動時の設定、`hugetlbfs`、`vfio-pci`、IOMMU の確認) を行います。NIC のバインドは行いません。[scripts/deploy.sh によるデプロイ](deploy.md) を参照してください。
+
+1. **Hugepages** (`wpg doctor` のチェック `hugepages`。未設定なら警告)。4 ワーカー・既定の `--ring-depth 4096` でポート 1 つのプールは約 70 MiB、これにドライバの確保分が加わります。
+
+   ```sh
+   echo 1024 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+   grep Huge /proc/meminfo
+   ```
+
+2. **IOMMU と vfio**: 物理マシンでは IOMMU を有効にし (カーネル引数 `intel_iommu=on iommu=pt` または `amd_iommu=on`)、`sudo modprobe vfio-pci` します。
+3. **NIC のバインド**。インタフェースはカーネルから (そして `wpg ifaces` から) 消えるので、ssh セッションが通っているインタフェースは絶対にバインドしないでください。
+
+   ```sh
+   dpdk-devbind.py --status                      # PCI アドレスと現在のドライバ
+   sudo ip link set ens4 down
+   sudo dpdk-devbind.py --bind=vfio-pci 0000:00:04.0
+   # カーネルに戻す: sudo dpdk-devbind.py --bind=virtio-pci 0000:00:04.0 (または ixgbe、i40e など)
+   ```
+
+   NVIDIA / Mellanox ConnectX (`mlx5`) は例外で、カーネルのドライバのまま `rdma-core` 経由で DPDK から使います。バインドし直さないでください。
+4. **権限**: root で実行します。一般ユーザーでの vfio には `/dev/vfio/*` の権限、`CAP_IPC_LOCK` / 大きな `RLIMIT_MEMLOCK`、hugepage のマウントへのアクセスが必要で、ここでは扱いません。
+
+### EAL 引数
+
+`wpg send` / `wpg bench` では `--eal-args` (1 つの文字列を空白で分割)、`wpg serve` では `wpg.toml` の `tx.dpdk_eal_args` ([設定リファレンス](../reference/config.md)) または `WPG_TX__DPDK_EAL_ARGS` で渡します。よく使うもの:
+
+| 引数 | 意味 |
+|---|---|
+| `-a 0000:00:04.0` | この PCI デバイスだけを probe する (複数指定可)。指定しなければ DPDK ドライバにバインドされた NIC をすべて使う |
+| `-l 2` | メイン lcore (既定は wpg が使える先頭の CPU)。送出ワーカーはこれまでどおり `--pin-cores` / `--auto-pin` で固定 |
+| `--socket-mem 512` / `-m 512` | 最初に確保する hugepage メモリ (MiB) |
+| `--vdev net_tap0,iface=dtap0` | 起動時に仮想デバイスを作る (インタフェースに名前を書いても可。上記) |
+| `--file-prefix wpg` | `--in-memory` の代わりに共有のランタイムファイルを使う (`dpdk-proc-info` やテレメトリソケット用) |
+| `--log-level lib.eal:debug` | 失敗したときに EAL のログを増やす |
+| `--no-huge -m 256` | hugepages なしで動かす (仮想デバイスのみ。物理 NIC には hugepages が必要) |
 
 ```sh
-dpdk-devbind.py --status
-sudo modprobe vfio-pci        # または uio_pci_generic
-sudo dpdk-devbind.py --bind=vfio-pci 0000:00:04.0
+sudo wpg bench --backend dpdk -i 0000:00:04.0 --eal-args "-a 0000:00:04.0" --workers 2 --auto-pin
+sudo wpg send t.wpg.yaml --backend dpdk -i 0000:00:04.0 --eal-args "-a 0000:00:04.0" --rate 1Mpps
+
+# NIC なし: tcpdump で見られる TAP インタフェース (root が必要)
+sudo wpg send t.wpg.yaml --backend dpdk -i net_tap0,iface=dtap0 --count 10 &
+sudo tcpdump -ni dtap0
 ```
 
-- EAL 引数 (コア、メモリチャネル、allow-list) は設定ファイルから渡します。[設定リファレンス](../reference/config.md)を参照。
-- **CML2**: Ubuntu ノードには virtio-net デバイスが見え、DPDK は virtio PMD で扱います。ゲストに IOMMU がない場合は `uio_pci_generic`、または vfio の no-IOMMU モード (`enable_unsafe_noiommu_mode`) を使います。性能は DPDK ではなくホスト側の vhost 経路で頭打ちになります。
+```toml
+# wpg.toml
+[tx]
+default_backend = "dpdk"
+allowed_ifaces = ["0000:00:04.0"]
+dpdk_eal_args = ["-a", "0000:00:04.0", "-l", "1"]
+```
 
-期待性能 (TODO §2.2、未計測): 物理 NIC で AF_XDP は 1 コアあたり数 Mpps、DPDK は 1 コアあたり 10 Mpps 以上。AF_XDP の copy モードを `lo` / `veth` で測った値は `docs/perf.md` にあります。
+### CML2 と virtio
+
+CML2 の Ubuntu ノードのデータ用インタフェースは virtio-net デバイスで、DPDK は virtio PMD (`net_virtio`、標準の DPDK パッケージに含まれる) で扱います。
+
+- ゲストには通常 IOMMU がないため、`vfio-pci` はバインドを拒否します。vfio の no-IOMMU モード (バインド前に `echo 1 | sudo tee /sys/module/vfio/parameters/enable_unsafe_noiommu_mode`。DMA が隔離されないため "unsafe" ですが、検証用 VM なら許容範囲) か `uio_pci_generic` を使います。
+- 管理用インタフェース (通常 `ens2`) はカーネルに残し、データ用インタフェースだけをバインドします。
+- virtio PMD の TX キュー数は、ふつうノードの vCPU 数 / virtio のキューペア数までです。それを超える `--workers` はキュー数を示すエラーになります。
+- 性能は DPDK ではなく、ホストの vhost 経路と仮想リンクで頭打ちになります。DPDK に頼る前に同じリンクで `afpacket` と比べてください。CML2 では差が小さいことがよくあります。
+- 送出に NIC の MAC アドレスは関係ありません (送信元 MAC はテンプレートのもの)。送出だけならプロミスキャスモードも不要です。
+
+### 制約
+
+- 送出のみ (`wpg capture` の DPDK 受信はなし)。
+- フレームは 2048 オクテットまで。マルチセグメント mbuf、TX のチェックサム / セグメンテーションオフロードは使いません (wpg が完成したフレームを作るため)。
+- 1 つのポートを同時に使えるジョブは 1 つ。EAL 引数はプロセスの間固定です。
+- DPDK は共有ライブラリ版のみ (PMD はプラグインとして読み込まれます)。
+
+期待性能 (TODO §2.2、実機では未計測): 物理 NIC で AF_XDP は 1 コアあたり数 Mpps、DPDK は 1 コアあたり 10 Mpps 以上。計測したら `docs/perf.md` のチェックリストで記録してください。
 
 ### バインディングのビルド (`dpdk-sys`)
 
@@ -121,4 +186,4 @@ export PKG_CONFIG_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu/pkgconfig
 export LD_LIBRARY_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu
 ```
 
-DPDK 24.11 は、親ディレクトリが world-writable (`/tmp` など) な場所から PMD プラグインを読み込むことを拒否します。`/opt` や `/usr/local` にインストールしてください。スモークテストは EAL を `--no-huge --no-pci` で起動し、`net_ring` の仮想ポートを使うため、hugepages・NIC・root のいずれも不要です。CI (ジョブ `dpdk`) が両方の LTS で実行します。DPDK は共有ライブラリ版のみ対応です (PMD はプラグインとして読み込まれます)。`dpdk` 送出バックエンド自体はまだで、`wpg` には `dpdk` のビルド feature がありません。
+DPDK 24.11 は、親ディレクトリが world-writable (`/tmp` など) な場所から PMD プラグインを読み込むことを拒否します。`/opt` や `/usr/local` にインストールしてください。スモークテストは EAL を `--no-huge --no-pci` で起動し、`net_ring` の仮想ポートを使うため、hugepages・NIC・root のいずれも不要です。CI (ジョブ `dpdk`) が両方の LTS で実行します。DPDK は共有ライブラリ版のみ対応です (PMD はプラグインとして読み込まれます)。バックエンド自体のテスト (`cargo test -p wpg-tx --features dpdk --lib dpdk`) も `net_ring` / `net_pcap` / `net_null` を使うため、hugepages・NIC・root なしで動きます。
