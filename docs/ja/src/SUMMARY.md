@@ -21,6 +21,12 @@
 # リファレンス
 
 - [プロトコルリファレンス](reference/protocols.md)
+  - [L2 制御プロトコル (P1)](reference/protocols/l2-control.md)
+  - [カプセル化プロトコル (P1)](reference/protocols/encap.md)
+  - [ルーティングプロトコル (P1)](reference/protocols/routing.md)
+  - [冗長化プロトコル (P1)](reference/protocols/fhrp.md)
+  - [マルチキャストプロトコル (P1)](reference/protocols/mcast.md)
+  - [アプリケーションプロトコル (P1)](reference/protocols/app.md)
 - [テンプレートスキーマ](reference/template-schema.md)
 - [API リファレンス](reference/api.md)
 - [CLI リファレンス](reference/cli.md)

@@ -21,6 +21,12 @@
 # Reference
 
 - [Protocol reference](reference/protocols.md)
+  - [L2 control protocols (P1)](reference/protocols/l2-control.md)
+  - [Encapsulation protocols (P1)](reference/protocols/encap.md)
+  - [Routing protocols (P1)](reference/protocols/routing.md)
+  - [Redundancy protocols (P1)](reference/protocols/fhrp.md)
+  - [Multicast protocols (P1)](reference/protocols/mcast.md)
+  - [Application protocols (P1)](reference/protocols/app.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)
