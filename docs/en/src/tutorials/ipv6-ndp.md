@@ -2,7 +2,7 @@
 
 Time: about 25 minutes. Privileges: none until Step 6.
 
-> This page replaces the planned "IS-IS IIH" tutorial. IS-IS (and CLNP) are outside the P0 protocol set that ships today; they are on the roadmap (TODO.md, P2). The IPv6 stack below exercises the same ideas in the meantime: several layers whose type, length and checksum fields are derived from each other, and a link-layer multicast address computed from a network-layer one.
+> This page uses the IPv6 stack to practise two ideas: several layers whose type, length and checksum fields are derived from each other, and a link-layer multicast address computed from a network-layer one. The OSI stack without IP (IS-IS over LLC) is covered in [Bringing up an IS-IS adjacency with Hellos](isis-adjacency.md).
 
 ## What you will build
 

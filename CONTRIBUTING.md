@@ -46,7 +46,7 @@ Before opening a PR, run `just fmt lint test check-wasm`. CI runs the same check
 ## Adding a protocol
 
 Protocols are declarative definitions in `wpg-protocols` (Rust macros for core protocols, YAML for
-user-extensions), lowered to one shared IR. Follow the step-by-step guide in `docs/dev/`
+user-extensions), lowered to one shared IR. Follow the step-by-step guide in `docs/en/src/dev/add-protocol.md`
 (developer guide: adding a protocol). At a minimum a protocol needs: a definition, Fluent strings for its
 name and field descriptions, a sample template, a golden pcap and tests. Then run `just docs-gen` to
 regenerate the reference pages (protocols, CLI, API, configuration, template schema) and commit them;
@@ -57,8 +57,8 @@ a test fails while they are stale.
 - **No hard-coded user-visible strings** in the server, CLI, or web UI (including error messages).
   Use Fluent message keys.
 - Every key must exist in **both** `locales/ja/main.ftl` and `locales/en/main.ftl`. A missing key in either
-  language fails CI (planned lint).
-- Adding a language: see the i18n section of the developer guide in `docs/dev/`.
+  language fails CI (`cargo test -p wpg-i18n`).
+- Adding a language: see the developer guide, `docs/en/src/dev/add-i18n.md`.
 
 ## Licensing and DCO
 

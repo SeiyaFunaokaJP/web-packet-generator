@@ -9,8 +9,10 @@
 ネットワーク検証向けの、Web GUI で動く高性能パケットジェネレータです。バックエンド、パケットエンジン、
 WASM フロントエンドまですべて Rust で実装しています。GUI で任意のパケットを組み立て、超高速に送出できます。
 
-> **ステータス: 開発初期（マイルストーン M0、プロジェクト基盤の整備中）。** 以下の内容はまだ動作を保証しません。
-> ロードマップは [TODO.md](TODO.md) を参照してください。
+> **ステータス: リリース前（0.x）。** マイルストーン M0〜M11（エンジン、送出と受信、サーバ、GUI、テンプレート、
+> P0〜P2 プロトコル、デプロイ、ドキュメント）は実装済みで、v1.0 のリリース判定（M12）を進めています。
+> 一部の経路（物理 NIC での AF_XDP zero-copy と DPDK、CML2）は実機で未確認です。ロードマップは [TODO.md](TODO.md)、
+> 変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
 
 ## wpg とは
 
@@ -29,14 +31,17 @@ NW エンジニア、検証担当、CML2 / EVE-NG 等のラボ利用者、プロ
 v1 の非ゴール: 本格的なキャプチャ/解析（Wireshark の代替ではありません）、TCP 3-way handshake 完走などの
 ステートフルなセッション生成、攻撃ツール用途への最適化。
 
-## 主な機能（予定）
+## 主な機能
 
+- Ethernet、VLAN、IPv4/IPv6、TCP/UDP からルーティング（OSPF、BGP、IS-IS）、OSI（CLNP、ES-IS）、MPLS / SR / SRv6、
+  トンネル、タイミング / OAM、アプリケーションまで 180 以上のプロトコル（[プロトコルリファレンス](docs/ja/src/reference/protocols.md)）
 - 宣言的なプロトコル定義 1 つから、合成・解析・GUI 生成・ドキュメント生成を行う
 - 長さ / チェックサム / 次ヘッダの自動計算（Auto/Manual 切替）と、意図的な malformed パケット生成
 - フィールドジェネレータ（range / list / random / counter / file / expr）と大量ストリーム生成
 - ブラウザ内 WASM による即時プレビュー（`wpg-core` をサーバと共有）
 - YAML テンプレート（`.wpg.yaml`）、`.wpgbundle` による共有、pcap/pcapng インポート
-- レート制御（pps / bps / 回線率 %）、バースト、WebSocket によるリアルタイム統計
+- レート制御（pps / bps / 回線率 %）、バースト、マルチキュー・マルチコア送出、WebSocket によるリアルタイム統計
+- tcpdump 形式のフィルタ付き受信カウンタ、シグネチャによるロス / 順序 / 遅延の照合、pcapng 保存
 - OpenAPI 付き REST API、パスワード認証（argon2id）、任意で TLS
 - 日本語・英語の UI / マニュアル / メッセージ
 
@@ -65,7 +70,7 @@ just run              # または ./scripts/run.sh --dev
 
 raw ソケット送出には権限が必要です。Linux は root 実行、または
 `sudo setcap cap_net_raw,cap_net_admin+ep ./target/release/wpg`。Windows は Npcap をインストールして管理者で実行。
-macOS は `/dev/bpf*` への権限が必要です。`wpg doctor`（予定）で自己診断できます。
+macOS は `/dev/bpf*` への権限が必要です。`wpg doctor` で自己診断できます。
 
 ## アーキテクチャ
 
@@ -97,16 +102,23 @@ workspace の crate: `wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-rx`, `wpg-templ
 | `pcap` (libpcap / Npcap / BPF) | Win / mac / Linux | 〜数十万 pps | 全 OS 共通のフォールバック |
 | `afpacket` (TPACKET_V3 + `sendmmsg`) | Linux | 〜1–3 Mpps/core | CML2 上 Ubuntu (virtio) の主経路。CAP_NET_RAW 必要 |
 | `afxdp` | Linux 5.10+ (`--features afxdp`) | 〜数 Mpps/core | zero-copy はドライバ対応要。zero-copy / copy 自動 (zero-copy は実機未確認) |
-| `dpdk` | Linux | 10 Mpps+/core | `--features dpdk`、DPDK 24.11 LTS（23.11 も可） |
+| `dpdk` | Linux | 10 Mpps+/core | `--features dpdk`、DPDK 24.11 LTS（23.11 も可）。確認済みは仮想デバイスのみ |
 | `pcapfile` | 全 | — | 送出せず pcapng に書き出す（ドライラン、CI） |
-| `loopback` / `null` | 全 | — | ベンチ・テスト用 |
+| `null` | 全 | — | ベンチ・テスト用 |
 
 最低対応 OS: Windows 10 21H2+ / macOS 12+ / Ubuntu 20.04+（glibc 2.31）。Windows の送出は Npcap のみで、
 「GUI + 低〜中速送出」の位置づけです。
 
+## ドキュメント
+
+利用者・開発者向けのマニュアルは日本語（[`docs/ja`](docs/ja/src/SUMMARY.md)）と英語（[`docs/en`](docs/en/src/SUMMARY.md)）の
+mdBook です。3 OS へのインストール、チュートリアル、自動生成のプロトコル / CLI / API / 設定リファレンス、運用（デプロイ、
+サービス化、DPDK / AF_XDP、CML2、性能チューニング）、開発者ガイドを収録しています。`just docs` でビルドします
+（`cargo install mdbook --locked` が必要）。
+
 ## ロードマップ
 
-M0〜M12 のマイルストーンと詳細仕様は [TODO.md](TODO.md) にあります。
+M0〜M12 のマイルストーンと詳細仕様は [TODO.md](TODO.md) にあります。変更履歴は [CHANGELOG.md](CHANGELOG.md) にあります。
 
 ## 法的注意・利用上の責任
 

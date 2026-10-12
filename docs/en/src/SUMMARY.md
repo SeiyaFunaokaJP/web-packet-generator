@@ -17,6 +17,8 @@
 - [Tutorial: IPv6 and Neighbor Discovery](tutorials/ipv6-ndp.md)
 - [Tutorial: Load and rate control](tutorials/rate-control.md)
 - [Tutorial: pcap to template replay](tutorials/pcap-replay.md)
+- [Tutorial: Load-testing a DHCP server](tutorials/dhcp-load.md)
+- [Tutorial: Bringing up an IS-IS adjacency with Hellos](tutorials/isis-adjacency.md)
 
 # Reference
 
@@ -211,7 +213,7 @@
     - [payload](reference/protocols/payload.md)
     - [raw](reference/protocols/raw.md)
 <!-- wpg-docs-gen:end protocol-pages -->
-- [P1 protocol notes](protocols/README.md)
+- [P1 protocol notes](protocols/overview.md)
   - [L2 control protocols](protocols/l2-control.md)
   - [Encapsulation and tunnels](protocols/encap.md)
   - [Routing protocols](protocols/routing.md)

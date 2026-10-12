@@ -4,6 +4,18 @@ Status: draft
 
 Measure first with `wpg bench` and compare against the baseline in `docs/perf.md` (measured on `lo` and `null` only). All flags below exist on both `wpg send` and `wpg bench` unless noted; see the [CLI reference](../reference/cli.md).
 
+## Where to start
+
+Change one thing at a time and measure each step with `wpg bench` (64-byte frames, about `--duration 10` seconds).
+
+1. **Know the ceiling**: `wpg bench --backend null` measures frame generation without any transmit path. If a real interface gets close to it, wpg itself is the limit.
+2. **afpacket basics**: `--qdisc-bypass` (unless you need tc), `--batch` 64 / 128 / 256 / 512, and a comparison with `--no-tx-ring`.
+3. **Pin cores**: `--pin-core` (one worker) or `--auto-pin`. Keep the thread on the NIC's NUMA node with its interrupts, and set the governor to `performance` (see "IRQ affinity and CPU governor" below).
+4. **Add workers**: `--workers 2`, `4`, ... up to the number of queues, until the gain stops.
+5. **Change the backend**: if that is still not enough, try `afxdp` (`--xdp-mode`, `--busy-poll`), then `dpdk` ([DPDK and AF_XDP setup](dpdk-afxdp.md)). On virtual NICs (CML2 and the like) the gap is often small; see [CML2 notes](cml2.md#choosing-a-backend-on-cml2).
+6. **Tighten the rate**: run `wpg send` at the target rate, read the achieved rate and lateness in the final report, and adjust `--wait` / `--clock` (see "Rate accuracy" below).
+7. **Record it**: keep the environment (CPU, NIC and driver, kernel, command, `wpg bench --json` output) with the checklist in `docs/perf.md`.
+
 ## Core pinning: `--pin-core`
 
 `--pin-core <CORE>` pins the transmit thread to one CPU core (Linux). This stops the scheduler from migrating the thread and keeps caches warm. Choose a core that is not handling the NIC's interrupts, and preferably on the same NUMA node as the NIC (`lscpu`, `/sys/class/net/<if>/device/numa_node`). Keep the core free of other work (`isolcpus` or `taskset` for the rest).

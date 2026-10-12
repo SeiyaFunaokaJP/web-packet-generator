@@ -26,7 +26,7 @@ Points of the unit:
 - Runs as the unprivileged user `wpg`. Raw sockets come from `AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN`, so the binary needs no `setcap` for the service (file capabilities are ignored under `NoNewPrivileges=yes` anyway).
 - `StateDirectory=wpg` creates `/var/lib/wpg` owned by `wpg`; `ProtectSystem=strict` makes the rest of the file system read-only for the server.
 - `EnvironmentFile=-/etc/wpg/wpg.env` for per-host `WPG_*` overrides (deploy.sh writes it).
-- `LimitMEMLOCK=infinity` for the future AF_XDP backend.
+- `LimitMEMLOCK=infinity` for the AF_XDP backend (UMEM is charged to `RLIMIT_MEMLOCK` on kernels before 5.11).
 - `RestrictAddressFamilies` allows `AF_PACKET` and `AF_XDP` besides IP and Unix sockets.
 
 Change the listen address with `bind` in `wpg.toml` or `WPG_SERVER__BIND=` in `wpg.env`, then `sudo systemctl restart wpg`.

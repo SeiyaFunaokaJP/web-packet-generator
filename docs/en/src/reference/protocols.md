@@ -2,7 +2,7 @@
 
 # Protocol reference
 
-This chapter is generated from the protocol definition IR of `wpg-protocols` (the catalog served at `GET /api/protocols`), so it always matches the code: 183 protocols. Each page lists the fields in wire order with their type, default, Auto rule and description, the lower layers that lead to the protocol, the next-layer table, the constraints checked after building and the bundled sample templates. The hand-written [protocol notes](../protocols/README.md) explain how the protocols are reached, which fields you set by hand and the approximations that remain. After changing a definition, regenerate with `just docs-gen`.
+This chapter is generated from the protocol definition IR of `wpg-protocols` (the catalog served at `GET /api/protocols`), so it always matches the code: 183 protocols. Each page lists the fields in wire order with their type, default, Auto rule and description, the lower layers that lead to the protocol, the next-layer table, the constraints checked after building and the bundled sample templates. The hand-written [protocol notes](../protocols/overview.md) explain how the protocols are reached, which fields you set by hand and the approximations that remain. After changing a definition, regenerate with `just docs-gen`.
 
 ## L2 (data link)
 

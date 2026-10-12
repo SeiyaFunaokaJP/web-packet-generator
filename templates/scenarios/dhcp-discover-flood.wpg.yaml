@@ -1,0 +1,49 @@
+# DHCP load: DHCPDISCOVER from 10000 clients (sequential MACs, source MAC = chaddr, random xid)
+schema: 1
+
+meta:
+  name: scenario-dhcp-discover-flood
+  descriptions:
+    ja: "DHCP 負荷: 1 万クライアントからの DHCPDISCOVER (MAC は連番、送信元 MAC = chaddr、xid はランダム)"
+    en: "DHCP load: DHCPDISCOVER from 10000 clients (sequential MACs, source MAC = chaddr, random xid)"
+  tags: [scenario, "protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:dhcpv4", "layer:l4", dhcp, load]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: oui
+    default: "02:00:5e"
+    description: First three octets of the client MACs (locally administered)
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "ff:ff:ff:ff:ff:ff"
+    generators:
+      src: { kind: range, start: "${oui}:00:00:01", end: "${oui}:ff:ff:ff" } # one MAC per client
+  - protocol: ipv4
+    fields:
+      src: 0.0.0.0
+      dst: 255.255.255.255
+  - protocol: udp
+    fields:
+      src_port: 68
+      dst_port: 67
+  - protocol: dhcpv4
+    fields:
+      op: boot_request
+      flags: broadcast
+      options:
+        - { message_type: discover }
+        - { parameter_request_list: [1, 3, 6, 15, 51] } # mask, router, DNS, domain, lease
+        - end
+    generators:
+      chaddr: { kind: expr, expr: "$0.src" } # the same MAC as the Ethernet source (layer 0)
+      xid: { kind: expr, expr: "rand(0, 0xffffffff)" }
+
+stream:
+  seed: 1
+  count: 10000
+
+tx:
+  rate: 200pps

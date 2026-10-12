@@ -12,6 +12,34 @@ Status: draft
 - `pcap` バックエンドも使う場合は `--features pcap` でビルドし、`libpcap0.8` を入れます。`afpacket` にライブラリは不要です。
 - vCPU は 2 つ以上。送出は 1 本のビジーなスレッドなので、OS 用に 1 コア空けます。
 
+## ラボの組み方
+
+最小の構成は、wpg を動かす Ubuntu ノード 1 台と試験対象のノードです。受信と照合 ([受信と検証](rx-verify.md)) も行うなら、受信用の Ubuntu ノードをもう 1 台置きます。
+
+```text
+External Connector (NAT / ブリッジ) ── ens2 [Ubuntu: wpg] ens3 ── 試験対象 (IOSv、CSR1000v、XRv9k、FRR …) ── ens3 [Ubuntu: 受信側 (任意)]
+```
+
+1. **管理用のリンク**: Ubuntu ノードの最初のインタフェース (`ens2`) を External Connector につなぎます。バイナリのコピー (`scripts/deploy.sh`)、ssh、Web UI への接続にだけ使い、試験トラフィックは流しません。
+2. **データ用のリンク**: 2 番目以降 (`ens3`、`ens4` …) を試験対象につなぎます。リンクの両端が起動していないとインタフェースは carrier なしのままです。
+3. **ノードの大きさ**: vCPU 2 以上 (`--workers N` なら N + 1 以上)、メモリ 2 GiB 以上。DPDK を使うなら hugepages のぶん (既定の 1024 ページで 2 GiB) を足します。
+4. **初期設定**: Ubuntu ノードの Config (cloud-init の user-data) で、ssh 公開鍵と、必要なら `ethtool`、`tcpdump`、`libpcap0.8` を入れておくと後が楽です。
+
+   ```yaml
+   #cloud-config
+   ssh_authorized_keys:
+     - ssh-ed25519 AAAA... you@workstation
+   packages: [ethtool, tcpdump]
+   ```
+
+5. **デプロイ**: 手元のマシンから管理用アドレスに対して `scripts/deploy.sh` を実行します ([scripts/deploy.sh によるデプロイ](deploy.md))。送信を許すインタフェースを `--iface` で限定してください。
+
+   ```sh
+   scripts/deploy.sh ubuntu@192.0.2.10 --service --iface ens3 --password-file ./wpg-password
+   ```
+
+6. **Web UI**: パスワードを設定して `0.0.0.0:8080` で待ち受けるか、サービスを `--bind 127.0.0.1:8080` にして ssh のポート転送 (`ssh -L 8080:127.0.0.1:8080 ubuntu@192.0.2.10`) で開きます ([認証と TLS](security.md))。
+
 ## 権限: setcap か root
 
 AF_PACKET ソケットには `CAP_NET_RAW` が必要です。root で実行するか、バイナリに一度だけ capability を付与します。
@@ -93,6 +121,17 @@ CML2 上では未計測です。手元にあるのは `docs/perf.md` の `lo` �
 ## 受信側の GRO / TSO / チェックサムオフロード
 
 オフロードが変えるのは、受信側に **見える** ものであって、wpg が送ったものではありません。GRO / LRO が有効だと、Linux の受信側の `tcpdump` は TCP ストリームで MTU を超える結合フレームを表示することがあります。正確に観測するには `sudo ethtool -K ens3 gro off lro off` で無効にします。wpg はチェックサム込みでフレームを自分で組み立てるので、送信ノードのチェックサムオフロードは影響しません (意図的に壊したチェックサムはそのまま送られます)。virtio ゲストの送信側キャプチャで "incorrect checksum" と出るのはカーネル自身のスタックが作ったパケットだけで、wpg のフレームではありません。現在の設定は `ethtool -k` で確認します。
+
+## CML2 でのバックエンドの選び方
+
+| バックエンド | CML2 (virtio-net) での使いどころ | 準備 |
+|---|---|---|
+| `afpacket` | **既定。まずこれを使います。** 追加の準備が要らず、管理用インタフェースと共存できます | `CAP_NET_RAW` (上記) |
+| `afxdp` | `afpacket` で頭打ちのとき比べてみる価値があります。virtio-net の zero-copy は新しいカーネルが必要で、多くの場合 copy モードになり、`afpacket` との差は小さくなります | `--features afxdp` でビルド、カーネル 5.10 以上、キュー数 (`ethtool -L`) ([AF_XDP](dpdk-afxdp.md#af_xdp)) |
+| `dpdk` | virtio PMD でインタフェースをカーネルから外して使います。律速はホストの vhost 経路なので、効果は環境次第です | `--features dpdk` でビルド、hugepages、vfio の no-IOMMU モードか `uio_pci_generic` ([CML2 と virtio](dpdk-afxdp.md#cml2-と-virtio)) |
+| `pcap` | 他の OS と同じ手順で試したいときだけ | `--features pcap` でビルド、`libpcap0.8` |
+
+どのバックエンドでも、送る前に `--backend pcapfile` でフレームを確かめ、低い `--rate` から始めます。性能を比べるときは同じリンクで `wpg bench` を順に実行し ([性能チューニング](tuning.md))、結果を `docs/perf.md` のチェックリストに沿って記録してください。
 
 ## トラブルシューティング
 

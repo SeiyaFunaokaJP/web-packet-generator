@@ -4,6 +4,18 @@ Status: draft
 
 まず `wpg bench` で計測し、`docs/perf.md` のベースライン (`lo` と `null` のみで計測) と比較します。特記しない限り、以下のフラグは `wpg send` と `wpg bench` の両方にあります。[CLI リファレンス](../reference/cli.md)を参照してください。
 
+## 進め方
+
+1 度に 1 つずつ変え、毎回 `wpg bench` で測ります (64 バイト、`--duration 10` (秒) 程度)。
+
+1. **上限を知る**: `wpg bench --backend null` で、送出経路を除いたフレーム生成の上限を測ります。実インタフェースでの値がこれに近ければ、律速は wpg 側です。
+2. **afpacket の基本**: `--qdisc-bypass` (tc を使わない場合)、`--batch` を 64 / 128 / 256 / 512 で比較、`--no-tx-ring` と比較。
+3. **コアの固定**: `--pin-core` (1 ワーカー) か `--auto-pin`。NIC の割り込みと同じ NUMA ノードに置き、governor を `performance` に (下の「IRQ アフィニティと CPU governor」)。
+4. **ワーカーを増やす**: `--workers 2`、`4` … とキュー数まで増やし、伸びが止まる点を探します。
+5. **バックエンドを変える**: それでも足りなければ `afxdp` (`--xdp-mode` と `--busy-poll`)、次に `dpdk` ([DPDK / AF_XDP のセットアップ](dpdk-afxdp.md))。仮想 NIC (CML2 など) では差が小さいことが多いので、[CML2 での注意点](cml2.md#cml2-でのバックエンドの選び方) も参照してください。
+6. **レートの精度を詰める**: 目標レートで `wpg send` し、最終レポートの達成率と遅れを見て `--wait` / `--clock` を調整します (下の「レート精度」)。
+7. **記録する**: 環境 (CPU、NIC とドライバ、カーネル、コマンド、`wpg bench --json` の出力) を `docs/perf.md` のチェックリストに沿って残します。
+
 ## コア pin: `--pin-core`
 
 `--pin-core <CORE>` は送出スレッドを 1 つの CPU コアに固定します (Linux)。スケジューラによる移動を防ぎ、キャッシュを温かく保ちます。NIC の割り込みを処理していないコアを選び、できれば NIC と同じ NUMA ノードのコアにします (`lscpu`、`/sys/class/net/<if>/device/numa_node`)。そのコアには他の仕事を載せないでください (残りは `isolcpus` や `taskset` で分離)。

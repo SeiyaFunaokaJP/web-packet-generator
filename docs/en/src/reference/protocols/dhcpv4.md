@@ -187,3 +187,4 @@
 
 - [dhcpv4-discover](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/app/dhcpv4-discover.wpg.yaml) — `templates/protocols/app/dhcpv4-discover.wpg.yaml`
 - [dhcpv4-relay](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/app/dhcpv4-relay.wpg.yaml) — `templates/protocols/app/dhcpv4-relay.wpg.yaml`
+- [scenario-dhcp-discover-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/dhcp-discover-flood.wpg.yaml) — `templates/scenarios/dhcp-discover-flood.wpg.yaml`

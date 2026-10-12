@@ -31,12 +31,12 @@ The v1.0 release gate (TODO.md §4, M12) additionally requires:
 - The web UI end-to-end tests (`just e2e`) green, and zero ja / en i18n gaps (`cargo test -p wpg-i18n`).
 - The screenshots and the builder GIF in `docs/{ja,en}/src/images/` regenerated with `just screenshots` when the UI changed (review them before committing).
 - Documentation complete in ja and en, with `docs/build.sh` passing.
-- The `CHANGELOG` updated.
+- `CHANGELOG.md` updated.
 
 ## Steps
 
 1. Pass every gate above.
-2. Summarise the changes since the last tag into the `CHANGELOG`, from the Conventional Commits. Call out upgrade notes (template schema, database or configuration changes, see [Upgrading](../operations/upgrade.md)).
+2. Move the **Unreleased** entries of `CHANGELOG.md` into a section for the new version (`## [X.Y.Z] - YYYY-MM-DD`), adding anything since the last tag from the Conventional Commits. Call out upgrade notes (template schema, database or configuration changes, see [Upgrading](../operations/upgrade.md)).
 3. Bump the workspace version in `Cargo.toml` (also the `version` of the internal `wpg-*` entries in `[workspace.dependencies]`) and update `Cargo.lock` (`cargo check`).
 4. Commit as `release: vX.Y.Z` and create an annotated tag `vX.Y.Z` (`git tag -a vX.Y.Z -m "wpg X.Y.Z"`).
 5. Push the tag (`git push origin vX.Y.Z`). `.github/workflows/release.yml` builds the archives, writes `SHA256SUMS` and creates the GitHub Release with generated notes; edit the notes afterwards. Tags with a hyphen (`v1.0.0-rc.1`) become pre-releases. `scripts/release.sh` fails when the tag does not match the workspace version.
@@ -56,7 +56,7 @@ Releases are built by `.github/workflows/release.yml`. Each target is built on i
 | `wpg-<ver>-x86_64-apple-darwin.tar.gz` | `macos-14` (cross) | Intel Macs |
 | `wpg-<ver>-x86_64-pc-windows-msvc.zip` | `windows-latest` | Needs Npcap at runtime |
 
-Each archive holds `wpg` / `wpg.exe` (with the web UI embedded), `README.md`, `README.ja.md`, both licences, `templates/` and `packaging/` (systemd, launchd and Windows service samples). Binaries are built without optional features (no `pcap`), so they need no extra library to start. They are **not signed or notarised**; see the macOS and Windows install pages for what users have to do.
+Each archive holds `wpg` / `wpg.exe` (with the web UI embedded), `README.md`, `README.ja.md`, `CHANGELOG.md`, both licences, `templates/` and `packaging/` (systemd, launchd and Windows service samples). Binaries are built without optional features (no `pcap`), so they need no extra library to start. They are **not signed or notarised**; see the macOS and Windows install pages for what users have to do.
 
 ### Building an archive locally
 

@@ -11,7 +11,7 @@
 #   -h, --help           this help
 #
 # Output: <out>/wpg-<version>-<target>.tar.gz (.zip on Windows) and a .sha256 file
-# next to it. The archive holds the binary, README, licences, the sample templates
+# next to it. The archive holds the binary, README, CHANGELOG, licences, the sample templates
 # and the service samples under packaging/.
 set -euo pipefail
 
@@ -103,7 +103,7 @@ trap 'rm -rf "$stage"' EXIT
 pkg="$stage/$name"
 mkdir -p "$pkg"
 cp "$bin" "$pkg/"
-cp README.md README.ja.md LICENSE-MIT LICENSE-APACHE "$pkg/"
+cp README.md README.ja.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "$pkg/"
 cp -R templates "$pkg/templates"
 cp -R packaging "$pkg/packaging"
 
