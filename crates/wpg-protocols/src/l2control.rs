@@ -140,6 +140,7 @@ pub fn cdp_tlvs() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 
@@ -389,6 +390,7 @@ pub fn pppoe_tags() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 
@@ -508,6 +510,7 @@ fn lcp_options() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 
@@ -548,6 +551,7 @@ fn ipcp_options() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 

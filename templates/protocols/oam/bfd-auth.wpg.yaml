@@ -1,0 +1,43 @@
+# BFD (RFC 5880 §4.4): a Poll with meticulous keyed SHA1 authentication (the hash is Manual)
+schema: 1
+
+meta:
+  name: bfd-auth
+  descriptions:
+    ja: "BFD (RFC 5880 §4.4): Meticulous Keyed SHA1 認証付きの Poll (A ビットと長さは自動、ハッシュは手動)"
+    en: "BFD (RFC 5880 §4.4): a Poll with meticulous keyed SHA1 authentication (A bit and length Auto, the hash is Manual)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:bfd", "layer:l4", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.12.1
+      dst: 10.0.12.2
+      dscp: 48
+      ttl: 255
+  - protocol: udp
+    fields:
+      src_port: 49153
+      dst_port: 3784
+  - protocol: bfd
+    fields:
+      state: up
+      p: 1 # Poll: the peer answers with F
+      my_discriminator: 0x00000101
+      your_discriminator: 0x00000201
+      desired_min_tx_interval: 50000
+      required_min_rx_interval: 50000
+      authentication:
+        - meticulous_keyed_sha1:
+            key_id: 1
+            sequence_number: 1
+            hash: "00000000 00000000 00000000 00000000 00000000" # SHA1 over the packet with the key in this field
+
+tx:
+  count: 1

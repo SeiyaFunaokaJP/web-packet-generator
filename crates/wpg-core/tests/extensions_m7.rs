@@ -6,7 +6,8 @@
 //! octets between the type and the length (`TlvDef::head_octets`) and items padded
 //! to a multiple of 4 octets (`TlvDef::align`); for BGP, variants told apart by
 //! their value (`TlvVariant::value_prefix` / `value_len`) and a type flag that
-//! widens the length (`TlvDef::long_length`).
+//! widens the length (`TlvDef::long_length`); for RSVP, items whose length comes
+//! before the type (`TlvDef::len_first`).
 
 use std::collections::BTreeMap;
 
@@ -35,6 +36,7 @@ fn tlv(variants: Vec<TlvVariant>, length: Length) -> TlvDef {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     }
 }
 
@@ -610,4 +612,94 @@ fn clashing_variants_are_rejected() {
     t.variants
         .push(TlvVariant::new(0x900e, "mp_again", Vec::new()));
     assert!(d.validate().is_err());
+}
+
+/// RSVP-shaped objects: 16-bit length (counting the header, padded to 4 octets),
+/// then a 16-bit type (Class-Num, C-Type).
+fn object_def() -> ProtocolDef {
+    let mut objects = tlv(
+        vec![
+            TlvVariant::new(0x0501, "time", vec![uint("refresh", 32)]),
+            TlvVariant::new(
+                0x0701,
+                "name",
+                vec![FieldDef::new(
+                    "name",
+                    FieldType::Bytes { len: Length::ToEnd },
+                )],
+            ),
+        ],
+        Length::ToEnd,
+    );
+    objects.type_bits = 16;
+    objects.len_bits = 16;
+    objects.len_includes_header = true;
+    objects.align = 4;
+    objects.len_first = true;
+    let mut d = ProtocolDef::new("objects", "Objects", wpg_core::ProtocolLayer::L4);
+    d.fields = vec![FieldDef::new("objects", FieldType::Tlv(objects))];
+    d
+}
+
+#[test]
+fn length_before_type() {
+    let defs = vec![object_def()];
+    defs[0].validate().unwrap();
+    let p = Packet::from_layers(vec![Layer::new("objects").with(
+        "objects",
+        vec![
+            TlvItem::named("time").with("refresh", 30_000u32),
+            TlvItem::named("name").with("name", b"ab".to_vec()),
+            TlvItem {
+                ty: Some(0x0901),
+                data: Some(vec![1, 2, 3, 4]),
+                ..TlvItem::default()
+            },
+        ],
+    )]);
+    let built = p.build(&defs).unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    let b = &built.bytes;
+    assert_eq!(b[..8], [0, 8, 5, 1, 0, 0, 0x75, 0x30]);
+    // Length 6, padded to 8 octets.
+    assert_eq!(b[8..16], [0, 6, 7, 1, b'a', b'b', 0, 0]);
+    assert_eq!(b[16..], [0, 8, 9, 1, 1, 2, 3, 4]);
+    // The layout shows the length first.
+    let item = &built.layout[0].fields[0].children[0];
+    let names: Vec<_> = item.children.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names, ["length", "type", "refresh"]);
+    assert_eq!(item.children[1].bit_offset, 16);
+    assert_eq!(item.children[2].bit_offset, 32);
+
+    let parsed = parse(b, "objects", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["objects"] else {
+        panic!("not decoded as items");
+    };
+    let names: Vec<_> = items.iter().map(|i| i.name.as_deref()).collect();
+    assert_eq!(names, [Some("time"), Some("name"), None]);
+    assert_eq!(items[1].fields["name"], FieldValue::Bytes(b"ab".to_vec()));
+    assert_eq!(items[2].ty, Some(0x0901));
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, *b);
+
+    // A truncated item (length 12, 8 octets left) becomes raw with a warning.
+    let short = [0, 12, 5, 1, 0, 0, 0, 1];
+    let parsed = parse(&short, "objects", &defs).unwrap();
+    assert!(parsed
+        .diagnostics
+        .iter()
+        .any(|d| d.key == keys::LENGTH_EXCEEDS_DATA));
+
+    let mut bad = object_def();
+    let FieldType::Tlv(t) = &mut bad.fields[0].ty else {
+        unreachable!()
+    };
+    t.head_octets = 1;
+    assert!(bad.validate().is_err());
+    let mut bad = object_def();
+    let FieldType::Tlv(t) = &mut bad.fields[0].ty else {
+        unreachable!()
+    };
+    t.variants.push(TlvVariant::type_only(0x0001, "pad"));
+    assert!(bad.validate().is_err());
 }

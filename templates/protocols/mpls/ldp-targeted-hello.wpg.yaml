@@ -1,0 +1,38 @@
+# LDP (RFC 5036): a targeted Hello for extended discovery, unicast to the remote LSR
+schema: 1
+
+meta:
+  name: ldp-targeted-hello
+  descriptions:
+    ja: "LDP (RFC 5036): 拡張ディスカバリの Targeted Hello (相手 LSR へのユニキャスト、T / R ビット、ホールドタイム 45 秒、構成シーケンス番号付き)"
+    en: "LDP (RFC 5036): a targeted Hello for extended discovery (unicast to the remote LSR, T and R bits, 45 s hold time, configuration sequence number)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:ldp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.3
+  - protocol: udp
+    fields:
+      src_port: 646
+      dst_port: 646
+  - protocol: ldp
+    fields:
+      lsr_id: 192.0.2.1
+      messages:
+        - hello:
+            message_id: 1
+            tlvs:
+              - common_hello_parameters: { hold_time: 45, t: 1, r: 1 }
+              - ipv4_transport_address: 192.0.2.1
+              - configuration_sequence_number: 1
+
+tx:
+  count: 1

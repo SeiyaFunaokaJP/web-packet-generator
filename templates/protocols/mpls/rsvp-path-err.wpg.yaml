@@ -1,0 +1,33 @@
+# RSVP (RFC 2205 / RFC 3209): a PathErr with an ERROR_SPEC (Routing Problem, no route to destination)
+schema: 1
+
+meta:
+  name: rsvp-path-err
+  descriptions:
+    ja: "RSVP (RFC 2205 / RFC 3209): ERROR_SPEC (Routing Problem / No route available toward destination) 付きの PathErr"
+    en: "RSVP (RFC 2205 / RFC 3209): a PathErr with an ERROR_SPEC (Routing Problem / No route available toward destination)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:rsvp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 10.0.12.2
+      dst: 10.0.12.1
+      dscp: 48
+  - protocol: rsvp
+    fields:
+      msg_type: path_err
+      objects:
+        - session_lsp_tunnel_ipv4: { tunnel_endpoint: 192.0.2.4, tunnel_id: 100, extended_tunnel_id: 192.0.2.1 }
+        - error_spec_ipv4: { node_address: 10.0.12.2, flags: 0, error_code: routing_problem, error_value: 5 }
+        - sender_template_lsp_tunnel_ipv4: { sender_address: 192.0.2.1, lsp_id: 1 }
+        - sender_tspec: {}
+
+tx:
+  count: 1

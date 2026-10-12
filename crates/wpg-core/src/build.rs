@@ -721,6 +721,23 @@ pub(crate) fn encode_tlv_item(
             (l & mask(len_bits), true)
         }
     };
+    if t.len_first {
+        // Length, then type, then the value (no head octets).
+        let mut w = BitWriter::default();
+        w.push_bits(len_bits, len);
+        w.push_bits(type_bits, ty);
+        w.push_bytes(&value);
+        children[0].bit_offset = len_bits as usize;
+        children.insert(
+            0,
+            FieldLayout {
+                auto,
+                ..FieldLayout::leaf("length", 0, len_bits as usize, FieldValue::UInt(len))
+            },
+        );
+        children.extend(shift(vchildren, (type_bits + len_bits) as usize));
+        return Ok(finish(w.buf, children));
+    }
     // Value fields in the head sit right after the type, the others after the length.
     let (in_head, after): (Vec<_>, Vec<_>) =
         vchildren.into_iter().partition(|c| c.bit_offset < head * 8);

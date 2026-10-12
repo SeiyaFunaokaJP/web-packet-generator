@@ -248,6 +248,54 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ("bgp.evpn.nlri.ip.addr", "192.0.2.1"),
             ],
         ),
+        (
+            "eth_ipv4_udp_ldp_hello",
+            vec![
+                ("udp.dstport", "646"),
+                ("ldp.hdr.pdu_len", "30"),
+                ("ldp.hdr.ldpid.lsr", "192.0.2.1"),
+                ("ldp.msg.type", "0x0100"),
+                ("ldp.msg.len", "20"),
+                ("ldp.msg.tlv.hello.hold", "15"),
+                ("ldp.msg.tlv.ipv4.taddr", "192.0.2.1"),
+            ],
+        ),
+        (
+            "eth_ipv4_tcp_ldp_label_mapping",
+            vec![
+                ("ldp.hdr.pdu_len", "33"),
+                ("ldp.msg.type", "0x0400"),
+                ("ldp.msg.len", "23"),
+                ("ldp.msg.tlv.fec.type", "2"),
+                ("ldp.msg.tlv.fec.len", "24"),
+                ("ldp.msg.tlv.fec.pfval", "198.51.100.0"),
+                ("ldp.msg.tlv.generic.label", "299776"),
+            ],
+        ),
+        (
+            "eth_ipv4_rsvp_path",
+            vec![
+                ("ip.proto", "46"),
+                ("ip.opt.ra", "0"),
+                ("rsvp.msg", "1"),
+                ("rsvp.message_length", "128"),
+                ("rsvp.session.tunnel_id", "1"),
+                ("rsvp.ero_rro_subobjects.ipv4_hop", "192.0.2.2"),
+                ("rsvp.refresh_interval", "30000"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_bfd",
+            vec![
+                ("udp.dstport", "3784"),
+                ("bfd.sta", "0x03"),
+                ("bfd.flags.a", "1"),
+                ("bfd.message_length", "33"),
+                ("bfd.my_discriminator", "0x00000101"),
+                ("bfd.desired_min_tx_interval", "300000"),
+                ("bfd.auth.password", "secret"),
+            ],
+        ),
     ]
 }
 

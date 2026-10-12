@@ -1,0 +1,42 @@
+# BFD (RFC 5880 / RFC 5881): single-hop control packets, state Up, 300 ms intervals
+schema: 1
+
+meta:
+  name: bfd-single-hop
+  descriptions:
+    ja: "BFD (RFC 5880 / RFC 5881): シングルホップの制御パケット (UDP 3784、TTL 255、状態 Up、送受信間隔 300 ms、検出乗数 3)"
+    en: "BFD (RFC 5880 / RFC 5881): single-hop control packets (UDP 3784, TTL 255, state Up, 300 ms intervals, detect multiplier 3)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:bfd", "layer:l4", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.12.1
+      dst: 10.0.12.2
+      dscp: 48
+      ttl: 255 # RFC 5881 §5: GTSM
+  - protocol: udp
+    fields:
+      src_port: 49152 # 49152-65535
+      dst_port: 3784
+  - protocol: bfd
+    fields:
+      diag: no_diagnostic
+      state: up
+      detect_mult: 3
+      # length and the A bit: Auto
+      my_discriminator: 0x00000101
+      your_discriminator: 0x00000201
+      desired_min_tx_interval: 300000 # microseconds
+      required_min_rx_interval: 300000
+      required_min_echo_rx_interval: 0
+
+tx:
+  count: 10
+  rate: 4pps # roughly one per 300 ms

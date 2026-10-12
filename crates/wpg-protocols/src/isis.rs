@@ -146,6 +146,7 @@ fn tlv_def(variants: Vec<TlvVariant>, length: Length) -> TlvDef {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     }
 }
 

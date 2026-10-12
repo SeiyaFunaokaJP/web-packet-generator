@@ -365,6 +365,7 @@ pub fn pim_hello_options() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 

@@ -430,7 +430,17 @@ fn decode_tlv(
             malformed(pos, Some(tb), &mut items);
             break;
         }
-        let ty = be(&rest[..tb]);
+        // With the length first, the type follows it.
+        let ty_at = if t.len_first {
+            usize::from(t.len_bits / 8)
+        } else {
+            0
+        };
+        if rest.len() < ty_at + tb {
+            malformed(pos, Some(ty_at + tb), &mut items);
+            break;
+        }
+        let ty = be(&rest[ty_at..ty_at + tb]);
         let variant = t.variant_by_type(ty);
         if variant.is_some_and(|v| v.type_only) {
             items.push(TlvItem {
@@ -450,7 +460,11 @@ fn decode_tlv(
             malformed(pos, Some(hl), &mut items);
             break;
         }
-        let len = be(&rest[tb + head..hl]);
+        let len = if t.len_first {
+            be(&rest[..ty_at])
+        } else {
+            be(&rest[tb + head..hl])
+        };
         let total = usize::try_from(len)
             .ok()
             .and_then(|l| l.checked_mul(unit))
@@ -973,6 +987,7 @@ mod tests {
             align: 0,
             unpadded_last: false,
             long_length: None,
+            len_first: false,
         };
         let outer = TlvDef {
             type_bits: 8,
@@ -1015,6 +1030,7 @@ mod tests {
             align: 0,
             unpadded_last: false,
             long_length: None,
+            len_first: false,
         };
         let mut p = ProtocolDef::new("tlvs", "TLVs", ProtocolLayer::L7);
         p.fields = vec![

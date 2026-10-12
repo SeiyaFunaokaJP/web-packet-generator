@@ -33,6 +33,7 @@
   - [IS-IS (P2)](protocols/isis.md)
   - [SCTP (P2)](protocols/sctp.md)
   - [OSPF Opaque / SR, BGP MP / EVPN (P2)](protocols/routing-ext.md)
+  - [LDP / RSVP-TE / BFD (P2)](protocols/mpls-bfd.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)
