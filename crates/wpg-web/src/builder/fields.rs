@@ -2,18 +2,21 @@
 //! toggle and a generator editor. Manual values are parsed live through
 //! `wpg_core::notation` (out-of-spec values are accepted so malformed packets can be
 //! built, with the constraint diagnostics shown inline). Generators show a live
-//! "expands to N" estimate from the stream cardinality.
+//! "expands to N" estimate from the stream cardinality, and the time to send the
+//! stream at the template's `tx.rate`.
 
 use leptos::prelude::*;
 use wpg_core::notation::{format_value, parse_generator};
 use wpg_core::{FieldDef, FieldType, Generator};
 use wpg_template::{parse_text, FieldInput, GeneratorSpec};
 
-use super::preview::{format_count, format_size, gen_cardinality, PreviewCtx};
+use super::preview::{estimate_secs, format_count, format_size, gen_cardinality, PreviewCtx};
 use super::proto;
 use super::state::{edit, Builder};
 use crate::components::{INPUT, INPUT_INVALID, LABEL};
+use crate::fmt;
 use crate::i18n::{tr, use_i18n};
+use crate::validate::parse_rate;
 
 /// How a field is currently valued.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -86,6 +89,7 @@ pub(crate) fn FieldEditor() -> impl IntoView {
                     <h2 class="truncate text-sm font-semibold">{name} <span class="font-mono text-xs text-slate-400">{proto_id.clone()}</span></h2>
                     <StreamEstimate />
                 </div>
+                <DurationEstimate />
                 <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                     {fields.into_iter().map(|fd| field_row(builder, li, &fd)).collect_view()}
                 </div>
@@ -110,6 +114,64 @@ fn StreamEstimate() -> impl IntoView {
                 </span>
             }
         })
+    }
+}
+
+/// Rate input (the template's `tx.rate`, also the job default) and the time the
+/// stream takes to send at it: `tx.count` packets, else one pass of the expansion,
+/// capped by `tx.duration_secs`.
+#[component]
+fn DurationEstimate() -> impl IntoView {
+    let i18n = use_i18n();
+    let builder = Builder::use_ctx();
+    let pv = PreviewCtx::use_ctx();
+    let rate = move || {
+        builder
+            .template
+            .with(|t| t.tx.rate.clone().unwrap_or_default())
+    };
+    let set_rate = move |ev: leptos::ev::Event| {
+        let v = event_target_value(&ev);
+        builder.edit(true, move |t| {
+            t.tx.rate = (!v.trim().is_empty()).then_some(v);
+        });
+    };
+    let parsed = Memo::new(move |_| {
+        builder
+            .template
+            .with(|t| t.tx.rate.as_deref().map(parse_rate))
+    });
+    let invalid = move || matches!(parsed.get(), Some(Err(_)));
+    let estimate = move || {
+        let (count, limit) = builder.template.with(|t| (t.tx.count, t.tx.duration_secs));
+        let (packets, frame_len) = pv
+            .preview
+            .with(|p| (count.or(p.cardinality), p.bytes.len()));
+        match parsed.get() {
+            None => i18n.t("ui-bld-duration-no-rate"),
+            Some(Err(key)) => i18n.t(key),
+            Some(Ok(r)) => match estimate_secs(packets, frame_len, r, limit) {
+                Some(secs) => i18n.ta("ui-bld-duration", &[("time", fmt::duration(secs))]),
+                None => i18n.t("ui-bld-duration-unknown"),
+            },
+        }
+    };
+    view! {
+        <div class="mb-2 flex items-center gap-2 text-[11px] text-slate-500" title=i18n.t("ui-bld-duration-help")>
+            <label for="bld-tx-rate" class="shrink-0">{tr("ui-bld-rate")}</label>
+            <div class="w-28">
+                <input
+                    id="bld-tx-rate"
+                    type="text"
+                    class=move || if invalid() { INPUT_INVALID } else { INPUT }
+                    placeholder="1000pps"
+                    aria-invalid=move || invalid().to_string()
+                    prop:value=rate
+                    on:input=set_rate
+                />
+            </div>
+            <span class=move || if invalid() { "text-rose-600" } else { "" } aria-live="polite">{estimate}</span>
+        </div>
     }
 }
 

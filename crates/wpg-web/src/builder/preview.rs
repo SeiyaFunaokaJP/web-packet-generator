@@ -18,6 +18,7 @@ use wpg_core::{
 use wpg_template::{apply_overrides, compile, FieldInput, GeneratorSpec, Template, VarOverrides};
 
 use super::proto::{catalog, field_type};
+use crate::validate::RateKind;
 
 /// A compile / build failure that produced no bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -365,6 +366,44 @@ pub(crate) fn gen_cardinality(spec: &GeneratorSpec, ty: &FieldType) -> Option<u6
     compiled.cardinality()
 }
 
+/// Smallest frame on the wire without FCS (mirrors `wpg_tx::rate::MIN_FRAME_LEN`).
+const MIN_FRAME_LEN: usize = 60;
+/// Preamble + SFD + FCS + minimum IFG (mirrors `wpg_tx::rate::WIRE_OVERHEAD`).
+const WIRE_OVERHEAD: usize = 24;
+
+/// Seconds needed to send `packets` frames of `frame_len` octets at `rate`, capped
+/// by the template's `duration_secs` limit. `packets: None` is an endless stream.
+/// `None` when it can't be told: a percentage of an unknown link, an unlimited rate,
+/// or an endless stream without a time limit.
+#[must_use]
+pub(crate) fn estimate_secs(
+    packets: Option<u64>,
+    frame_len: usize,
+    rate: RateKind,
+    limit_secs: Option<f64>,
+) -> Option<f64> {
+    #[allow(clippy::cast_precision_loss)] // estimate only
+    let wire_bits = (frame_len.max(MIN_FRAME_LEN) + WIRE_OVERHEAD) as f64 * 8.0;
+    let per_packet = match rate {
+        RateKind::Pps(v) => Some(1.0 / v),
+        RateKind::Bps(v) => Some(wire_bits / v),
+        RateKind::Ifg(d) => Some(d),
+        RateKind::Percent(_) | RateKind::Unlimited => None,
+    };
+    #[allow(clippy::cast_precision_loss)] // estimate only
+    let raw = match (packets, per_packet) {
+        (Some(n), Some(t)) => Some(n as f64 * t),
+        (None, _) => Some(f64::INFINITY),
+        (Some(_), None) => None,
+    };
+    let secs = match (raw, limit_secs) {
+        (Some(r), Some(l)) => r.min(l),
+        (Some(r), None) => r,
+        (None, _) => return None,
+    };
+    secs.is_finite().then_some(secs)
+}
+
 /// `Some(n)` → grouped count; `None` → the infinity sign.
 #[must_use]
 pub(crate) fn format_count(n: Option<u64>) -> String {
@@ -480,6 +519,46 @@ mod tests {
             assert_eq!(a.hex(), b.hex(), "index {idx}");
         }
         assert_eq!(build_preview(&m2, 0).cardinality, Some(9));
+    }
+
+    #[test]
+    fn duration_estimate() {
+        // 1000 packets at 100 pps → 10 s.
+        assert_eq!(
+            estimate_secs(Some(1000), 64, RateKind::Pps(100.0), None),
+            Some(10.0)
+        );
+        // 60-byte frames are 84 octets on the wire: 1e6 of them at 672 Mbps → 1 s.
+        let s = estimate_secs(Some(1_000_000), 60, RateKind::Bps(672e6), None).unwrap();
+        assert!((s - 1.0).abs() < 1e-9, "{s}");
+        // Runts are padded to the minimum frame on the wire.
+        assert_eq!(
+            estimate_secs(Some(1_000_000), 20, RateKind::Bps(672e6), None),
+            estimate_secs(Some(1_000_000), 60, RateKind::Bps(672e6), None)
+        );
+        assert_eq!(
+            estimate_secs(Some(4), 64, RateKind::Ifg(0.5), None),
+            Some(2.0)
+        );
+        // The time limit caps the estimate, and bounds an endless stream.
+        assert_eq!(
+            estimate_secs(Some(1000), 64, RateKind::Pps(10.0), Some(30.0)),
+            Some(30.0)
+        );
+        assert_eq!(
+            estimate_secs(None, 64, RateKind::Pps(10.0), Some(30.0)),
+            Some(30.0)
+        );
+        assert_eq!(estimate_secs(None, 64, RateKind::Pps(10.0), None), None);
+        // Link-relative and unlimited rates depend on the NIC.
+        assert_eq!(
+            estimate_secs(Some(10), 64, RateKind::Percent(50.0), None),
+            None
+        );
+        assert_eq!(
+            estimate_secs(Some(10), 64, RateKind::Unlimited, Some(5.0)),
+            None
+        );
     }
 
     #[test]
