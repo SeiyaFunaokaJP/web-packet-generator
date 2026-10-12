@@ -21,6 +21,13 @@
 # Reference
 
 - [Protocol reference](reference/protocols.md)
+- [P1 protocol notes](protocols/README.md)
+  - [L2 control protocols](protocols/l2-control.md)
+  - [Encapsulation and tunnels](protocols/encap.md)
+  - [Routing protocols](protocols/routing.md)
+  - [Redundancy (FHRP)](protocols/fhrp.md)
+  - [Multicast control](protocols/multicast.md)
+  - [Application protocols](protocols/app.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)

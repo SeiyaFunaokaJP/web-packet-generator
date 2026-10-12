@@ -358,7 +358,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] VRRP / HSRP / GLBP
 - [x] IGMP / MLD / PIM（制約: PIM は IPv4 のみチェックサム自動）
 - [x] DHCPv4/v6 / DNS / NTP / SNMP / Syslog / RADIUS / TFTP（制約: DNS セクションは opaque、SNMP は短形式長 <128 octets、RADIUS Authenticator は手動）
-- [ ] 各プロトコルのサンプルテンプレ + golden pcap + ドキュメント (自動生成分 + 補足)（サンプルテンプレ・golden バイトテスト・tshark 突合・フィールド説明 ja/en は済。ドキュメント補足ページは未）
+- [x] 各プロトコルのサンプルテンプレ + golden pcap + ドキュメント (自動生成分 + 補足)（サンプルテンプレ・golden バイトテスト・tshark 突合・フィールド説明 ja/en、補足ページ `docs/{ja,en}/src/protocols/`。リファレンスの自動生成は M11）
 - [x] wpg-core 拡張で上記の近似を解消: 先頭ニブル/残長による demux、リスト件数の Auto、NUL 終端文字列型、チェックサム範囲の除外指定、送信元ポートでの demux（`Peek` / `min_len` / `count` / `cstring` / `exclude` / `alt_field`。MPLS・GTP-U・PIM Register の IP 判別、IGMPv3/MLDv2 クエリ、VRRPv2・HSRPv2 の読み直し、OSPF/LSA チェックサム、TFTP 文字列、応答方向の UDP/TCP が正確に。残る近似は各モジュール doc 参照）
 
 ### M7: P2 OSI / マニアック領域（4–6 週）
