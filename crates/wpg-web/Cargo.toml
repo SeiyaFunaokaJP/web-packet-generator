@@ -23,8 +23,8 @@ console_error_panic_hook.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 # HTTP (fetch) + WebSocket with futures; works with Leptos' `spawn_local`.
-gloo-net = { version = "0.6", default-features = false, features = ["http", "json", "websocket"] }
-gloo-timers = { version = "0.3", features = ["futures"] }
+gloo-net = { version = "0.7", default-features = false, features = ["http", "json", "websocket"] }
+gloo-timers = { version = "0.4", features = ["futures"] }
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

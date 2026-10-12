@@ -36,18 +36,18 @@ tracing-subscriber = { workspace = true, features = ["json", "registry"] }
 figment = { version = "0.10", features = ["toml", "env"] }
 toml = "0.9"
 # `wpg config set-password` edits wpg.toml keeping its comments.
-toml_edit = "0.23"
+toml_edit = "0.25"
 # Default data directory (`~/.local/share/wpg` etc.).
 directories = "6"
 # Template library hot reload (TODO §2.4).
 notify = "8"
 notify-debouncer-mini = "0.7"
-tower-http = { version = "0.6", features = ["compression-gzip", "compression-br", "trace", "cors", "request-id", "util"] }
+tower-http = { version = "0.7", features = ["compression-gzip", "compression-br", "trace", "cors", "request-id", "util"] }
 uuid = { version = "1", features = ["v4"] }
 # OpenAPI document + Swagger UI (vendored: no download at build time).
-utoipa = { version = "5", features = ["axum_extras"] }
-utoipa-axum = "0.2"
-utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }
+utoipa = { version = "6", features = ["axum_extras"] }
+utoipa-axum = "0.3"
+utoipa-swagger-ui = { version = "10", features = ["axum", "vendored"] }
 # Authentication / TLS (TODO §2.6, §3): SQLite for users / sessions / history,
 # argon2id password hashes, rustls (ring provider: no C toolchain beyond cc) with
 # self-signed certificates from rcgen.
@@ -55,7 +55,7 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 argon2 = { version = "0.5", features = ["std"] }
 sha2 = "0.10"
 base64 = "0.23"
-getrandom = "0.3"
+getrandom = "0.4"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
 axum-server = { version = "0.8", features = ["tls-rustls-no-provider"] }
