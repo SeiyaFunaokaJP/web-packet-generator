@@ -199,6 +199,14 @@ pub fn t(locale: Locale, key: &str) -> String {
         .unwrap_or_else(|| key.to_owned())
 }
 
+/// Translates `key` for `locale` without any fallback: `None` when this locale
+/// has no such message (optional texts, e.g. per-command notes of the generated
+/// documentation).
+#[must_use]
+pub fn try_t(locale: Locale, key: &str) -> Option<String> {
+    format(locale, key, None)
+}
+
 /// Formats a [`wpg_core::Diagnostic`] in `locale` using its key and named arguments.
 ///
 /// Falls back to English and finally to the diagnostic's own English `message`
@@ -326,6 +334,21 @@ mod tests {
                     "area",
                     "sys",
                     "nsel",
+                    // generated documentation (wpg docs gen)
+                    "octets",
+                    "src",
+                    "dst",
+                    "algorithm",
+                    "covers",
+                    "fields",
+                    "expr",
+                    "type",
+                    "align",
+                    "flag",
+                    "variant",
+                    "written",
+                    "removed",
+                    "n",
                 ] {
                     args.set(name, "1");
                 }

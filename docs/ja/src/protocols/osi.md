@@ -26,3 +26,11 @@ OSI の PDU の前には「次は何か」を示す番号がなく、PDU 自身�
 
 - `osi` の NLPID は Auto ではありません。
 - NLPID `0x81` / `0x82` / `0x83` の PDU は (十分な長さがあれば) 常に CLNP / ES-IS / IS-IS としてデコードされるため、これらを載せた汎用 `osi` レイヤは専用のプロトコルとして読み戻されます。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`llc`](../reference/protocols/llc.md) · [`ppp`](../reference/protocols/ppp.md) · [`osi`](../reference/protocols/osi.md) · [`clnp`](../reference/protocols/clnp.md) · [`esis_ish`](../reference/protocols/esis_ish.md) · [`isis_l1_lan_hello`](../reference/protocols/isis_l1_lan_hello.md)
+<!-- wpg-docs-gen:end reference-links -->

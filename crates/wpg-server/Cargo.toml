@@ -35,6 +35,8 @@ tracing-subscriber = { workspace = true, features = ["json", "registry"] }
 # `wpg.toml` + `WPG_*` environment + CLI overrides (TODO §1.2 "設定").
 figment = { version = "0.10", features = ["toml", "env"] }
 toml = "0.9"
+# JSON Schema of `Config` (the generated configuration reference).
+schemars = "1"
 # `wpg config set-password` edits wpg.toml keeping its comments.
 toml_edit = "0.25"
 # Default data directory (`~/.local/share/wpg` etc.).

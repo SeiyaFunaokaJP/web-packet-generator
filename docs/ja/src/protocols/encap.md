@@ -34,3 +34,11 @@ IP-in-IP 用の専用プロトコルはありません。`ipv4` の上に `ipv4`
 - **GTP-U** の任意フィールド (シーケンス番号、N-PDU 番号、拡張ヘッダ。E/S/PN フラグで存在) は表現されません。
 - **Geneve** のオプションはヘッダが 3 ビットのフラグ + 5 ビット長と 1 オクテット未満の幅を含むため、`opt_len` で大きさが決まる不透明な `options` 領域です。
 - **L2TPv2 / v3** のヘッダは種別 (制御 / データ) とフラグで存在するフィールドが大きく変わるため、本体は不透明なバイト列です。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ethernet2`](../reference/protocols/ethernet2.md) · [`ipv4`](../reference/protocols/ipv4.md) · [`ipv6`](../reference/protocols/ipv6.md) · [`vxlan`](../reference/protocols/vxlan.md) · [`gre`](../reference/protocols/gre.md) · [`nvgre`](../reference/protocols/nvgre.md) · [`mpls`](../reference/protocols/mpls.md) · [`gtpu`](../reference/protocols/gtpu.md) · [`geneve`](../reference/protocols/geneve.md) · [`l2tpv2`](../reference/protocols/l2tpv2.md) · [`l2tpv3`](../reference/protocols/l2tpv3.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

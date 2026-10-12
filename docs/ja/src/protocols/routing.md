@@ -51,3 +51,11 @@ ipv4 / tcp / bgp                 # KEEPALIVE はヘッダのみ (type 4 が既�
 - **BGP の経路属性**は 16 ビット type (flags << 8 | type code) の TLV です。長さは 8 ビット、Extended Length フラグ (`0x10`) 付きなら 16 ビットで、フラグは 255 オクテットを超えると自動で付き、`type` を明示した場合はその形式を保ちます。`AS_PATH` / `AGGREGATOR` は 4 オクテット AS 番号 (RFC 6793) です。拡張オプションパラメータ (RFC 9072) は未対応です。
 - BGP はセグメントごとに先頭の 1 メッセージだけをデコードします。
 - **EIGRP** の経路 TLV の宛先は `ceil(prefix_length / 8)` オクテットの可変長のため、TLV 値の末尾までを `destination` オクテットとして保持します。複数宛先の TLV はその 1 フィールドにまとまります。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ospfv2`](../reference/protocols/ospfv2.md) · [`ospfv3`](../reference/protocols/ospfv3.md) · [`ospfv3_lsu`](../reference/protocols/ospfv3_lsu.md) · [`bgp`](../reference/protocols/bgp.md) · [`rip`](../reference/protocols/rip.md) · [`ripng`](../reference/protocols/ripng.md) · [`eigrp`](../reference/protocols/eigrp.md)
+<!-- wpg-docs-gen:end reference-links -->

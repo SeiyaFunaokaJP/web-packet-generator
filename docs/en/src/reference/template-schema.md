@@ -125,3 +125,236 @@ Command-line options of `wpg send` override these.
 | `malformed/` | deliberately broken packets (bad checksums, wrong lengths, truncation, bad FCS); they lint with warnings by design and are tagged `malformed` |
 
 List them with `wpg template list templates`.
+
+<!-- wpg-docs-gen:begin template-schema-keys -->
+## Key reference (generated)
+
+Generated from the JSON Schema of the template format (`wpg template schema`); the descriptions are the doc comments of the code (English). `Template` is the document root.
+
+<a id="schema-template"></a>
+
+### `Template`
+
+A `.wpg.yaml` template: one packet (+ generators) = one stream.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `layers` | [`TemplateLayer`](#schema-templatelayer)`[]` |   | Layer stack, outermost first. |
+| `meta` | [`Meta`](#schema-meta) | yes | Metadata. |
+| `packet` | [`PacketOptions`](#schema-packetoptions) |   | Frame-level options (padding, FCS). |
+| `schema` | `integer` | yes | Schema version, see [`SCHEMA_VERSION`]. |
+| `stream` | [`StreamOptions`](#schema-streamoptions) |   | Stream expansion options. |
+| `tx` | [`TxProfile`](#schema-txprofile) |   | Transmit profile. |
+| `variables` | [`Variable`](#schema-variable)`[]` |   | Template variables. |
+
+<a id="schema-fcschoice"></a>
+
+### `FcsChoice`
+
+Frame check sequence choice.
+
+| Value | Description |
+|---|---|
+| `"auto"` | Append the correct CRC-32. |
+| `"bad"` | Append a deliberately wrong CRC-32. |
+| `"none"` | No FCS (what capture / TX backends usually expect). |
+
+<a id="schema-fieldinput"></a>
+
+### `FieldInput`
+
+A field value as written in YAML / JSON: a scalar in human notation or a
+structured value for TLV (`options`) and list fields.
+
+* scalars: `64`, `"192.168.1.1"`, `0x0800`, `syn|ack` (flag names), `ipv4` (enum
+  variant names), `auto`. Hex byte strings must be quoted (`"00 01 02"`);
+* TLV: a list of items, each a bare variant name (`nop`), a one-key map
+  (`{ mss: 1460 }`, `{ timestamps: { tsval: 1, tsecr: 0 } }`) or the explicit form
+  `{ type: 99, data: "01 02" }` / `{ name: mss, length: 4, fields: { value: 1 } }`;
+* list: a list of scalars, or of maps for lists of field groups.
+
+| Value | Description |
+|---|---|
+| `null` | Empty (`~`): e.g. an option without value. |
+| `boolean` | `true` / `false` (1 / 0). |
+| `integer` | Unsigned integer. |
+| `integer` | Negative integer. |
+| `string` | Text in human notation. |
+| [`FieldInput`](#schema-fieldinput)`[]` | Sequence (TLV items, list elements). |
+| `map<string, `[`FieldInput`](#schema-fieldinput)`>` | Mapping (TLV item, field group). |
+
+<a id="schema-generator"></a>
+
+### `Generator`
+
+Field value generator, tagged by `kind`.
+
+#### `kind: "range"`
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `end` | `string` \| `integer` | yes |   |
+| `kind` | `"range"` | yes |   |
+| `start` | `string` \| `integer` | yes |   |
+| `step` | `integer` |   |   |
+
+#### `kind: "list"`
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `"list"` | yes |   |
+| `values` | (`string` \| `integer`)`[]` | yes |   |
+
+#### `kind: "random"`
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `"random"` | yes |   |
+| `max` | `string` \| `integer` |   |   |
+| `min` | `string` \| `integer` |   |   |
+| `seed` | `integer` |   |   |
+
+#### `kind: "random_mac"`
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `"random_mac"` | yes |   |
+| `oui` | `string` |   |   |
+| `seed` | `integer` |   |   |
+
+#### `kind: "counter"`
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `"counter"` | yes |   |
+| `start` | `integer` |   |   |
+| `step` | `integer` |   |   |
+| `wrap` | `integer` |   |   |
+
+#### `kind: "file"`
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `"file"` | yes |   |
+| `path` | `string` | yes |   |
+
+#### `kind: "expr"`
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `expr` | `string` | yes |   |
+| `kind` | `"expr"` | yes |   |
+
+<a id="schema-generatorspec"></a>
+
+### `GeneratorSpec`
+
+A generator of a layer field: either a full [`Generator`] or the human shorthand
+of the GUI (`192.168.1.1-192.168.5.254`, `10.0.0.0/24`, `1,5,9`, `00:11:22:*`).
+
+| Value | Description |
+|---|---|
+| [`Generator`](#schema-generator) | Full form, e.g. `{ kind: range, start: 192.168.1.1, end: 192.168.1.254 }`. |
+| `string` | Shorthand parsed with `wpg_core::notation::parse_generator`. |
+
+<a id="schema-meta"></a>
+
+### `Meta`
+
+Template metadata.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `author` | `string` \| `null` |   | Author. |
+| `created` | `string` \| `null` |   | Creation timestamp (RFC 3339 or a plain date). |
+| `description` | `string` \| `null` |   | Free-form description. |
+| `descriptions` | `map<string, ``string``>` |   | Localised descriptions keyed by language tag (`ja`, `en`). |
+| `name` | `string` | yes | Display name. |
+| `tags` | `string``[]` |   | Tags for search / grouping. |
+
+<a id="schema-packetoptions"></a>
+
+### `PacketOptions`
+
+Frame-level packet options.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `fcs` | [`FcsChoice`](#schema-fcschoice) |   | Frame check sequence. |
+| `pad_to_min` | `boolean` |   | Zero-pad to the minimum frame length (Ethernet: 60 octets). |
+
+<a id="schema-scalar"></a>
+
+### `Scalar`
+
+A YAML scalar; variable defaults may be written as numbers.
+
+| Value | Description |
+|---|---|
+| `string` |   |
+| `integer` |   |
+| `integer` |   |
+| `boolean` |   |
+
+<a id="schema-streammode"></a>
+
+### `StreamMode`
+
+How generators of several fields are combined (see `wpg_core::stream::Mode`).
+
+| Value | Description |
+|---|---|
+| `"zip"` | Advance all generators in lockstep. |
+| `"product"` | Cartesian product, the last generator varies fastest. |
+| `"nested"` | Product with an explicit priority given by [`StreamOptions::order`]. |
+
+<a id="schema-streamoptions"></a>
+
+### `StreamOptions`
+
+Stream expansion options.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `count` | `integer` \| `null` |   | Number of packets; defaults to `tx.count`, then to the natural length. |
+| `mode` | [`StreamMode`](#schema-streammode) |   | Combination mode of the generators. |
+| `order` | `string``[]` |   | For `nested`: fields from the slowest to the fastest, as `<layer>.<field>` where `<layer>` is a 0-based index or a protocol id (`ipv4.src`). |
+| `seed` | `integer` \| `null` |   | Seed for random generators. |
+
+<a id="schema-templatelayer"></a>
+
+### `TemplateLayer`
+
+One layer of the template's packet.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `fields` | `map<string, `[`FieldInput`](#schema-fieldinput)`>` |   | Manually set fields in human notation (`192.168.1.1`, `0x0800`, `syn\|ack`, `${src_ip}`). Unlisted fields use their default or Auto value; the literal `auto` also leaves a field Auto. TLV / list fields take structured values. |
+| `generators` | `map<string, `[`GeneratorSpec`](#schema-generatorspec)`>` |   | Generators varying fields across the stream. |
+| `protocol` | `string` | yes | Protocol id from the catalog (e.g. `ethernet2`). |
+
+<a id="schema-txprofile"></a>
+
+### `TxProfile`
+
+How the stream is transmitted.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `burst` | `integer` \| `null` |   | Burst size in packets. |
+| `count` | `integer` \| `null` |   | Number of packets (`None` together with `duration_secs: None` = infinite). |
+| `duration_secs` | `number` \| `null` |   | Duration limit in seconds. |
+| `rate` | `string` \| `null` |   | Rate in human notation: `1000pps`, `1Mpps`, `10Gbps`, `50%`. |
+
+<a id="schema-variable"></a>
+
+### `Variable`
+
+A template argument (`${name}` placeholder) overridable at run time.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `default` | [`Scalar`](#schema-scalar) \| `null` |   | Default value (human notation; numbers and booleans are accepted too). |
+| `description` | `string` \| `null` |   | Description shown in the GUI / CLI. |
+| `name` | `string` | yes | Placeholder name. |
+<!-- wpg-docs-gen:end template-schema-keys -->

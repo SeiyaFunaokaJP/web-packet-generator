@@ -39,3 +39,11 @@ All of them are demultiplexed on the UDP port: the destination port, else the so
 - **TFTP**: the RRQ / WRQ file name, mode and options and the error message are typed as NUL-terminated strings. DATA / ACK / ERROR / OACK split into `tftp_data` and so on via re-parse on the opcode. The transfer itself runs between two ephemeral ports (TIDs), so packets not on port 69 decode as `raw` after UDP.
 - **NTP** control (mode 6) and private (mode 7) messages have their own layouts and are out of scope. Extension fields and the MAC are an opaque `extensions`.
 - **Syslog** is free text, a single opaque `message`. Give the string as is, in RFC 5424 or RFC 3164 format.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`dhcpv4`](../reference/protocols/dhcpv4.md) · [`dhcpv6`](../reference/protocols/dhcpv6.md) · [`dhcpv6_relay`](../reference/protocols/dhcpv6_relay.md) · [`dns`](../reference/protocols/dns.md) · [`ntp`](../reference/protocols/ntp.md) · [`snmp`](../reference/protocols/snmp.md) · [`snmp_pdu`](../reference/protocols/snmp_pdu.md) · [`snmp_trap`](../reference/protocols/snmp_trap.md) · [`syslog`](../reference/protocols/syslog.md) · [`radius`](../reference/protocols/radius.md) · [`tftp`](../reference/protocols/tftp.md) · [`tftp_data`](../reference/protocols/tftp_data.md) · [`tftp_ack`](../reference/protocols/tftp_ack.md) · [`tftp_error`](../reference/protocols/tftp_error.md) · [`tftp_oack`](../reference/protocols/tftp_oack.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

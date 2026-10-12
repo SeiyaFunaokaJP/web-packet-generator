@@ -30,3 +30,7 @@ Before falling back to an approximation (opaque octets or a Manual value), check
 | Same number, different layout | `BindingEntry::reparsing` | VRRPv2/v3, HSRPv1/v2, TFTP |
 
 The evaluation order is described under "次プロトコルの選択 (demux)" in the specification, `docs/spec/02-packet-builder.md`.
+
+## Reference docs
+
+The [protocol reference](../reference/protocols.md) is generated from the definitions: run `just docs-gen` (`cargo run -p wpg-cli -- docs gen`) and commit the result. New protocols, fields, bindings and sample templates are picked up automatically; the field descriptions come from the `desc = "..."` Fluent keys (ja / en). Hand-written notes go in `docs/{ja,en}/src/protocols/`: mention the protocol ids in backticks (`` `isis_l1_lsp` ``) and the generator links them both ways. The test `generated_docs_are_up_to_date` (wpg-cli) fails while the committed pages are stale.

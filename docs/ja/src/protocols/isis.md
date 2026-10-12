@@ -86,3 +86,11 @@ LLC の DSAP / SSAP (`0xfe`) と PPP の protocol (`0x0023`) は Auto です。�
 - TE の帯域は 32 ビット IEEE 浮動小数点の生値です。SID / ラベルと SR 能力の範囲はオクテット列 (3 オクテットのラベルまたは 4 オクテットのインデックス) です。
 - HMAC-MD5 認証値 (および RFC 5310 の暗号認証) は計算しません。
 - TLV 240 は 15 オクテット形式でモデル化しています。短い形式 (1 / 5 オクテット) は `data` として読み戻されます。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`ipv6`](../reference/protocols/ipv6.md) · [`clnp`](../reference/protocols/clnp.md) · [`isis`](../reference/protocols/isis.md) · [`isis_l1_lan_hello`](../reference/protocols/isis_l1_lan_hello.md) · [`isis_l2_lan_hello`](../reference/protocols/isis_l2_lan_hello.md) · [`isis_p2p_hello`](../reference/protocols/isis_p2p_hello.md) · [`isis_l1_lsp`](../reference/protocols/isis_l1_lsp.md) · [`isis_l2_lsp`](../reference/protocols/isis_l2_lsp.md) · [`isis_l1_csnp`](../reference/protocols/isis_l1_csnp.md) · [`isis_l2_csnp`](../reference/protocols/isis_l2_csnp.md) · [`isis_l1_psnp`](../reference/protocols/isis_l1_psnp.md) · [`isis_l2_psnp`](../reference/protocols/isis_l2_psnp.md)
+<!-- wpg-docs-gen:end reference-links -->

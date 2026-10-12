@@ -39,3 +39,11 @@ ipv4 / pim_register / ipv4 / udp / payload
 - **PIM over IPv6** needs the IPv6 pseudo header in its checksum, but a checksum kind cannot depend on the lower layer, so `pim` is reached from IPv4 only and uses the plain Internet checksum.
 - PIM encoded addresses are typed for IPv4 (address family 1) only.
 - IGMP / MLD need the Router Alert option; the samples put it in the `ipv4` `options` / the `ipv6_hopopts` layer.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`ipv6_hopopts`](../reference/protocols/ipv6_hopopts.md) · [`icmpv6`](../reference/protocols/icmpv6.md) · [`igmp`](../reference/protocols/igmp.md) · [`igmpv2`](../reference/protocols/igmpv2.md) · [`igmpv3_query`](../reference/protocols/igmpv3_query.md) · [`igmpv3_report`](../reference/protocols/igmpv3_report.md) · [`mld`](../reference/protocols/mld.md) · [`mldv2_query`](../reference/protocols/mldv2_query.md) · [`mldv2_report`](../reference/protocols/mldv2_report.md) · [`pim`](../reference/protocols/pim.md) · [`pim_hello`](../reference/protocols/pim_hello.md) · [`pim_join_prune`](../reference/protocols/pim_join_prune.md) · [`pim_register`](../reference/protocols/pim_register.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

@@ -32,3 +32,11 @@ Notes on LLDP / CDP / STP / LACP and Marker / EAPOL / PPPoE / PPP. Definitions a
 - **STP** types the IEEE 802.1D Configuration BPDU (35 octets) exactly. The RSTP / MSTP extension (Version 1 Length, Version 3 Length, MSTI configuration records) is an opaque `trailer`. For an RST BPDU set `protocol_version` and `bpdu_type` and put the Version 1 Length (`00`) in `trailer`; for an MST BPDU give the rest of the MST part as hex as well.
 - Bridge and root identifiers are split into the 2-octet priority (including the system-id extension) and the 6-octet MAC. Timers are in 1/256-second units (`max_age` 20 s = `0x1400`).
 - The **EAPOL** body (the EAP packet for type 0) is an opaque `body`.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ethernet2`](../reference/protocols/ethernet2.md) · [`dot3`](../reference/protocols/dot3.md) · [`llc`](../reference/protocols/llc.md) · [`snap`](../reference/protocols/snap.md) · [`lldp`](../reference/protocols/lldp.md) · [`cdp`](../reference/protocols/cdp.md) · [`stp`](../reference/protocols/stp.md) · [`lacp`](../reference/protocols/lacp.md) · [`marker`](../reference/protocols/marker.md) · [`eapol`](../reference/protocols/eapol.md) · [`pppoe_discovery`](../reference/protocols/pppoe_discovery.md) · [`pppoe_session`](../reference/protocols/pppoe_session.md) · [`ppp`](../reference/protocols/ppp.md) · [`ppp_lcp`](../reference/protocols/ppp_lcp.md) · [`ppp_ipcp`](../reference/protocols/ppp_ipcp.md)
+<!-- wpg-docs-gen:end reference-links -->

@@ -30,3 +30,7 @@ Status: draft
 | 同じ番号でレイアウト違い | `BindingEntry::reparsing` | VRRPv2/v3、HSRPv1/v2、TFTP |
 
 評価順などの詳細は仕様 `docs/spec/02-packet-builder.md` の「次プロトコルの選択」を参照してください。
+
+## リファレンスドキュメント
+
+[プロトコルリファレンス](../reference/protocols.md) は定義から自動生成します。`just docs-gen` (`cargo run -p wpg-cli -- docs gen`) を実行して結果をコミットしてください。新しいプロトコル、フィールド、バインディング、サンプルテンプレートは自動で反映され、フィールド説明は `desc = "..."` の Fluent キー (ja / en) から取ります。手書きの補足は `docs/{ja,en}/src/protocols/` に書き、プロトコル ID をバッククォートで書けば (`` `isis_l1_lsp` ``)、生成ツールが双方向のリンクを張ります。コミット済みのページが古いと、テスト `generated_docs_are_up_to_date` (wpg-cli) が失敗します。

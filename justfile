@@ -77,9 +77,14 @@ audit:
 deny:
     cargo deny check
 
-# Build the mdBook documentation (requires: cargo install mdbook --locked).
+# Regenerate the reference chapters of the docs (protocols, CLI, API, config, template schema)
+# from the code; `just docs-gen --check` only reports stale files.
+docs-gen *args:
+    cargo run -q -p wpg-cli -- docs gen {{args}}
+
+# Build the mdBook documentation into docs/book (requires: cargo install mdbook --locked).
 docs:
-    mdbook build docs
+    ./docs/build.sh
 
 # Deploy to a remote host: `just deploy user@192.0.2.10` or `just deploy host=user@192.0.2.10`.
 deploy host:

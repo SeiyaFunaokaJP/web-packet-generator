@@ -32,3 +32,11 @@ LLDP / CDP / STP / LACP・Marker / EAPOL / PPPoE / PPP の補足です。定義�
 - **STP** は IEEE 802.1D の Configuration BPDU (35 オクテット) を正確に型付けします。RSTP / MSTP の拡張部 (Version 1 Length、Version 3 Length、MSTI 構成レコード) は不透明な `trailer` です。RST BPDU を作るには `protocol_version` と `bpdu_type` を設定し、`trailer` に Version 1 Length (`00`) を、MST BPDU では以降の MST 部も Hex で与えます。
 - ブリッジ ID / ルート ID は 2 オクテットの priority (system-id 拡張込み) と 6 オクテットの MAC に分割されています。タイマは 1/256 秒単位です (`max_age` 20 秒 = `0x1400`)。
 - **EAPOL** の本体 (type 0 なら EAP パケット) は不透明な `body` です。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ethernet2`](../reference/protocols/ethernet2.md) · [`dot3`](../reference/protocols/dot3.md) · [`llc`](../reference/protocols/llc.md) · [`snap`](../reference/protocols/snap.md) · [`lldp`](../reference/protocols/lldp.md) · [`cdp`](../reference/protocols/cdp.md) · [`stp`](../reference/protocols/stp.md) · [`lacp`](../reference/protocols/lacp.md) · [`marker`](../reference/protocols/marker.md) · [`eapol`](../reference/protocols/eapol.md) · [`pppoe_discovery`](../reference/protocols/pppoe_discovery.md) · [`pppoe_session`](../reference/protocols/pppoe_session.md) · [`ppp`](../reference/protocols/ppp.md) · [`ppp_lcp`](../reference/protocols/ppp_lcp.md) · [`ppp_ipcp`](../reference/protocols/ppp_ipcp.md)
+<!-- wpg-docs-gen:end reference-links -->

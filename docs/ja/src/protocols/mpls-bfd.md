@@ -129,3 +129,11 @@ Path・PathTear・ResvConf は IP の Router Alert オプション付きで送�
 - LDP の 1 レイヤは 1 PDU です。同じセグメントに PDU を複数入れる場合、後続の PDU はデコード時に `raw` になります。
 - RSVP は GMPLS (RFC 3473) のオブジェクト、ADSPEC、POLICY_DATA を型付けしません。RSVP over UDP (RFC 2205 付録 C) は対象外です。
 - IntServ のパラメータは 1 つ目 (トークンバケット) だけを型付けし、以降 (保証サービスの Rate / Slack など) は `parameters` のオクテット列です。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`ldp`](../reference/protocols/ldp.md) · [`rsvp`](../reference/protocols/rsvp.md) · [`bfd`](../reference/protocols/bfd.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

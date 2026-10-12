@@ -51,3 +51,11 @@ ipv4 / tcp / bgp                 # a KEEPALIVE is the header alone (type 4 is th
 - **BGP path attributes** are a TLV with a 16-bit type (flags << 8 | type code); the length is 8 bits, or 16 bits with the Extended Length flag (`0x10`), which is set automatically above 255 octets and kept when given in an explicit `type`. `AS_PATH` / `AGGREGATOR` use 4-octet AS numbers (RFC 6793). Extended optional parameters (RFC 9072) are not supported.
 - Only the first BGP message in a segment is decoded.
 - **EIGRP** route TLVs end in a variable-length destination (`ceil(prefix_length / 8)` octets), kept as `destination` octets running to the end of the TLV value; a multi-destination TLV stays in that one field.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ospfv2`](../reference/protocols/ospfv2.md) · [`ospfv2_lsu`](../reference/protocols/ospfv2_lsu.md) · [`ospfv3`](../reference/protocols/ospfv3.md) · [`ospfv3_lsu`](../reference/protocols/ospfv3_lsu.md) · [`bgp`](../reference/protocols/bgp.md) · [`rip`](../reference/protocols/rip.md) · [`ripng`](../reference/protocols/ripng.md) · [`eigrp`](../reference/protocols/eigrp.md)
+<!-- wpg-docs-gen:end reference-links -->

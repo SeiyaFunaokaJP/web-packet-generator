@@ -68,3 +68,11 @@ Other options are kept as `{ type: N, data: "..." }`.
 - The segmentation `total_length` is not computed, and no segmentation / reassembly of a large PDU into several frames is done.
 - Security and quality of service maintenance values are octets; the globally unique / source address specific formats are not split.
 - A Redirect's subnetwork address (`bsnpa`) is octets (a MAC address is 6 octets: `"02 00 00 00 00 02"`). An empty `net` (`""`) redirects to an end system.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`osi`](../reference/protocols/osi.md) · [`clnp`](../reference/protocols/clnp.md) · [`esis`](../reference/protocols/esis.md) · [`esis_esh`](../reference/protocols/esis_esh.md) · [`esis_ish`](../reference/protocols/esis_ish.md) · [`esis_rd`](../reference/protocols/esis_rd.md) · [`payload`](../reference/protocols/payload.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

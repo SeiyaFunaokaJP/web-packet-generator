@@ -12,6 +12,8 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+# JSON Schema of `LogConfig` (the generated configuration reference).
+schemars = "1"
 thiserror.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["json", "registry"] }
