@@ -19,6 +19,8 @@ wpg lets network engineers, test engineers, lab users (CML2, EVE-NG, ...) and pr
 assemble packets layer by layer in a web GUI, and transmit them with a fast backend. The binary is named
 `wpg`; the web frontend is embedded in it, so a single executable is all you need.
 
+![Building Ethernet / IPv4 / UDP in the packet builder, with a source-address range](docs/en/src/images/builder.gif)
+
 What sets it apart:
 
 1. **Deep protocol support**, including OSI-family protocols such as IS-IS and CLNP.

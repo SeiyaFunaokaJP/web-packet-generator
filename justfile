@@ -45,6 +45,14 @@ e2e:
     cargo build -p wpg-cli
     cd e2e && npm ci && npx playwright install chromium && npx playwright test
 
+# Regenerate the documentation screenshots and the builder GIF in docs/{en,ja}/src/images/
+# (requires what `e2e` does, plus ffmpeg for the GIF; see e2e/README.md).
+screenshots:
+    cd crates/wpg-web && trunk build --release
+    touch crates/wpg-server/src/lib.rs
+    cargo build -p wpg-cli
+    cd e2e && npm ci && npx playwright install chromium && npx playwright test -c screenshots.config.ts
+
 # Regenerate tests/golden/*.hex and *.pcap (review the diff before committing).
 golden-update:
     WPG_UPDATE_GOLDEN=1 cargo test -p wpg-golden-tests --test golden
