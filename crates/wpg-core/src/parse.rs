@@ -267,14 +267,11 @@ fn decode_fields(
                 }
             }
             FieldType::Nsap => {
-                return Err(Diagnostic::new(
-                    DiagLevel::Error,
-                    keys::UNSUPPORTED_FIELD,
-                    format!("cannot decode field `{}` of {} yet", fd.name, who.name),
-                )
-                .at_layer(who.layer)
-                .on_field(fd.name.clone())
-                .arg("protocol", who.id));
+                let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                let n = usize::from(*rest.first().ok_or_else(|| short(who, at))?);
+                let addr = rest.get(1..=n).ok_or_else(|| short(who, at))?;
+                bit += (n + 1) * 8;
+                FieldValue::Nsap(addr.to_vec())
             }
         };
         fields.insert(fd.name.clone(), value);

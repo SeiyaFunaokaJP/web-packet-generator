@@ -113,7 +113,10 @@ pub enum FieldType {
     Ipv4,
     /// IPv6 address.
     Ipv6,
-    /// Variable-length OSI NSAP address (1..=20 octets).
+    /// Variable-length OSI NSAP address (1..=20 octets) in its usual OSI encoding:
+    /// a 1-octet length indicator followed by the address octets (CLNP source /
+    /// destination, ES-IS NET / NSAP, IS-IS area addresses). The value is the
+    /// address alone; the builder writes the length indicator, the parser reads it.
     Nsap,
     /// NUL-terminated octet string (TFTP file names, C strings). The value is the
     /// octets *without* the terminator, which the builder appends; the parser reads

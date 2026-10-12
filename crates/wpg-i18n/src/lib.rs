@@ -321,6 +321,11 @@ mod tests {
                     "url",
                     "fingerprint",
                     "min",
+                    // NSAP structure (wpg-web builder)
+                    "afi",
+                    "area",
+                    "sys",
+                    "nsel",
                 ] {
                     args.set(name, "1");
                 }

@@ -94,11 +94,12 @@ pub fn dot3() -> ProtocolDef {
 
 /// IEEE 802.2 LLC header (U-format, 1-octet control): DSAP, SSAP, control.
 ///
-/// `dsap` and `ssap` are both Auto from the next layer (`0xaa` SNAP, `0xfe` OSI /
-/// CLNP, `0x42` spanning tree). Control defaults to `0x03` (UI).
+/// `dsap` and `ssap` are both Auto from the next layer (`0xaa` SNAP, `0xfe` OSI,
+/// `0x42` spanning tree). Control defaults to `0x03` (UI). Under `0xfe` the OSI
+/// PDU is selected by its NLPID octet ([`crate::osi::osi_peek`]).
 #[must_use]
 pub fn llc() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "llc",
         name: "IEEE 802.2 LLC",
         layer: L2,
@@ -126,10 +127,13 @@ pub fn llc() -> ProtocolDef {
         },
         next: dsap {
             0xaa => "snap",
-            0xfe => "clnp",
             0x42 => "stp",
         },
+    };
+    if let Some(b) = d.next.as_mut() {
+        b.peek = Some(crate::osi::osi_peek(0xfe));
     }
+    d
 }
 
 /// SNAP header (RFC 1042): OUI and protocol id (an EtherType when the OUI is 0).

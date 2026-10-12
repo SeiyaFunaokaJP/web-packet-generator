@@ -658,6 +658,7 @@ ui-bld-auto = Auto
 ui-bld-manual = Manual
 ui-bld-gen = Gen
 ui-bld-computed = computed on build
+ui-bld-nsap-parts = AFI { $afi } · area { $area } · system ID { $sys } · NSEL { $nsel }
 ui-bld-estimate = Packets in the stream and their total size
 ui-bld-expands = expands to { $count } (~{ $bytes })
 ui-bld-rate = Rate
@@ -919,3 +920,7 @@ eigrp-acknowledge = Acknowledged sequence number (0 = none).
 eigrp-virtual-router-id = Virtual router ID (0 = unicast address family).
 eigrp-autonomous-system = EIGRP autonomous system number.
 eigrp-tlvs = EIGRP TLVs (16-bit type, 16-bit length including the header).
+
+# --- P2 OSI encapsulation field descriptions ---
+osi-nlpid = Network layer protocol identifier (ISO/IEC TR 9577): 0x81 CLNP, 0x82 ES-IS, 0x83 IS-IS.
+osi-data = Rest of the OSI PDU after the NLPID (opaque octets).

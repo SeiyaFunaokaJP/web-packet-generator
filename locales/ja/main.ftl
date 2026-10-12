@@ -658,6 +658,7 @@ ui-bld-auto = 自動
 ui-bld-manual = 手動
 ui-bld-gen = 生成
 ui-bld-computed = ビルド時に計算
+ui-bld-nsap-parts = AFI { $afi } · エリア { $area } · システム ID { $sys } · NSEL { $nsel }
 ui-bld-estimate = ストリームのパケット数と合計サイズ
 ui-bld-expands = { $count } 個（約 { $bytes }）
 ui-bld-rate = レート
@@ -919,3 +920,7 @@ eigrp-acknowledge = 確認応答するシーケンス番号 (0 = なし)。
 eigrp-virtual-router-id = 仮想ルータ ID (0 = ユニキャストアドレスファミリ)。
 eigrp-autonomous-system = EIGRP の AS 番号。
 eigrp-tlvs = EIGRP TLV (16 ビットタイプ、ヘッダを含む 16 ビット長)。
+
+# --- P2 OSI カプセル化 フィールド説明 ---
+osi-nlpid = ネットワーク層プロトコル識別子 (ISO/IEC TR 9577): 0x81 CLNP、0x82 ES-IS、0x83 IS-IS。
+osi-data = NLPID 以降の OSI PDU の残り (不透明なオクテット列)。

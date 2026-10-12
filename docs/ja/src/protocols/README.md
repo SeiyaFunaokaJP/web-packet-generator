@@ -19,6 +19,7 @@ Status: draft
 | [冗長化 (FHRP)](fhrp.md) | VRRPv2・v3 / HSRPv1・v2 / GLBP |
 | [マルチキャスト制御](multicast.md) | IGMPv1・v2・v3 / MLDv1・v2 / PIM-SM v2 |
 | [アプリケーションプロトコル](app.md) | DHCPv4・v6 / DNS / NTP / SNMP / Syslog / RADIUS / TFTP |
+| [OSI カプセル化 (P2)](osi.md) | 802.2 LLC `0xfe` / PPP `0x0023` 上の OSI PDU、NSAP 型 |
 
 ## 共通の考え方
 
