@@ -106,6 +106,7 @@ fn tlv_def(mut variants: Vec<TlvVariant>) -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 

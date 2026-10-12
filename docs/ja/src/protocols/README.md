@@ -27,6 +27,7 @@ Status: draft
 | [LDP / RSVP-TE / BFD (P2)](mpls-bfd.md) | LDP の PDU・メッセージ・TLV (FEC、ラベル、Hello / セッションパラメータ)、RSVP-TE の Path / Resv などとオブジェクト (ERO / RRO、SESSION_ATTRIBUTE、IntServ)、BFD 制御パケットと認証 (Micro-BFD 含む) |
 | [SRv6 SRH / SR-MPLS (P2)](srv6.md) | SRv6 Segment Routing Header (セグメントリスト、Pad / HMAC TLV、最終宛先での上位層チェックサム、IPv4 / IPv6 / Ethernet のカプセル化)、SR-MPLS のラベルスタック (予約ラベル名、SRGB + インデックス、エントロピーラベル) |
 | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](timing-oam.md) | Ethernet / UDP 上の PTP メッセージと TLV、SyncE ESMC、Ethernet CFM / Y.1731 (CCM、LB、LT、AIS / LCK、LM / DM / SLM など) と ERPS R-APS、802.3ah OAMPDU |
+| [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](mobile-voip.md) | MACsec の SecTAG (セキュアデータと ICV は不透明)、GTPv2-C のメッセージと IE (グループ化 IE の Bearer Context)、Diameter のメッセージと AVP (ベンダ固有、グループ化)、SIP の開始行・ヘッダ行・本文、RTP ヘッダと RTCP 複合パケット (SR / RR / SDES / BYE / APP) |
 
 ## 共通の考え方
 

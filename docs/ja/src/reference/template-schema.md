@@ -38,7 +38,8 @@ tx: { ... }                # 任意
 |---|---|
 | 整数 | `64`、`0x0800`、`0b101` |
 | MAC / IPv4 / IPv6 | `02:00:00:00:00:01`、`192.0.2.1`、`2001:db8::1` (`"00:11:22:33:44:55"` のように数字だけの MAC は YAML が数値と解釈しうるので引用符で囲む) |
-| バイト列 | `"00 01 02 03"` (必ず引用符) |
+| バイト列 | `"00 01 02 03"` (必ず引用符)。テキストは `'"text"'` (`\r`、`\n`、`\t` のエスケープ可) |
+| テキスト行 (CRLF で終わる SIP の行) | `start_line: '"INVITE sip:bob@example.com SIP/2.0"'` (終端は自動で付く) |
 | enum | 数値かバリアント名: `ethertype: arp`、`oper: request`、`type: echo_request` |
 | flags | ビット名を `\|` で連結: `flags: syn\|ack`、`flags: df` |
 | TLV リスト (TCP/IPv4 オプション) | `- mss: 1460`、`- sack_permitted`、`- nop`、`- timestamps: { tsval: 1, tsecr: 0 }`、`- { type: 99, data: "01 02" }` |

@@ -29,6 +29,13 @@ fn eth_header(ethertype: u16) -> Vec<u8> {
 /// header first; pass `None` for a frame that already starts with Ethernet.
 #[must_use]
 pub(crate) fn dissect(frame: &[u8], ethertype: Option<u16>) -> Option<Value> {
+    dissect_with(frame, ethertype, &[])
+}
+
+/// [`dissect`] with extra tshark arguments (e.g. `-d udp.port==5004,rtp` for
+/// protocols without a well-known port).
+#[must_use]
+pub(crate) fn dissect_with(frame: &[u8], ethertype: Option<u16>, args: &[&str]) -> Option<Value> {
     if std::env::var("WPG_TSHARK").ok().as_deref() != Some("1") {
         return None;
     }
@@ -51,6 +58,7 @@ pub(crate) fn dissect(frame: &[u8], ethertype: Option<u16>) -> Option<Value> {
     let out = Command::new("tshark")
         .arg("-r")
         .arg(&path)
+        .args(args)
         .args(["-T", "json"])
         .output()
         .expect("run tshark (WPG_TSHARK=1 requires tshark on PATH)");

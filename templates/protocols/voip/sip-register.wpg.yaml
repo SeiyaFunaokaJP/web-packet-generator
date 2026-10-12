@@ -1,0 +1,44 @@
+# SIP (RFC 3261): a REGISTER over TCP 5060 without a body
+schema: 1
+
+meta:
+  name: sip-register
+  descriptions:
+    ja: "SIP (RFC 3261): TCP 5060 番ポートでの本文なしの REGISTER"
+    en: "SIP (RFC 3261): a REGISTER over TCP 5060 without a body"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "protocol:sip", "layer:l4", voip, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 5060
+      seq: 1
+      ack: 1
+      flags: psh|ack
+  - protocol: sip
+    fields:
+      start_line: '"REGISTER sip:registrar.example.com SIP/2.0"'
+      headers:
+        - '"Via: SIP/2.0/TCP 192.0.2.1:49152;branch=z9hG4bKnashds7"'
+        - '"Max-Forwards: 70"'
+        - '"To: Bob <sip:bob@example.com>"'
+        - '"From: Bob <sip:bob@example.com>;tag=456248"'
+        - '"Call-ID: 843817637684230@998sdasdh09"'
+        - '"CSeq: 1826 REGISTER"'
+        - '"Contact: <sip:bob@192.0.2.1>"'
+        - '"Expires: 7200"'
+        - '"Content-Length: 0"'
+
+tx:
+  count: 1

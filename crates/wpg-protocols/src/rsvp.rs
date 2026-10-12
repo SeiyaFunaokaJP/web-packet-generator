@@ -74,6 +74,7 @@ fn tlv_def(type_bits: u8, len_bits: u8, variants: Vec<TlvVariant>, length: Lengt
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     }
 }
 

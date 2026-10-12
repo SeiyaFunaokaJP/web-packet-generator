@@ -1,0 +1,48 @@
+# Diameter (RFC 6733): a Capabilities-Exchange-Request over TCP 3868
+schema: 1
+
+meta:
+  name: diameter-cer
+  descriptions:
+    ja: "Diameter (RFC 6733): TCP 3868 番ポートでの Capabilities-Exchange-Request (Origin-Host / Realm、Host-IP-Address、Vendor-Id、Product-Name、S6a の Vendor-Specific-Application-Id)"
+    en: "Diameter (RFC 6733): a Capabilities-Exchange-Request over TCP 3868 (Origin-Host / Realm, Host-IP-Address, Vendor-Id, Product-Name, the S6a Vendor-Specific-Application-Id)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "protocol:diameter", "layer:l4", mobile, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 3868
+      seq: 1
+      ack: 1
+      flags: psh|ack
+  - protocol: diameter
+    fields:
+      command_code: capabilities_exchange
+      hop_by_hop: 0x00000001
+      end_to_end: 0x00000001
+      avps:
+        # string values are written as "text"; lengths and padding are Auto
+        - origin_host: { value: '"mme.example.com"' }
+        - origin_realm: { value: '"example.com"' }
+        - host_ip_address: { address: 192.0.2.1 }
+        - vendor_id: { value: 0 }
+        - product_name: { value: '"wpg"' }
+        - supported_vendor_id: { value: 10415 } # 3GPP
+        - vendor_specific_application_id:
+            avps:
+              - vendor_id: { value: 10415 }
+              - auth_application_id: { value: 16777251 } # S6a / S6d
+
+tx:
+  count: 1

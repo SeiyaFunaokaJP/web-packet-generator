@@ -92,12 +92,29 @@ pub enum Length {
         #[serde(default = "one_u32", skip_serializing_if = "is_one")]
         unit: u32,
         /// Octets added after multiplying (IPv6 extension headers: the length
-        /// counts 8-octet units beyond the first, so `unit = 8, adjust = 8`).
+        /// counts 8-octet units beyond the first, so `unit = 8, adjust = 8`;
+        /// GTPv2-C counts from octet 5, RTCP in 32-bit words minus one).
         #[serde(default, skip_serializing_if = "is_zero")]
         adjust: i64,
     },
     /// Consumes the rest of the enclosing PDU.
     ToEnd,
+    /// Consumes the rest of the enclosing PDU except its last `octets` octets,
+    /// which belong to the fields after it (the `MACsec` ICV after the secure data).
+    ToEndExcept {
+        /// Octets left for the fields that follow.
+        octets: u32,
+    },
+    /// `bytes` and `list` fields only: ends with a terminator, which the builder
+    /// appends and the parser consumes (it is not part of the value). A `bytes`
+    /// value ends at the first occurrence of the terminator and cannot contain it
+    /// (a CRLF-terminated text line); a `list` ends where an element would start
+    /// with it (SIP header lines ended by an empty line, RTCP SDES items ended by
+    /// a null octet).
+    Until {
+        /// The terminating octets (at least one).
+        terminator: Vec<u8>,
+    },
     /// `tlv` fields only: the region ends with the first item of this type (the
     /// End TLV of CFM / 802.3ah OAM), or with the enclosing PDU when there is none.
     /// What follows the end item (Ethernet padding) is left to the layers below.
@@ -226,6 +243,19 @@ impl FieldType {
         }
     }
 
+    /// Whether a value of this variable-size type finds its own end (terminated
+    /// `bytes`, `cstring`, `nsap`), so that it can be a list element.
+    #[must_use]
+    pub fn is_self_delimiting(&self) -> bool {
+        matches!(
+            self,
+            FieldType::Bytes {
+                len: Length::Until { .. }
+            } | FieldType::CString
+                | FieldType::Nsap
+        )
+    }
+
     /// Width in bits of integer-like types (`uint`, `int`, `enum`, `flags`).
     #[must_use]
     pub fn int_bits(&self) -> Option<u8> {
@@ -283,6 +313,12 @@ impl FieldType {
                 };
                 octets(t.type_bits, "type")?;
                 octets(t.len_bits, "length")?;
+                if t.uncounted_octets > 0 && t.len_includes_header {
+                    return Err(CoreError::InvalidDefinition {
+                        protocol: field.to_owned(),
+                        reason: "uncounted value octets need a length without the header".into(),
+                    });
+                }
                 if t.len_first
                     && (t.head_octets > 0
                         || t.long_length.is_some()
@@ -445,6 +481,11 @@ pub struct TlvDef {
     /// header; otherwise the length covers only the value after the length field.
     #[serde(default, skip_serializing_if = "is_zero_u8")]
     pub head_octets: u8,
+    /// Leading octets of the value right after the length field that the length
+    /// does not count (the GTPv2-C IE spare / instance octet). Only without
+    /// `len_includes_header`.
+    #[serde(default, skip_serializing_if = "is_zero_u8")]
+    pub uncounted_octets: u8,
     /// Every item is followed by zero octets up to a multiple of `align` octets
     /// (0 or 1 = no padding). The padding is not counted in the length field
     /// (SCTP chunks and parameters).
@@ -1160,6 +1201,18 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
                 Some(src)
             }
             Some(Length::UntilOffset { field: src, .. }) => Some(src),
+            Some(Length::Until { terminator }) => {
+                if terminator.is_empty() || matches!(field.ty, FieldType::Tlv(_)) {
+                    return Err(def_err(
+                        proto,
+                        format!(
+                            "`{}`: a terminated length needs a terminator and a bytes / list field",
+                            field.name
+                        ),
+                    ));
+                }
+                None
+            }
             Some(Length::UntilTlv { .. }) if !matches!(field.ty, FieldType::Tlv(_)) => {
                 return Err(def_err(
                     proto,
@@ -1247,10 +1300,13 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
             FieldType::List {
                 item: ItemDef::Field { ty },
                 ..
-            } if ty.fixed_bits().is_none_or(|b| b % 8 != 0) => {
+            } if !ty.is_self_delimiting() && ty.fixed_bits().is_none_or(|b| b % 8 != 0) => {
                 return Err(def_err(
                     proto,
-                    format!("list `{}` elements must be fixed whole octets", field.name),
+                    format!(
+                        "list `{}` elements must be fixed whole octets or terminated",
+                        field.name
+                    ),
                 ));
             }
             _ => {}

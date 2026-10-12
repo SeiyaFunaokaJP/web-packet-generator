@@ -13,7 +13,7 @@ use wpg_core::notation::{format_bytes, format_mac, format_nsap, format_value};
 use wpg_core::stream::{Expansion, PlanConfig};
 use wpg_core::{
     CompiledGenerator, Diagnostic, FieldLayout, FieldType, FieldValue, Generator, LayerLayout,
-    TrailerLayout,
+    Length, TrailerLayout,
 };
 use wpg_template::{apply_overrides, compile, FieldInput, GeneratorSpec, Template, VarOverrides};
 
@@ -329,6 +329,12 @@ fn bytes_to_input(ty: &FieldType, b: &[u8]) -> Option<FieldInput> {
             .map(|(_, addr)| FieldInput::Str(format_nsap(addr))),
         FieldType::CString => Some(text(&FieldValue::Bytes(
             b.strip_suffix(&[0]).unwrap_or(b).to_vec(),
+        ))),
+        FieldType::Bytes {
+            len: Length::Until { terminator },
+        } => Some(FieldInput::Str(format_value(
+            &FieldValue::Bytes(b.strip_suffix(terminator.as_slice()).unwrap_or(b).to_vec()),
+            ty,
         ))),
         FieldType::Bytes { .. } | FieldType::Raw | FieldType::Padding { .. } => {
             Some(FieldInput::Str(format_bytes(b)))

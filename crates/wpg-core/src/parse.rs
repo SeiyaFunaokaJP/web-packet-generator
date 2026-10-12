@@ -118,6 +118,11 @@ fn region_len(
         }
         // TLV regions closed by an item are measured in `decode_fields`.
         Length::ToEnd | Length::UntilTlv { .. } => Ok(remaining),
+        Length::ToEndExcept { octets } => remaining
+            .checked_sub(*octets as usize)
+            .ok_or_else(|| short(who, at + remaining)),
+        // Terminated regions are found by their terminator (see `terminated`).
+        Length::Until { .. } => Ok(remaining),
         // Count lists are bounded by their elements (see `decode_counted`).
         Length::Count { .. } => Ok(remaining),
         Length::FromField { field, .. } | Length::UntilOffset { field, .. } => {
@@ -223,6 +228,14 @@ fn decode_fields(
                     _ => FieldValue::Bytes(b.to_vec()),
                 }
             }
+            FieldType::Bytes {
+                len: Length::Until { terminator },
+            } => {
+                let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                let n = find_octets(rest, terminator).ok_or_else(|| short(who, at + remaining))?;
+                bit += (n + terminator.len()) * 8;
+                FieldValue::Bytes(rest[..n].to_vec())
+            }
             FieldType::Bytes { len } => {
                 let n = region_len(len, fd, &fields, remaining, who, at, bit / 8, diags)?;
                 let b = take(data, bit, n).ok_or_else(|| short(who, at))?;
@@ -291,6 +304,21 @@ fn decode_fields(
                     FieldValue::Bytes(rest[..n].to_vec())
                 }
             }
+            FieldType::List {
+                item,
+                length: Length::Until { terminator },
+            } => {
+                let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                let (elems, n) = decode_terminated(who, fd, item, rest, at, terminator)
+                    .ok_or_else(|| short(who, at))?;
+                bit += n * 8;
+                let v = FieldValue::List(elems);
+                if reproduces(fd, &v, &rest[..n]) {
+                    v
+                } else {
+                    FieldValue::Bytes(rest[..n].to_vec())
+                }
+            }
             FieldType::List { item, length } => {
                 let n = region_len(length, fd, &fields, remaining, who, at, bit / 8, diags)?;
                 let region = take(data, bit, n).ok_or_else(|| short(who, at))?;
@@ -339,6 +367,41 @@ fn decode_counted(
     Some((out, pos))
 }
 
+/// Position of the first occurrence of `needle` (non-empty) in `hay`.
+fn find_octets(hay: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() {
+        return None;
+    }
+    hay.windows(needle.len()).position(|w| w == needle)
+}
+
+/// Decodes list elements from the start of `data` until the next ones are
+/// `terminator`; returns them and the octets they span with the terminator,
+/// `None` if an element does not decode or the terminator is missing.
+fn decode_terminated(
+    who: Who<'_>,
+    fd: &FieldDef,
+    item: &ItemDef,
+    data: &[u8],
+    base: usize,
+    terminator: &[u8],
+) -> Option<(Vec<FieldValue>, usize)> {
+    let mut out = Vec::new();
+    let mut pos = 0;
+    loop {
+        let rest = data.get(pos..)?;
+        if rest.starts_with(terminator) {
+            return Some((out, pos + terminator.len()));
+        }
+        let (elem, n) = decode_element(who, fd, item, rest, base + pos)?;
+        if n == 0 {
+            return None;
+        }
+        out.push(elem);
+        pos += n;
+    }
+}
+
 /// Decodes one list element from the start of `data`: the value and its size.
 fn decode_element(
     who: Who<'_>,
@@ -351,7 +414,12 @@ fn decode_element(
     match item {
         ItemDef::Field { ty } => {
             let efd = [FieldDef::new(fd.name.clone(), (**ty).clone())];
-            let n = ty.fixed_bits()? as usize / 8;
+            // Self-delimiting elements (terminated text) find their own end.
+            let n = match ty.fixed_bits() {
+                Some(bits) => bits as usize / 8,
+                None if ty.is_self_delimiting() => data.len(),
+                None => return None,
+            };
             let h = decode_fields(who, &efd, data.get(..n)?, base, scratch).ok()?;
             Some((h.fields.into_values().next()?, h.len))
         }
@@ -523,7 +591,7 @@ fn decode_tlv(
                 if t.len_includes_header {
                     (l >= hl).then_some(l)
                 } else {
-                    l.checked_add(hl)
+                    l.checked_add(hl + usize::from(t.uncounted_octets))
                 }
             });
         let Some(total) = total.filter(|n| *n <= rest.len()) else {
@@ -1047,6 +1115,7 @@ mod tests {
             unpadded_last: false,
             long_length: None,
             len_first: false,
+            uncounted_octets: 0,
         };
         let outer = TlvDef {
             type_bits: 8,
@@ -1090,6 +1159,7 @@ mod tests {
             unpadded_last: false,
             long_length: None,
             len_first: false,
+            uncounted_octets: 0,
         };
         let mut p = ProtocolDef::new("tlvs", "TLVs", ProtocolLayer::L7);
         p.fields = vec![

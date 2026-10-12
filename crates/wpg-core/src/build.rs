@@ -417,6 +417,15 @@ pub(crate) fn encode_value(
                 }
             }
             w.push_bytes(b);
+            if let Length::Until { terminator } = len {
+                if !terminator.is_empty() && b.windows(terminator.len()).any(|x| x == terminator) {
+                    return Err(invalid(
+                        fd,
+                        "a terminated value cannot contain its terminator",
+                    ));
+                }
+                w.push_bytes(terminator);
+            }
         }
         // Composite fields accept verbatim octets too (malformed content on purpose).
         (
@@ -455,7 +464,7 @@ pub(crate) fn encode_value(
             }
             return Ok(out);
         }
-        (FieldType::List { item, .. }, FieldValue::List(elems)) => {
+        (FieldType::List { item, length }, FieldValue::List(elems)) => {
             let mut out = Vec::with_capacity(elems.len());
             for (k, e) in elems.iter().enumerate() {
                 let before = w.bits;
@@ -473,6 +482,9 @@ pub(crate) fn encode_value(
                     children,
                     ..FieldLayout::leaf(format!("[{k}]"), before, w.bits - before, e.clone())
                 });
+            }
+            if let Length::Until { terminator } = length {
+                w.push_bytes(terminator);
             }
             return Ok(out);
         }
@@ -659,13 +671,15 @@ pub(crate) fn encode_tlv_item(
         }
     };
     let mut value = vw.buf;
-    if value.len() < head {
-        value.resize(head, 0);
+    // Octets right after the length that it does not count (GTPv2-C instance).
+    let uncounted = usize::from(t.uncounted_octets);
+    if value.len() < head + uncounted {
+        value.resize(head + uncounted, 0);
     }
     let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
     let counted_with = |len_bits: u32| {
         let hdr = ((type_bits + len_bits) / 8) as usize + head;
-        (if t.len_includes_header { hdr } else { 0 }) + value.len() - head
+        (if t.len_includes_header { hdr } else { 0 }) + value.len() - head - uncounted
     };
     let mut counted = counted_with(len_bits);
     // An Auto length too large for the normal width selects the long form, unless

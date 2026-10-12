@@ -1,0 +1,44 @@
+# RTCP (RFC 3550): leaving the session with a Receiver Report, an SDES CNAME and a BYE with a reason
+schema: 1
+
+meta:
+  name: rtcp-rr-bye
+  descriptions:
+    ja: "RTCP (RFC 3550): 受信者レポート、SDES の CNAME、理由付きの BYE からなるセッション離脱時の複合パケット"
+    en: "RTCP (RFC 3550): leaving the session with a compound Receiver Report, SDES CNAME and BYE with a reason"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:rtcp_rr", "protocol:rtcp_sdes", "protocol:rtcp_bye", "layer:l4", voip, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.2
+      dst: 192.0.2.1
+  - protocol: udp
+    fields:
+      src_port: 5005
+      dst_port: 5005
+  - protocol: rtcp_rr
+    fields:
+      ssrc: 0x87654321
+      report_blocks:
+        - { ssrc: 0x12345678, fraction_lost: 2, cumulative_lost: 3, highest_sequence: 0x00010032, jitter: 40, lsr: 0xb0008000, dlsr: 0x00008000 }
+  - protocol: rtcp_sdes
+    fields:
+      chunks:
+        - ssrc: 0x87654321
+          items:
+            - { type: cname, text: '"bob@192.0.2.2"' }
+  - protocol: rtcp_bye
+    fields:
+      ssrcs: [0x87654321]
+      reason:
+        - { text: '"call ended"' } # length and padding Auto
+
+tx:
+  count: 1

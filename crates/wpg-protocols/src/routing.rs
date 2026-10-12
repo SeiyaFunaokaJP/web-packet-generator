@@ -867,6 +867,7 @@ pub fn bgp_capabilities() -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
@@ -897,6 +898,7 @@ pub fn bgp_open_params() -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
@@ -1043,6 +1045,7 @@ pub fn bgp_path_attributes() -> FieldType {
             len_bits: 16,
         }),
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
@@ -1293,6 +1296,7 @@ pub fn eigrp_tlvs() -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
