@@ -22,16 +22,51 @@ The default afpacket path is the TPACKET_V3 TX ring: frames are copied into shar
 
 Skips the qdisc layer, about 30% faster on `lo`, but disables tc shaping/netem for the traffic. See [CML2 notes](cml2.md).
 
-## Rate accuracy and the spin threshold
+## Rate accuracy: wait mode (`--wait`) and clock (`--clock`)
 
-The rate limiter is a token bucket that waits in a hybrid manner: it `sleep`s while the next deadline is far away and busy-spins for the last 50 microseconds (the default spin threshold). Pure `sleep` has a jitter of the kernel timer slack (typically 50-100 microseconds), which ruins precise spacing at high pps; pure spin burns a full core. When the interval between frames is shorter than the wait resolution, the limiter grants several frames at once (`--burst`), so the *average* rate follows the target while individual spacing does not. `ifg=<duration>` forces a burst of 1. If the achieved rate is lower than requested, the path is the limit: a catch-up burst is capped (10 ms) so it never floods after a stall. The final report of `wpg send` includes the achieved-rate accuracy.
+The rate limiter (`wpg send`) is a token bucket. `--wait` chooses how it waits:
+
+| `--wait` | Behaviour | CPU |
+|---|---|---|
+| `hybrid` (default) | `sleep` while the deadline is far away, busy-spin for the last 50 microseconds | a little, proportional to waiting |
+| `sleep` | `sleep` only | lowest |
+| `spin` | busy-spin only | a full core |
+| `busy-poll` | spin and service the backend meanwhile (afxdp: reap the completion ring, wake the driver); the default with `--busy-poll` | a full core |
+
+Precision work (M8):
+
+- **The TX thread's timer slack is lowered from 50 to 1 microsecond** (`PR_SET_TIMERSLACK`, Linux, for the modes that sleep).
+- **Oversleep is learned**: a moving average of how late `sleep` actually woke up is subtracted from the next sleep (the rest is spun away).
+- **The clock is the TSC** (`--clock auto`, the default): on x86_64 with an invariant TSC (CPUID, or the Linux flags `constant_tsc` and `nonstop_tsc`) the pacer reads `rdtsc` directly, with the frequency calibrated once against `Instant`. A read costs a few ns, so each spin iteration is shorter and the lateness about halves. `--clock monotonic` restores `Instant`; where the TSC is not usable the pacer falls back automatically.
+
+Measurements in a container on `lo` (including a before/after comparison) are in `docs/perf.md`, section "Rate control precision". In short: `hybrid` at 1 kpps went from 74.5 to 10-15 microseconds mean lateness, `sleep` from 62-121 to 2-44 microseconds; the median lateness of the spinning modes is about 0.1 microsecond (0.03-0.06 with the TSC). The maximum (milliseconds) comes from the shared host taking the vCPU away and no wait mode removes it; for precision combine `--pin-core` / `--auto-pin` with `isolcpus`.
+
+When the interval between frames is shorter than the wait resolution, the limiter grants several frames at once (`--burst`), so the *average* rate follows the target while individual spacing does not. `ifg=<duration>` forces a burst of 1. If the achieved rate is lower than requested, the path is the limit: a catch-up burst is capped (10 ms) so it never floods after a stall. The final report of `wpg send` includes the achieved ratio and the lateness (max, mean); `--json` also has p50 / p99 (`p50_jitter`, `p99_jitter`) and whether the TSC was used (`tsc`).
+
+## Multi-queue, multi-core sending (`--workers`)
+
+`--workers N` starts N TX workers. Each has its own thread and backend instance (afpacket: socket and TX ring; afxdp: socket and UMEM) and gets 1/N of the stream and of the rate (`--rate 1Mpps --workers 4` is 250 kpps per worker). Counters are summed and the final report lists every worker. `pcap` and `pcapfile` are limited to one worker.
+
+Queue assignment:
+
+- **afxdp**: worker `i` binds NIC queue `--queue` + `i`. Create the queues with `ethtool -L <if> combined N` ([DPDK / AF_XDP](dpdk-afxdp.md)).
+- **afpacket**: the queue cannot be chosen directly; the kernel derives it from the sending CPU. With XPS configured (`/sys/class/net/<if>/queues/tx-<n>/xps_cpus`) it follows that map, otherwise with `--qdisc-bypass` it is "CPU number mod queue count". Pinning the workers to different cores spreads them over different queues.
+
+```sh
+# 4 workers on a 4-queue NIC, pinned automatically to cores on the NIC's NUMA node
+wpg bench --backend afxdp -i ens3 --workers 4 --auto-pin
+wpg send tpl.wpg.yaml -i ens3 --backend afpacket --qdisc-bypass --workers 4 --pin-cores 2,3,4,5
+```
+
+## NUMA awareness (`--auto-pin`)
+
+- `--auto-pin` pins the workers, in order, to cores on the NIC's NUMA node (`/sys/class/net/<if>/device/numa_node`). Only cores the process may use (`taskset` / cgroup cpuset) are chosen, and core 0 (which tends to collect interrupts and housekeeping) comes last. Without NUMA information (virtual NICs, single-node machines) the allowed cores are used in order. `--pin-cores` takes precedence.
+- Workers allocate their frame buffers after pinning themselves, so Linux's first-touch policy puts that memory on the core's node.
+- The afxdp UMEM is allocated on the NIC's node (`mbind(MPOL_PREFERRED)`); the backend line shows `NUMA node N`.
+- Keep the (TX completion) interrupts on cores of the same node too (see "IRQ affinity" below).
 
 ## IRQ affinity and CPU governor
 
 - Spread or pin NIC interrupts: `cat /proc/interrupts | grep <if>`, `echo <mask> | sudo tee /proc/irq/<n>/smp_affinity`; stop `irqbalance` when pinning by hand. Keep the TX thread and the TX-completion IRQ on the same NUMA node (not necessarily the same core).
 - Use the `performance` governor: `sudo cpupower frequency-set -g performance`. In a VM the governor is controlled by the host; ask the CML2 host admin.
 - Disable deep C-states if latency spikes appear; disable SMT sibling load on the pinned core.
-
-## Multiple queues
-
-Multi-queue sending (`--workers`) is planned; check `wpg bench --help` and `wpg send --help` for the current flags. Until then run one instance per queue and pin each to a different core.

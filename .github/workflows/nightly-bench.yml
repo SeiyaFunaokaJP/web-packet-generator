@@ -1,0 +1,59 @@
+# Performance regression test (TODO M8): `wpg bench` and the pacer precision
+# example every night, compared with scripts/bench-thresholds.json. The thresholds
+# are deliberately loose (shared GitHub runners vary by 10-30 % from run to run);
+# they catch order-of-magnitude regressions, not small ones. Raw JSON is kept as
+# an artifact for 90 days so trends can be compared by hand.
+name: nightly bench
+
+on:
+  schedule:
+    - cron: "17 18 * * *" # 03:17 JST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  bench:
+    name: wpg bench (release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: |
+          cargo build --release -p wpg-cli --features afxdp
+          cargo build --release -p wpg-tx --example pacing
+      - name: System info
+        run: |
+          uname -a
+          nproc
+          lscpu | head -20
+          ./target/release/wpg doctor || true
+      - name: Benchmarks
+        run: |
+          set -euo pipefail
+          mkdir -p bench
+          W=./target/release/wpg
+          $W bench --backend null --duration 5 --json > bench/null.json
+          $W bench --backend null --duration 5 --workers 2 --json > bench/null-2w.json
+          # Raw sockets need root on the runner.
+          sudo $W bench --backend afpacket --iface lo --duration 5 --json > bench/afpacket-lo.json
+          sudo $W bench --backend afpacket --iface lo --duration 5 --no-tx-ring --json > bench/afpacket-lo-sendmmsg.json
+          # AF_XDP copy mode; optional in the thresholds (the runner kernel may lack XDP sockets).
+          sudo $W bench --backend afxdp --iface lo --xdp-mode copy --duration 5 --json > bench/afxdp-lo.json \
+            || rm -f bench/afxdp-lo.json
+          ./target/release/examples/pacing 1 --json > bench/pacing.json
+      - name: Compare with thresholds
+        run: python3 scripts/bench-check.py scripts/bench-thresholds.json bench --summary "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-${{ github.run_number }}
+          path: bench/
+          retention-days: 90

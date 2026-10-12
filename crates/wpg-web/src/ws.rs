@@ -5,7 +5,7 @@ use std::collections::{HashMap, VecDeque};
 
 use leptos::prelude::*;
 
-use crate::api::{JobStatus, LogLine, ServerEvent, Stats};
+use crate::api::{JobStatus, LogLine, RxStats, ServerEvent, Stats};
 use crate::sparkline::{push_sample, SPARK_SAMPLES};
 
 /// Log lines kept in the drawer.
@@ -82,6 +82,11 @@ pub(crate) struct Live {
     /// Bumped on `templates_changed` (and on reconnect).
     pub(crate) templates_rev: RwSignal<u64>,
     pub(crate) logs: RwSignal<VecDeque<LogEntry>>,
+    /// Latest receive statistics per capture (`rx_stats`).
+    pub(crate) rx_stats: RwSignal<HashMap<String, RxStats>>,
+    pub(crate) capture_states: RwSignal<HashMap<String, JobStatus>>,
+    /// Bumped on every `capture_state` (and on reconnect): capture lists refetch.
+    pub(crate) captures_rev: RwSignal<u64>,
     log_seq: StoredValue<u64>,
 }
 
@@ -94,6 +99,9 @@ impl Live {
             jobs_rev: RwSignal::new(0),
             templates_rev: RwSignal::new(0),
             logs: RwSignal::new(VecDeque::new()),
+            rx_stats: RwSignal::new(HashMap::new()),
+            capture_states: RwSignal::new(HashMap::new()),
+            captures_rev: RwSignal::new(0),
             log_seq: StoredValue::new(0),
         }
     }
@@ -125,6 +133,20 @@ impl Live {
                 });
             }
             ServerEvent::TemplatesChanged => self.templates_rev.update(|r| *r += 1),
+            ServerEvent::RxStats {
+                capture_id,
+                snapshot,
+            } => {
+                self.rx_stats.update(|m| {
+                    m.insert(capture_id, snapshot);
+                });
+            }
+            ServerEvent::CaptureState { capture_id, state } => {
+                self.capture_states.update(|m| {
+                    m.insert(capture_id, state);
+                });
+                self.captures_rev.update(|r| *r += 1);
+            }
             ServerEvent::Unknown => {}
         }
     }
@@ -132,6 +154,21 @@ impl Live {
     /// Latest stats of a job (tracked).
     pub(crate) fn job(self, id: &str) -> Option<JobLive> {
         self.stats.with(|m| m.get(id).cloned())
+    }
+
+    /// Latest receive statistics of a capture (tracked).
+    pub(crate) fn capture(self, id: &str) -> Option<RxStats> {
+        self.rx_stats.with(|m| m.get(id).cloned())
+    }
+
+    /// Forgets a deleted capture.
+    pub(crate) fn forget_capture(self, id: &str) {
+        self.rx_stats.update(|m| {
+            m.remove(id);
+        });
+        self.capture_states.update(|m| {
+            m.remove(id);
+        });
     }
 
     /// Forgets a deleted job.
@@ -195,6 +232,7 @@ async fn run(live: Live) {
                 // Catch up on whatever happened while we were away.
                 live.jobs_rev.update(|r| *r += 1);
                 live.templates_rev.update(|r| *r += 1);
+                live.captures_rev.update(|r| *r += 1);
                 while let Some(msg) = ws.next().await {
                     match msg {
                         Ok(Message::Text(t)) => live.handle(&t),
@@ -269,6 +307,12 @@ mod tests {
         assert_eq!(live.logs.with_untracked(VecDeque::len), LOG_CAP);
         live.handle(r#"{"type":"templates_changed"}"#);
         assert_eq!(live.templates_rev.get_untracked(), 1);
+        live.handle(r#"{"type":"rx_stats","capture_id":"c","snapshot":{"matched":9}}"#);
+        assert_eq!(live.capture("c").map(|s| s.matched), Some(9));
+        live.handle(r#"{"type":"capture_state","capture_id":"c","state":{"state":"finished","detail":"stopped"}}"#);
+        assert_eq!(live.captures_rev.get_untracked(), 1);
+        live.forget_capture("c");
+        assert!(live.capture("c").is_none());
         live.handle("not json");
         live.forget("j");
         assert!(live.job("j").is_none());

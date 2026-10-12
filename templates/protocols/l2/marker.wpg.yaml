@@ -6,7 +6,7 @@ meta:
   descriptions:
     ja: "Marker PDU (IEEE 802.3 clause 43): Slow Protocols サブタイプ 2 の Marker 要求"
     en: "Marker PDU (IEEE 802.3 clause 43): a Slow Protocols subtype 2 marker request"
-  tags: ["protocol:marker", "layer:l2", sample, "parse-as:marker=lacp"]
+  tags: ["protocol:marker", "layer:l2", sample]
   author: wpg
   created: 2026-10-01
 

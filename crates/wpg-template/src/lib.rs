@@ -459,11 +459,7 @@ pub struct Template {
 /// [`TemplateError::MissingSchema`], [`TemplateError::UnsupportedSchema`] or a shape
 /// error of the (migrated) document.
 pub fn migrate(mut value: serde_yaml::Value) -> Result<Template, TemplateError> {
-    let found = value
-        .get("schema")
-        .and_then(serde_yaml::Value::as_u64)
-        .ok_or(TemplateError::MissingSchema)?;
-    let mut version = u32::try_from(found).unwrap_or(u32::MAX);
+    let mut version = schema_of(&value)?;
     if version == 0 || version > SCHEMA_VERSION {
         return Err(TemplateError::UnsupportedSchema { found: version });
     }
@@ -472,6 +468,23 @@ pub fn migrate(mut value: serde_yaml::Value) -> Result<Template, TemplateError> 
         version += 1;
     }
     Ok(serde_yaml::from_value(value)?)
+}
+
+/// Reads only the `schema:` version of a YAML or JSON template document, without
+/// migrating or validating the rest (`wpg template migrate --check`).
+///
+/// # Errors
+/// [`TemplateError::Yaml`] for a syntax error, [`TemplateError::MissingSchema`].
+pub fn schema_version(src: &str) -> Result<u32, TemplateError> {
+    schema_of(&serde_yaml::from_str(src)?)
+}
+
+fn schema_of(value: &serde_yaml::Value) -> Result<u32, TemplateError> {
+    let found = value
+        .get("schema")
+        .and_then(serde_yaml::Value::as_u64)
+        .ok_or(TemplateError::MissingSchema)?;
+    Ok(u32::try_from(found).unwrap_or(u32::MAX))
 }
 
 /// One migration step: rewrites a document of version `n` into version `n + 1`
@@ -709,6 +722,20 @@ tx:
         assert!(matches!(err, TemplateError::UnsupportedSchema { found: 0 }));
         let err = Template::from_yaml("meta: {name: x}\n").unwrap_err();
         assert!(matches!(err, TemplateError::MissingSchema));
+    }
+
+    #[test]
+    fn reads_schema_version_only() {
+        assert_eq!(schema_version("schema: 1\nbogus: [1]\n").unwrap(), 1);
+        assert_eq!(schema_version("{\"schema\": 7}").unwrap(), 7);
+        assert!(matches!(
+            schema_version("meta: {}\n"),
+            Err(TemplateError::MissingSchema)
+        ));
+        assert!(matches!(
+            schema_version("schema: [\n"),
+            Err(TemplateError::Yaml(_))
+        ));
     }
 
     #[test]

@@ -1,0 +1,31 @@
+# ITU-T Y.1731: delay measurement reply (DMR) with the four timestamps
+schema: 1
+
+meta:
+  name: y1731-dmr
+  descriptions:
+    ja: "ITU-T Y.1731: 4 つのタイムスタンプ付きの遅延測定応答 (DMR)"
+    en: "ITU-T Y.1731: delay measurement reply (DMR) with the four timestamps"
+  tags: ["protocol:ethernet2", "protocol:cfm_dmr", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: cfm_dmr
+    fields:
+      md_level: 5
+      tx_timestamp_f_seconds: 1700000000
+      tx_timestamp_f_nanoseconds: 0
+      rx_timestamp_f_seconds: 1700000000
+      rx_timestamp_f_nanoseconds: 120000
+      tx_timestamp_b_seconds: 1700000000
+      tx_timestamp_b_nanoseconds: 150000
+      rx_timestamp_b_seconds: 0 # filled in by the receiver
+      rx_timestamp_b_nanoseconds: 0
+
+tx:
+  count: 1

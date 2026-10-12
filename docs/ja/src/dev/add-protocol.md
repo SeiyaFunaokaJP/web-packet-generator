@@ -38,6 +38,7 @@ cargo check -p wpg-core -p wpg-protocols -p wpg-i18n --target wasm32-unknown-unk
 | 同じタイプで値によってレイアウトが変わる TLV 項目 | `TlvVariant::when_value_starts` / `when_value_len` (タイプを共有するバリアント。判別条件のないものが既定) | AFI / SAFI ごとの BGP `MP_REACH_NLRI`、3 / 4 オクテットの OSPF SR の SID、EVPN の IPv4 / IPv6 IP Prefix ルート |
 | 長さが型より前にある TLV 項目 | `TlvDef::len_first` (`head_octets` / `long_length` とは併用不可) | RSVP オブジェクト (長さ、Class-Num、C-Type) |
 | 長さの直後にあり長さに数えない TLV の値オクテット | `TlvDef::uncounted_octets` (ヘッダを含まない長さのときのみ) | GTPv2-C IE のスペア / インスタンスのオクテット |
+| End 項目で終わり、その後に詰め物が続く TLV 列 | `Length::UntilTlv { type_value }` (`tlv` フィールドのみ) | CFM、802.3ah OAM の TLV (End TLV 0) |
 | TLV の長さを広げるタイプのフラグ | `TlvDef::long_length` (`TlvLongLength { flag, len_bits }`。値が長すぎると自動で付く) | BGP の Extended Length パス属性 |
 | 指定 PDU 長まで埋め草 TLV で埋める | `TlvDef::fill` (`TlvFill { variant, until }`) | IS-IS Hello の Padding TLV |
 | NUL 終端文字列 | `cstring` 型 | TFTP `filename` / `mode` |

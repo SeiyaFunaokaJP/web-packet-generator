@@ -1,0 +1,19 @@
+[
+  {"name": "null backend (engine)", "file": "null.json", "metric": "pps", "min": 5e6},
+  {"name": "null backend drops", "file": "null.json", "metric": "dropped", "max": 0},
+  {"name": "null backend, 2 workers", "file": "null-2w.json", "metric": "pps", "min": 8e6},
+  {"name": "afpacket lo (TX ring)", "file": "afpacket-lo.json", "metric": "pps", "min": 2.5e5},
+  {"name": "afpacket lo (sendmmsg)", "file": "afpacket-lo-sendmmsg.json", "metric": "pps", "min": 2.5e5},
+  {"name": "afxdp lo (copy mode)", "file": "afxdp-lo.json", "metric": "pps", "min": 2e5, "optional": true},
+  {"name": "afxdp lo drops", "file": "afxdp-lo.json", "metric": "dropped", "max": 0, "optional": true},
+  {"name": "pacing hybrid 1 kpps rate", "file": "pacing.json",
+   "select": {"wait": "hybrid", "clock": "tsc", "pps": 1000.0}, "metric": "ratio", "min": 0.98, "max": 1.02},
+  {"name": "pacing hybrid 100 kpps rate", "file": "pacing.json",
+   "select": {"wait": "hybrid", "clock": "tsc", "pps": 100000.0}, "metric": "ratio", "min": 0.99, "max": 1.01},
+  {"name": "pacing spin 1 Mpps rate", "file": "pacing.json",
+   "select": {"wait": "spin", "clock": "tsc", "pps": 1000000.0}, "metric": "ratio", "min": 0.99, "max": 1.01},
+  {"name": "pacing spin 100 kpps p50 lateness (ns)", "file": "pacing.json",
+   "select": {"wait": "spin", "clock": "tsc", "pps": 100000.0}, "metric": "p50_ns", "max": 20000},
+  {"name": "pacing hybrid 10 kpps p50 lateness (ns)", "file": "pacing.json",
+   "select": {"wait": "hybrid", "clock": "tsc", "pps": 10000.0}, "metric": "p50_ns", "max": 50000}
+]

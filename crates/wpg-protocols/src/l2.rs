@@ -2,6 +2,9 @@
 
 use wpg_core::{protocol, BindingEntry, ProtocolDef};
 
+use crate::cfm::CFM_ETHERTYPE;
+use crate::ptp::PTP_ETHERTYPE;
+
 /// Minimum Ethernet frame length without FCS (64 - 4).
 pub const ETHERNET_MIN_FRAME: u32 = 60;
 
@@ -13,6 +16,11 @@ pub const DOT3_MAX_LENGTH: u64 = 0x05ff;
 /// The EtherType is `Auto` and follows the next layer through the binding; with no
 /// known next layer the default `0x88b5` (IEEE 802 local experimental) is used so
 /// that a raw payload is not mistaken for IPv4 when parsed back.
+///
+/// The Slow Protocols EtherType `0x8809` is demultiplexed by its subtype octet
+/// (LACP, Marker, 802.3ah OAM, ESMC: [`crate::l2control::slow_protocols_peek`]);
+/// PTP (`0x88f7`) and CFM (`0x8902`) decode as their generic message, which then
+/// re-decodes itself by message type / opcode.
 ///
 /// A type/length value up to `0x05ff` means the frame is really IEEE 802.3: the
 /// parser then re-decodes it as [`dot3`]. Short frames are zero padded to 60
@@ -42,6 +50,7 @@ pub fn ethernet2() -> ProtocolDef {
                 0x88cc => lldp,
                 0x88e5 => macsec,
                 0x88f7 => ptp,
+                0x8902 => cfm,
             } = 0x88b5, auto = next_protocol;
         },
         next: ethertype {
@@ -51,7 +60,6 @@ pub fn ethernet2() -> ProtocolDef {
             0x8100 => "dot1q",
             0x88a8 => "dot1ad",
             0x88cc => "lldp",
-            0x8809 => "lacp",
             0x888e => "eapol",
             0x8863 => "pppoe_discovery",
             0x8864 => "pppoe_session",
@@ -61,8 +69,11 @@ pub fn ethernet2() -> ProtocolDef {
         },
     };
     if let Some(b) = d.next.as_mut() {
+        b.table.extend(crate::ptp::bindings(PTP_ETHERTYPE, None));
+        b.table.extend(crate::cfm::bindings(CFM_ETHERTYPE));
         b.table
             .push(BindingEntry::range(0, DOT3_MAX_LENGTH, "dot3").reparsing());
+        b.peek = Some(crate::l2control::slow_protocols_peek());
     }
     d.min_frame_len = Some(ETHERNET_MIN_FRAME);
     d
@@ -171,7 +182,7 @@ pub fn snap() -> ProtocolDef {
 /// VID and the inner EtherType (normally `0x8100`, followed by a [`dot1q`] C-tag).
 #[must_use]
 pub fn dot1ad() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "dot1ad",
         name: "802.1ad S-VLAN",
         layer: L2,
@@ -186,6 +197,8 @@ pub fn dot1ad() -> ProtocolDef {
                 0x86dd => ipv6,
                 0x88a8 => qinq,
                 0x88b5 => local_experimental,
+                0x88f7 => ptp,
+                0x8902 => cfm,
             } = 0x8100, auto = next_protocol;
         },
         next: ethertype {
@@ -198,7 +211,9 @@ pub fn dot1ad() -> ProtocolDef {
         constraints: {
             warning: not_equals(vid, 4095);
         },
-    }
+    };
+    tag_bindings(&mut d);
+    d
 }
 
 /// IEEE 802.1Q VLAN tag (4 octets after the outer EtherType/TPID `0x8100`):
@@ -208,7 +223,7 @@ pub fn dot1ad() -> ProtocolDef {
 /// its binding), so stacking `dot1q` layers yields Q-in-Q style tag stacks.
 #[must_use]
 pub fn dot1q() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "dot1q",
         name: "802.1Q VLAN",
         layer: L2,
@@ -223,6 +238,8 @@ pub fn dot1q() -> ProtocolDef {
                 0x86dd => ipv6,
                 0x88b5 => local_experimental,
                 0x88e5 => macsec,
+                0x88f7 => ptp,
+                0x8902 => cfm,
             } = 0x88b5, auto = next_protocol;
         },
         next: ethertype {
@@ -236,6 +253,16 @@ pub fn dot1q() -> ProtocolDef {
         constraints: {
             warning: not_equals(vid, 4095);
         },
+    };
+    tag_bindings(&mut d);
+    d
+}
+
+/// PTP and CFM behind a VLAN tag (CFM MEPs of a VLAN, PTP on a tagged port).
+fn tag_bindings(d: &mut ProtocolDef) {
+    if let Some(b) = d.next.as_mut() {
+        b.table.extend(crate::ptp::bindings(PTP_ETHERTYPE, None));
+        b.table.extend(crate::cfm::bindings(CFM_ETHERTYPE));
     }
 }
 

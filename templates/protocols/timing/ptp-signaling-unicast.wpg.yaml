@@ -1,0 +1,37 @@
+# PTP Signaling (IEEE 1588-2008 §16.1): unicast negotiation, requesting Sync and Announce
+schema: 1
+
+meta:
+  name: ptp-signaling-unicast
+  descriptions:
+    ja: "PTP Signaling (IEEE 1588-2008 §16.1): ユニキャストネゴシエーション。Announce (2 秒ごと) と Sync (毎秒 16 回) を 300 秒間要求 (TLV 長は自動)"
+    en: "PTP Signaling (IEEE 1588-2008 §16.1): unicast negotiation requesting Announce (every 2 s) and Sync (16 per second) for 300 s (TLV lengths Auto)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:ptp_signaling", "layer:l4", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.2
+      dst: 10.0.0.1
+  - protocol: udp
+    fields:
+      src_port: 320
+      dst_port: 320
+  - protocol: ptp_signaling
+    fields:
+      flags: 0x0400 # unicastFlag
+      clock_identity: 0x020000fffe000002
+      target_port_clock_identity: 0x020000fffe000001
+      target_port_port_number: 1
+      tlvs:
+        - request_unicast_transmission: { message_type: announce, log_inter_message_period: 1, duration_field: 300 }
+        - request_unicast_transmission: { message_type: sync, log_inter_message_period: -4, duration_field: 300 }
+
+tx:
+  count: 1

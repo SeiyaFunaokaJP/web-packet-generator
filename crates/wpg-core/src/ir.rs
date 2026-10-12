@@ -115,6 +115,13 @@ pub enum Length {
         /// The terminating octets (at least one).
         terminator: Vec<u8>,
     },
+    /// `tlv` fields only: the region ends with the first item of this type (the
+    /// End TLV of CFM / 802.3ah OAM), or with the enclosing PDU when there is none.
+    /// What follows the end item (Ethernet padding) is left to the layers below.
+    UntilTlv {
+        /// Type value of the closing item.
+        type_value: u64,
+    },
 }
 
 /// Symbolic value of an `enum` field.
@@ -1205,6 +1212,12 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
                     ));
                 }
                 None
+            }
+            Some(Length::UntilTlv { .. }) if !matches!(field.ty, FieldType::Tlv(_)) => {
+                return Err(def_err(
+                    proto,
+                    format!("`{}`: only tlv fields can end at a tlv item", field.name),
+                ));
             }
             Some(Length::Count { field: src }) => {
                 if !matches!(field.ty, FieldType::List { .. }) {

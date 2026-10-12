@@ -30,8 +30,9 @@ use std::thread::{JoinHandle, Thread};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde::{Deserialize, Serialize};
+use wpg_core::signature::{self, Signature};
 
-use crate::rate::{ramp_fraction, Pacer, PacerConfig, Rate, RateAccuracy, RateUnit};
+use crate::rate::{ramp_fraction, Pacer, PacerConfig, Rate, RateAccuracy, RateUnit, WaitMode};
 use crate::source::FrameSource;
 use crate::{backend, Frame, TxBackend, TxError, TxOptions, TxStats};
 
@@ -67,6 +68,21 @@ pub struct JobConfig {
     /// Wall-clock time to start sending at; until then the job is
     /// [`JobState::Scheduled`] (a time in the past starts immediately).
     pub start_at: Option<SystemTime>,
+    /// Stamp every frame with a receive-verification signature
+    /// ([`wpg_core::signature`]) just before it is handed to the backend.
+    pub signature: Option<SignatureConfig>,
+}
+
+/// Signature stamping of a job (see [`wpg_core::signature`]).
+///
+/// Frame `n` of stream `i` carries stream id `stream_id_base + i` and sequence
+/// number `n` (counted over all workers, from 0), plus the wall-clock time of its
+/// batch. Frames without room for a signature are sent unchanged and counted in
+/// [`StatsSnapshot::unsigned`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignatureConfig {
+    /// Stream id of the job's first stream.
+    pub stream_id_base: u32,
 }
 
 impl Default for JobConfig {
@@ -84,6 +100,7 @@ impl Default for JobConfig {
             snapshot_interval: Duration::from_millis(100),
             ramp_up: None,
             start_at: None,
+            signature: None,
         }
     }
 }
@@ -171,6 +188,10 @@ pub struct StatsSnapshot {
     pub rate_achieved_ratio: Option<f64>,
     /// Per-stream counters.
     pub per_stream: Vec<StreamStats>,
+    /// Frames sent without a signature because they had no room for one (only
+    /// with [`JobConfig::signature`]).
+    #[serde(default)]
+    pub unsigned: u64,
     /// State at the time of the snapshot.
     pub state: JobState,
 }
@@ -187,6 +208,7 @@ impl StatsSnapshot {
             l1_bps: 0.0,
             rate_achieved_ratio: None,
             per_stream: vec![StreamStats::default(); streams],
+            unsigned: 0,
             state: JobState::Running,
         }
     }
@@ -211,6 +233,9 @@ pub struct WorkerReport {
     pub core: Option<usize>,
     /// Whether it was pinned (`None` if no pinning was requested).
     pub pinned: Option<bool>,
+    /// [`TxBackend::detail`] of its backend (e.g. the AF_XDP queue and mode).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 
 /// Final result of a job.
@@ -289,6 +314,42 @@ struct Shared {
     rate: Rate,
     burst: u32,
     ramp_up: Option<Duration>,
+    sig: Option<SigState>,
+}
+
+/// Shared signature state: the next sequence number of every stream.
+struct SigState {
+    base: u32,
+    seq: Box<[AtomicU64]>,
+    unsigned: AtomicU64,
+}
+
+impl SigState {
+    /// Stamps `frames` (stream of frame `i` in `stream_of[i]`) with one TX time.
+    fn stamp(&self, frames: &mut [Frame], stream_of: &[usize]) {
+        let ts_ns = SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| u64::try_from(d.as_nanos()).unwrap_or(u64::MAX));
+        let mut unsigned = 0;
+        for (f, &s) in frames.iter_mut().zip(stream_of) {
+            let buf = f.buf_mut();
+            if signature::room(buf) < signature::LEN {
+                unsigned += 1;
+                continue;
+            }
+            let sig = Signature {
+                stream_id: self.base.wrapping_add(u32::try_from(s).unwrap_or(u32::MAX)),
+                seq: self.seq[s].fetch_add(1, Ordering::Relaxed),
+                ts_ns,
+            };
+            if signature::stamp(buf, &sig).is_err() {
+                unsigned += 1;
+            }
+        }
+        if unsigned > 0 {
+            self.unsigned.fetch_add(unsigned, Ordering::Relaxed);
+        }
+    }
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -500,6 +561,11 @@ impl TxJob {
             rate: config.rate,
             burst: pacer_cfg.burst,
             ramp_up: pacer_cfg.ramp_up,
+            sig: config.signature.map(|c| SigState {
+                base: c.stream_id_base,
+                seq: (0..streams).map(|_| AtomicU64::new(0)).collect(),
+                unsigned: AtomicU64::new(0),
+            }),
         });
         let mut handles = Vec::with_capacity(n);
         for (i, ((backend, source), count)) in workers.into_iter().zip(counts).enumerate() {
@@ -635,6 +701,9 @@ impl JobHandle {
             st.packets = *p;
             st.bytes = *b;
         }
+        if let Some(sig) = &self.shared.sig {
+            s.unsigned = sig.unsigned.load(Ordering::Relaxed);
+        }
         s.state = self.state();
         s
     }
@@ -765,6 +834,12 @@ impl Worker {
             }
             std::thread::park_timeout(Duration::from_millis(50));
         }
+        if !self.rate.is_unlimited()
+            && !matches!(self.pacer_cfg.wait, WaitMode::Spin | WaitMode::BusyPoll)
+        {
+            crate::rate::reduce_timer_slack();
+        }
+        let busy_poll = self.pacer_cfg.wait == WaitMode::BusyPoll;
         // Validated in `start_workers`.
         let mut pacer = Pacer::new(self.rate, self.pacer_cfg).expect("validated rate");
         let batch = self.batch;
@@ -813,7 +888,16 @@ impl Worker {
                 Some(d) => max_block.min(d.saturating_sub(active)),
                 None => max_block,
             };
-            let Some(grant) = pacer.poll(block) else {
+            let polled = if busy_poll {
+                let backend = &mut self.backend;
+                pacer.poll_with(block, &mut || {
+                    // Errors resurface on the next send_batch.
+                    let _ = backend.service();
+                })
+            } else {
+                pacer.poll(block)
+            };
+            let Some(grant) = polled else {
                 continue;
             };
             let mut n = batch.min(usize::try_from(grant).unwrap_or(usize::MAX));
@@ -836,6 +920,9 @@ impl Worker {
                 }
             }
             if filled > 0 {
+                if let Some(sig) = &self.sh.sig {
+                    sig.stamp(&mut frames[..filled], &stream_of[..filled]);
+                }
                 attempted += filled as u64;
                 let c = &self.sh.workers[self.index];
                 c.attempted.fetch_add(filled as u64, Ordering::Relaxed);
@@ -938,6 +1025,11 @@ impl Monitor {
             l1_bps: t.l1_bytes.saturating_sub(tick.last.l1_bytes) as f64 * 8.0 / dt,
             rate_achieved_ratio: self.sh.ratio(&t),
             per_stream,
+            unsigned: self
+                .sh
+                .sig
+                .as_ref()
+                .map_or(0, |s| s.unsigned.load(Ordering::Relaxed)),
             state,
         };
         tick.last_t = now;
@@ -1068,6 +1160,7 @@ impl Monitor {
                     active: o.active,
                     core: o.core,
                     pinned: o.pinned,
+                    detail: o.detail.clone(),
                 }
             })
             .collect();
@@ -1117,8 +1210,11 @@ fn merge_accuracy(outs: &[WorkerOut], rate: Rate, active: Duration) -> RateAccur
                 .sum::<f64>()
                 / waits,
         ),
+        p50_jitter: accs.iter().map(|a| a.p50_jitter).max().unwrap_or_default(),
+        p99_jitter: accs.iter().map(|a| a.p99_jitter).max().unwrap_or_default(),
         frames: accs.iter().map(|a| a.frames).sum(),
         active,
+        tsc: !accs.is_empty() && accs.iter().all(|a| a.tsc),
     }
 }
 

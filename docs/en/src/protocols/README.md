@@ -26,6 +26,7 @@ Per-field descriptions (ja/en) come with the GUI field editor and `GET /api/prot
 | [OSPF Opaque / SR, BGP MP / EVPN (P2)](routing-ext.md) | OSPFv2 TE / Router Information / Extended Prefix / Extended Link LSAs with SR SIDs, BGP NLRI for IPv6, VPN-IPv4 / VPN-IPv6 and EVPN |
 | [LDP / RSVP-TE / BFD (P2)](mpls-bfd.md) | LDP PDUs, messages and TLVs (FEC, labels, Hello / session parameters), RSVP-TE Path / Resv and other messages with their objects (ERO / RRO, SESSION_ATTRIBUTE, IntServ), BFD control packets with authentication (Micro-BFD included) |
 | [SRv6 SRH / SR-MPLS (P2)](srv6.md) | SRv6 Segment Routing Header (segment list, Pad / HMAC TLVs, upper-layer checksums toward the final destination, IPv4 / IPv6 / Ethernet encapsulation), SR-MPLS label stacks (reserved label names, SRGB + index, entropy labels) |
+| [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](timing-oam.md) | PTP messages over Ethernet / UDP with their TLVs, SyncE ESMC, Ethernet CFM / Y.1731 (CCM, LB, LT, AIS / LCK, LM / DM / SLM, ...) with ERPS R-APS, 802.3ah OAMPDUs |
 | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](mobile-voip.md) | MACsec SecTAG (secure data / ICV opaque), GTPv2-C messages and IEs (grouped Bearer Context), Diameter messages and AVPs (vendor-specific, grouped), SIP start line / header lines / body, RTP header and compound RTCP (SR / RR / SDES / BYE / APP) |
 
 ## Common patterns

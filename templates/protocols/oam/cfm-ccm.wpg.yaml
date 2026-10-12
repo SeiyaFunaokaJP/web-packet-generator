@@ -1,0 +1,38 @@
+# Ethernet CFM (IEEE 802.1Q clause 21 / ITU-T Y.1731): CCM every second on VLAN 100, MD level 5
+schema: 1
+
+meta:
+  name: cfm-ccm
+  descriptions:
+    ja: "Ethernet CFM (IEEE 802.1Q 21 章 / ITU-T Y.1731): VLAN 100 上の CCM (MD レベル 5、MEP ID 10、1 秒周期、ICC 形式の MEG ID、Port / Interface Status TLV、シーケンス番号を加算)"
+    en: "Ethernet CFM (IEEE 802.1Q clause 21 / ITU-T Y.1731): CCM on VLAN 100 (MD level 5, MEP ID 10, 1 s period, ICC-based MEG ID, Port / Interface Status TLVs, incrementing sequence number)"
+  tags: ["protocol:ethernet2", "protocol:dot1q", "protocol:cfm_ccm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:35" # CCM group address of MD level 5
+      src: "02:00:00:00:00:01"
+  - protocol: dot1q
+    fields:
+      pcp: 7
+      vid: 100
+  - protocol: cfm_ccm
+    fields:
+      md_level: 5
+      rdi: 0
+      period: s_1
+      mep_id: 10
+      # maid: default = Y.1731 ICC-based MEG ID "WPG001" + "MEG0001", zero padded to 48 octets
+      tlvs:
+        - port_status: { port_status: up }
+        - interface_status: { interface_status: up }
+        - end
+    generators:
+      sequence_number: 1-1000
+
+tx:
+  count: 10
+  rate: 1pps

@@ -1,5 +1,6 @@
 //! Layer-2 control / encapsulation protocols (TODO §2.1 P1): LLDP, CDP, STP,
-//! LACP / Marker (Slow Protocols), EAPOL, `PPPoE` Discovery / Session and PPP
+//! LACP / Marker (Slow Protocols, demultiplexed by subtype together with 802.3ah
+//! OAM and ESMC: [`slow_protocols_peek`]), EAPOL, `PPPoE` Discovery / Session and PPP
 //! (LCP / IPCP).
 //!
 //! ## Engine limitations exercised here (see the module docs of each protocol)
@@ -24,8 +25,8 @@
 use std::collections::BTreeMap;
 
 use wpg_core::{
-    protocol, FieldDef, FieldType, FieldValue, ItemDef, Length, LengthUnit, ProtocolDef, TlvDef,
-    TlvVariant,
+    protocol, BindingEntry, FieldDef, FieldType, FieldValue, ItemDef, Length, LengthUnit, Peek,
+    ProtocolDef, TlvDef, TlvVariant,
 };
 
 fn u(name: &str, bits: u8) -> FieldDef {
@@ -224,6 +225,30 @@ pub fn stp() -> ProtocolDef {
 // --------------------------------------------------------------------------
 // Slow Protocols (IEEE 802.3 clause 43), EtherType 0x8809: LACP + Marker
 // --------------------------------------------------------------------------
+
+/// Payload demux of the Slow Protocols EtherType `0x8809` on the subtype octet:
+/// LACP (1), Marker (2), 802.3ah OAM (3, the generic [`crate::efm_oam::efm_oam`]
+/// followed by its dedicated OAMPDUs for the builder) and the ESMC organization
+/// specific Slow Protocol (`0x0a`). Other subtypes decode as `raw`.
+#[must_use]
+pub fn slow_protocols_peek() -> Peek {
+    use crate::efm_oam::{EFM_OAM, EFM_OAM_SUBTYPE, PDUS};
+    let oam = std::iter::once(EFM_OAM)
+        .chain(PDUS.iter().map(|p| p.1))
+        .map(|p| BindingEntry::new(EFM_OAM_SUBTYPE, p));
+    let table = [BindingEntry::new(1, "lacp"), BindingEntry::new(2, "marker")]
+        .into_iter()
+        .chain(oam)
+        .chain(std::iter::once(BindingEntry::new(
+            crate::esmc::ESMC_SUBTYPE,
+            crate::esmc::ESMC,
+        )))
+        .collect();
+    Peek::new(SLOW_PROTOCOLS, 8, table)
+}
+
+/// EtherType of the Slow Protocols (IEEE 802.3 annex 43B).
+pub const SLOW_PROTOCOLS: u64 = 0x8809;
 
 /// LACPDU (IEEE 802.3ad, EtherType `0x8809`, subtype 1): actor, partner and
 /// collector TLVs plus the terminator, 110 octets in all. Actor / partner state

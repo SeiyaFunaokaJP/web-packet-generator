@@ -129,6 +129,7 @@ fn JobBody(
     let report = job.with_value(JobInfo::report_view);
     let raw_report = job.with_value(|j| j.report.clone());
     let spec = job.with_value(|j| j.spec.clone());
+    let sig = (spec.signature, spec.stream_id);
     let j = job.get_value();
 
     view! {
@@ -317,6 +318,14 @@ fn JobBody(
                     <dt class="text-slate-500">{tr("ui-jobs-mix")}</dt><dd>{spec.mix.clone()}</dd>
                     <dt class="text-slate-500">{tr("ui-jobs-count")}</dt><dd>{spec.count.map_or_else(|| "–".to_owned(), |c| c.to_string())}</dd>
                     <dt class="text-slate-500">{tr("ui-jobs-duration")}</dt><dd>{spec.duration.clone().unwrap_or_else(|| "–".to_owned())}</dd>
+                    <dt class="text-slate-500">{tr("ui-job-signature")}</dt>
+                    <dd>
+                        {move || if sig.0 {
+                            i18n.ta("ui-job-signature-on", &[("id", sig.1.unwrap_or(0).to_string())])
+                        } else {
+                            i18n.t("ui-no")
+                        }}
+                    </dd>
                     <dt class="text-slate-500">{tr("ui-job-created")}</dt><dd>{move || fmt::datetime(i18n.locale.get(), j.created)}</dd>
                     <dt class="text-slate-500">{tr("ui-job-started")}</dt><dd>{move || j.started.map_or_else(|| "–".to_owned(), |t| fmt::datetime(i18n.locale.get(), t))}</dd>
                     <dt class="text-slate-500">{tr("ui-job-finished")}</dt><dd>{move || j.finished.map_or_else(|| "–".to_owned(), |t| fmt::datetime(i18n.locale.get(), t))}</dd>
