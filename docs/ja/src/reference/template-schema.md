@@ -64,6 +64,29 @@ tx: { ... }                # 任意
 
 同じフィールドに固定値とジェネレータを書くと lint が警告します。
 
+### 式 (`expr`)
+
+`expr` ジェネレータはパケットごとに整数を計算します。結果は他の値と同じようにフィールドに書き込まれるので、数値のほか IPv4 / IPv6 アドレスや MAC アドレスも埋められます。
+
+| 要素 | 意味 |
+|---|---|
+| `12`、`0x1f`、`0b101` | リテラル (10 進、16 進、2 進) |
+| `idx` | ストリーム内のパケット番号 (0、1、2、…) |
+| `$field`、`$<layer>.field` | 同じパケットでの、別の *ジェネレータ付き* フィールドの値。`<layer>` は 0 始まりのレイヤ番号 (`$0.src` は先頭レイヤの `src` ジェネレータ) |
+| `+ - * / %`、`<< >>`、`& ^ \|`、単項 `- ~` | C と同じ演算子と優先順位。整数演算 (128 ビット、桁あふれは折り返し) |
+| `hash(x)`、`crc(x)` | `x` (8 オクテットのビッグエンディアン) の FNV-1a 64 / CRC-32。連番を散らすのに使う |
+| `rand(min, max)` | `min` から `max` までの乱数。パケット番号と `stream.seed` で決まる |
+| `min(a, ...)`、`max(a, ...)` | 引数の最小 / 最大 |
+
+参照できるのは、同じテンプレートでジェネレータを持つフィールドだけです。固定値のフィールドは見えません (変数にして `${name}` と書けば、式の解析より前に置き換わります)。`expr` が別の `expr` を参照できるのは、参照先がテンプレート内で先にある場合だけです。同梱ライブラリの例:
+
+```yaml
+generators:
+  chaddr: { kind: expr, expr: "$0.src" }                          # Ethernet の送信元 MAC を写す (dhcp-discover-flood)
+  xid: { kind: expr, expr: "rand(0, 0xffffffff)" }               # 再現可能なランダムのトランザクション ID
+  label: { kind: expr, expr: "${srgb_base} + ${first_index} + idx" } # SR-MPLS の Prefix SID (sr-mpls-prefix-sid-sweep)
+```
+
 ## `packet`
 
 | キー | 既定 | 意味 |
@@ -122,7 +145,7 @@ tx: { ... }                # 任意
 |---|---|
 | `examples/` | 小さな出発点 5 本 |
 | `protocols/l2`, `l3`, `l4`, `payload`, `frame` | カタログの全プロトコルのサンプル。ジャンボ、最小サイズ、ランツ、FCS の例を含む |
-| `scenarios/` | すぐ使える試験: ARP スイープ、SYN フラッドとポートスキャン、QinQ、NDP と RA、ping と TTL スイープ、QoS マトリクス、MTU 探索、フレーム長スイープ、MAC フラッド |
+| `scenarios/` | すぐ使える試験: ARP スイープ、SYN フラッドとポートスキャン、QinQ、NDP と RA、ping と TTL スイープ、QoS マトリクス、MTU 探索、フレーム長スイープ、MAC フラッド、SR-MPLS Prefix SID スイープ、DHCP DISCOVER 負荷 |
 | `interop/` | 実機・FRR との相互接続確認: OSPFv2 2-Way、RIPv2 経路、IS-IS 隣接 Up、VRRPv3 プリエンプト、PIM ネイバー、LDP ディスカバリ、BFD セッション Up (`interop` タグ。手順は運用ガイドの「相互接続確認」) |
 | `malformed/` | わざと壊したパケット (チェックサム不正、長さ不一致、切り詰め、FCS 不正)。設計上 lint が警告を出し、`malformed` タグが付く |
 

@@ -12,6 +12,34 @@ The first deployment target is an Ubuntu node in Cisco CML2 with a virtio-net in
 - The `wpg` binary built with `--features pcap` if you also want the `pcap` backend (needs `libpcap0.8`). `afpacket` needs no library.
 - Use two or more vCPUs. Sending is one busy thread; leave a core for the OS.
 
+## Building the lab
+
+The smallest setup is one Ubuntu node running wpg and the node under test. To receive and verify as well ([Receive and verification](rx-verify.md)), add a second Ubuntu node on the far side.
+
+```text
+External Connector (NAT / bridge) ── ens2 [Ubuntu: wpg] ens3 ── device under test (IOSv, CSR1000v, XRv9k, FRR, ...) ── ens3 [Ubuntu: receiver (optional)]
+```
+
+1. **Management link**: connect the Ubuntu node's first interface (`ens2`) to an External Connector. Use it only for copying the binary (`scripts/deploy.sh`), ssh and the web UI, never for test traffic.
+2. **Data links**: connect the next interfaces (`ens3`, `ens4`, ...) to the device under test. An interface has no carrier until the nodes on both ends of the link are started.
+3. **Node size**: 2 or more vCPUs (N + 1 or more for `--workers N`) and 2 GiB of memory or more. Add the hugepages for DPDK (2 GiB for the default 1024 pages).
+4. **Initial configuration**: in the Ubuntu node's Config (cloud-init user-data), add your ssh key and, if you want them, `ethtool`, `tcpdump` and `libpcap0.8`:
+
+   ```yaml
+   #cloud-config
+   ssh_authorized_keys:
+     - ssh-ed25519 AAAA... you@workstation
+   packages: [ethtool, tcpdump]
+   ```
+
+5. **Deploy**: run `scripts/deploy.sh` from your workstation against the management address ([Deploying with `scripts/deploy.sh`](deploy.md)). Restrict sending to the data interfaces with `--iface`:
+
+   ```sh
+   scripts/deploy.sh ubuntu@192.0.2.10 --service --iface ens3 --password-file ./wpg-password
+   ```
+
+6. **Web UI**: either set a password and listen on `0.0.0.0:8080`, or install the service with `--bind 127.0.0.1:8080` and open it through an ssh tunnel (`ssh -L 8080:127.0.0.1:8080 ubuntu@192.0.2.10`) ([Authentication and TLS](security.md)).
+
 ## Privileges: setcap or root
 
 AF_PACKET sockets need `CAP_NET_RAW`. Either run as root, or grant the capabilities to the binary once:
@@ -93,6 +121,17 @@ Unmeasured on CML2. What we have is the `lo` baseline in `docs/perf.md`: about 1
 ## Receiving side: GRO, TSO and checksum offload
 
 Offloads change what the receiver *shows*, not what wpg sent. With GRO or LRO enabled, `tcpdump` on a Linux receiver can display merged super-frames larger than the MTU for TCP streams; disable it for accurate captures: `sudo ethtool -K ens3 gro off lro off`. Checksum offload on the sending node does not matter for wpg, because wpg builds the full frame including checksums itself (bad checksums you asked for are sent as is). On virtio guests, captures on the sender may show "incorrect checksum" only for packets the kernel's own stack produced, not for wpg frames. Use `ethtool -k` to see the current settings.
+
+## Choosing a backend on CML2
+
+| Backend | When to use it on CML2 (virtio-net) | Preparation |
+|---|---|---|
+| `afpacket` | **The default; start here.** Needs nothing extra and coexists with the management interface | `CAP_NET_RAW` (above) |
+| `afxdp` | Worth comparing when `afpacket` tops out. virtio-net zero-copy needs a recent kernel; mostly you get copy mode, and the gap to `afpacket` is small | built with `--features afxdp`, kernel 5.10+, enough queues (`ethtool -L`) ([AF_XDP](dpdk-afxdp.md#af_xdp)) |
+| `dpdk` | Takes the interface away from the kernel with the virtio PMD. The host's vhost path is the limit, so the gain depends on the host | built with `--features dpdk`, hugepages, vfio no-IOMMU mode or `uio_pci_generic` ([CML2 and virtio](dpdk-afxdp.md#cml2-and-virtio)) |
+| `pcap` | Only to follow the same procedure as on other OSes | built with `--features pcap`, `libpcap0.8` |
+
+With any backend, check the frames with `--backend pcapfile` first and start with a low `--rate`. To compare performance, run `wpg bench` with each backend on the same link ([Performance tuning](tuning.md)) and record the results with the checklist in `docs/perf.md`.
 
 ## Troubleshooting
 

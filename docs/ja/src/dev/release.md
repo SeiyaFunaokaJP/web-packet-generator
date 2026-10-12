@@ -31,12 +31,12 @@ TODO.md §4 の v1.0 リリース判定 (M12) では、これに加えて次を�
 - GUI の E2E (`just e2e`) が緑、i18n の ja / en 抜け漏れが 0 (`cargo test -p wpg-i18n`)。
 - UI を変えたときは `docs/{ja,en}/src/images/` のスクリーンショットとビルダーの GIF を `just screenshots` で再生成する (コミット前に目で確認)。
 - ドキュメントが ja / en そろっており、`docs/build.sh` が通る。
-- `CHANGELOG` が更新されている。
+- `CHANGELOG.md` が更新されている。
 
 ## 手順
 
 1. ゲートをすべて通す (上記)。
-2. `CHANGELOG` に、前回のタグ以降の変更を Conventional Commits から整理してまとめる。アップグレード時の注意 (テンプレートスキーマ、データベース、設定の変更。[アップグレード](../operations/upgrade.md) を参照) も書く。
+2. `CHANGELOG.md` の **Unreleased** の項目を新しいバージョンの節 (`## [X.Y.Z] - YYYY-MM-DD`) に移し、前回のタグ以降の変更を Conventional Commits から補う。アップグレード時の注意 (テンプレートスキーマ、データベース、設定の変更。[アップグレード](../operations/upgrade.md) を参照) も書く。
 3. `Cargo.toml` のワークスペースバージョン (と `[workspace.dependencies]` の内部 `wpg-*` の `version`) を上げ、`Cargo.lock` を更新する (`cargo check`)。
 4. `release: vX.Y.Z` でコミットし、注釈付きタグ `vX.Y.Z` を打つ (`git tag -a vX.Y.Z -m "wpg X.Y.Z"`)。
 5. タグをプッシュする (`git push origin vX.Y.Z`)。`.github/workflows/release.yml` がアーカイブをビルドし、`SHA256SUMS` を書き、自動生成のノート付きで GitHub Release を作成するので、その後ノートを編集する。ハイフンを含むタグ (`v1.0.0-rc.1`) はプレリリースになる。タグがワークスペースのバージョンと一致しないと `scripts/release.sh` が失敗する。
@@ -56,7 +56,7 @@ TODO.md §4 の v1.0 リリース判定 (M12) では、これに加えて次を�
 | `wpg-<ver>-x86_64-apple-darwin.tar.gz` | `macos-14` (クロス) | Intel Mac |
 | `wpg-<ver>-x86_64-pc-windows-msvc.zip` | `windows-latest` | 実行時に Npcap が必要 |
 
-各アーカイブには、`wpg` / `wpg.exe` (Web UI を組み込み済み)、`README.md`、`README.ja.md`、2 つのライセンス、`templates/`、`packaging/` (systemd、launchd、Windows サービスのサンプル) が入ります。バイナリは任意の feature 無し (`pcap` 無し) でビルドするので、起動に追加のライブラリは不要です。**署名と公証はしていません**。利用者が行う手順は macOS と Windows のインストールページを参照してください。
+各アーカイブには、`wpg` / `wpg.exe` (Web UI を組み込み済み)、`README.md`、`README.ja.md`、`CHANGELOG.md`、2 つのライセンス、`templates/`、`packaging/` (systemd、launchd、Windows サービスのサンプル) が入ります。バイナリは任意の feature 無し (`pcap` 無し) でビルドするので、起動に追加のライブラリは不要です。**署名と公証はしていません**。利用者が行う手順は macOS と Windows のインストールページを参照してください。
 
 ### ローカルでアーカイブを作る
 

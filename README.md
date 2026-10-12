@@ -10,8 +10,10 @@ A high-performance, browser-driven packet generator for network verification, wr
 (backend, packet engine and the WASM frontend). Build arbitrary packets in a GUI and send them at very
 high rates to test network devices and topologies.
 
-> **Status: early development (milestone M0, project foundation).** Nothing described below is
-> guaranteed to work yet. See [TODO.md](TODO.md) for the roadmap.
+> **Status: pre-release (0.x).** Milestones M0 to M11 (engine, transmit and receive, server, GUI, templates,
+> P0 to P2 protocols, deployment, documentation) are in place; the v1.0 release gate (M12) is in progress, and
+> some paths (AF_XDP zero-copy and DPDK on physical NICs, CML2) are not yet verified on real hardware. See
+> [TODO.md](TODO.md) for the roadmap and [CHANGELOG.md](CHANGELOG.md) for what has changed.
 
 ## What is wpg?
 
@@ -30,14 +32,17 @@ What sets it apart:
 Non-goals for v1: a full capture/analysis tool (this is not a Wireshark replacement), stateful sessions
 such as full TCP handshakes, and optimisation for attack tooling.
 
-## Key features (planned)
+## Key features
 
+- More than 180 protocols, from Ethernet, VLAN, IPv4/IPv6, TCP/UDP to routing (OSPF, BGP, IS-IS), OSI (CLNP, ES-IS),
+  MPLS / SR / SRv6, tunnels, timing / OAM and application protocols ([protocol reference](docs/en/src/reference/protocols.md))
 - Declarative protocol definitions that drive build, parse, GUI generation and documentation from one source
 - Auto-computed lengths, checksums and next-header fields, with Auto/Manual toggles and deliberate malformed packets
 - Field generators (range, list, random, counter, file, expr) and mass stream generation
 - Instant in-browser preview: `wpg-core` is compiled to WASM and shared with the server
 - YAML templates (`.wpg.yaml`) and bundles (`.wpgbundle`) for sharing; pcap/pcapng import
-- Rate control (pps / bps / line-rate %), bursts, live statistics over WebSocket
+- Rate control (pps / bps / line-rate %), bursts, multi-queue / multi-core sending, live statistics over WebSocket
+- Receive counters with tcpdump-style filters, signature-based loss / order / latency checks, pcapng capture
 - REST API with OpenAPI, password authentication (argon2id), optional TLS
 - Japanese and English UI, manuals and messages
 
@@ -69,7 +74,7 @@ just run              # or: ./scripts/run.sh --dev
 
 Raw-socket transmission needs privileges: on Linux run as root or use
 `sudo setcap cap_net_raw,cap_net_admin+ep ./target/release/wpg`; on Windows install Npcap and run as
-Administrator; on macOS grant access to `/dev/bpf*`. Run `wpg doctor` (planned) to diagnose.
+Administrator; on macOS grant access to `/dev/bpf*`. Run `wpg doctor` to diagnose.
 
 ## Architecture
 
@@ -101,16 +106,24 @@ Workspace crates: `wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-rx`, `wpg-template
 | `pcap` (libpcap / Npcap / BPF) | Windows / macOS / Linux | up to several hundred kpps | Portable fallback |
 | `afpacket` (TPACKET_V3 + `sendmmsg`) | Linux | ~1-3 Mpps/core | Main path on CML2 Ubuntu (virtio); needs CAP_NET_RAW |
 | `afxdp` | Linux 5.10+ (`--features afxdp`) | several Mpps/core | Driver support for zero-copy; zero-copy/copy auto (zero-copy not yet verified on real NICs) |
-| `dpdk` | Linux | 10 Mpps+/core | `--features dpdk`, DPDK 24.11 LTS (23.11 also) |
+| `dpdk` | Linux | 10 Mpps+/core | `--features dpdk`, DPDK 24.11 LTS (23.11 also); verified on virtual devices only |
 | `pcapfile` | all | n/a | Writes pcapng instead of sending (dry run, CI) |
-| `loopback` / `null` | all | n/a | Benchmarks and tests |
+| `null` | all | n/a | Benchmarks and tests |
 
 Minimum supported OS: Windows 10 21H2+, macOS 12+, Ubuntu 20.04+ (glibc 2.31). Windows transmission uses
 Npcap only and is positioned as "GUI plus low-to-medium rate".
 
+## Documentation
+
+The user and developer manual is an mdBook in English ([`docs/en`](docs/en/src/SUMMARY.md)) and Japanese
+([`docs/ja`](docs/ja/src/SUMMARY.md)): installation on the three OSes, tutorials, the generated protocol, CLI,
+API and configuration references, operations (deployment, services, DPDK / AF_XDP, CML2, tuning) and the
+developer guide. Build it with `just docs` (needs `cargo install mdbook --locked`).
+
 ## Roadmap
 
-Milestones M0 to M12 and the full specification live in [TODO.md](TODO.md) (written in Japanese).
+Milestones M0 to M12 and the full specification live in [TODO.md](TODO.md) (written in Japanese). Changes are
+listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Legal notice and responsible use
 

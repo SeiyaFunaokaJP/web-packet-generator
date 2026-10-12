@@ -198,6 +198,7 @@
 - [rtp-pcmu](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/rtp-pcmu.wpg.yaml) — `templates/protocols/voip/rtp-pcmu.wpg.yaml`
 - [sip-invite](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/sip-invite.wpg.yaml) — `templates/protocols/voip/sip-invite.wpg.yaml`
 - [sip-register](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/sip-register.wpg.yaml) — `templates/protocols/voip/sip-register.wpg.yaml`
+- [scenario-dhcp-discover-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/dhcp-discover-flood.wpg.yaml) — `templates/scenarios/dhcp-discover-flood.wpg.yaml`
 - [scenario-frame-size-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/frame-size-sweep.wpg.yaml) — `templates/scenarios/frame-size-sweep.wpg.yaml`
 - [scenario-jumbo-udp-mtu-probe](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml) — `templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml`
 - [scenario-mac-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/mac-flood.wpg.yaml) — `templates/scenarios/mac-flood.wpg.yaml`

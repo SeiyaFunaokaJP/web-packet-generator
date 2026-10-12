@@ -26,7 +26,7 @@ unit のポイント:
 - 特権の無いユーザ `wpg` で動きます。raw ソケットは `AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN` で得るので、サービス用にはバイナリへの `setcap` は不要です (`NoNewPrivileges=yes` の下ではファイルケーパビリティはどのみち無視されます)。
 - `StateDirectory=wpg` が `wpg` 所有の `/var/lib/wpg` を作ります。`ProtectSystem=strict` により、それ以外のファイルシステムはサーバから読み取り専用になります。
 - `EnvironmentFile=-/etc/wpg/wpg.env` でホストごとの `WPG_*` を上書きできます (deploy.sh が書きます)。
-- `LimitMEMLOCK=infinity` は将来の AF_XDP バックエンド用です。
+- `LimitMEMLOCK=infinity` は AF_XDP バックエンド用です (5.11 より前のカーネルでは UMEM が `RLIMIT_MEMLOCK` に計上されます)。
 - `RestrictAddressFamilies` は IP と Unix ソケットに加えて `AF_PACKET` と `AF_XDP` を許可します。
 
 待ち受けアドレスは `wpg.toml` の `bind` か `wpg.env` の `WPG_SERVER__BIND=` で変更し、`sudo systemctl restart wpg` を実行します。

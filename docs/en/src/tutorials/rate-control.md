@@ -2,7 +2,7 @@
 
 Time: about 20 minutes. Privileges: none (the `null` and `pcapfile` backends are used throughout).
 
-> This page replaces the planned "DHCP load" tutorial. DHCP is a P1 protocol that is not implemented yet; the skills below (mass generation, rate, duration, ramp-up, workers) are the ones that tutorial would have used, and they work with any template.
+> The skills below (mass generation, rate, duration, ramp-up, workers) work with any template. For an example that loads a real server and counts its answers, see [Load-testing a DHCP server](dhcp-load.md).
 
 ## What you will build
 

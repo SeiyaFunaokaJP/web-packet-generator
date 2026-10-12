@@ -129,7 +129,7 @@ fn samples(root: &Path) -> Result<BTreeMap<String, Vec<Sample>>, String> {
     Ok(map)
 }
 
-/// The hand-written notes pages of `locale` (README excluded).
+/// The hand-written notes pages of `locale` (the overview page excluded).
 fn notes_pages(root: &Path, locale: Locale) -> Result<Vec<NotesPage>, String> {
     let dir = root.join(src_path(locale, NOTES_DIR));
     let Ok(rd) = std::fs::read_dir(&dir) else {
@@ -138,7 +138,7 @@ fn notes_pages(root: &Path, locale: Locale) -> Result<Vec<NotesPage>, String> {
     let mut files: Vec<String> = rd
         .flatten()
         .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| n.ends_with(".md") && n != "README.md")
+        .filter(|n| n.ends_with(".md") && n != "overview.md")
         .collect();
     files.sort();
     let known: BTreeSet<&str> = catalog().iter().map(|p| p.id.as_str()).collect();

@@ -139,6 +139,7 @@ The next layer is selected by `dst_port`; when the field is Auto the builder wri
 - [rtcp-sr-sdes](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/rtcp-sr-sdes.wpg.yaml) — `templates/protocols/voip/rtcp-sr-sdes.wpg.yaml`
 - [rtp-pcmu](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/rtp-pcmu.wpg.yaml) — `templates/protocols/voip/rtp-pcmu.wpg.yaml`
 - [sip-invite](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/sip-invite.wpg.yaml) — `templates/protocols/voip/sip-invite.wpg.yaml`
+- [scenario-dhcp-discover-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/dhcp-discover-flood.wpg.yaml) — `templates/scenarios/dhcp-discover-flood.wpg.yaml`
 - [scenario-frame-size-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/frame-size-sweep.wpg.yaml) — `templates/scenarios/frame-size-sweep.wpg.yaml`
 - [scenario-jumbo-udp-mtu-probe](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml) — `templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml`
 - [scenario-mac-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/mac-flood.wpg.yaml) — `templates/scenarios/mac-flood.wpg.yaml`

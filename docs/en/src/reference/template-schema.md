@@ -64,6 +64,29 @@ A map from field name to a generator, either the full form or the shorthand used
 
 A generator and a fixed value on the same field produce a lint warning.
 
+### Expressions (`expr`)
+
+An `expr` generator computes an integer for every packet. The result is written into the field like any other value, so it can fill numbers, IPv4 / IPv6 addresses and MAC addresses.
+
+| Element | Meaning |
+|---|---|
+| `12`, `0x1f`, `0b101` | literals (decimal, hexadecimal, binary) |
+| `idx` | the packet index in the stream (0, 1, 2, ...) |
+| `$field`, `$<layer>.field` | this packet's value of another *generated* field; `<layer>` is the 0-based layer index (`$0.src` is the `src` generator of the first layer) |
+| `+ - * / %`, `<< >>`, `& ^ \|`, unary `- ~` | C-like operators and precedence; integer arithmetic (128-bit, wrapping) |
+| `hash(x)`, `crc(x)` | FNV-1a 64 / CRC-32 of `x` (as 8 big-endian octets): spreads sequential values |
+| `rand(min, max)` | a random value between `min` and `max`, fixed per packet index and `stream.seed` |
+| `min(a, ...)`, `max(a, ...)` | smallest / largest argument |
+
+A reference can only name a field that has a generator in the same template; fixed field values are not visible (put them in a variable and write `${name}` instead, which is substituted before the expression is parsed). An `expr` can read another `expr` only if that one comes earlier in the template. Examples from the bundled library:
+
+```yaml
+generators:
+  chaddr: { kind: expr, expr: "$0.src" }                          # copy the Ethernet source MAC (dhcp-discover-flood)
+  xid: { kind: expr, expr: "rand(0, 0xffffffff)" }               # a reproducible random transaction ID
+  label: { kind: expr, expr: "${srgb_base} + ${first_index} + idx" } # SR-MPLS prefix SIDs (sr-mpls-prefix-sid-sweep)
+```
+
 ## `packet`
 
 | Key | Default | Meaning |
@@ -122,7 +145,7 @@ Command-line options of `wpg send` override these.
 |---|---|
 | `examples/` | five small starting points |
 | `protocols/l2`, `l3`, `l4`, `payload`, `frame` | one or more samples for every protocol in the catalog, plus jumbo, minimum-size, runt and FCS cases |
-| `scenarios/` | ready-made tests: ARP sweeps, SYN flood and port scan, QinQ, NDP and RA, ping and TTL sweeps, QoS matrix, MTU probe, frame-size sweep, MAC flood |
+| `scenarios/` | ready-made tests: ARP sweeps, SYN flood and port scan, QinQ, NDP and RA, ping and TTL sweeps, QoS matrix, MTU probe, frame-size sweep, MAC flood, SR-MPLS prefix SID sweep, DHCP DISCOVER load |
 | `interop/` | interop checks against real devices and FRR: OSPFv2 2-Way, RIPv2 routes, IS-IS adjacency Up, VRRPv3 preemption, PIM neighbor, LDP discovery, BFD session Up (`interop` tag; procedure in the operations guide, "Interop checks") |
 | `malformed/` | deliberately broken packets (bad checksums, wrong lengths, truncation, bad FCS); they lint with warnings by design and are tagged `malformed` |
 

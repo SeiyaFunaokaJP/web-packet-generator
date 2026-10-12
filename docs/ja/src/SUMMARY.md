@@ -17,6 +17,8 @@
 - [チュートリアル: IPv6 と近隣探索 (NDP)](tutorials/ipv6-ndp.md)
 - [チュートリアル: 負荷とレート制御](tutorials/rate-control.md)
 - [チュートリアル: pcap からテンプレートへ変換して再生](tutorials/pcap-replay.md)
+- [チュートリアル: DHCP サーバの負荷試験](tutorials/dhcp-load.md)
+- [チュートリアル: IS-IS Hello で隣接を Up にする](tutorials/isis-adjacency.md)
 
 # リファレンス
 
@@ -211,7 +213,7 @@
     - [payload](reference/protocols/payload.md)
     - [raw](reference/protocols/raw.md)
 <!-- wpg-docs-gen:end protocol-pages -->
-- [P1 プロトコル補足](protocols/README.md)
+- [P1 プロトコル補足](protocols/overview.md)
   - [L2 制御プロトコル](protocols/l2-control.md)
   - [カプセル化・トンネル](protocols/encap.md)
   - [ルーティングプロトコル](protocols/routing.md)

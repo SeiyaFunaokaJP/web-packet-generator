@@ -31,7 +31,7 @@ PR 前に `just fmt lint test check-wasm` を実行してください。CI で�
 
 ## プロトコルの追加
 
-`docs/dev/` の開発者ガイド（プロトコル追加手順）を参照してください。定義、Fluent 文字列（名称・フィールド説明）、
+`docs/ja/src/dev/add-protocol.md` の開発者ガイド（プロトコル追加手順）を参照してください。定義、Fluent 文字列（名称・フィールド説明）、
 サンプルテンプレート、golden pcap、テストが最低限必要です。
 そのあと `just docs-gen` でリファレンス（プロトコル・CLI・API・設定・テンプレートスキーマ）を再生成してコミットしてください
 （生成物が古いとテストが失敗します）。
@@ -40,7 +40,7 @@ PR 前に `just fmt lint test check-wasm` を実行してください。CI で�
 
 - サーバ / CLI / Web UI（エラーメッセージ含む）に **ユーザー向け文字列を直書きしない**。Fluent のキーを使う。
 - すべてのキーは `locales/ja/main.ftl` と `locales/en/main.ftl` の **両方** に存在すること
-  （抜けは CI の lint で検出予定）。
+  （抜けは `cargo test -p wpg-i18n` が検出し、CI で失敗します）。
 
 ## ライセンスと DCO
 
