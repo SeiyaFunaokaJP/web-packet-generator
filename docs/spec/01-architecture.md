@@ -85,6 +85,6 @@ web-packet-generator/
 
 - 設定 crate を `figment` と `config` のどちらにするか (優先順位: CLI > env > ファイルのマージ挙動と、WASM 側で不要であること)。
 - i18n を `fluent` 直接利用とするか `rust-i18n` を併用するか。server と web (WASM) で同一 `.ftl` を共有する方式。
-- `serde_yaml` はメンテ終了が告知されているため、後継 (`serde_yml` 等) の選定を M5 までに行う。
+- ~~`serde_yaml` はメンテ終了が告知されているため、後継 (`serde_yml` 等) の選定を M5 までに行う。~~ 決定: 互換フォークの `serde_norway` を `serde_yaml` の名前で使う (M12、`unsafe-libyaml` の RUSTSEC-2024-0449 対応。`serde_yml` は RUSTSEC-2025-0068 のため不採用)。
 - `wpg-core` の「no_std 寄り」の範囲 (alloc 前提か、`std` feature を切るか)。
 - `wpg-rx` を `wpg-tx` と同一 crate にしない理由の再確認 (依存が pcap/AF_XDP で共通)。

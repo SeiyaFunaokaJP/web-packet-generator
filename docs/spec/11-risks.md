@@ -15,7 +15,7 @@ Status: draft / 元: TODO.md §5
 ## 追加で検討したいリスク (Proposal)
 
 - `xsk-rs` のメンテ状況・カーネル/ドライバ差異による AF_XDP の不安定さ (libc 補完で吸収する方針、[ADR-0005](../adr/0005-af-xdp.md))。
-- `serde_yaml` の非メンテ化によるテンプレート形式の依存リスク。
+- `serde_yaml` の非メンテ化によるテンプレート形式の依存リスク。(M12 でメンテされている互換フォーク `serde_norway` に移行済み。)
 - WASM と server の合成結果の乖離 (浮動小数点、乱数、時刻を core に持ち込まない)。
 
 ## 未決事項 (Open questions)

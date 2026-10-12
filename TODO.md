@@ -83,7 +83,7 @@ web-packet-generator/
 | D&D | HTML5 DnD API を Leptos で薄くラップ（自作） | 依存を減らす。必要なら `web-sys` 直叩き |
 | Hex 表示 | 自作コンポーネント（仮想スクロール） | 1500〜9000B の同期ハイライトが必要 |
 | 状態共有 | `wpg-core` を WASM でもビルド → ブラウザ側でプレビュー合成 | サーバ往復なしで即時プレビュー |
-| シリアライズ | `serde` + `serde_yaml` / `serde_json` | テンプレ YAML、API JSON |
+| シリアライズ | `serde` + `serde_yaml`（実体は互換フォーク `serde_norway`）/ `serde_json` | テンプレ YAML、API JSON |
 | i18n | `fluent` (`fluent-bundle`, `rust-i18n` 検討) | 複数形/性別対応、ja/en の .ftl |
 | 認証 | `argon2` + `tower-sessions`（Cookie） | パスワード 1 つ〜複数ユーザ。TLS は `rustls` オプション |
 | 静的資産埋め込み | `rust-embed` | 単一バイナリ配布 |
@@ -409,7 +409,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] 3 OS でビルド・起動・pcap バックエンド送出確認
 - [ ] Linux afpacket で 1 Mpps/core 以上 (参考値)、DPDK は環境依存のため参考記録
 - [ ] GUI E2E 緑、i18n ja/en 抜け漏れ 0 (lint)
-- [ ] `cargo audit` / `deny` クリーン
+- [x] `cargo audit` / `deny` クリーン（`serde_yaml` 0.9（非推奨、`unsafe-libyaml` の RUSTSEC-2024-0449 で `cargo deny` が失敗）をメンテされている互換フォーク `serde_norway` 0.9.42 に置き換え（ワークスペースで `serde_yaml` の名前のまま、コード変更なし）。`cargo audit` は警告 0、`cargo deny check` は advisories / bans / licenses / sources すべて ok。leptos 0.8 経由のビルド時専用 proc-macro 2 件（`paste`、`proc-macro-error2`、いずれも unmaintained のみ）は理由付きで `deny.toml` / `.cargo/audit.toml` の ignore に残す。重複バージョンは `multiple-versions = "warn"` の警告のみで対象外）
 - [ ] ドキュメント ja/en 完備、CHANGELOG
 
 ---
