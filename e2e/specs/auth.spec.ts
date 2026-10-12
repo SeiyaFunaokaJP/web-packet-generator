@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { login } from './helpers';
+import { login, PASSWORD } from './helpers';
 
 test('unauthenticated visits go to the login screen', async ({ page }) => {
   await page.goto('/jobs');
@@ -22,4 +22,14 @@ test('log in and out', async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
   await page.goto('/');
   await expect(page).toHaveURL(/\/login/);
+});
+
+test('a deep link keeps its query string through the login', async ({ page }) => {
+  await page.goto('/jobs?new=protocols-l4-udp');
+  await expect(page).toHaveURL(/\/login\?next=%2Fjobs%3Fnew%3Dprotocols-l4-udp$/);
+  await page.locator('#login-password').fill(PASSWORD);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/jobs\?new=protocols-l4-udp$/);
+  const dialog = page.getByRole('dialog', { name: 'New job' });
+  await expect(dialog.getByRole('combobox', { name: 'Template' })).toHaveValue('protocols-l4-udp');
 });
