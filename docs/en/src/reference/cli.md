@@ -2,7 +2,7 @@
 
 Status: draft
 
-The `wpg` binary provides the subcommands serve, send, render, import, template, ifaces, doctor and bench. The same binary runs the server and headless sending, which suits CI and ssh sessions. For example, `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` transmits a template. The blocks below are the verbatim `--help` output of the current build. Subcommands not listed here (`serve`, `import`) are not documented yet; run `wpg <command> --help`. Flags described as planned (`--workers`, `--ramp-up`, `--start-at`, template-driven bench) appear here only once they exist in `--help`.
+The `wpg` binary provides the subcommands serve, send, render, import, template, ifaces, doctor and bench. The same binary runs the server and headless sending, which suits CI and ssh sessions. For example, `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` transmits a template. The blocks below are the verbatim `--help` output of the current build. Subcommands not listed here (`serve`, `import`) are not documented yet; run `wpg <command> --help`.
 
 ## Commands
 
@@ -48,14 +48,24 @@ Options:
       --duration <DURATION>  Duration limit, e.g. `10s`, `2m`
       --rate <RATE>          Rate, e.g. `1Mpps`, `10Gbps`, `50%`, `ifg=10us`, `unlimited`
       --burst <BURST>        Frames sent back to back per rate-control grant
+      --wait <MODE>          How the rate control waits: hybrid (sleep, then spin), sleep, spin or busy-poll (spin and service the backend)
+      --clock <CLOCK>        Rate-control clock: auto (TSC when invariant), tsc or monotonic [default: auto]
+      --ramp-up <DURATION>   Ramp the rate up linearly from 0 over this time, e.g. `5s`
+      --start-at <TIME>      Start at this time: RFC 3339 (`2026-09-29T12:00:00Z`) or a delay (`+10s`)
       --plan <PLAN>          Expansion strategy: auto, prerender or onthefly [default: auto]
       --json                 Print the final report as JSON on stdout
       --var <NAME=VALUE>     Template variable override (`name=value`), repeatable
       --batch <N>            Frames per `send_batch` call
       --ring-depth <N>       TX ring depth in frames (`afpacket`)
-      --pin-core <CORE>      Pin the TX thread to this CPU core (Linux)
+      --pin-core <CORE>      Pin the TX thread to this CPU core (Linux; the first worker)
+      --pin-cores <CORES>    Pin worker i to the i-th core of this list, e.g. `1,2` (Linux)
+      --workers <N>          TX worker threads, each with its own backend instance (afpacket: socket and ring) and share of the stream and rate [default: 1]
       --qdisc-bypass         Bypass the qdisc layer (`afpacket`, `PACKET_QDISC_BYPASS`)
       --no-tx-ring           Use `sendmmsg` instead of the TPACKET_V3 TX ring (`afpacket`)
+      --auto-pin             Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
+      --queue <N>            First hardware queue (`afxdp`; worker i binds queue N+i)
+      --xdp-mode <MODE>      AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy [default: auto]
+      --busy-poll            Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
   -h, --help                 Print help
   -V, --version              Print version
 ```
@@ -82,7 +92,7 @@ Options:
 
 ### `wpg bench`
 
-Unlimited-rate transmission of a synthetic frame (EtherType 0x88b5). See `docs/perf.md` for baselines. `--json` output fields: backend, detail, iface, frame_size, batch_size, packets, dropped, pps, bps (L2), l1_bps, elapsed.
+Unlimited-rate transmission of a synthetic frame (EtherType 0x88b5). See `docs/perf.md` for baselines. `--json` output fields: backend, detail, iface, frame_size, batch_size, workers, worker_details (with several workers), template, packets, dropped, pps, bps (L2), l1_bps, elapsed. `--backend afxdp` needs a build with `--features afxdp` ([DPDK / AF_XDP](../operations/dpdk-afxdp.md)); `--auto-pin`, `--queue`, `--busy-poll`, `--wait` and `--clock` are explained in [Performance tuning](../operations/tuning.md).
 
 ```text
 Measure transmit performance
@@ -94,12 +104,20 @@ Options:
   -i, --iface <IFACE>            Interface (for real backends)
       --duration <DURATION>      Duration in seconds [default: 5]
       --frame-size <FRAME_SIZE>  Frame size in bytes (without FCS) [default: 64]
+      --template <FILE>          Benchmark on-the-fly generation of this template instead of a fixed frame
+      --var <NAME=VALUE>         Template variable override (`name=value`), repeatable (with --template)
       --json                     Output JSON
       --batch <N>                Frames per `send_batch` call
       --ring-depth <N>           TX ring depth in frames (`afpacket`)
-      --pin-core <CORE>          Pin the TX thread to this CPU core (Linux)
+      --pin-core <CORE>          Pin the TX thread to this CPU core (Linux; the first worker)
+      --pin-cores <CORES>        Pin worker i to the i-th core of this list, e.g. `1,2` (Linux)
+      --workers <N>              TX worker threads, each with its own backend instance (afpacket: socket and ring) and share of the stream and rate [default: 1]
       --qdisc-bypass             Bypass the qdisc layer (`afpacket`, `PACKET_QDISC_BYPASS`)
       --no-tx-ring               Use `sendmmsg` instead of the TPACKET_V3 TX ring (`afpacket`)
+      --auto-pin                 Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
+      --queue <N>                First hardware queue (`afxdp`; worker i binds queue N+i)
+      --xdp-mode <MODE>          AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy [default: auto]
+      --busy-poll                Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
   -h, --help                     Print help
   -V, --version                  Print version
 ```

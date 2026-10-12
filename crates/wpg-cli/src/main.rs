@@ -153,6 +153,13 @@ pub(crate) struct SendArgs {
     /// Frames sent back to back per rate-control grant.
     #[arg(long)]
     pub(crate) burst: Option<u32>,
+    /// How the rate control waits: hybrid (sleep, then spin), sleep, spin or
+    /// busy-poll (spin and service the backend).
+    #[arg(long, value_name = "MODE")]
+    pub(crate) wait: Option<wpg_tx::rate::WaitMode>,
+    /// Rate-control clock: auto (TSC when invariant), tsc or monotonic.
+    #[arg(long, value_name = "CLOCK", default_value = "auto")]
+    pub(crate) clock: wpg_tx::clock::ClockSource,
     /// Ramp the rate up linearly from 0 over this time, e.g. `5s`.
     #[arg(long, value_name = "DURATION")]
     pub(crate) ramp_up: Option<String>,

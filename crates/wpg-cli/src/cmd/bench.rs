@@ -46,6 +46,12 @@ fn print_table(r: &BenchResult, locale: Locale, fast: Option<bool>) {
     }
     if r.workers > 1 {
         line("summary-workers", &[("workers", r.workers.to_string())]);
+        for (i, d) in r.worker_details.iter().enumerate() {
+            line(
+                "bench-worker",
+                &[("index", i.to_string()), ("detail", d.clone())],
+            );
+        }
     }
     line(
         "bench-frame",
@@ -142,7 +148,7 @@ pub(crate) fn run(args: crate::BenchArgs) -> ExitCode {
     let opts = BenchOptions {
         tx: args.tuning.options(BenchOptions::default().tx.batch_size),
         workers,
-        pin_cores: args.tuning.pin_cores.clone(),
+        pin_cores: args.tuning.pin_cores_for(&iface, workers),
     };
     let mut frame_size = args.frame_size;
     let mut fast = None;
