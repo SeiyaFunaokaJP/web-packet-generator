@@ -368,7 +368,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] SCTP (CRC32c)（`sctp` 1 レイヤに共通ヘッダと全チャンク（DATA / INIT / INIT ACK / SACK / HEARTBEAT / ABORT / SHUTDOWN 系 / ERROR / COOKIE 系 / AUTH / I-DATA / ASCONF / RE-CONFIG / FORWARD TSN / PAD）、パラメータ・エラー原因。CRC32c・長さ・4 オクテット詰め・SACK 件数は Auto。IPv4/IPv6 protocol 132、UDP 9899。wpg-core の TLV に `head_octets`（型と長さの間のフラグ）・`align` / `unpadded_last`（長さに含めない詰め物）を追加。DATA のユーザデータはチャンク内のオクテット列で PPID による demux はしない）
 - [x] OSPF Opaque/SR、BGP MP/EVPN/VPNv4 NLRI（OSPFv2 の Opaque LSA（LS タイプ 9/10/11 を `ospfv2_opaque_lsa` に読み直し、`opaque_type` で TE / Router Information / Extended Prefix / Extended Link 本体）と SR の TLV / sub-TLV（SR-Algorithm、SID/Label Range、SRLB、SRMS Preference、Prefix-SID、Adj-SID / LAN Adj-SID。SID は 3 / 4 オクテットを値長で判別）。TLV の長さ・4 オクテット詰め・Opaque タイプ・LSA チェックサムは Auto。BGP は `MP_REACH_NLRI` / `MP_UNREACH_NLRI` を AFI / SAFI ごとの型付き項目に（IPv4・IPv6 ユニキャスト、VPN-IPv4 / VPN-IPv6（ラベル + RD + プレフィックス）、EVPN ルートタイプ 1〜5）、PMSI Tunnel 属性、UPDATE の経路をプレフィックスのリストに、2 つの長さを Auto に、Extended Length（255 オクテット超で自動）に対応。wpg-core に `TlvVariant::value_prefix` / `value_len`（同じタイプのバリアントを値で判別）と `TlvDef::long_length` を追加。OSPFv3 の E-LSA / SR、ADD-PATH、複数ラベルのスタック、BGP Prefix-SID 属性は対象外）
 - [x] LDP / RSVP-TE (基本) / BFD（`ldp` 1 レイヤ = 1 PDU に全メッセージ（Notification / Hello / Initialization / KeepAlive / Address 系 / Label Mapping・Request・Withdraw・Release・Abort）と TLV（FEC のプレフィックス要素とワイルドカード、IPv4 / IPv6 Address List、Hop Count、Path Vector、Generic Label、Status、Common Hello（GTSM ビット）/ Session Parameters、トランスポートアドレス、構成シーケンス番号）。PDU 長・メッセージ / TLV 長は Auto、メッセージは PDU 長で終わる。UDP / TCP 646。`rsvp` 1 レイヤに共通ヘッダと全オブジェクト（SESSION / HOP / TIME_VALUES / ERROR_SPEC / SCOPE / STYLE / FLOWSPEC / FILTER_SPEC / SENDER_TEMPLATE / SENDER_TSPEC / RESV_CONFIRM / LABEL / LABEL_REQUEST / ERO / RRO / HELLO / MESSAGE_ID / SESSION_ATTRIBUTE、IPv4 / IPv6 / LSP トンネル）、ERO / RRO サブオブジェクト。チェックサム・長さ・セッション名長と詰め物は Auto。IPv4 / IPv6 protocol 46。`bfd` 制御パケットと認証セクション（簡易パスワード、Keyed / Meticulous MD5・SHA1）、長さと A ビットは Auto。UDP 3784 / 4784 / 6784（Micro-BFD）。wpg-core の TLV に `len_first`（長さが型より前）を追加。状態機械・タイマー、BFD のダイジェスト計算、GMPLS オブジェクト・ADSPEC・POLICY_DATA の型付け、IntServ の 2 つ目以降のパラメータ、同一セグメント内の複数 LDP PDU のデコードは対象外）
-- [ ] SRv6 SRH / SR-MPLS 補助
+- [x] SRv6 SRH / SR-MPLS 補助（`ipv6_srh`: ルーティングタイプ 4 を IPv6 next header 43 のルーティングタイプ peek で判別、セグメントリスト（IPv6 アドレスのリスト）と Pad1 / PadN / HMAC TLV。`hdr_ext_len`・`last_entry`・Pad1 詰め物は Auto、`segments_left` が 0 でない間は UDP / TCP / ICMPv6 の疑似ヘッダ宛先を最終宛先（セグメントリスト要素 0）に置き換え（高速パッチ経路も追従）。IPv6 next header 143 → Ethernet（End.DX2）。SR-MPLS は `mpls.label` の予約ラベル名（ELI 7、GAL 13 など）と SRGB + インデックスを `expr` で書くサンプル / シナリオ、エントロピーラベル。wpg-core に `Peek::skip`・`count(field, adjust)`・`Length::UntilOffset { adjust }`・`ProtocolDef::final_destination` を追加。HMAC の計算、`ipv6.dst` のアクティブセグメントへの自動設定、`segments_left <= last_entry` の検査、uSID / CSID の専用表現、SRGB の範囲検査は対象外）
 - [ ] PTP / ESMC / ERPS / Y.1731 CFM / 802.3ah OAM
 - [ ] MACsec (構造のみ) / GTP-C / Diameter / SIP / RTP
 - [ ] 実機 (or CML2 上 IOS-XR / Junos / FRR) との相互接続確認シナリオをドキュメント化
@@ -396,12 +396,12 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] アップグレード手順・テンプレマイグレーション
 
 ### M11: ドキュメント仕上げ（継続 + 2 週）
-- [ ] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)
+- [x] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)（Linux / macOS / Windows のインストール・権限・初回ログイン、ARP スイープ / VLAN SYN / IPv6 NDP / レート制御 / pcap 再生のチュートリアルを ja/en で整備し、CLI の実出力と tshark 突合で確認）
 - [ ] プロトコルリファレンス自動生成 (定義 IR → Markdown)
 - [ ] API / CLI / 設定 / テンプレスキーマ リファレンス
 - [ ] DPDK / AF_XDP / CML2 セットアップガイド、性能チューニング
-- [ ] 開発者ガイド (プロトコル追加、i18n 追加、リリース)
-- [ ] FAQ / トラブルシュート、法的注意
+- [x] 開発者ガイド (プロトコル追加、i18n 追加、リリース)（crate 構成・プロトコル追加の手順と部品・i18n キー追加・リリースゲートを ja/en で整備し、CONTRIBUTING.ja.md と整合）
+- [x] FAQ / トラブルシュート、法的注意（`wpg doctor` チェック表とよくある質問、責任ある利用 / デュアルライセンス / 第三者コンポーネントの法的注意を ja/en で整備）
 - [ ] スクリーンショット・動画 GIF
 
 ### M12: v1.0 リリース判定

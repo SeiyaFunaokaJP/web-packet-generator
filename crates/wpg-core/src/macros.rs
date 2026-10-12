@@ -262,9 +262,10 @@ macro_rules! __wpg_auto {
             adjust: $crate::__wpg_or!($($a)?; 0),
         }
     };
-    (count ($f:ident)) => {
+    (count ($f:ident $(, adjust = $a:expr)?)) => {
         $crate::AutoCompute::Count {
             field: ::std::string::String::from(stringify!($f)),
+            adjust: $crate::__wpg_or!($($a)?; 0),
         }
     };
     (size ($f:ident)) => {

@@ -1,0 +1,43 @@
+# SRv6 End.DX2 (RFC 8986): an Ethernet frame in IPv6 + SRH with an HMAC TLV
+schema: 1
+
+meta:
+  name: srv6-end-dx2-hmac
+  descriptions:
+    ja: "SRv6 End.DX2 (RFC 8986): Ethernet フレーム (next header 143) を SRH (HMAC TLV 付き、RFC 8754 §2.1.2) で L2VPN 転送"
+    en: "SRv6 End.DX2 (RFC 8986): an Ethernet frame (next header 143) carried over an SRH with an HMAC TLV (RFC 8754 §2.1.2) for an L2VPN"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:ipv6_srh", "protocol:arp", "layer:l3", srv6, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: "2001:db8::1"
+      dst: "fc00:0:3:e0d2::"
+  - protocol: ipv6_srh
+    fields:
+      segments_left: 0
+      segment_list: ["fc00:0:3:e0d2::"] # End.DX2 of node 3
+      tlvs:
+        - hmac:
+            d: 0
+            hmac_key_id: 1
+            hmac: "00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000" # HMAC-SHA256: Manual
+      # next_header: Auto (143 = Ethernet)
+  - protocol: ethernet2
+    fields:
+      dst: ff:ff:ff:ff:ff:ff
+      src: "02:00:00:00:aa:01"
+  - protocol: arp
+    fields:
+      sha: "02:00:00:00:aa:01"
+      spa: 192.168.10.1
+      tpa: 192.168.10.2
+
+tx:
+  count: 1

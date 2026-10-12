@@ -1,0 +1,39 @@
+# SRv6 (RFC 8754): IPv6 + Segment Routing Header with three segments, carrying UDP
+schema: 1
+
+meta:
+  name: srv6-srh-udp
+  descriptions:
+    ja: "SRv6 (RFC 8754): 3 セグメント (残り 2) の SRH 付き IPv6/UDP。UDP チェックサムは最後のセグメントを宛先として自動計算"
+    en: "SRv6 (RFC 8754): IPv6/UDP with a three-segment SRH (two left); the UDP checksum uses the last segment as destination"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:ipv6_srh", "protocol:udp", "layer:l3", srv6, sample, ipv6-ext]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: "2001:db8::1"
+      dst: "fc00:0:2:e001::" # active segment = segment_list[segments_left]
+  - protocol: ipv6_srh
+    fields:
+      segments_left: 2
+      # Reverse path order: element 0 is the last segment (the final destination).
+      # last_entry, hdr_ext_len and next_header: Auto
+      segment_list: ["2001:db8:0:9::1", "fc00:0:3:e001::", "fc00:0:2:e001::"]
+  - protocol: udp
+    fields:
+      src_port: 40000
+      dst_port: 40001
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

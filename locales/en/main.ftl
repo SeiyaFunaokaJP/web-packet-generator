@@ -60,6 +60,12 @@ ipv6-options = Raw TLV options, padded to a multiple of 8 bytes.
 ipv6-routing-data = Type-specific routing data.
 ipv6-routing-type = Routing header type (e.g. 2 = Mobile IPv6, 4 = SRH).
 ipv6-segments-left = Number of route segments remaining.
+srh-segments-left = Segments Left: index (in the segment list) of the next segment to visit; 0 at the last one.
+srh-last-entry = Last Entry: index of the last element of the segment list, i.e. number of segments - 1 (Auto).
+srh-flags = Flags (no flag defined by RFC 8754; 0).
+srh-tag = Tag: marks packets as part of a class or group (0 = unused).
+srh-segment-list = Segment list (SIDs) in reverse path order: element 0 is the last segment, the last element the first. While Segments Left is non-zero, upper-layer checksums use element 0 as the destination.
+srh-tlvs = Optional TLVs (8-bit type, 8-bit length): Pad1, PadN, HMAC (the HMAC value is Manual). The header is then padded with Pad1 octets to a multiple of 8 (Auto).
 ndp-destination = Destination address of a redirect.
 ndp-managed = Managed address configuration flag (M).
 ndp-options = Raw NDP options (TLV).
@@ -611,7 +617,7 @@ gre-flags = GRE flags and version (checksum / key / sequence present bits).
 gre-protocol-type = EtherType of the encapsulated payload.
 nvgre-vsid = 24-bit NVGRE Virtual Subnet ID.
 nvgre-flowid = NVGRE FlowID (entropy for load balancing).
-mpls-label = 20-bit MPLS label value.
+mpls-label = 20-bit MPLS label value. 0-15 are reserved (0 / 2 explicit null, 1 router alert, 3 implicit null, 7 entropy label indicator, 13 GAL, 14 OAM alert, 15 extension); SR-MPLS SIDs are SRGB base + SID index.
 mpls-tc = 3-bit traffic class (QoS / ECN).
 mpls-s = Bottom-of-stack bit (1 = last label; Auto from the next layer).
 mpls-ttl = MPLS time to live.
