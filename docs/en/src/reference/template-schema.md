@@ -42,6 +42,7 @@ Fields you write are **Manual**; fields you omit (or set to `auto`) keep their d
 | enum | a number or a variant name: `ethertype: arp`, `oper: request`, `type: echo_request` |
 | flags | bit names joined by `\|`: `flags: syn\|ack`, `flags: df` |
 | TLV list (TCP/IPv4 options) | `- mss: 1460`, `- sack_permitted`, `- nop`, `- timestamps: { tsval: 1, tsecr: 0 }`, `- { type: 99, data: "01 02" }` |
+| list / TLV list as verbatim octets | `nlri: "18 c6 33 64"` (a quoted hex string instead of the list; written by the import for content it cannot decode) |
 
 Deliberately wrong values are accepted: a Manual length or checksum is used as written, and `wpg template lint` reports the mismatch as a warning (`diag-*`). That is how the samples in `templates/malformed/` are made.
 

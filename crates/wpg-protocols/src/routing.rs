@@ -1,7 +1,7 @@
 //! Routing protocols (TODO §2.1 P1): OSPFv2 / OSPFv3 (Hello, DBD, LSR, LSU, `LSAck`
-//! and the main LSAs), BGP-4 (OPEN, UPDATE, KEEPALIVE, NOTIFICATION, ROUTE-REFRESH
-//! with the main path attributes and capabilities), `RIPv1` / v2, `RIPng` and EIGRP
-//! (basic TLVs).
+//! and the main LSAs; OSPFv2 opaque LSAs are in [`crate::ospf_opaque`]), BGP-4
+//! (OPEN, UPDATE, KEEPALIVE, NOTIFICATION, ROUTE-REFRESH with the main path
+//! attributes and capabilities), `RIPv1` / v2, `RIPng` and EIGRP (basic TLVs).
 //!
 //! Demultiplexing: IPv4 protocol 89 → [`ospfv2`], IPv6 next header 89 →
 //! [`ospfv3`], IP protocol 88 → [`eigrp`] (both families), TCP port 179 →
@@ -34,20 +34,17 @@
 //!   entries (router-link `num_tos` > 0, summary / external TOS metrics) are not
 //!   modelled; neither are the OSPFv3 prefix lists (variable 4-octet-aligned
 //!   address prefixes), which stay opaque `prefixes` / `address_prefix` octets.
-//! * **BGP UPDATE** has two length fields bracketing variable regions in one
-//!   header (withdrawn routes, path attributes, then NLRI to the end). Auto
-//!   lengths only measure whole header / payload spans, so
-//!   `withdrawn_routes_length` and `total_path_attribute_length` are Manual
-//!   (their defaults match the default values). Withdrawn routes and NLRI are
-//!   opaque `(length, prefix)` octets because a prefix occupies
-//!   `ceil(length / 8)` octets, which a `FromField` length cannot express.
-//! * **BGP path attributes** have an 8-bit or 16-bit length depending on the
-//!   Extended Length flag. [`wpg_core::TlvDef`] has one length width, so
-//!   attributes are a TLV with a 16-bit type (flags << 8 | type code) and an
-//!   8-bit length; extended-length attributes (flag `0x10`) must be written as
-//!   verbatim `raw` items and do not parse back. `AS_PATH` / `AGGREGATOR` use
-//!   4-octet AS numbers (RFC 6793, the four-octet AS capability negotiated).
-//!   Extended optional parameters (RFC 9072) are not modelled.
+//! * **BGP UPDATE** lengths (`withdrawn_routes_length`,
+//!   `total_path_attribute_length`) are Auto sizes of the regions they bound;
+//!   withdrawn routes and NLRI are prefix lists ([`crate::bgp_mp`]).
+//! * **BGP path attributes** are a TLV with a 16-bit type (flags << 8 | type
+//!   code). The length is 8 bits, or 16 with the Extended Length flag (`0x10`,
+//!   [`wpg_core::TlvLongLength`]): set automatically when an attribute exceeds
+//!   255 octets and kept when the item gives its type. `MP_REACH_NLRI` /
+//!   `MP_UNREACH_NLRI` are typed per AFI / SAFI ([`crate::bgp_mp`]).
+//!   `AS_PATH` / `AGGREGATOR` use 4-octet AS numbers (RFC 6793, the four-octet
+//!   AS capability negotiated). Extended optional parameters (RFC 9072) are not
+//!   modelled.
 //! * **BGP** is bound on TCP port 179 (destination, else source, so both
 //!   directions of a session decode); only one BGP message per segment is
 //!   decoded.
@@ -60,8 +57,10 @@ use std::collections::BTreeMap;
 
 use wpg_core::{
     protocol, FieldDef, FieldType, FieldValue, ItemDef, Length, LengthUnit, ProtocolDef, TlvDef,
-    TlvItem, TlvVariant,
+    TlvItem, TlvLongLength, TlvVariant,
 };
+
+use crate::bgp_mp;
 
 fn u(name: &str, bits: u8) -> FieldDef {
     FieldDef::new(name, FieldType::UInt { bits })
@@ -291,9 +290,12 @@ pub fn ospfv2_lsack() -> ProtocolDef {
 /// from the body layer), Fletcher `ls_checksum` (Auto; `ls_age` is left out, so
 /// it is exact for any age, see the module docs) and `length` (Auto, header +
 /// body).
+///
+/// LS types 9 / 10 / 11 re-decode the layer as an opaque LSA
+/// ([`crate::ospf_opaque::ospfv2_opaque_lsa`]).
 #[must_use]
 pub fn ospfv2_lsa() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "ospfv2_lsa",
         name: "OSPFv2 LSA",
         layer: L3,
@@ -316,6 +318,9 @@ pub fn ospfv2_lsa() -> ProtocolDef {
                 4 => summary_asbr,
                 5 => as_external,
                 7 => nssa_external,
+                9 => link_local_opaque,
+                10 => area_opaque,
+                11 => as_opaque,
             } = 1, auto = next_protocol, desc = "ospf-ls-type";
             link_state_id: ipv4 = [192, 0, 2, 1], desc = "ospf-link-state-id";
             advertising_router: ipv4 = [192, 0, 2, 1], desc = "ospf-advertising-router";
@@ -331,7 +336,12 @@ pub fn ospfv2_lsa() -> ProtocolDef {
             5 => "ospfv2_external_lsa",
             7 => "ospfv2_external_lsa",
         },
+    };
+    if let Some(b) = d.next.as_mut() {
+        b.table
+            .push(wpg_core::BindingEntry::range(9, 11, "ospfv2_opaque_lsa").reparsing());
     }
+    d
 }
 
 /// OSPFv2 Router-LSA body (LS type 1): V / E / B flags, link count (Auto) and
@@ -855,6 +865,7 @@ pub fn bgp_capabilities() -> FieldType {
         head_octets: 0,
         align: 0,
         unpadded_last: false,
+        long_length: None,
     })
 }
 
@@ -883,6 +894,7 @@ pub fn bgp_open_params() -> FieldType {
         head_octets: 0,
         align: 0,
         unpadded_last: false,
+        long_length: None,
     })
 }
 
@@ -965,76 +977,54 @@ pub fn bgp_path_attributes() -> FieldType {
             }),
         )
     };
+    let mut variants = vec![
+        TlvVariant::new(0x4001, "origin", vec![u("origin", 8)]),
+        TlvVariant::new(
+            0x4002,
+            "as_path",
+            vec![FieldDef::new("segments", list_to_end(as_segment))],
+        ),
+        TlvVariant::new(0x4003, "next_hop", vec![ip4("next_hop")]),
+        TlvVariant::new(0x8004, "multi_exit_disc", vec![u("med", 32)]),
+        TlvVariant::new(0x4005, "local_pref", vec![u("local_pref", 32)]),
+        TlvVariant::new(0x4006, "atomic_aggregate", Vec::new()),
+        TlvVariant::new(0xc007, "aggregator", vec![u("asn", 32), ip4("address")]),
+        TlvVariant::new(0xc008, "communities", vec![u32_list()]),
+    ];
+    variants.extend(bgp_mp::mp_variants());
+    variants.extend([
+        TlvVariant::new(
+            0xc010,
+            "extended_communities",
+            vec![FieldDef::new(
+                "values",
+                list_to_end(ItemDef::Field {
+                    ty: Box::new(FieldType::UInt { bits: 64 }),
+                }),
+            )],
+        ),
+        TlvVariant::new(
+            0xc020,
+            "large_communities",
+            vec![FieldDef::new(
+                "values",
+                list_to_end(ItemDef::Struct {
+                    fields: vec![
+                        u("global_admin", 32),
+                        u("local_data1", 32),
+                        u("local_data2", 32),
+                    ],
+                }),
+            )],
+        ),
+        bgp_mp::pmsi_tunnel(),
+    ]);
     FieldType::Tlv(TlvDef {
         type_bits: 16,
         len_bits: 8,
         len_includes_header: false,
         len_unit: LengthUnit::Bytes,
-        variants: vec![
-            TlvVariant::new(0x4001, "origin", vec![u("origin", 8)]),
-            TlvVariant::new(
-                0x4002,
-                "as_path",
-                vec![FieldDef::new("segments", list_to_end(as_segment))],
-            ),
-            TlvVariant::new(0x4003, "next_hop", vec![ip4("next_hop")]),
-            TlvVariant::new(0x8004, "multi_exit_disc", vec![u("med", 32)]),
-            TlvVariant::new(0x4005, "local_pref", vec![u("local_pref", 32)]),
-            TlvVariant::new(0x4006, "atomic_aggregate", Vec::new()),
-            TlvVariant::new(0xc007, "aggregator", vec![u("asn", 32), ip4("address")]),
-            TlvVariant::new(0xc008, "communities", vec![u32_list()]),
-            TlvVariant::new(
-                0x800e,
-                "mp_reach_nlri",
-                vec![
-                    u("afi", 16),
-                    u("safi", 8),
-                    u("next_hop_length", 8),
-                    FieldDef::new(
-                        "next_hop",
-                        FieldType::Bytes {
-                            len: Length::FromField {
-                                field: "next_hop_length".into(),
-                                unit: 1,
-                                adjust: 0,
-                                div: 1,
-                            },
-                        },
-                    ),
-                    u("reserved", 8),
-                    rest("nlri"),
-                ],
-            ),
-            TlvVariant::new(
-                0x800f,
-                "mp_unreach_nlri",
-                vec![u("afi", 16), u("safi", 8), rest("withdrawn")],
-            ),
-            TlvVariant::new(
-                0xc010,
-                "extended_communities",
-                vec![FieldDef::new(
-                    "values",
-                    list_to_end(ItemDef::Field {
-                        ty: Box::new(FieldType::UInt { bits: 64 }),
-                    }),
-                )],
-            ),
-            TlvVariant::new(
-                0xc020,
-                "large_communities",
-                vec![FieldDef::new(
-                    "values",
-                    list_to_end(ItemDef::Struct {
-                        fields: vec![
-                            u("global_admin", 32),
-                            u("local_data1", 32),
-                            u("local_data2", 32),
-                        ],
-                    }),
-                )],
-            ),
-        ],
+        variants,
         unknown_as_raw: true,
         length: Length::FromField {
             field: "total_path_attribute_length".into(),
@@ -1046,12 +1036,16 @@ pub fn bgp_path_attributes() -> FieldType {
         head_octets: 0,
         align: 0,
         unpadded_last: false,
+        long_length: Some(TlvLongLength {
+            flag: 0x1000,
+            len_bits: 16,
+        }),
     })
 }
 
-/// BGP UPDATE (type 2): withdrawn routes, path attributes and NLRI. Both length
-/// fields are Manual (see the module docs). Default: ORIGIN IGP, `AS_PATH`
-/// `AS_SEQUENCE` 65001, `NEXT_HOP` 192.0.2.1 announcing 198.51.100.0/24.
+/// BGP UPDATE (type 2): withdrawn routes, path attributes and NLRI (prefix lists,
+/// see [`crate::bgp_mp`]). Both length fields are Auto. Default: ORIGIN IGP,
+/// `AS_PATH` `AS_SEQUENCE` 65001, `NEXT_HOP` 192.0.2.1 announcing 198.51.100.0/24.
 #[must_use]
 pub fn bgp_update() -> ProtocolDef {
     let segment = st(&[
@@ -1069,11 +1063,16 @@ pub fn bgp_update() -> ProtocolDef {
         name: "BGP UPDATE",
         layer: L7,
         fields: {
-            withdrawn_routes_length: uint(16) = 0, desc = "bgp-withdrawn-routes-length";
-            withdrawn_routes: bytes(from = withdrawn_routes_length) = [], desc = "bgp-withdrawn-routes";
-            total_path_attribute_length: uint(16) = 20, desc = "bgp-total-path-attribute-length";
+            withdrawn_routes_length: uint(16), auto = size(withdrawn_routes), desc = "bgp-withdrawn-routes-length";
+            withdrawn_routes: ty(bgp_mp::prefix_list(Length::FromField {
+                field: "withdrawn_routes_length".into(),
+                unit: 1,
+                adjust: 0,
+                div: 1,
+            })) = bgp_mp::prefixes(&[]), desc = "bgp-withdrawn-routes";
+            total_path_attribute_length: uint(16), auto = size(path_attributes), desc = "bgp-total-path-attribute-length";
             path_attributes: ty(bgp_path_attributes()) = attrs, desc = "bgp-path-attributes";
-            nlri: bytes(to_end) = [24, 198, 51, 100], desc = "bgp-nlri";
+            nlri: ty(bgp_mp::prefix_list(Length::ToEnd)) = bgp_mp::prefixes(&[(24, &[198, 51, 100])]), desc = "bgp-nlri";
         },
     }
 }
@@ -1289,6 +1288,7 @@ pub fn eigrp_tlvs() -> FieldType {
         head_octets: 0,
         align: 0,
         unpadded_last: false,
+        long_length: None,
     })
 }
 

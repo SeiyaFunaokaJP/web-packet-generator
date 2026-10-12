@@ -1,0 +1,50 @@
+# BGP/MPLS IP VPN (RFC 4364): an UPDATE announcing a VPN-IPv4 route with a label and a route target
+schema: 1
+
+meta:
+  name: bgp-update-vpnv4
+  descriptions:
+    ja: "BGP/MPLS IP VPN (RFC 4364): RD 65001:100、ラベル 16、ルートターゲット 65001:100 付きで 198.51.100.0/24 を広告する VPN-IPv4 の UPDATE (iBGP)"
+    en: "BGP/MPLS IP VPN (RFC 4364): an iBGP UPDATE announcing the VPN-IPv4 route 65001:100:198.51.100.0/24 with label 16 and route target 65001:100"
+  tags: ["protocol:bgp", "protocol:bgp_update", "layer:l4", routing, mpls, vpn, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      dscp: 48
+      flags: df
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 179
+      seq: 1001
+      ack: 5001
+      flags: psh|ack
+  - protocol: bgp
+  - protocol: bgp_update
+    fields:
+      path_attributes:
+        - { origin: 0 }
+        - { as_path: { segments: [] } } # iBGP
+        - { local_pref: 100 }
+        - extended_communities:
+            - 0x0002fde900000064 # route target 65001:100 (type 0x00, subtype 0x02)
+        - mp_reach_vpnv4:
+            # afi 1 / safi 128: the defaults
+            next_hop:
+              - { rd: "00 00 00 00 00 00 00 00", address: 192.0.2.1 }
+            nlri:
+              # length = 24 (label) + 64 (RD) + 24 (prefix) bits
+              - { length: 112, label: 16, exp: 0, bos: 1, rd: "0000 fde9 00000064", prefix: "c6 33 64" }
+      nlri: []
+
+tx:
+  count: 1

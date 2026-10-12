@@ -36,7 +36,7 @@ pub use generator::{CompiledGenerator, Generator, GeneratorError, GeneratorState
 pub use ir::{
     raw_protocol, AutoCompute, Binding, BindingEntry, ChecksumCoverage, ChecksumKind, EnumVariant,
     FieldDef, FieldType, FlagBit, ItemDef, Length, LengthOf, LengthUnit, Peek, ProtocolDef,
-    ProtocolLayer, PseudoHeader, Resolve, Synthesizer, TlvDef, TlvFill, TlvVariant,
+    ProtocolLayer, PseudoHeader, Resolve, Synthesizer, TlvDef, TlvFill, TlvLongLength, TlvVariant,
     RAW_PROTOCOL_ID,
 };
 pub use packet::{FcsMode, FieldValue, Layer, Packet, TlvItem};

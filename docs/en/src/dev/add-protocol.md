@@ -18,6 +18,8 @@ Before falling back to an approximation (opaque octets or a Manual value), check
 | Region ending at a header length field, after variable-size fields | `Length::UntilOffset { field, unit }` | CLNP / ES-IS options up to the length indicator |
 | TLV value octets between the type and the length | `TlvDef::head_octets` | SCTP chunk flags |
 | TLV items padded to a multiple of N octets, padding outside the length | `TlvDef::align` (`unpadded_last`: the enclosing item pads the last one) | SCTP chunks, parameters and error causes |
+| TLV items of one type whose layout depends on the value | `TlvVariant::when_value_starts` / `when_value_len` (variants sharing a type; one without a discriminator is the fallback) | BGP `MP_REACH_NLRI` per AFI / SAFI, OSPF SR SIDs of 3 or 4 octets, EVPN IPv4 / IPv6 IP Prefix routes |
+| A type flag that widens the TLV length | `TlvDef::long_length` (`TlvLongLength { flag, len_bits }`, set automatically when the value is too long) | BGP Extended Length path attributes |
 | Pad to a requested PDU size with filler TLVs | `TlvDef::fill` (`TlvFill { variant, until }`) | IS-IS Hello Padding TLVs |
 | NUL-terminated string | `cstring` type | TFTP `filename` / `mode` |
 | OSI address with length indicator | `nsap` type (length octet is automatic) | CLNP / ES-IS / IS-IS NSAP / NET |

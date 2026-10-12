@@ -1,0 +1,49 @@
+# OSPFv2 SR (RFC 7684 / RFC 8665): an Extended Prefix LSA with a node Prefix SID
+schema: 1
+
+meta:
+  name: ospfv2-lsu-ext-prefix-sr
+  descriptions:
+    ja: "OSPFv2 SR (RFC 7684 / RFC 8665): ループバック 192.0.2.1/32 にノード Prefix SID (インデックス 1) を付ける Extended Prefix LSA"
+    en: "OSPFv2 SR (RFC 7684 / RFC 8665): an Extended Prefix LSA giving the loopback 192.0.2.1/32 a node Prefix SID (index 1)"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_lsu", "protocol:ospfv2_opaque_lsa", "protocol:ospfv2_ext_prefix_lsa", "layer:l3", routing, segment-routing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:05"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.5
+      ttl: 1
+      dscp: 48
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv2_lsu
+    fields:
+      num_lsas: 1
+  - protocol: ospfv2_opaque_lsa
+    fields:
+      ls_type: area_opaque
+      opaque_id: 1
+      advertising_router: 192.0.2.1
+  - protocol: ospfv2_ext_prefix_lsa
+    fields:
+      tlvs:
+        - extended_prefix:
+            route_type: intra_area
+            prefix_length: 32
+            address_family: 0 # IPv4 unicast
+            flags: n # node SID
+            prefix: 192.0.2.1
+            sub_tlvs:
+              # 4 octets: an index into the SRGB (V and L flags clear)
+              - prefix_sid: { flags: 0, mt_id: 0, algorithm: 0, index: 1 }
+
+tx:
+  count: 1

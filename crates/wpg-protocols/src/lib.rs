@@ -15,6 +15,7 @@ use wpg_core::{ProtocolDef, Resolve};
 
 pub mod app;
 pub mod arp;
+pub mod bgp_mp;
 pub mod clnp;
 pub mod encap;
 pub mod fhrp;
@@ -27,6 +28,7 @@ pub mod l3;
 pub mod l4;
 pub mod mcast;
 pub mod osi;
+pub mod ospf_opaque;
 pub mod payload;
 pub mod routing;
 pub mod sctp;
@@ -154,6 +156,11 @@ pub fn builtin() -> Vec<ProtocolDef> {
         routing::ospfv2_network_lsa(),
         routing::ospfv2_summary_lsa(),
         routing::ospfv2_external_lsa(),
+        ospf_opaque::ospfv2_opaque_lsa(),
+        ospf_opaque::ospfv2_te_lsa(),
+        ospf_opaque::ospfv2_ri_lsa(),
+        ospf_opaque::ospfv2_ext_prefix_lsa(),
+        ospf_opaque::ospfv2_ext_link_lsa(),
         routing::ospfv3(),
         routing::ospfv3_hello(),
         routing::ospfv3_dbd(),

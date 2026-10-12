@@ -271,7 +271,19 @@ impl FieldType {
                     }
                 };
                 octets(t.type_bits, "type")?;
-                octets(t.len_bits, "length")
+                octets(t.len_bits, "length")?;
+                match &t.long_length {
+                    Some(l)
+                        if l.flag == 0 || l.flag > crate::bits::mask(u32::from(t.type_bits)) =>
+                    {
+                        Err(CoreError::InvalidDefinition {
+                            protocol: field.to_owned(),
+                            reason: "tlv long length flag must be a type bit".into(),
+                        })
+                    }
+                    Some(l) => octets(l.len_bits, "long length"),
+                    None => Ok(()),
+                }
             }
             FieldType::List {
                 item: ItemDef::Field { ty },
@@ -314,6 +326,16 @@ pub struct TlvVariant {
     /// (TCP / IPv4 EOL and NOP, IPv6 Pad1).
     #[serde(default, skip_serializing_if = "is_false")]
     pub type_only: bool,
+    /// Parse only: the variant applies when the value starts with these octets
+    /// (BGP `MP_REACH_NLRI` per AFI / SAFI). Several variants may then share a
+    /// type; one without a discriminator is the fallback for that type.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub value_prefix: Vec<u8>,
+    /// Parse only: the variant applies when the value is exactly this many octets
+    /// long (EVPN IP Prefix routes for IPv4 and IPv6), see
+    /// [`TlvVariant::value_prefix`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value_len: Option<u32>,
     /// Fluent message id for the description.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description_key: Option<String>,
@@ -328,8 +350,41 @@ impl TlvVariant {
             name: name.into(),
             fields,
             type_only: false,
+            value_prefix: Vec::new(),
+            value_len: None,
             description_key: None,
         }
+    }
+
+    /// Builder: the variant applies only when the value starts with `octets` (see
+    /// [`TlvVariant::value_prefix`]).
+    #[must_use]
+    pub fn when_value_starts(mut self, octets: &[u8]) -> Self {
+        self.value_prefix = octets.to_vec();
+        self
+    }
+
+    /// Builder: the variant applies only when the value is `octets` long (see
+    /// [`TlvVariant::value_len`]).
+    #[must_use]
+    pub fn when_value_len(mut self, octets: u32) -> Self {
+        self.value_len = Some(octets);
+        self
+    }
+
+    /// Whether the variant has a value discriminator.
+    #[must_use]
+    pub fn is_discriminated(&self) -> bool {
+        !self.value_prefix.is_empty() || self.value_len.is_some()
+    }
+
+    /// Whether `value` satisfies the discriminators (always true without them).
+    #[must_use]
+    pub fn accepts(&self, value: &[u8]) -> bool {
+        value.starts_with(&self.value_prefix)
+            && self
+                .value_len
+                .is_none_or(|n| usize::try_from(n).is_ok_and(|n| n == value.len()))
     }
 
     /// A type-only variant (no length, no value).
@@ -388,6 +443,25 @@ pub struct TlvDef {
     /// Automatic padding items (IS-IS Hello padding), see [`TlvFill`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fill: Option<TlvFill>,
+    /// A type bit that widens the length field (BGP Extended Length), see
+    /// [`TlvLongLength`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub long_length: Option<TlvLongLength>,
+}
+
+/// A flag bit in the type field selecting a wider length field.
+///
+/// BGP path attributes carry their flags in the high octet of the 16-bit type;
+/// with the Extended Length flag (`0x1000`) the length is 16 bits instead of 8.
+/// Variants are matched with the flag cleared, so one variant covers both forms.
+/// The builder sets the flag when an Auto length does not fit the normal width
+/// and the item gives no explicit `type`; an explicit type decides by itself.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TlvLongLength {
+    /// The type bit(s) that select the long form.
+    pub flag: u64,
+    /// Width of the length field in the long form (8, 16, 24 or 32 bits).
+    pub len_bits: u8,
 }
 
 /// Pads a TLV region with filler items up to a requested PDU size.
@@ -407,10 +481,45 @@ pub struct TlvFill {
 }
 
 impl TlvDef {
-    /// Variant by wire type.
+    /// Whether two types name the same item type (equal once the
+    /// [`TlvDef::long_length`] flag is cleared).
+    #[must_use]
+    pub fn same_type(&self, a: u64, b: u64) -> bool {
+        let flag = self.long_length.as_ref().map_or(0, |l| l.flag);
+        a & !flag == b & !flag
+    }
+
+    /// Width in bits of the length field of an item of wire type `ty`.
+    #[must_use]
+    pub fn len_bits_for(&self, ty: u64) -> u8 {
+        match &self.long_length {
+            Some(l) if ty & l.flag != 0 => l.len_bits,
+            _ => self.len_bits,
+        }
+    }
+
+    /// Variant by wire type (the first one when several share the type, see
+    /// [`TlvVariant::value_prefix`]).
     #[must_use]
     pub fn variant_by_type(&self, ty: u64) -> Option<&TlvVariant> {
-        self.variants.iter().find(|v| v.type_value == ty)
+        self.variants
+            .iter()
+            .find(|v| self.same_type(v.type_value, ty))
+    }
+
+    /// Variant of an item by wire type and value: the first variant of that type
+    /// whose discriminators accept `value`, else the type's variant without
+    /// discriminators.
+    #[must_use]
+    pub fn variant_for(&self, ty: u64, value: &[u8]) -> Option<&TlvVariant> {
+        let mut of_type = self
+            .variants
+            .iter()
+            .filter(|v| self.same_type(v.type_value, ty));
+        of_type
+            .clone()
+            .find(|v| v.is_discriminated() && v.accepts(value))
+            .or_else(|| of_type.find(|v| !v.is_discriminated()))
     }
 
     /// Variant by name.
@@ -1015,10 +1124,12 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
         match &field.ty {
             FieldType::Tlv(t) => {
                 for (k, v) in t.variants.iter().enumerate() {
-                    if t.variants[..k]
-                        .iter()
-                        .any(|o| o.name == v.name || o.type_value == v.type_value)
-                    {
+                    let clash = |o: &TlvVariant| {
+                        t.same_type(o.type_value, v.type_value)
+                            && o.value_prefix == v.value_prefix
+                            && o.value_len == v.value_len
+                    };
+                    if t.variants[..k].iter().any(|o| o.name == v.name || clash(o)) {
                         return Err(def_err(
                             proto,
                             format!("tlv `{}`: duplicate variant `{}`", field.name, v.name),
@@ -1030,10 +1141,13 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
                             format!("tlv variant `{}` does not fit the type width", v.name),
                         ));
                     }
-                    if v.type_only && !v.fields.is_empty() {
+                    if v.type_only && (!v.fields.is_empty() || v.is_discriminated()) {
                         return Err(def_err(
                             proto,
-                            format!("type-only tlv variant `{}` cannot have fields", v.name),
+                            format!(
+                                "type-only tlv variant `{}` cannot have fields or value discriminators",
+                                v.name
+                            ),
                         ));
                     }
                     let bits = validate_fields(proto, &v.fields, false)?;

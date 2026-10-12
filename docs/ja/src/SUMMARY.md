@@ -32,6 +32,7 @@
   - [CLNP / ES-IS (P2)](protocols/clnp.md)
   - [IS-IS (P2)](protocols/isis.md)
   - [SCTP (P2)](protocols/sctp.md)
+  - [OSPF Opaque / SR、BGP MP / EVPN (P2)](protocols/routing-ext.md)
 - [テンプレートスキーマ](reference/template-schema.md)
 - [API リファレンス](reference/api.md)
 - [CLI リファレンス](reference/cli.md)

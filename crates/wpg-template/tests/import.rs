@@ -3,6 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
+use wpg_core::{FieldValue, Layer, Packet, TlvItem};
 use wpg_protocols::catalog;
 use wpg_template::render::{render_pcapng, render_with};
 use wpg_template::{
@@ -78,6 +79,89 @@ fn packet_zero_is_exact_for_every_sample() {
         assert_eq!(before[0], after[0], "{name}\n{}", t.to_yaml().unwrap());
         assert_eq!(after.len(), 5, "{name}: stream.count");
     }
+}
+
+/// Captures of the M7 routing samples import as typed layers (no raw fallback):
+/// an empty BGP `nlri` (whose default is not empty) is kept, Extended Length
+/// attributes keep their type, and the opaque LSA bodies and SIDs round-trip.
+#[test]
+fn routing_extension_samples_import_exactly() {
+    for name in [
+        "bgp-update-mp-ipv6",
+        "bgp-update-vpnv4",
+        "bgp-update-evpn",
+        "ospfv2-lsu-te-lsa",
+        "ospfv2-lsu-ri-sr",
+        "ospfv2-lsu-ext-prefix-sr",
+        "ospfv2-lsu-ext-link-sr",
+    ] {
+        let p = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../templates/protocols/routing")
+            .join(format!("{name}.wpg.yaml"));
+        let original = Template::from_path(p).unwrap();
+        let file = pcapng(&original, None);
+        let r = import_capture(&file, "x.pcapng", &ImportOptions::default(), catalog()).unwrap();
+        assert!(
+            r.notes.iter().all(|n| n.key != "import-not-reproducible"),
+            "{name}: {:?}",
+            r.notes
+        );
+        let imported = &r.templates[0];
+        let protocols: Vec<_> = imported
+            .layers
+            .iter()
+            .map(|l| l.protocol.as_str())
+            .collect();
+        let want: Vec<_> = original
+            .layers
+            .iter()
+            .map(|l| l.protocol.as_str())
+            .collect();
+        assert_eq!(protocols, want, "{name}");
+        assert_eq!(render(&original, None), render(imported, None), "{name}");
+    }
+
+    // An attribute sent in the Extended Length form keeps it.
+    let mp = TlvItem {
+        ty: Some(0x900e),
+        ..TlvItem::named("mp_reach_ipv4_unicast")
+            .with("next_hop", vec![FieldValue::Ipv4([192, 0, 2, 1].into())])
+            .with(
+                "nlri",
+                vec![FieldValue::Struct(
+                    [
+                        ("length".to_owned(), FieldValue::UInt(24)),
+                        ("prefix".to_owned(), FieldValue::Bytes(vec![198, 51, 100])),
+                    ]
+                    .into_iter()
+                    .collect(),
+                )],
+            )
+    };
+    let frame = Packet::from_layers(vec![
+        Layer::new("ethernet2"),
+        Layer::new("ipv4"),
+        Layer::new("tcp").with("dst_port", 179u16),
+        Layer::new("bgp"),
+        Layer::new("bgp_update")
+            .with("path_attributes", vec![mp])
+            .with("nlri", Vec::<FieldValue>::new()),
+    ])
+    .build(catalog())
+    .unwrap()
+    .bytes;
+    let r = import_frames(
+        std::slice::from_ref(&frame),
+        "x",
+        &ImportOptions::default(),
+        catalog(),
+    )
+    .unwrap();
+    assert!(r.notes.is_empty(), "{:?}", r.notes);
+    let yaml = r.templates[0].to_yaml().unwrap();
+    assert!(yaml.contains("name: mp_reach_ipv4_unicast"), "{yaml}");
+    assert!(yaml.contains("type: 36878"), "{yaml}"); // 0x900e
+    assert_eq!(render(&r.templates[0], None), [frame]);
 }
 
 #[test]

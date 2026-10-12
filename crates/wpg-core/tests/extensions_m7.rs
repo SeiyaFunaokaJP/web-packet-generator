@@ -4,7 +4,9 @@
 //! items up to a requested PDU size (`TlvFill`); for CLNP / ES-IS, regions that
 //! end at a header length indicator (`Length::UntilOffset`); for SCTP, TLV value
 //! octets between the type and the length (`TlvDef::head_octets`) and items padded
-//! to a multiple of 4 octets (`TlvDef::align`).
+//! to a multiple of 4 octets (`TlvDef::align`); for BGP, variants told apart by
+//! their value (`TlvVariant::value_prefix` / `value_len`) and a type flag that
+//! widens the length (`TlvDef::long_length`).
 
 use std::collections::BTreeMap;
 
@@ -12,7 +14,7 @@ use wpg_core::diag::keys;
 use wpg_core::stream::FieldRef;
 use wpg_core::{
     parse, protocol, AutoCompute, FieldDef, FieldType, FieldValue, ItemDef, Layer, Length,
-    LengthUnit, Packet, Prebuilt, ProtocolDef, TlvDef, TlvFill, TlvItem, TlvVariant,
+    LengthUnit, Packet, Prebuilt, ProtocolDef, TlvDef, TlvFill, TlvItem, TlvLongLength, TlvVariant,
 };
 
 fn uint(name: &str, bits: u8) -> FieldDef {
@@ -32,6 +34,7 @@ fn tlv(variants: Vec<TlvVariant>, length: Length) -> TlvDef {
         head_octets: 0,
         align: 0,
         unpadded_last: false,
+        long_length: None,
     }
 }
 
@@ -498,4 +501,113 @@ fn head_octets_and_aligned_items() {
     let short = &built.bytes[..11];
     let parsed = parse(short, "chunks", &defs).unwrap();
     assert_eq!(parsed.packet.build(&defs).unwrap().bytes, short);
+}
+
+/// BGP-like attributes: 16-bit type (flags << 8 | code), 8-bit length, 16-bit with
+/// the `0x1000` flag; code 14 has one variant per value prefix (AFI / SAFI) and a
+/// fallback, code 5 one variant per value length.
+fn attr_def() -> ProtocolDef {
+    let rest = || FieldDef::new("rest", FieldType::Bytes { len: Length::ToEnd });
+    let mut attrs = tlv(
+        vec![
+            TlvVariant::new(
+                0x800e,
+                "mp_a",
+                vec![uint("afi", 16), uint("safi", 8), rest()],
+            )
+            .when_value_starts(&[0, 1, 1]),
+            TlvVariant::new(
+                0x800e,
+                "mp_b",
+                vec![uint("afi", 16), uint("safi", 8), rest()],
+            )
+            .when_value_starts(&[0, 2, 1]),
+            TlvVariant::new(
+                0x800e,
+                "mp",
+                vec![FieldDef::new(
+                    "data",
+                    FieldType::Bytes { len: Length::ToEnd },
+                )],
+            ),
+            TlvVariant::new(5, "short", vec![uint("v", 16)]).when_value_len(2),
+            TlvVariant::new(5, "long", vec![uint("v", 32)]).when_value_len(4),
+        ],
+        Length::ToEnd,
+    );
+    attrs.type_bits = 16;
+    attrs.long_length = Some(TlvLongLength {
+        flag: 0x1000,
+        len_bits: 16,
+    });
+    let mut d = ProtocolDef::new("attrs", "Attrs", wpg_core::ProtocolLayer::L7);
+    d.fields = vec![FieldDef::new("attrs", FieldType::Tlv(attrs))];
+    d
+}
+
+#[test]
+fn variants_told_apart_by_value_and_long_lengths() {
+    let defs = vec![attr_def()];
+    defs[0].validate().unwrap();
+    let p = Packet::from_layers(vec![Layer::new("attrs").with(
+        "attrs",
+        vec![
+            TlvItem::named("mp_b")
+                .with("afi", 2u16)
+                .with("safi", 1u8)
+                .with("rest", vec![0xaa]),
+            TlvItem::named("long").with("v", 7u32),
+            TlvItem::named("short").with("v", 7u16),
+            // Too long for an 8-bit length: the Extended Length flag is set.
+            TlvItem::named("mp").with("data", vec![0x55; 300]),
+            // An explicit type keeps its form.
+            TlvItem {
+                ty: Some(0x900e),
+                ..TlvItem::named("mp_a").with("afi", 1u16).with("safi", 1u8)
+            },
+            TlvItem::named("mp").with("data", vec![0, 3, 1]),
+        ],
+    )]);
+    let built = p.build(&defs).unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    let b = &built.bytes;
+    assert_eq!(b[..7], [0x80, 0x0e, 4, 0, 2, 1, 0xaa]);
+    assert_eq!(b[7..14], [0, 5, 4, 0, 0, 0, 7]);
+    assert_eq!(b[14..19], [0, 5, 2, 0, 7]);
+    assert_eq!(b[19..23], [0x90, 0x0e, 0x01, 0x2c]);
+    assert_eq!(b[323..330], [0x90, 0x0e, 0, 3, 0, 1, 1]);
+    assert_eq!(b[330..], [0x80, 0x0e, 3, 0, 3, 1]);
+
+    let parsed = parse(b, "attrs", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["attrs"] else {
+        panic!("not decoded as items");
+    };
+    let names: Vec<_> = items.iter().map(|i| i.name.as_deref().unwrap()).collect();
+    assert_eq!(names, ["mp_b", "long", "short", "mp", "mp_a", "mp"]);
+    assert_eq!(items[3].ty, Some(0x900e));
+    assert_eq!(items[4].fields["afi"], FieldValue::UInt(1));
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, *b);
+
+    // A value length no variant accepts and no fallback: kept as data.
+    let odd = [0, 5, 3, 1, 2, 3];
+    let parsed = parse(&odd, "attrs", &defs).unwrap();
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["attrs"] else {
+        panic!("not decoded as items");
+    };
+    assert_eq!(items[0].name, None);
+    assert_eq!(items[0].data.as_deref(), Some(&[1, 2, 3][..]));
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, odd);
+}
+
+#[test]
+fn clashing_variants_are_rejected() {
+    let mut d = attr_def();
+    let FieldType::Tlv(t) = &mut d.fields[0].ty else {
+        unreachable!()
+    };
+    // Same type once the long-length flag is cleared, no discriminator.
+    t.variants
+        .push(TlvVariant::new(0x900e, "mp_again", Vec::new()));
+    assert!(d.validate().is_err());
 }

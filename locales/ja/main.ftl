@@ -858,7 +858,7 @@ ospf-lsa-headers = LSA ヘッダ (各 20 オクテット。チェックサムと
 ospf-lsr-requests = 要求する LSA (LS タイプ、リンクステート ID、広告ルータ)。
 ospf-num-lsas = アップデートに含まれる LSA の数。
 ospf-ls-age = LSA 生成からの経過秒数 (自動チェックサムを正確にするには 0 のまま)。
-ospf-ls-type = LSA タイプ (LSA 本体レイヤから自動)。
+ospf-ls-type = LSA タイプ (LSA 本体レイヤから自動。9 / 10 / 11 = Opaque LSA)。
 ospf-link-state-id = 記述対象を識別するリンクステート ID。
 ospf-advertising-router = LSA を生成したルータのルータ ID。
 ospf-ls-sequence = LSA シーケンス番号 (0x80000001 = 初期値)。
@@ -872,6 +872,10 @@ ospf-metric = 経路のコスト。
 ospf-external-e = 外部メトリックタイプ (1 = タイプ 2、0 = タイプ 1)。
 ospf-forwarding-address = 宛先へのトラフィックの転送先アドレス (0.0.0.0 = ASBR 自身)。
 ospf-external-route-tag = 外部経路に付く 32 ビットのタグ。
+ospf-opaque-ls-type = Opaque LSA のフラッディング範囲 (9 = リンクローカル、10 = エリア、11 = AS)。
+ospf-opaque-type = Opaque タイプ (1 = TE、4 = Router Information、7 = Extended Prefix、8 = Extended Link。本体レイヤから自動)。
+ospf-opaque-id = 同じ Opaque タイプの LSA を区別する Opaque ID (24 ビット)。
+ospf-opaque-tlvs = Opaque LSA の TLV (16 ビットのタイプと長さ、値は 4 オクテット境界まで詰め物。長さは自動)。
 ospfv3-checksum = IPv6 疑似ヘッダを含む OSPFv3 パケットのインターネットチェックサム (自動)。
 ospfv3-instance-id = インスタンス ID (同一リンク上の OSPFv3 インスタンスを区別)。
 ospfv3-interface-id = 送信インタフェースのインタフェース ID。
@@ -897,11 +901,11 @@ bgp-hold-time = 提案するホールドタイム (秒。0 または 3 以上)�
 bgp-identifier = 送信側の BGP 識別子 (ルータ ID)。
 bgp-opt-params-length = オプションパラメータ長 (オクテット、自動)。
 bgp-opt-params = オプションパラメータ (タイプ 2 = Capabilities)。
-bgp-withdrawn-routes-length = 撤回経路の長さ (オクテット、手動)。
-bgp-withdrawn-routes = 撤回経路 ((プレフィックス長, プレフィックス) のオクテット列)。
-bgp-total-path-attribute-length = パス属性の長さ (オクテット、手動)。
-bgp-path-attributes = パス属性 (フラグ + タイプコード、8 ビット長)。
-bgp-nlri = NLRI ((プレフィックス長, プレフィックス) のオクテット列)。
+bgp-withdrawn-routes-length = 撤回経路の長さ (オクテット、自動)。
+bgp-withdrawn-routes = 撤回する IPv4 経路 (ビット単位のプレフィックス長, プレフィックス)。
+bgp-total-path-attribute-length = パス属性の長さ (オクテット、自動)。
+bgp-path-attributes = パス属性 (フラグ + タイプコード。Extended Length フラグ付きなら長さは 16 ビットで、255 オクテットを超えると自動で付く)。
+bgp-nlri = 広告する IPv4 経路 (ビット単位のプレフィックス長, プレフィックス)。他のファミリは MP_REACH_NLRI に入れる。
 bgp-error-code = NOTIFICATION のエラーコード。
 bgp-error-subcode = NOTIFICATION のエラーサブコード。
 bgp-error-data = NOTIFICATION の診断データ。

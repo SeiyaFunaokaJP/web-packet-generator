@@ -392,7 +392,6 @@ fn decode_tlv(
 ) -> Vec<TlvItem> {
     let tb = usize::from(t.type_bits / 8);
     let head = usize::from(t.head_octets);
-    let hl = tb + head + usize::from(t.len_bits / 8);
     let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
     let align = t.align.max(1) as usize;
     // Item size with its padding (the last item may lack it).
@@ -446,6 +445,7 @@ fn decode_tlv(
             items.push(TlvItem::raw(rest));
             break;
         }
+        let hl = tb + head + usize::from(t.len_bits_for(ty) / 8);
         if rest.len() < hl {
             malformed(pos, Some(hl), &mut items);
             break;
@@ -469,6 +469,9 @@ fn decode_tlv(
         // Verified with its full padding: the last item may lack it.
         let mut bytes = rest[..total_padded].to_vec();
         bytes.resize(padded(total, usize::MAX), 0);
+        // Variants sharing a type are told apart by their value.
+        let value = [&rest[tb..tb + head], &rest[hl..total]].concat();
+        let variant = t.variant_for(ty, &value);
         items.push(decode_item(fd, t, ty, len, variant, &bytes, total, hl));
         pos += total_padded;
         if t.unpadded_last && pos == region.len() && total_padded > total {
@@ -969,6 +972,7 @@ mod tests {
             head_octets: 0,
             align: 0,
             unpadded_last: false,
+            long_length: None,
         };
         let outer = TlvDef {
             type_bits: 8,
@@ -1010,6 +1014,7 @@ mod tests {
             head_octets: 0,
             align: 0,
             unpadded_last: false,
+            long_length: None,
         };
         let mut p = ProtocolDef::new("tlvs", "TLVs", ProtocolLayer::L7);
         p.fields = vec![

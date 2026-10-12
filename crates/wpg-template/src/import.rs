@@ -519,10 +519,14 @@ fn base_template(
                 let Some(v) = layer.fields.get(&fd.name) else {
                     continue;
                 };
-                let empty = matches!(v, FieldValue::Tlv(i) if i.is_empty())
-                    || matches!(v, FieldValue::List(i) if i.is_empty());
+                let is_empty = |v: &FieldValue| {
+                    matches!(v, FieldValue::Tlv(i) if i.is_empty())
+                        || matches!(v, FieldValue::List(i) if i.is_empty())
+                };
+                // Unset = the default, when that is empty too (BGP `nlri` is not).
+                let empty = is_empty(v) && fd.default.as_ref().is_none_or(is_empty);
                 if empty || matches!(fd.ty, FieldType::Padding { .. }) {
-                    continue; // unset = empty
+                    continue;
                 }
                 let input = if autos[li].contains(&fd.name) {
                     FieldInput::Str("auto".to_owned())

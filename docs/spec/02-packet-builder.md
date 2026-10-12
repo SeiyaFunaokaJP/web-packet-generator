@@ -17,7 +17,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 | `cstring` | NUL 終端文字列 (値は終端なし、合成時に `0x00` を付加。TFTP のファイル名など) |
 | `enum` | 名前付き値 |
 | `flags(bit set)` | ビット集合 |
-| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) / 前のフィールドが示すグループ先頭からのオフセットまで (`値 × unit`、CLNP / ES-IS の長さ指示子で終わるオプション)。TLV は型と長さの間に値の先頭オクテットを置ける (`head_octets`、SCTP チャンクのフラグ) ほか、各項目を N オクテット境界までゼロ詰めできる (`align`、詰め物は長さに含めない。`unpadded_last` で最後の項目は詰めず外側に任せる: SCTP パラメータ) |
+| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) / 前のフィールドが示すグループ先頭からのオフセットまで (`値 × unit`、CLNP / ES-IS の長さ指示子で終わるオプション)。TLV は型と長さの間に値の先頭オクテットを置ける (`head_octets`、SCTP チャンクのフラグ) ほか、各項目を N オクテット境界までゼロ詰めできる (`align`、詰め物は長さに含めない。`unpadded_last` で最後の項目は詰めず外側に任せる: SCTP パラメータ)。同じタイプのバリアントを値の先頭オクテット (`value_prefix`、BGP の AFI / SAFI) や値の長さ (`value_len`、OSPF SR の 3 / 4 オクテットの SID) で選び分けられ、タイプのフラグビットで長さフィールドを広げられる (`long_length`、BGP の Extended Length。値が長すぎると合成時に自動で付く) |
 | `padding` / `raw` | 詰め物 / 生バイト |
 
 ### 自動計算フィールド (GUI で Auto / Manual トグル)
@@ -76,7 +76,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 - CLNP (ISO 8473), ES-IS (ISO 9542: ESH/ISH/RD), NSAP アドレスエディタ
 - 802.2 LLC (DSAP/SSAP 0xFE) 上の OSI カプセル化、SNAP
 - SCTP (RFC 9260: DATA/INIT/INIT-ACK/SACK/HEARTBEAT/ABORT/SHUTDOWN/ERROR/COOKIE、AUTH/I-DATA/ASCONF/RE-CONFIG/FORWARD-TSN/PAD、パラメータ・エラー原因、CRC32c)
-- OSPF 拡張 (Opaque LSA / SR)、BGP 拡張 (MP-BGP / EVPN / VPNv4 NLRI)
+- OSPF 拡張 (Opaque LSA タイプ 9/10/11: TE / Router Information / Extended Prefix / Extended Link、SR の SR-Algorithm・SID/Label Range・SRLB・Prefix-SID・Adj-SID)、BGP 拡張 (MP_REACH / MP_UNREACH の IPv4・IPv6 ユニキャスト / VPN-IPv4・VPN-IPv6 / EVPN ルートタイプ 1〜5、PMSI Tunnel、Extended Length)
 - MPLS 制御: LDP (Hello/Init/Address/Label Mapping), RSVP-TE (Path/Resv 基本)
 - BFD (制御パケット), Micro-BFD
 - Segment Routing: SRv6 (SRH), MPLS-SR ラベルスタック生成補助
