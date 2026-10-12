@@ -21,6 +21,14 @@ ARG TRUNK_VERSION=0.21.14
 # Extra cargo features of wpg-cli, e.g. "pcap".
 ARG FEATURES=""
 
+# Behind a TLS-intercepting proxy, pass its CA certificate(s) (PEM) as a build secret:
+#   docker build --secret id=ca_certs,src=/path/to/proxy-ca.pem .
+# They are trusted in this build stage only and never reach the runtime image.
+RUN --mount=type=secret,id=ca_certs \
+    if [ -s /run/secrets/ca_certs ]; then \
+        cp /run/secrets/ca_certs /usr/local/share/ca-certificates/wpg-build-ca.crt \
+        && update-ca-certificates; \
+    fi
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpcap-dev \
     && rm -rf /var/lib/apt/lists/*
