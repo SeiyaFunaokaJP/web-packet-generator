@@ -39,3 +39,11 @@ ipv4 / pim_register / ipv4 / udp / payload
 - **PIM over IPv6** はチェックサムに IPv6 疑似ヘッダが必要ですが、チェックサムの種類を下位レイヤで切り替えられないため、`pim` は IPv4 からのみ到達し、通常のインターネットチェックサムを使います。
 - PIM のエンコード済みアドレスは IPv4 (アドレスファミリ 1) のみ型付けされています。
 - IGMP / MLD はルータアラートオプションを必要とします。サンプルは `ipv4` の `options` / `ipv6_hopopts` に Router Alert を入れてあります。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`ipv6_hopopts`](../reference/protocols/ipv6_hopopts.md) · [`icmpv6`](../reference/protocols/icmpv6.md) · [`igmp`](../reference/protocols/igmp.md) · [`igmpv2`](../reference/protocols/igmpv2.md) · [`igmpv3_query`](../reference/protocols/igmpv3_query.md) · [`igmpv3_report`](../reference/protocols/igmpv3_report.md) · [`mld`](../reference/protocols/mld.md) · [`mldv2_query`](../reference/protocols/mldv2_query.md) · [`mldv2_report`](../reference/protocols/mldv2_report.md) · [`pim`](../reference/protocols/pim.md) · [`pim_hello`](../reference/protocols/pim_hello.md) · [`pim_join_prune`](../reference/protocols/pim_join_prune.md) · [`pim_register`](../reference/protocols/pim_register.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

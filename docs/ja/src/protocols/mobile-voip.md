@@ -152,3 +152,11 @@ RTCP は 1 パケット 1 レイヤなので、複合パケットは RTCP レイ
 - Diameter のベンダ固有 AVP 辞書 (3GPP の S6a / Gx / Gy など)、2 段以上のグループ化 AVP、SCTP DATA チャンクからの Diameter の demux
 - SIP の `Content-Length` の Auto、ヘッダの名前 / 値への分解、SIP over TLS (5061)、マルチパート本文
 - RTP のペイロード形式、SRTP、RTCP のフィードバック (RTPFB / PSFB) と XR の本体 (`rtcp` でオクテット列として保持)
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`udp`](../reference/protocols/udp.md) · [`ipv6`](../reference/protocols/ipv6.md) · [`macsec`](../reference/protocols/macsec.md) · [`gtpv2`](../reference/protocols/gtpv2.md) · [`diameter`](../reference/protocols/diameter.md) · [`sip`](../reference/protocols/sip.md) · [`rtp`](../reference/protocols/rtp.md) · [`rtcp`](../reference/protocols/rtcp.md) · [`rtcp_sr`](../reference/protocols/rtcp_sr.md) · [`rtcp_rr`](../reference/protocols/rtcp_rr.md) · [`rtcp_sdes`](../reference/protocols/rtcp_sdes.md) · [`rtcp_bye`](../reference/protocols/rtcp_bye.md) · [`rtcp_app`](../reference/protocols/rtcp_app.md) · [`payload`](../reference/protocols/payload.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

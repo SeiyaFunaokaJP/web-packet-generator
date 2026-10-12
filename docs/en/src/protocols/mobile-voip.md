@@ -152,3 +152,11 @@ RTCP is one layer per packet, so a compound packet is a stack of RTCP layers. Th
 - Diameter vendor-specific AVP dictionaries (3GPP S6a / Gx / Gy ...), grouped AVPs deeper than one level, demultiplexing Diameter from SCTP DATA chunks
 - SIP `Content-Length` Auto, header parsing into name / value, SIP over TLS (5061), multipart bodies
 - RTP payload formats, SRTP, RTCP feedback (RTPFB / PSFB) and XR bodies (kept as octets in `rtcp`)
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`udp`](../reference/protocols/udp.md) · [`ipv6`](../reference/protocols/ipv6.md) · [`macsec`](../reference/protocols/macsec.md) · [`gtpv2`](../reference/protocols/gtpv2.md) · [`diameter`](../reference/protocols/diameter.md) · [`sip`](../reference/protocols/sip.md) · [`rtp`](../reference/protocols/rtp.md) · [`rtcp`](../reference/protocols/rtcp.md) · [`rtcp_sr`](../reference/protocols/rtcp_sr.md) · [`rtcp_rr`](../reference/protocols/rtcp_rr.md) · [`rtcp_sdes`](../reference/protocols/rtcp_sdes.md) · [`rtcp_bye`](../reference/protocols/rtcp_bye.md) · [`rtcp_app`](../reference/protocols/rtcp_app.md) · [`payload`](../reference/protocols/payload.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

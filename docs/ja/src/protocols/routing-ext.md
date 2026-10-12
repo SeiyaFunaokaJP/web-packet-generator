@@ -106,3 +106,11 @@ TE の帯域は、オクテット / 秒を表す 32 ビット IEEE 浮動小数�
 - OSPF TE の GMPLS sub-TLV (RFC 4203) と、上に挙げた以外の RI TLV は raw 項目のままです。
 - BGP の ADD-PATH のパス識別子 (RFC 7911)、2 つ以上のラベルのスタック (RFC 8277)、BGP Prefix-SID 属性 (RFC 8669) は扱いません。そうした NLRI は汎用の `mp_reach_nlri` / `mp_unreach_nlri` 項目にオクテット列で書いてください。こうした NLRI を解析するとオクテットは同一に再構成されますが、デコードされたフィールドは実際の区切りとずれます。
 - 1 セグメント内の複数の BGP メッセージ、1 LSU 内の複数の型付き LSA は扱いません ([ルーティングプロトコル](routing.md) を参照)。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ospfv2_lsa`](../reference/protocols/ospfv2_lsa.md) · [`ospfv2_opaque_lsa`](../reference/protocols/ospfv2_opaque_lsa.md) · [`ospfv2_te_lsa`](../reference/protocols/ospfv2_te_lsa.md) · [`ospfv2_ri_lsa`](../reference/protocols/ospfv2_ri_lsa.md) · [`ospfv2_ext_prefix_lsa`](../reference/protocols/ospfv2_ext_prefix_lsa.md) · [`ospfv2_ext_link_lsa`](../reference/protocols/ospfv2_ext_link_lsa.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

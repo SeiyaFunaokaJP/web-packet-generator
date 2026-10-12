@@ -34,3 +34,11 @@ There is no dedicated IP-in-IP protocol: stack `ipv4` (or `ipv6`) on top of `ipv
 - **GTP-U** optional fields (sequence number, N-PDU number, extension headers, present per the E/S/PN flags) are not modelled.
 - **Geneve** options have a header with 3 flag bits and a 5-bit length, narrower than an octet, so they are an opaque `options` region sized by `opt_len`.
 - **L2TPv2 / v3** header fields depend heavily on the message kind (control / data) and flag bits, so the body is opaque octets.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ethernet2`](../reference/protocols/ethernet2.md) · [`ipv4`](../reference/protocols/ipv4.md) · [`ipv6`](../reference/protocols/ipv6.md) · [`vxlan`](../reference/protocols/vxlan.md) · [`gre`](../reference/protocols/gre.md) · [`nvgre`](../reference/protocols/nvgre.md) · [`mpls`](../reference/protocols/mpls.md) · [`gtpu`](../reference/protocols/gtpu.md) · [`geneve`](../reference/protocols/geneve.md) · [`l2tpv2`](../reference/protocols/l2tpv2.md) · [`l2tpv3`](../reference/protocols/l2tpv3.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

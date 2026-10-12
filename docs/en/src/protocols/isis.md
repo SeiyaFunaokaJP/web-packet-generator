@@ -86,3 +86,11 @@ Other TLVs are kept as `{ type: N, data: "..." }`.
 - TE bandwidths are the raw 32-bit IEEE floating point values. SIDs / labels and the SR capability ranges are octets (a 3-octet label or a 4-octet index).
 - The HMAC-MD5 authentication value (and the cryptographic authentication of RFC 5310) is not computed.
 - TLV 240 is modelled in its 15-octet form; the shorter forms (1 and 5 octets) read back as `data`.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`ipv6`](../reference/protocols/ipv6.md) · [`clnp`](../reference/protocols/clnp.md) · [`isis`](../reference/protocols/isis.md) · [`isis_l1_lan_hello`](../reference/protocols/isis_l1_lan_hello.md) · [`isis_l2_lan_hello`](../reference/protocols/isis_l2_lan_hello.md) · [`isis_p2p_hello`](../reference/protocols/isis_p2p_hello.md) · [`isis_l1_lsp`](../reference/protocols/isis_l1_lsp.md) · [`isis_l2_lsp`](../reference/protocols/isis_l2_lsp.md) · [`isis_l1_csnp`](../reference/protocols/isis_l1_csnp.md) · [`isis_l2_csnp`](../reference/protocols/isis_l2_csnp.md) · [`isis_l1_psnp`](../reference/protocols/isis_l1_psnp.md) · [`isis_l2_psnp`](../reference/protocols/isis_l2_psnp.md)
+<!-- wpg-docs-gen:end reference-links -->

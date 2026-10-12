@@ -26,3 +26,11 @@ When building, stack `osi` or a dedicated PDU (`clnp`, `esis_ish`, `isis_l1_lan_
 
 - The `osi` NLPID is not Auto.
 - A PDU with NLPID `0x81` / `0x82` / `0x83` always decodes as CLNP / ES-IS / IS-IS (when long enough), so a generic `osi` layer carrying one of them reads back as the dedicated protocol.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`llc`](../reference/protocols/llc.md) · [`ppp`](../reference/protocols/ppp.md) · [`osi`](../reference/protocols/osi.md) · [`clnp`](../reference/protocols/clnp.md) · [`esis_ish`](../reference/protocols/esis_ish.md) · [`isis_l1_lan_hello`](../reference/protocols/isis_l1_lan_hello.md)
+<!-- wpg-docs-gen:end reference-links -->

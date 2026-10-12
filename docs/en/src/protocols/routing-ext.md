@@ -106,3 +106,11 @@ Received attributes keep their form: a parsed Extended Length attribute is expor
 - The OSPF TE GMPLS sub-TLVs (RFC 4203) and the RI TLVs other than those listed stay raw items.
 - BGP ADD-PATH path identifiers (RFC 7911), label stacks of more than one label (RFC 8277) and the BGP Prefix-SID attribute (RFC 8669) are not modelled. Write such NLRI as octets with the generic `mp_reach_nlri` / `mp_unreach_nlri` items; when parsing such NLRI, the octets still rebuild identically but the decoded fields do not line up with them.
 - Several BGP messages in one segment, and several typed LSAs in one LSU, are not supported (see the [routing protocols](routing.md) page).
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ospfv2_lsa`](../reference/protocols/ospfv2_lsa.md) · [`ospfv2_opaque_lsa`](../reference/protocols/ospfv2_opaque_lsa.md) · [`ospfv2_te_lsa`](../reference/protocols/ospfv2_te_lsa.md) · [`ospfv2_ri_lsa`](../reference/protocols/ospfv2_ri_lsa.md) · [`ospfv2_ext_prefix_lsa`](../reference/protocols/ospfv2_ext_prefix_lsa.md) · [`ospfv2_ext_link_lsa`](../reference/protocols/ospfv2_ext_link_lsa.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

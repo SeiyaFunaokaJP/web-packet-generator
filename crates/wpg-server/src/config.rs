@@ -24,6 +24,7 @@ use std::path::{Path, PathBuf};
 
 use figment::providers::{Env, Format, Serialized, Toml};
 use figment::Figment;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -46,7 +47,7 @@ pub const REDACTED: &str = "<redacted>";
 const ENV_SECTIONS: &[&str] = &["server", "auth", "templates", "data_dir", "tx", "log"];
 
 /// The whole configuration (`wpg.toml`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
     /// Directory for server state: user templates, favourites, the `SQLite`
@@ -68,7 +69,7 @@ pub struct Config {
 }
 
 /// `[server]`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct ServerConfig {
     /// Listen address. Without a password (and no user created on the setup
@@ -85,7 +86,7 @@ pub struct ServerConfig {
 }
 
 /// `[server.tls]`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TlsConfig {
     /// PEM certificate chain.
@@ -95,7 +96,7 @@ pub struct TlsConfig {
 }
 
 /// `[auth]`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthConfig {
     /// argon2id PHC string of the admin password (`$argon2id$v=19$...`);
@@ -137,7 +138,7 @@ impl std::fmt::Debug for Secret {
 }
 
 /// `[templates]`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct TemplatesConfig {
     /// Read-only template libraries (e.g. Git checkouts), scanned recursively for
@@ -149,7 +150,7 @@ pub struct TemplatesConfig {
 }
 
 /// `[tx]`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct TxConfig {
     /// Interfaces jobs may transmit on; empty = all (TODO §2.6 "送出先インタフェース
@@ -563,6 +564,28 @@ impl Config {
     #[must_use]
     pub fn example_toml() -> &'static str {
         EXAMPLE_TOML
+    }
+
+    /// JSON Schema of `wpg.toml` (keys, types and doc comments), used to generate
+    /// the configuration reference. Defaults are left out: `data_dir` depends on
+    /// the machine; take them from [`Config::default`] instead.
+    #[must_use]
+    pub fn json_schema() -> serde_json::Value {
+        let mut value =
+            serde_json::to_value(schemars::schema_for!(Config)).unwrap_or(serde_json::Value::Null);
+        strip_defaults(&mut value);
+        value
+    }
+}
+
+fn strip_defaults(v: &mut serde_json::Value) {
+    match v {
+        serde_json::Value::Object(m) => {
+            m.remove("default");
+            m.values_mut().for_each(strip_defaults);
+        }
+        serde_json::Value::Array(a) => a.iter_mut().for_each(strip_defaults),
+        _ => {}
     }
 }
 

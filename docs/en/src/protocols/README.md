@@ -2,7 +2,7 @@
 
 Status: draft
 
-The [protocol reference](../reference/protocols.md) is the field listing that will be generated from the protocol definition IR (M11). This chapter is the hand-written supplement to it for the P1 protocols (M6). For each group it covers:
+The [protocol reference](../reference/protocols.md) is the field listing generated from the protocol definition IR, one page per protocol. This chapter is the hand-written supplement to it for the P1 and P2 protocols (M6, M7); each page ends with links to the generated pages of the protocols it covers. For each group it covers:
 
 - how a protocol is reached from the layer below (demultiplexing on decode)
 - which fields are Auto and which you must set by hand (Manual)

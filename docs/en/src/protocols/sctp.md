@@ -90,3 +90,11 @@ Parameters (INIT, INIT ACK, HEARTBEAT, ASCONF, RE-CONFIG) and error causes (ABOR
 - A received chunk whose length also counts the padding of its last parameter (some implementations do) decodes the same, with an empty item after that parameter that keeps the padding where it was.
 - No association state: TSNs, stream sequence numbers and tags are values (use generators to vary them).
 - Unknown chunk types decode with their flags as the first `data` octet; the "action" bits of the type are not interpreted.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`sctp`](../reference/protocols/sctp.md)
+<!-- wpg-docs-gen:end reference-links -->

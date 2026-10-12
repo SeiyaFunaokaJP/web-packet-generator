@@ -5,6 +5,7 @@ use wpg_i18n::{negotiate, Locale};
 pub(crate) mod bench;
 pub(crate) mod capture;
 pub(crate) mod config;
+pub(crate) mod docs;
 pub(crate) mod doctor;
 pub(crate) mod ifaces;
 pub(crate) mod import;

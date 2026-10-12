@@ -45,6 +45,31 @@ enum Command {
     Capture(cmd::capture::CaptureArgs),
     /// Configuration file tools (init, show, validate).
     Config(ConfigArgs),
+    /// Documentation tools for contributors (generate the reference pages).
+    #[command(hide = true)]
+    Docs(DocsArgs),
+}
+
+/// Arguments of `wpg docs`.
+#[derive(Debug, Args)]
+pub(crate) struct DocsArgs {
+    #[command(subcommand)]
+    pub(crate) action: DocsAction,
+}
+
+/// Actions of `wpg docs`.
+#[derive(Debug, Subcommand)]
+pub(crate) enum DocsAction {
+    /// Regenerate the reference chapters of `docs/{ja,en}` (protocols, CLI, API,
+    /// configuration, template schema) from the code.
+    Gen {
+        /// Repository root (the directory holding `docs/` and `templates/`).
+        #[arg(long, default_value = ".", value_name = "DIR")]
+        root: PathBuf,
+        /// Only check: list stale files and exit with status 1 if there are any.
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 /// Arguments of `wpg serve`.
@@ -364,6 +389,7 @@ impl Command {
             Command::Bench(_) => "bench",
             Command::Capture(_) => "capture",
             Command::Config(_) => "config",
+            Command::Docs(_) => "docs",
         }
     }
 }
@@ -381,6 +407,7 @@ fn main() -> ExitCode {
         Command::Bench(args) => cmd::bench::run(args),
         Command::Capture(args) => cmd::capture::run(args),
         Command::Config(args) => cmd::config::run(args),
+        Command::Docs(args) => cmd::docs::run(&args),
     }
 }
 
@@ -466,6 +493,7 @@ mod tests {
             &["wpg", "config", "init", "--path", "w.toml", "--force"],
             &["wpg", "config", "show", "--config", "w.toml"],
             &["wpg", "config", "validate"],
+            &["wpg", "docs", "gen", "--root", "..", "--check"],
             &["wpg", "bench", "--backend", "null"],
             &[
                 "wpg",

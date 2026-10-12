@@ -69,3 +69,11 @@ SR-MPLS SIDs are ordinary MPLS labels, so a stack is built from `mpls` layers.
 - No HMAC computation and no simulation of SRv6 behaviors (End / End.X / End.DT4 ...): a SID's behavior is only its address value.
 - No dedicated representation of compressed SIDs (uSID / CSID, RFC 9800); write them as 128-bit addresses.
 - SRGB / SRLB ranges are not checked.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ethernet2`](../reference/protocols/ethernet2.md) · [`ipv6_route`](../reference/protocols/ipv6_route.md) · [`ipv6_srh`](../reference/protocols/ipv6_srh.md) · [`mpls`](../reference/protocols/mpls.md)
+<!-- wpg-docs-gen:end reference-links -->

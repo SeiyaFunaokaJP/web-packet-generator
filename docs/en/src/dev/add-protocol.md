@@ -10,7 +10,8 @@ Core protocols are defined with a Rust macro (`crates/wpg-protocols/src/`) and c
 4. **Regenerate the golden files.** Rebuild `tests/golden/*.hex` / `*.pcap` with `just golden-update` and review the diff. Never edit the `.hex` / `.pcap` by hand.
 5. **Cross-check.** If tshark is available, compare against Wireshark with `WPG_TSHARK=1 cargo test -p wpg-golden-tests -- --ignored`.
 6. **Update the notes.** When approximations remain or the encapsulation is unusual, add matching ja / en notes under `docs/{ja,en}/src/protocols/`.
-7. **Pass the pre-push checks** (CLAUDE.md).
+7. **Regenerate the reference.** Rebuild the [protocol reference](../reference/protocols.md) and the other generated pages with `just docs-gen` and commit them (see "Reference docs" below).
+8. **Pass the pre-push checks** (CLAUDE.md).
 
 ```sh
 cargo fmt --all -- --check
@@ -50,3 +51,7 @@ Before falling back to an approximation (opaque octets or a Manual value), check
 | Same number, different layout | `BindingEntry::reparsing` | VRRPv2/v3, HSRPv1/v2, TFTP |
 
 The evaluation order is described under "次プロトコルの選択 (demux)" in the specification, `docs/spec/02-packet-builder.md`.
+
+## Reference docs
+
+The [protocol reference](../reference/protocols.md) is generated from the definitions: run `just docs-gen` (`cargo run -p wpg-cli -- docs gen`) and commit the result. New protocols, fields, bindings and sample templates are picked up automatically; the field descriptions come from the `desc = "..."` Fluent keys (ja / en). Hand-written notes go in `docs/{ja,en}/src/protocols/`: mention the protocol ids in backticks (`` `isis_l1_lsp` ``) and the generator links them both ways. The test `generated_docs_are_up_to_date` (wpg-cli) fails while the committed pages are stale.

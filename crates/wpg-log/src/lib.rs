@@ -15,6 +15,7 @@ use std::fmt;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::broadcast;
@@ -28,7 +29,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer};
 
 /// Console / file line format.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum LogFormat {
     /// Human readable, one line per event.
@@ -39,7 +40,7 @@ pub enum LogFormat {
 }
 
 /// How often the log file is rotated.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Rotation {
     /// A single file, never rotated.
@@ -62,7 +63,7 @@ impl From<Rotation> for AppenderRotation {
 }
 
 /// Logging configuration (the `log` section of the server config file).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct LogConfig {
     /// `EnvFilter` directives, e.g. `info` or `wpg_tx=debug,info`.

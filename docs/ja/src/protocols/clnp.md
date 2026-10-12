@@ -68,3 +68,11 @@ CLNP のセグメンテーション部は `{data_unit_identifier, segment_offset
 - セグメンテーション部の `total_length` は計算せず、大きな PDU を複数フレームに分割 / 再構成する機能もありません。
 - セキュリティ / QoS 維持の値はオクテット列で、グローバル一意 / 送信元アドレス固有などの形式は分解しません。
 - リダイレクトのサブネットワークアドレス (`bsnpa`) はオクテット列です (MAC アドレスは 6 オクテット: `"02 00 00 00 00 02"`)。`net` を空 (`""`) にするとエンドシステムへのリダイレクトになります。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`osi`](../reference/protocols/osi.md) · [`clnp`](../reference/protocols/clnp.md) · [`esis`](../reference/protocols/esis.md) · [`esis_esh`](../reference/protocols/esis_esh.md) · [`esis_ish`](../reference/protocols/esis_ish.md) · [`esis_rd`](../reference/protocols/esis_rd.md) · [`payload`](../reference/protocols/payload.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

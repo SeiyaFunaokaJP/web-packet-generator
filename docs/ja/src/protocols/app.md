@@ -39,3 +39,11 @@ DHCPv4 / DHCPv6 / DNS / NTP / SNMP / Syslog / RADIUS / TFTP の補足です。�
 - **TFTP**: RRQ / WRQ のファイル名・モード・オプションと、エラーメッセージは NUL 終端文字列として型付けされています。DATA / ACK / ERROR / OACK は opcode による読み直しで `tftp_data` などに分かれます。転送本体は両端とも一時ポート (TID) 同士で行われるため、ポート 69 以外のパケットは UDP の後ろが `raw` としてデコードされます。
 - **NTP** の制御メッセージ (mode 6) とプライベートメッセージ (mode 7) は別レイアウトのため対象外です。拡張フィールドと MAC は不透明な `extensions` です。
 - **Syslog** は自由テキストで、1 つの不透明な `message` です。RFC 5424 / RFC 3164 いずれの形式でも、文字列をそのまま与えてください。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`dhcpv4`](../reference/protocols/dhcpv4.md) · [`dhcpv6`](../reference/protocols/dhcpv6.md) · [`dhcpv6_relay`](../reference/protocols/dhcpv6_relay.md) · [`dns`](../reference/protocols/dns.md) · [`ntp`](../reference/protocols/ntp.md) · [`snmp`](../reference/protocols/snmp.md) · [`snmp_pdu`](../reference/protocols/snmp_pdu.md) · [`snmp_trap`](../reference/protocols/snmp_trap.md) · [`syslog`](../reference/protocols/syslog.md) · [`radius`](../reference/protocols/radius.md) · [`tftp`](../reference/protocols/tftp.md) · [`tftp_data`](../reference/protocols/tftp_data.md) · [`tftp_ack`](../reference/protocols/tftp_ack.md) · [`tftp_error`](../reference/protocols/tftp_error.md) · [`tftp_oack`](../reference/protocols/tftp_oack.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

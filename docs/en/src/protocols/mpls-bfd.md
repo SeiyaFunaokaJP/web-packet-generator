@@ -129,3 +129,11 @@ The `bfd` layer is the mandatory section and the optional authentication section
 - One LDP layer is one PDU; further PDUs in the same segment decode as `raw`.
 - RSVP does not type the GMPLS objects (RFC 3473), ADSPEC or POLICY_DATA; RSVP over UDP (RFC 2205 appendix C) is out of scope.
 - Only the first IntServ parameter (the token bucket) is typed; later ones (the guaranteed service rate / slack term, ...) are `parameters` octets.
+
+<!-- wpg-docs-gen:begin reference-links -->
+## Generated reference
+
+Field reference of the protocols on this page (generated from the definitions):
+
+[`ipv4`](../reference/protocols/ipv4.md) · [`ldp`](../reference/protocols/ldp.md) · [`rsvp`](../reference/protocols/rsvp.md) · [`bfd`](../reference/protocols/bfd.md) · [`raw`](../reference/protocols/raw.md)
+<!-- wpg-docs-gen:end reference-links -->

@@ -1,0 +1,3689 @@
+{
+  "components": {
+    "schemas": {
+      "AuthStatus": {
+        "description": "`GET /api/auth/status`.",
+        "properties": {
+          "authenticated": {
+            "description": "The request carries a valid session.",
+            "type": "boolean"
+          },
+          "configured": {
+            "description": "A password exists (configured or set on the setup screen).",
+            "type": "boolean"
+          },
+          "csrf_token": {
+            "description": "CSRF token to send as `X-CSRF-Token` on POST / PUT / DELETE (also in the\n`wpg_csrf` cookie); `null` when not logged in.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "setup_required": {
+            "description": "No password yet: show the setup screen (`POST /api/auth/setup`).",
+            "type": "boolean"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserInfo",
+                "description": "The logged-in user."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "configured",
+          "authenticated",
+          "setup_required"
+        ],
+        "type": "object"
+      },
+      "BackendItem": {
+        "description": "One transmit backend.",
+        "properties": {
+          "available": {
+            "description": "Compiled in and supported on this OS (privileges not checked).",
+            "type": "boolean"
+          },
+          "multi_worker": {
+            "description": "Several TX workers per job.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Name (`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`).",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why it is unavailable / requirements.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "available",
+          "multi_worker"
+        ],
+        "type": "object"
+      },
+      "Backends": {
+        "description": "`GET /api/system/backends` response body.",
+        "properties": {
+          "backends": {
+            "description": "All backends.",
+            "items": {
+              "$ref": "#/components/schemas/BackendItem"
+            },
+            "type": "array"
+          },
+          "default": {
+            "description": "Backend used when a job names none.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "default",
+          "backends"
+        ],
+        "type": "object"
+      },
+      "CaptureInfo": {
+        "description": "A capture as returned by the API.",
+        "properties": {
+          "backend": {
+            "description": "Resolved backend.",
+            "type": "string"
+          },
+          "filter": {
+            "description": "Normalised filter text (empty = every frame).",
+            "type": "string"
+          },
+          "finished": {
+            "description": "End time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Capture id.",
+            "type": "string"
+          },
+          "iface": {
+            "description": "Resolved interface (input path for `pcapfile`).",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name (`spec.name`, else `<backend>:<iface>`).",
+            "type": "string"
+          },
+          "saved": {
+            "description": "Whether a pcapng file was written (download with\n`GET /api/captures/{id}/pcapng`).",
+            "type": "boolean"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/CaptureSpec",
+            "description": "The request."
+          },
+          "started": {
+            "description": "Start time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stats": {
+            "description": "Latest statistics (`wpg_rx::RxSnapshot`).",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "`{ \"state\": \"running\" }`, `{ \"state\": \"finished\", \"detail\":\n\"count_reached\" | \"duration_elapsed\" | \"end_of_input\" | \"stopped\" }`,\n`{ \"state\": \"failed\", \"detail\": \"<error>\" }`.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "spec",
+          "status",
+          "backend",
+          "iface",
+          "filter",
+          "started",
+          "saved"
+        ],
+        "type": "object"
+      },
+      "CaptureSpec": {
+        "description": "What to capture (all fields are optional).",
+        "properties": {
+          "backend": {
+            "default": null,
+            "description": "Backend: `afpacket`, `pcap`, `pcapfile`, `null` (default: `afpacket` on\nLinux, else `pcap`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "count": {
+            "default": null,
+            "description": "Stop after this many matching frames.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "duration": {
+            "default": null,
+            "description": "Stop after this long, e.g. `10s`, `2m`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "filter": {
+            "default": null,
+            "description": "tcpdump-style filter (`udp port 5001 and wpg`); empty = every frame.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "iface": {
+            "default": null,
+            "description": "Interface (`any` = every interface with `afpacket`); for `pcapfile` the\nname of a capture file under `<data_dir>/captures` (e.g. a dry-run output).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "include_outgoing": {
+            "default": false,
+            "description": "Also count frames this host transmits.",
+            "type": "boolean"
+          },
+          "keep": {
+            "default": 100,
+            "description": "Matching frames kept for display (default 100, at most 10000).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "default": null,
+            "description": "Display name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "promisc": {
+            "default": false,
+            "description": "Promiscuous mode.",
+            "type": "boolean"
+          },
+          "save": {
+            "default": null,
+            "description": "Save the matching frames as a pcapng file of this name under\n`<data_dir>/captures`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verify": {
+            "default": false,
+            "description": "Check the signatures of matching frames (loss / order / latency).",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "CapturedFrame": {
+        "description": "One kept frame.",
+        "properties": {
+          "hex": {
+            "description": "Captured octets as lower-case hex (decode with `POST /api/parse`).",
+            "type": "string"
+          },
+          "index": {
+            "description": "Position among the matching frames (0-based).",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "len": {
+            "description": "Original length.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "signature": {
+            "description": "The frame's signature (`stream_id`, `seq`, `ts_ns`), if any.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "ts_ns": {
+            "description": "Capture time, nanoseconds since the Unix epoch.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index",
+          "ts_ns",
+          "len",
+          "hex"
+        ],
+        "type": "object"
+      },
+      "ClientMessage": {
+        "description": "Client → server message.",
+        "oneOf": [
+          {
+            "description": "Selects the jobs whose `stats` / `job_state` events are sent.",
+            "properties": {
+              "jobs": {
+                "description": "`\"all\"` or a list of job ids.",
+                "type": "object"
+              },
+              "logs": {
+                "description": "Receive `log` events (default true).",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "subscribe"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "CreateJob": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/JobSpec",
+            "description": "The job."
+          },
+          {
+            "properties": {
+              "start": {
+                "description": "Start immediately (default `true`); `false` leaves it in state `created`.",
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          }
+        ],
+        "description": "`POST /api/jobs` body: a [`JobSpec`] plus `start`."
+      },
+      "EndReason": {
+        "description": "Why a job ended normally (mirrors `wpg_tx::job::FinishReason`).",
+        "enum": [
+          "count_reached",
+          "duration_elapsed",
+          "source_exhausted",
+          "stopped"
+        ],
+        "type": "string"
+      },
+      "ErrorBody": {
+        "description": "`{ \"error\": ... }` body (OpenAPI schema of every error response).",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorInfo",
+            "description": "The error."
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "ErrorInfo": {
+        "description": "Error object.",
+        "properties": {
+          "code": {
+            "description": "Stable machine code: `not_found`, `bad_request`, `invalid_template`,\n`policy_violation`, `read_only`, `invalid_state`, `backend_error`,\n`unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`,\n`forbidden`, `already_configured`, `internal`.",
+            "type": "string"
+          },
+          "details": {
+            "description": "Extra data, e.g. the lint issues of an invalid template."
+          },
+          "message": {
+            "description": "Human readable message in the language of `Accept-Language`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "Favorite": {
+        "description": "Body of `POST /api/templates/{id}/favorite` (empty body = toggle).",
+        "properties": {
+          "favorite": {
+            "description": "New value.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "favorite"
+        ],
+        "type": "object"
+      },
+      "FavoriteState": {
+        "description": "`POST /api/templates/{id}/favorite` response.",
+        "properties": {
+          "favorite": {
+            "description": "Current value.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Template id.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "favorite"
+        ],
+        "type": "object"
+      },
+      "FilterCheck": {
+        "description": "`POST /api/captures/filter` request.",
+        "properties": {
+          "filter": {
+            "description": "Filter text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filter"
+        ],
+        "type": "object"
+      },
+      "FilterCheckResult": {
+        "description": "`POST /api/captures/filter` response.",
+        "properties": {
+          "error": {
+            "description": "What is wrong (when invalid).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "normalized": {
+            "description": "Normalised filter text (when valid).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ok": {
+            "description": "The filter is valid.",
+            "type": "boolean"
+          },
+          "pos": {
+            "description": "Byte offset of the error (when invalid).",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "Health": {
+        "description": "`GET /api/health` response body.",
+        "properties": {
+          "locale": {
+            "description": "Negotiated locale.",
+            "type": "string"
+          },
+          "message": {
+            "description": "Localised human-readable status.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Always `\"ok\"` when the server answers.",
+            "type": "string"
+          },
+          "uptime_secs": {
+            "description": "Seconds since the server started.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "version": {
+            "description": "Server version.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "locale",
+          "message",
+          "uptime_secs"
+        ],
+        "type": "object"
+      },
+      "IfaceBrief": {
+        "description": "An interface on the dashboard.",
+        "properties": {
+          "allowed": {
+            "description": "Allowed by the transmit policy.",
+            "type": "boolean"
+          },
+          "loopback": {
+            "description": "Loopback.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "running": {
+            "description": "Carrier / running.",
+            "type": "boolean"
+          },
+          "speed_mbps": {
+            "description": "Link speed.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "up": {
+            "description": "Administratively up.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "up",
+          "running",
+          "loopback",
+          "allowed"
+        ],
+        "type": "object"
+      },
+      "JobBrief": {
+        "description": "A running job on the dashboard.",
+        "properties": {
+          "backend": {
+            "description": "Backend.",
+            "type": "string"
+          },
+          "bps": {
+            "description": "L2 bits per second.",
+            "format": "double",
+            "type": "number"
+          },
+          "id": {
+            "description": "Job id.",
+            "type": "string"
+          },
+          "iface": {
+            "description": "Interface.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "packets": {
+            "description": "Packets sent.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pps": {
+            "description": "Packets per second.",
+            "format": "double",
+            "type": "number"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus",
+            "description": "State."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "backend",
+          "iface",
+          "packets",
+          "pps",
+          "bps"
+        ],
+        "type": "object"
+      },
+      "JobInfo": {
+        "description": "A job as returned by the API (also the persisted history record).",
+        "properties": {
+          "backend": {
+            "description": "Resolved backend.",
+            "type": "string"
+          },
+          "created": {
+            "description": "Creation time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "finished": {
+            "description": "End time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Job id.",
+            "type": "string"
+          },
+          "iface": {
+            "description": "Resolved interface (output path for `pcapfile`).",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name (`spec.name`, else the first template's name).",
+            "type": "string"
+          },
+          "plans": {
+            "description": "Expansion plan of each stream.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "rate": {
+            "description": "Resolved rate.",
+            "type": "string"
+          },
+          "report": {
+            "description": "Final report (after the job ended).",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "spec": {
+            "$ref": "#/components/schemas/JobSpec",
+            "description": "The request."
+          },
+          "started": {
+            "description": "Start time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "stats": {
+            "description": "Latest statistics.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus",
+            "description": "Current state."
+          },
+          "workers": {
+            "description": "TX workers.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "spec",
+          "status",
+          "backend",
+          "iface",
+          "rate",
+          "workers",
+          "plans",
+          "created"
+        ],
+        "type": "object"
+      },
+      "JobSpec": {
+        "description": "What to send, where and how (all fields but `streams` are optional).",
+        "properties": {
+          "backend": {
+            "default": null,
+            "description": "Backend: `null`, `pcapfile`, `afpacket`, `pcap`, ... (default: `tx.default_backend`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "batch": {
+            "default": null,
+            "description": "Frames per `send_batch` call.",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "burst": {
+            "default": null,
+            "description": "Frames per rate-control grant.",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "count": {
+            "default": null,
+            "description": "Total packets (default: the template's `tx.count` for a single stream).",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "dry_run": {
+            "default": null,
+            "description": "Dry run: write a pcapng file of this name under `<data_dir>/captures`\ninstead of sending (forces the `pcapfile` backend).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "duration": {
+            "default": null,
+            "description": "Duration limit, e.g. `10s`, `2m`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "iface": {
+            "default": null,
+            "description": "Interface (not needed for `null`; the output file name for `pcapfile`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mix": {
+            "$ref": "#/components/schemas/Mix",
+            "default": "weighted",
+            "description": "Interleaving of several streams."
+          },
+          "name": {
+            "default": null,
+            "description": "Display name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pin_cores": {
+            "default": [],
+            "description": "Core per worker (Linux).",
+            "items": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "plan": {
+            "default": null,
+            "description": "Expansion strategy: `auto`, `prerender`, `onthefly`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ramp_up": {
+            "default": null,
+            "description": "Linear rate ramp-up time, e.g. `5s`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rate": {
+            "default": null,
+            "description": "Rate: `1000pps`, `1Mpps`, `10Gbps`, `50%`, `ifg=10us`, `unlimited`\n(default: the first template's `tx.rate`, then `tx.max_rate`, else unlimited).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "signature": {
+            "default": false,
+            "description": "Stamp every frame with a receive-verification signature (magic + stream\nid + sequence number + TX time over the last 24 payload octets; see\n`/api/captures` with `verify`).",
+            "type": "boolean"
+          },
+          "start_at": {
+            "default": null,
+            "description": "Scheduled start: RFC 3339 or `+10s`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stream_id": {
+            "default": null,
+            "description": "Signature stream id of the first stream (stream `i` gets `stream_id + i`;\ndefault 0).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "streams": {
+            "default": [],
+            "description": "Streams (at least one). Several streams are mixed into one TX worker.",
+            "items": {
+              "$ref": "#/components/schemas/JobStream"
+            },
+            "type": "array"
+          },
+          "workers": {
+            "default": null,
+            "description": "TX worker threads (single stream only).",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "JobStatus": {
+        "description": "Job lifecycle state: `{ \"state\": \"running\" }`, `{ \"state\": \"finished\",\n\"detail\": \"count_reached\" }`, `{ \"state\": \"failed\", \"detail\": \"<error>\" }`.",
+        "oneOf": [
+          {
+            "description": "Created with `start: false`, not started yet.",
+            "properties": {
+              "state": {
+                "enum": [
+                  "created"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Waiting for `start_at`.",
+            "properties": {
+              "state": {
+                "enum": [
+                  "scheduled"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Sending.",
+            "properties": {
+              "state": {
+                "enum": [
+                  "running"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Paused.",
+            "properties": {
+              "state": {
+                "enum": [
+                  "paused"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Ended normally (`count_reached`, `duration_elapsed`, `source_exhausted`,\n`stopped`).",
+            "properties": {
+              "detail": {
+                "$ref": "#/components/schemas/EndReason",
+                "description": "Ended normally (`count_reached`, `duration_elapsed`, `source_exhausted`,\n`stopped`)."
+              },
+              "state": {
+                "enum": [
+                  "finished"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "detail",
+              "state"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Ended with an error.",
+            "properties": {
+              "detail": {
+                "description": "Ended with an error.",
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "failed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "detail",
+              "state"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "JobStream": {
+        "description": "One stream of a job: a stored template (`template_id`) or an inline one.",
+        "properties": {
+          "template": {
+            "description": "Inline template (takes precedence over `template_id`).",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "template_id": {
+            "description": "Id of a stored template.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vars": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Template variable values (`name` → human notation).",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "weight": {
+            "description": "Weight for `mix: weighted` (0 counts as 1).",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "JobTotals": {
+        "description": "Dashboard aggregate of the running jobs.",
+        "properties": {
+          "active": {
+            "description": "Jobs that are scheduled, running or paused.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "bps": {
+            "description": "Sum of the jobs' L2 bits per second.",
+            "format": "double",
+            "type": "number"
+          },
+          "l1_bps": {
+            "description": "Sum of the jobs' L1 bits per second.",
+            "format": "double",
+            "type": "number"
+          },
+          "pps": {
+            "description": "Sum of the jobs' packets per second.",
+            "format": "double",
+            "type": "number"
+          },
+          "running": {
+            "description": "Jobs currently sending.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active",
+          "running",
+          "pps",
+          "bps",
+          "l1_bps"
+        ],
+        "type": "object"
+      },
+      "LintRequest": {
+        "description": "`POST /api/lint` request.",
+        "properties": {
+          "template": {
+            "description": "Template: object or YAML text.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "template"
+        ],
+        "type": "object"
+      },
+      "LintResponse": {
+        "description": "`POST /api/lint` response.",
+        "properties": {
+          "errors": {
+            "description": "Number of errors.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "issues": {
+            "description": "Findings (`level`, `path`, `key`, `args`, localised `message`).",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "description": "No errors (warnings allowed).",
+            "type": "boolean"
+          },
+          "warnings": {
+            "description": "Number of warnings.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "errors",
+          "warnings",
+          "issues"
+        ],
+        "type": "object"
+      },
+      "LoginRequest": {
+        "description": "`POST /api/auth/login` body.",
+        "properties": {
+          "password": {
+            "description": "Password.",
+            "type": "string"
+          },
+          "username": {
+            "description": "User name (default `admin`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
+      "Mix": {
+        "description": "How several streams are interleaved.",
+        "enum": [
+          "weighted",
+          "sequential",
+          "round_robin"
+        ],
+        "type": "string"
+      },
+      "Overview": {
+        "description": "`GET /api/stats/overview` response.",
+        "properties": {
+          "history": {
+            "description": "Jobs in the history.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ifaces": {
+            "description": "Interfaces.",
+            "items": {
+              "$ref": "#/components/schemas/IfaceBrief"
+            },
+            "type": "array"
+          },
+          "jobs": {
+            "description": "Active jobs.",
+            "items": {
+              "$ref": "#/components/schemas/JobBrief"
+            },
+            "type": "array"
+          },
+          "templates": {
+            "description": "Templates in the library.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/JobTotals",
+            "description": "Totals over the active jobs."
+          },
+          "uptime_secs": {
+            "description": "Seconds since the server started.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "uptime_secs",
+          "totals",
+          "jobs",
+          "ifaces",
+          "templates",
+          "history"
+        ],
+        "type": "object"
+      },
+      "ParseRequest": {
+        "description": "`POST /api/parse` request.",
+        "properties": {
+          "bytes_hex": {
+            "description": "Frame bytes as hex (whitespace, `:` / `-` separators and `0x` allowed).",
+            "type": "string"
+          },
+          "fcs": {
+            "description": "The frame ends with a 4-octet FCS.",
+            "type": "boolean"
+          },
+          "first_protocol": {
+            "description": "Protocol of the first octet (default `ethernet2`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "bytes_hex"
+        ],
+        "type": "object"
+      },
+      "ParseResponse": {
+        "description": "`POST /api/parse` response.",
+        "properties": {
+          "bytes_hex": {
+            "description": "Normalised hex of the input.",
+            "type": "string"
+          },
+          "diagnostics": {
+            "description": "Parse and build findings with localised `message`.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "layout": {
+            "description": "Layer / field positions.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "len": {
+            "description": "Frame length in octets.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "packet": {
+            "description": "Decoded packet (`wpg_core::Packet`: layers with Manual field values).",
+            "type": "object"
+          },
+          "trailers": {
+            "description": "Padding / FCS.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "packet",
+          "layout",
+          "trailers",
+          "diagnostics",
+          "len",
+          "bytes_hex"
+        ],
+        "type": "object"
+      },
+      "ProtocolSummary": {
+        "description": "Catalog entry.",
+        "properties": {
+          "fields": {
+            "description": "Field names in wire order.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Stable id (`ethernet2`, `ipv4`, ...).",
+            "type": "string"
+          },
+          "layer": {
+            "description": "Palette classification (`l2`, `l3`, `l4`, `payload`, ...).",
+            "type": "object"
+          },
+          "name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "next": {
+            "description": "Protocols this one can carry (its next-layer binding table).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "synth": {
+            "description": "Content generator instead of wire fields (payload).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "layer",
+          "fields",
+          "next",
+          "synth"
+        ],
+        "type": "object"
+      },
+      "RenderRequest": {
+        "description": "`POST /api/render` request.",
+        "properties": {
+          "count": {
+            "description": "Packets to render (1..=256, default 1).",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "index": {
+            "description": "Stream index of the first packet (default 0).",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "template": {
+            "description": "Template: object (JSON form of `.wpg.yaml`) or YAML text.",
+            "type": "object"
+          },
+          "vars": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Variable values.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "template"
+        ],
+        "type": "object"
+      },
+      "RenderResponse": {
+        "description": "`POST /api/render` response.",
+        "properties": {
+          "cardinality": {
+            "description": "Packets in the whole stream (`null` = unbounded).",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "packets": {
+            "description": "The packets.",
+            "items": {
+              "$ref": "#/components/schemas/RenderedPacket"
+            },
+            "type": "array"
+          },
+          "plan": {
+            "description": "How a job would expand the stream (pre-render vs on-the-fly).",
+            "type": "object"
+          }
+        },
+        "required": [
+          "packets",
+          "plan"
+        ],
+        "type": "object"
+      },
+      "RenderedPacket": {
+        "description": "One rendered packet.",
+        "properties": {
+          "bytes_hex": {
+            "description": "Frame bytes as lower-case hex (without FCS unless the template asks for one).",
+            "type": "string"
+          },
+          "diagnostics": {
+            "description": "Builder findings with localised `message`.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "index": {
+            "description": "Stream index.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "layout": {
+            "description": "Layer / field positions (`wpg_core::LayerLayout`).",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "len": {
+            "description": "Length in octets.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "trailers": {
+            "description": "Padding / FCS after the layers.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "index",
+          "bytes_hex",
+          "len",
+          "layout",
+          "trailers",
+          "diagnostics"
+        ],
+        "type": "object"
+      },
+      "Role": {
+        "description": "A user role (only `admin` is created for now; operator / viewer are P1).",
+        "enum": [
+          "admin",
+          "operator",
+          "viewer"
+        ],
+        "type": "string"
+      },
+      "ServerEvent": {
+        "description": "One message from the server to WebSocket clients.",
+        "oneOf": [
+          {
+            "description": "Latest statistics of a running job (every 100 ms, one per job).",
+            "properties": {
+              "job_id": {
+                "description": "Job id.",
+                "type": "string"
+              },
+              "snapshot": {
+                "description": "Counters and rates (`wpg_tx::job::StatsSnapshot`).",
+                "type": "object"
+              },
+              "type": {
+                "enum": [
+                  "stats"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id",
+              "snapshot",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A job changed state.",
+            "properties": {
+              "job_id": {
+                "description": "Job id.",
+                "type": "string"
+              },
+              "state": {
+                "$ref": "#/components/schemas/JobStatus",
+                "description": "New state."
+              },
+              "type": {
+                "enum": [
+                  "job_state"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id",
+              "state",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "allOf": [
+              {
+                "description": "The line (flattened into the message).",
+                "type": "object"
+              },
+              {
+                "description": "A log line (`ts`, `level`, `target`, `message`, `fields`).",
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "log"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "A log line (`ts`, `level`, `target`, `message`, `fields`)."
+          },
+          {
+            "description": "The template index changed (file watcher or API write).",
+            "properties": {
+              "type": {
+                "enum": [
+                  "templates_changed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Latest statistics of a capture (every 100 ms while it runs, once more at\nthe end).",
+            "properties": {
+              "capture_id": {
+                "description": "Capture id.",
+                "type": "string"
+              },
+              "snapshot": {
+                "description": "Counters, rates and verification (`wpg_rx::RxSnapshot`).",
+                "type": "object"
+              },
+              "type": {
+                "enum": [
+                  "rx_stats"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "capture_id",
+              "snapshot",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A capture started or ended.",
+            "properties": {
+              "capture_id": {
+                "description": "Capture id.",
+                "type": "string"
+              },
+              "state": {
+                "description": "New state (`{ \"state\": \"running\" | \"finished\" | \"failed\", \"detail\" }`).",
+                "type": "object"
+              },
+              "type": {
+                "enum": [
+                  "capture_state"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "capture_id",
+              "state",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SetupRequest": {
+        "description": "`POST /api/auth/setup` body.",
+        "properties": {
+          "confirm": {
+            "description": "The same password again.",
+            "type": "string"
+          },
+          "password": {
+            "description": "The new admin password (at least 8 characters).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "TemplateDetail": {
+        "description": "A template with its index entry and lint findings.",
+        "properties": {
+          "issues": {
+            "description": "Lint findings with localised `message`.",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/TemplateSummary",
+            "description": "Index entry."
+          },
+          "template": {
+            "description": "The template (JSON form of `.wpg.yaml`).",
+            "type": "object"
+          }
+        },
+        "required": [
+          "summary",
+          "template",
+          "issues"
+        ],
+        "type": "object"
+      },
+      "TemplateList": {
+        "description": "`GET /api/templates` response.",
+        "properties": {
+          "recent": {
+            "description": "Recently used template ids, most recent first.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "templates": {
+            "description": "Matching templates, sorted by name.",
+            "items": {
+              "$ref": "#/components/schemas/TemplateSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "templates",
+          "recent"
+        ],
+        "type": "object"
+      },
+      "TemplateSource": {
+        "description": "Where a template comes from.",
+        "enum": [
+          "user",
+          "library"
+        ],
+        "type": "string"
+      },
+      "TemplateSummary": {
+        "description": "Index entry of a template.",
+        "properties": {
+          "author": {
+            "description": "Author.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "description": "Description in the requested language (`meta.descriptions[lang]`, else\n`meta.description`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "All localised descriptions (`ja`, `en`).",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "error": {
+            "description": "Load error when the file does not parse.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "favorite": {
+            "description": "Marked as favourite.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Stable id (slug of the relative path).",
+            "type": "string"
+          },
+          "last_used": {
+            "description": "Last use (open in the GUI, job start), Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "modified": {
+            "description": "File modification time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "`meta.name` (the file stem when the file does not parse).",
+            "type": "string"
+          },
+          "path": {
+            "description": "Path relative to its root directory.",
+            "type": "string"
+          },
+          "protocols": {
+            "description": "Protocol stack, outermost first.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "root": {
+            "description": "The root directory.",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TemplateSource",
+            "description": "Library or user template."
+          },
+          "tags": {
+            "description": "Tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "writable": {
+            "description": "Whether it can be updated / deleted through the API.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "tags",
+          "protocols",
+          "source",
+          "path",
+          "root",
+          "writable",
+          "favorite"
+        ],
+        "type": "object"
+      },
+      "UserInfo": {
+        "description": "`user` of [`AuthStatus`].",
+        "properties": {
+          "name": {
+            "description": "User name.",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "description": "`admin`, `operator` or `viewer`."
+          }
+        },
+        "required": [
+          "name",
+          "role"
+        ],
+        "type": "object"
+      },
+      "VersionInfo": {
+        "description": "`GET /api/version` response body.",
+        "properties": {
+          "api_version": {
+            "description": "REST API version (bumped on incompatible changes).",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "arch": {
+            "description": "Target CPU architecture.",
+            "type": "string"
+          },
+          "features": {
+            "description": "Optional features compiled in (`pcap`, ...).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "locales": {
+            "description": "Supported UI / message languages.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "os": {
+            "description": "Target OS.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Server version.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "api_version",
+          "os",
+          "arch",
+          "features",
+          "locales"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "description": "Session cookie set by `POST /api/auth/login` / `POST /api/auth/setup`",
+        "in": "cookie",
+        "name": "wpg_session",
+        "type": "apiKey"
+      },
+      "csrfToken": {
+        "description": "Required on POST / PUT / DELETE: the `csrf_token` of `GET /api/auth/status` (also the `wpg_csrf` cookie)",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "web-packet-generator contributors"
+    },
+    "description": "REST + WebSocket API of the wpg server. Errors are `{ \"error\": { \"code\", \"message\", \"details\" } }` with `message` in the language of `Accept-Language` (en, ja).\n\nAuthentication: log in with `POST /api/auth/login` (or complete `POST /api/auth/setup` on first run); the `wpg_session` cookie then authenticates every request and POST / PUT / DELETE must also send the session's CSRF token (cookie `wpg_csrf`, `GET /api/auth/status`) in `X-CSRF-Token`. Without a session protected endpoints answer 401 (`unauthorized`, or `setup_required` while no password exists).",
+    "license": {
+      "name": "MIT OR Apache-2.0"
+    },
+    "title": "wpg — Web Packet Generator API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Logged in; `Set-Cookie`: `wpg_session`, `wpg_csrf`"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`unauthorized` / `setup_required`"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not JSON"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`rate_limited`: `details.retry_after_secs`, `Retry-After`"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Logs in (rate limited per client address: 5 failures a minute, then an\nexponentially growing lock-out up to 15 minutes). Requires\n`Content-Type: application/json`.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Logged out"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`csrf_failed`"
+          }
+        },
+        "summary": "Logs out (needs `X-CSRF-Token` when the session is live) and clears the\ncookies.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/setup": {
+      "post": {
+        "operationId": "setup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Password set; `Set-Cookie`: `wpg_session`, `wpg_csrf`"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Passwords differ / too short"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`forbidden`: remote client"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`already_configured`"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not JSON"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "First-run setup: sets the admin password and logs in. Only while no\npassword is configured, and only from a loopback client unless the server\nruns with `--allow-insecure`. Requires `Content-Type: application/json`.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/status": {
+      "get": {
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            },
+            "description": "State"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Authentication state of the caller (never requires a session).",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/captures": {
+      "get": {
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CaptureInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Captures"
+          }
+        },
+        "summary": "All captures (running and the last finished ones), newest first.",
+        "tags": [
+          "captures"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureInfo"
+                }
+              }
+            },
+            "description": "Started"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid spec or filter"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown interface / input file"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`backend_error`: the backend could not be opened"
+          }
+        },
+        "summary": "Starts a capture.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/backends": {
+      "get": {
+        "operationId": "backends",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Backends (`name`, `available`, `reason`)"
+          }
+        },
+        "summary": "Receive backend availability on this build / OS.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/filter": {
+      "post": {
+        "operationId": "check_filter",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilterCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterCheckResult"
+                }
+              }
+            },
+            "description": "Result"
+          }
+        },
+        "summary": "Checks a capture filter without starting a capture.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}": {
+      "delete": {
+        "operationId": "delete",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Removes a capture (a running one is stopped first; a saved pcapng file stays\non disk).",
+        "tags": [
+          "captures"
+        ]
+      },
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureInfo"
+                }
+              }
+            },
+            "description": "Capture"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "One capture.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}/packets": {
+      "get": {
+        "operationId": "packets",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CapturedFrame"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Kept frames"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "The first N matching frames of a capture (live while it runs).",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}/pcapng": {
+      "get": {
+        "operationId": "pcapng",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "pcapng file"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id or nothing saved"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Still running"
+          }
+        },
+        "summary": "The pcapng file of a finished capture started with `save`.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}/stop": {
+      "post": {
+        "operationId": "stop",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureInfo"
+                }
+              }
+            },
+            "description": "Stopping"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Already ended"
+          }
+        },
+        "summary": "Stops a running capture (asynchronously; watch `capture_state`).",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "The server is up"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Liveness probe.",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Jobs"
+          }
+        },
+        "summary": "All live jobs (created, running and recently finished), newest first.",
+        "tags": [
+          "jobs"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJob"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInfo"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid job"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`policy_violation`: interface or rate not allowed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown template id"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid template"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`backend_error`: the backend could not be opened"
+          }
+        },
+        "summary": "Creates (and by default starts) a job.",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/history": {
+      "get": {
+        "operationId": "history",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Finished jobs"
+          }
+        },
+        "summary": "Finished jobs (last 100), newest first.",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/{id}": {
+      "delete": {
+        "operationId": "delete",
+        "parameters": [
+          {
+            "description": "Job id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Removes a job (a running one is stopped first and recorded in the history).",
+        "tags": [
+          "jobs"
+        ]
+      },
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "description": "Job id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInfo"
+                }
+              }
+            },
+            "description": "Job"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "One job (live or from the history).",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/{id}/pause": {
+      "post": {
+        "operationId": "pause",
+        "parameters": [
+          {
+            "description": "Job id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInfo"
+                }
+              }
+            },
+            "description": "Pausing"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not running"
+          }
+        },
+        "summary": "Pauses a running job.",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/{id}/resume": {
+      "post": {
+        "operationId": "resume",
+        "parameters": [
+          {
+            "description": "Job id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInfo"
+                }
+              }
+            },
+            "description": "Resuming"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not running"
+          }
+        },
+        "summary": "Resumes a paused job.",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/{id}/start": {
+      "post": {
+        "operationId": "start",
+        "parameters": [
+          {
+            "description": "Job id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInfo"
+                }
+              }
+            },
+            "description": "Started"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not in state `created`"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Backend error"
+          }
+        },
+        "summary": "Starts a job created with `start: false`.",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/{id}/stats": {
+      "get": {
+        "operationId": "stats",
+        "parameters": [
+          {
+            "description": "Job id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "`wpg_tx::job::StatsSnapshot`"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Never started"
+          }
+        },
+        "summary": "Latest statistics snapshot of a job.",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/{id}/stop": {
+      "post": {
+        "operationId": "stop",
+        "parameters": [
+          {
+            "description": "Job id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInfo"
+                }
+              }
+            },
+            "description": "Stopping"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Already ended"
+          }
+        },
+        "summary": "Stops a job (asynchronously; watch `job_state` or poll the job).",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/lint": {
+      "post": {
+        "operationId": "lint_template",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LintResponse"
+                }
+              }
+            },
+            "description": "Lint result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          }
+        },
+        "summary": "Checks a template (`wpg template lint`). A template that does not even parse\nis reported as a single error at path `\"\"`.",
+        "tags": [
+          "packets"
+        ]
+      }
+    },
+    "/api/parse": {
+      "post": {
+        "operationId": "parse",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseResponse"
+                }
+              }
+            },
+            "description": "Decoded packet"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid hex"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Cannot be decoded"
+          }
+        },
+        "summary": "Decodes raw bytes into layers (Hex paste import).",
+        "tags": [
+          "packets"
+        ]
+      }
+    },
+    "/api/protocols": {
+      "get": {
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProtocolSummary"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Catalog summary"
+          }
+        },
+        "summary": "The catalog in palette order.",
+        "tags": [
+          "protocols"
+        ]
+      }
+    },
+    "/api/protocols/{id}": {
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "description": "Protocol id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Protocol definition IR"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown protocol"
+          }
+        },
+        "summary": "The full definition (`wpg_core::ProtocolDef`): fields with types, defaults,\nauto computations and bindings. Every `description_key` gets a localised\n`description` next to it.",
+        "tags": [
+          "protocols"
+        ]
+      }
+    },
+    "/api/render": {
+      "post": {
+        "operationId": "render",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenderResponse"
+                }
+              }
+            },
+            "description": "Rendered packets"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid template (details: lint issues)"
+          }
+        },
+        "summary": "Renders packets of a template (preview).",
+        "tags": [
+          "packets"
+        ]
+      }
+    },
+    "/api/stats/overview": {
+      "get": {
+        "operationId": "overview",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "Dashboard data"
+          }
+        },
+        "summary": "Dashboard summary.",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/system/backends": {
+      "get": {
+        "operationId": "backends",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Backends"
+                }
+              }
+            },
+            "description": "Backends"
+          }
+        },
+        "summary": "Transmit backends of this build.",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/system/doctor": {
+      "get": {
+        "operationId": "doctor",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "`{ ok, locale, checks: [...] }`"
+          }
+        },
+        "summary": "Self-diagnosis (`wpg doctor --json`), with localised `summary` / `fix`.",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/system/ifaces": {
+      "get": {
+        "operationId": "ifaces",
+        "parameters": [
+          {
+            "description": "Re-read the interfaces instead of using the few-seconds cache.",
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Interfaces (`wpg ifaces --json` plus `usable` / `allowed`)"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Enumeration failed"
+          }
+        },
+        "summary": "Network interfaces with `usable` (up, running, not loopback) and `allowed`\n(by `tx.allowed_ifaces`).",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/templates": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "description": "Case-insensitive search in id, name, descriptions, tags and protocols.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required tag(s), comma separated.",
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only favourites (`true`) / non-favourites (`false`).",
+            "in": "query",
+            "name": "favorite",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Only `user` or `library` templates.",
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TemplateSource"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateList"
+                }
+              }
+            },
+            "description": "Templates"
+          }
+        },
+        "summary": "Lists / searches templates.",
+        "tags": [
+          "templates"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Template (JSON form of `.wpg.yaml`)",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid template"
+          }
+        },
+        "summary": "Creates a template in the user directory (file name from `meta.name`).",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/templates/import": {
+      "post": {
+        "operationId": "import",
+        "requestBody": {
+          "content": {
+            "text/yaml": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Template YAML",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            },
+            "description": "Imported"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid template"
+          }
+        },
+        "summary": "Imports a `.wpg.yaml` (or JSON) document into the user directory.",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/templates/{id}": {
+      "delete": {
+        "operationId": "delete",
+        "parameters": [
+          {
+            "description": "Template id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Read-only library template"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Deletes a user template.",
+        "tags": [
+          "templates"
+        ]
+      },
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "description": "Template id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            },
+            "description": "Template"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The file does not parse"
+          }
+        },
+        "summary": "One template (also marks it as recently used).",
+        "tags": [
+          "templates"
+        ]
+      },
+      "put": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "description": "Template id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Template (JSON form of `.wpg.yaml`)",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Read-only library template"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid template"
+          }
+        },
+        "summary": "Replaces a user template.",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/templates/{id}/duplicate": {
+      "post": {
+        "operationId": "duplicate",
+        "parameters": [
+          {
+            "description": "Template id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            },
+            "description": "The copy"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Copies a template (library or user) into the user directory.",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/templates/{id}/export": {
+      "get": {
+        "operationId": "export",
+        "parameters": [
+          {
+            "description": "Template id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/yaml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "YAML"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Downloads a template as `.wpg.yaml` (the file itself, comments included).",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/templates/{id}/favorite": {
+      "post": {
+        "operationId": "favorite",
+        "parameters": [
+          {
+            "description": "Template id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Favorite"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "description": "`{\"favorite\": bool}`; empty or `null` = toggle"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteState"
+                }
+              }
+            },
+            "description": "New state"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Sets (or, without a body, toggles) the favourite flag.",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/version": {
+      "get": {
+        "operationId": "version",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionInfo"
+                }
+              }
+            },
+            "description": "Version and build info"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Build information.",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/ws": {
+      "get": {
+        "operationId": "ws",
+        "responses": {
+          "101": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerEvent"
+                }
+              }
+            },
+            "description": "WebSocket: JSON `ServerEvent` messages"
+          }
+        },
+        "summary": "WebSocket upgrade.",
+        "tags": [
+          "events"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "cookieAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Login, logout, first-run setup",
+      "name": "auth"
+    },
+    {
+      "description": "Health, version, interfaces, diagnostics, backends",
+      "name": "system"
+    },
+    {
+      "description": "Protocol catalog",
+      "name": "protocols"
+    },
+    {
+      "description": "Render / parse / lint",
+      "name": "packets"
+    },
+    {
+      "description": "Template library",
+      "name": "templates"
+    },
+    {
+      "description": "Transmit jobs and statistics",
+      "name": "jobs"
+    },
+    {
+      "description": "Receive counters, captured frames and signature verification",
+      "name": "captures"
+    },
+    {
+      "description": "WebSocket event stream",
+      "name": "events"
+    }
+  ]
+}

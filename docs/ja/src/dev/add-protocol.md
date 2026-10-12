@@ -10,7 +10,8 @@
 4. **golden を再生成する。** `just golden-update` で `tests/golden/*.hex` / `*.pcap` を作り直し、差分を確認します。`.hex` / `.pcap` は手で編集しないでください。
 5. **突合する。** tshark があれば `WPG_TSHARK=1 cargo test -p wpg-golden-tests -- --ignored` で Wireshark と突き合わせます。
 6. **補足ドキュメントを更新する。** 近似が残る場合やカプセル化が特殊な場合は `docs/{ja,en}/src/protocols/` に ja / en そろえて追記します。
-7. **プッシュ前のチェック** (CLAUDE.md) をすべて通します。
+7. **リファレンスを再生成する。** `just docs-gen` で[プロトコルリファレンス](../reference/protocols.md)などを作り直してコミットします (下の「リファレンスドキュメント」)。
+8. **プッシュ前のチェック** (CLAUDE.md) をすべて通します。
 
 ```sh
 cargo fmt --all -- --check
@@ -50,3 +51,7 @@ cargo check -p wpg-core -p wpg-protocols -p wpg-i18n --target wasm32-unknown-unk
 | 同じ番号でレイアウト違い | `BindingEntry::reparsing` | VRRPv2/v3、HSRPv1/v2、TFTP |
 
 評価順などの詳細は仕様 `docs/spec/02-packet-builder.md` の「次プロトコルの選択」を参照してください。
+
+## リファレンスドキュメント
+
+[プロトコルリファレンス](../reference/protocols.md) は定義から自動生成します。`just docs-gen` (`cargo run -p wpg-cli -- docs gen`) を実行して結果をコミットしてください。新しいプロトコル、フィールド、バインディング、サンプルテンプレートは自動で反映され、フィールド説明は `desc = "..."` の Fluent キー (ja / en) から取ります。手書きの補足は `docs/{ja,en}/src/protocols/` に書き、プロトコル ID をバッククォートで書けば (`` `isis_l1_lsp` ``)、生成ツールが双方向のリンクを張ります。コミット済みのページが古いと、テスト `generated_docs_are_up_to_date` (wpg-cli) が失敗します。

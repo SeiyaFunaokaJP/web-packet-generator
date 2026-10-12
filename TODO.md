@@ -397,8 +397,8 @@ wpg bench   [--backend ...]                                # 送出性能計測
 
 ### M11: ドキュメント仕上げ（継続 + 2 週）
 - [x] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)（Linux / macOS / Windows のインストール・権限・初回ログイン、ARP スイープ / VLAN SYN / IPv6 NDP / レート制御 / pcap 再生のチュートリアルを ja/en で整備し、CLI の実出力と tshark 突合で確認）
-- [ ] プロトコルリファレンス自動生成 (定義 IR → Markdown)
-- [ ] API / CLI / 設定 / テンプレスキーマ リファレンス
+- [x] プロトコルリファレンス自動生成 (定義 IR → Markdown)（`wpg docs gen`（隠しサブコマンド、`just docs-gen`）がカタログから `docs/{ja,en}/src/reference/protocols.md` と 1 プロトコル 1 ページ（フィールドの型・既定値・Auto 規則・説明（Fluent）、enum / flags / TLV / リストの詳細、下位レイヤからの到達、次レイヤ表、制約、`protocol:<id>` タグのサンプル）、`SUMMARY.md` のレイヤ別エントリ、手書き補足ページ末尾の双方向リンク（本文のバッククォート ID から抽出）を生成。新プロトコルは再実行で自動反映、wpg-cli のテストが生成物の鮮度を検査。P0 プロトコルのフィールド説明（Fluent キー未設定分）と優先度 P0〜P3 の分類は対象外）
+- [x] API / CLI / 設定 / テンプレスキーマ リファレンス（同じ生成ツールで ja/en を生成: API は utoipa の OpenAPI からエンドポイント・パラメータ・レスポンス・スキーマ（`docs/schema/openapi.json` も出力）、CLI は clap 定義から全コマンドの `--help`（コマンドごとの補足は任意の Fluent キー）、設定は `Config` の JSON Schema（schemars）からキー・型・既定値・環境変数名と Fluent の説明、`wpg config init` の例、テンプレートスキーマは JSON Schema のキー表を手書きページ末尾に。API / テンプレートスキーマの説明文は doc コメント由来の英語のまま）
 - [ ] DPDK / AF_XDP / CML2 セットアップガイド、性能チューニング
 - [x] 開発者ガイド (プロトコル追加、i18n 追加、リリース)（crate 構成・プロトコル追加の手順と部品・i18n キー追加・リリースゲートを ja/en で整備し、CONTRIBUTING.ja.md と整合）
 - [x] FAQ / トラブルシュート、法的注意（`wpg doctor` チェック表とよくある質問、責任ある利用 / デュアルライセンス / 第三者コンポーネントの法的注意を ja/en で整備）

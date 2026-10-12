@@ -69,3 +69,11 @@ SR-MPLS の SID は通常の MPLS ラベルなので、`mpls` レイヤを並べ
 - HMAC の計算、SRv6 の Behavior (End / End.X / End.DT4 など) のシミュレーションはしません。SID の Behavior はアドレスの値で表すだけです。
 - SRv6 圧縮 SID (uSID / CSID、RFC 9800) の専用表現はありません (128 ビットアドレスとして書けます)。
 - SR-MPLS の SRGB / SRLB の範囲検査はしません。
+
+<!-- wpg-docs-gen:begin reference-links -->
+## 自動生成リファレンス
+
+このページのプロトコルのフィールドリファレンス (定義から自動生成):
+
+[`ethernet2`](../reference/protocols/ethernet2.md) · [`ipv6_route`](../reference/protocols/ipv6_route.md) · [`ipv6_srh`](../reference/protocols/ipv6_srh.md) · [`mpls`](../reference/protocols/mpls.md)
+<!-- wpg-docs-gen:end reference-links -->

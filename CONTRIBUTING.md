@@ -26,6 +26,7 @@ specification are in [TODO.md](TODO.md).
 | `just lint` | `cargo clippy ... -D warnings` |
 | `just check-wasm` | Ensure `wpg-core` and `wpg-i18n` build for `wasm32-unknown-unknown` |
 | `just audit` / `just deny` | `cargo audit` / `cargo deny check` |
+| `just docs-gen` | Regenerate the reference chapters of the docs from the code |
 | `just docs` | Build the mdBook docs |
 | `just clean` | Remove build artefacts |
 
@@ -47,7 +48,9 @@ Before opening a PR, run `just fmt lint test check-wasm`. CI runs the same check
 Protocols are declarative definitions in `wpg-protocols` (Rust macros for core protocols, YAML for
 user-extensions), lowered to one shared IR. Follow the step-by-step guide in `docs/dev/`
 (developer guide: adding a protocol). At a minimum a protocol needs: a definition, Fluent strings for its
-name and field descriptions, a sample template, a golden pcap and tests.
+name and field descriptions, a sample template, a golden pcap and tests. Then run `just docs-gen` to
+regenerate the reference pages (protocols, CLI, API, configuration, template schema) and commit them;
+a test fails while they are stale.
 
 ## Internationalisation (i18n)
 
