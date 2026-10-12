@@ -11,7 +11,14 @@ docker build -t wpg .
 docker build -t wpg --build-arg FEATURES=pcap .     # libpcap バックエンド付き
 ```
 
-ビルドにはインターネット接続が必要です (crates.io、GitHub 上の Trunk のリリース、Trunk がダウンロードする Tailwind CSS と wasm-bindgen)。TLS を中継するプロキシの内側では、先にプロキシの CA 証明書をビルドステージに追加してください。
+ビルドにはインターネット接続が必要です (crates.io、GitHub 上の Trunk のリリース、Trunk がダウンロードする Tailwind CSS と wasm-bindgen)。TLS を中継するプロキシの内側では、プロキシの CA 証明書 (PEM) をビルドシークレットで、プロキシのアドレスを標準のビルド引数で渡します。証明書を信頼するのはビルドステージだけで、実行用イメージには入りません。
+
+```sh
+docker build -t wpg --secret id=ca_certs,src=/path/to/proxy-ca.pem \
+  --build-arg HTTPS_PROXY=http://proxy.example:3128 .
+```
+
+Docker Hub の匿名 pull のレート制限にかかる場合は、`--build-arg RUST_IMAGE=mirror.gcr.io/library/rust:1-bookworm --build-arg RUNTIME_IMAGE=mirror.gcr.io/library/debian:bookworm-slim` のように別のレジストリのベースイメージを使えます。
 
 ## 実行
 
@@ -49,9 +56,17 @@ docker compose logs -f wpg
 ## 制限
 
 - Linux ホストを使ってください。macOS / Windows の Docker Desktop はコンテナを VM の中で動かすので、`--network host` は VM のネットワークになり、フレームは物理 NIC に届きません。
-- コンテナ内の `wpg doctor` はコンテナから見た状態 (ケーパビリティ、インタフェース) を報告します。将来の DPDK バックエンド用の hugepages と `vfio-pci` はホスト側で準備する必要があります。
+- コンテナ内の `wpg doctor` はコンテナから見た状態 (ケーパビリティ、インタフェース) を報告します。イメージは `dpdk` feature なしでビルドします (両方のステージに DPDK のライブラリが必要になるため)。DPDK 用の hugepages と `vfio-pci` は、いずれにしてもホスト側で準備します。
 - `--network host` を使わない場合 (既定のブリッジネットワークと `-p 8080:8080`)、GUI は使えますが、ジョブはコンテナ自身の `eth0` でしか送信できません。
 
 ## 確認状況
 
-compose ファイルは `docker compose config` で確認しました。開発用サンドボックスでは、TLS を中継するプロキシをビルドコンテナが信頼しないため (Trunk のダウンロードが失敗する)、`docker build` を最後まで完了できませんでした。代わりにビルドのコマンドはホスト上で確認し (`scripts/release.sh` は同じ `trunk build --release` と `cargo build --release --locked -p wpg-cli` を実行します)、実行ステージはローカルでビルドしたバイナリで確認しました。**使う前に通常の環境で `docker build` を実行してください。**
+2026 年 10 月に次を確認しました (Docker 29.8、Linux 6.18 のホスト、追加 feature なしのイメージ)。
+
+- `docker build` が最後まで完了 (Trunk による Web UI と `cargo build --release --locked`)。実行用イメージはディスク上で約 170 MB (圧縮時 44 MB)。
+- `docker run --network host --cap-drop ALL --cap-add NET_RAW --cap-add NET_ADMIN -e WPG_PASSWORD=...` でヘルスチェックが `healthy` になり、`/api/health` と Web UI が応答。コンテナ内の `wpg doctor` は `CAP_NET_RAW` / `CAP_NET_ADMIN` 付きで raw ソケットが使えると報告。
+- コンテナ内で `afpacket` バックエンドの `wpg send` により `lo` へ 100 フレームを送出し、同じコンテナの `wpg capture` で受信。
+- `--build-arg FEATURES=pcap` のイメージには `libpcap0.8` が入り、`wpg doctor` が検出し、`wpg send --backend pcap` で `lo` へ 50 フレームを送出。
+- `docker compose up -d --no-build` でサービスが `healthy` になり、`WPG_PASSWORD` でのログインが成功 (204)、誤ったパスワードは拒否 (401)。`WPG_PASSWORD` が無いと compose ファイルのメッセージで起動を拒否。
+
+開発用サンドボックスのプロキシは HTTPS しか通さないため、`apt-get` の取得先だけを使い捨ての Dockerfile のコピーで `https://deb.debian.org` に変えました。それ以外はリポジトリの `Dockerfile` をそのまま使っています。Docker Desktop (macOS / Windows) は確認していません。
