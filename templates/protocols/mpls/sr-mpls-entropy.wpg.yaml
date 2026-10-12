@@ -1,0 +1,57 @@
+# SR-MPLS (RFC 8660): prefix SID + adjacency SID with an entropy label (RFC 6790)
+schema: 1
+
+meta:
+  name: sr-mpls-entropy
+  descriptions:
+    ja: "SR-MPLS (RFC 8660): プレフィックス SID (SRGB 16000 + インデックス 101) と隣接 SID 24001、エントロピーラベル指示子 + エントロピーラベル (RFC 6790) で IPv4/UDP を転送"
+    en: "SR-MPLS (RFC 8660): a prefix SID (SRGB 16000 + index 101), adjacency SID 24001 and an entropy label indicator + entropy label (RFC 6790) carrying IPv4/UDP"
+  tags: ["protocol:ethernet2", "protocol:mpls", "protocol:ipv4", "protocol:udp", "layer:l2", mpls, sr-mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: srgb_base
+    default: 16000
+    description: First label of the SRGB
+  - name: sid_index
+    default: 101
+    description: Prefix SID index of the egress node
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: mpls
+    fields:
+      ttl: 64
+    generators:
+      label: { kind: expr, expr: "${srgb_base} + ${sid_index}" } # prefix SID → 16101
+  - protocol: mpls
+    fields:
+      label: 24001 # adjacency SID (local label)
+  - protocol: mpls
+    fields:
+      label: entropy_label_indicator # 7
+  - protocol: mpls
+    fields:
+      label: 0x54321 # entropy label (flow hash)
+      ttl: 0 # RFC 6790 §4.2
+      # s: Auto (1 on the bottom label)
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 10.0.0.2
+  - protocol: udp
+    fields:
+      src_port: 1024
+      dst_port: 4000
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 16
+
+tx:
+  count: 1

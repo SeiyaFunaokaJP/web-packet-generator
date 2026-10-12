@@ -23,7 +23,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 ### 自動計算フィールド (GUI で Auto / Manual トグル)
 
 - 長さ系: IPv4 total length, UDP length, IS-IS PDU length, TLV length など
-- チェックサム系: IPv4 header, TCP/UDP (v4/v6 疑似ヘッダ), ICMP, OSPF, IS-IS (Fletcher), SCTP CRC32c, RSVP, GRE など
+- チェックサム系: IPv4 header, TCP/UDP (v4/v6 疑似ヘッダ), ICMP, OSPF, IS-IS (Fletcher), SCTP CRC32c, RSVP, GRE など。疑似ヘッダの宛先は、間にルーティングヘッダ (`final_destination` を持つ定義、SRv6 SRH) があり残りセグメントが 0 でなければ最終宛先 (セグメントリストの要素 0) に置き換える (RFC 8200 §8.1)
 - 次ヘッダ / EtherType / Protocol 番号: 下位レイヤの選択から自動決定し、上書き可
 - 件数系 (`count(list)`): 同じフィールド群の `list` / `tlv` の要素数 (IGMPv3 の `num_group_records`、グループレコード内の `num_sources` など)。リスト要素・TLV 値の中でも使える
 - サイズ系 (`size(field)`): 同じフィールド群の後続の可変長フィールドのオクテット数 (IS-IS 拡張到達性エントリ内のサブ TLV 長など)。`count` と同じくリスト要素・TLV 値の中でも使える
@@ -35,7 +35,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 
 解析時は各プロトコルの binding で次レイヤを決める。評価順は次のとおり。
 
-1. `peek`: セレクタ値が `on` のとき、ペイロード先頭の数ビットを覗いて決める (MPLS の bottom-of-stack / GTP-U G-PDU / PIM Register: 先頭ニブル 4 → IPv4、6 → IPv6)
+1. `peek`: セレクタ値が `on` のとき、ペイロード先頭の数ビット (`skip` ビット飛ばした位置から) を覗いて決める (MPLS の bottom-of-stack / GTP-U G-PDU / PIM Register: 先頭ニブル 4 → IPv4、6 → IPv6。IPv6 next header 43: 3 オクテット目のルーティングタイプ 4 → SRH)
 2. セレクタフィールドの値に一致するエントリ。`min_len` 付きのエントリは、ヘッダ後に残るオクテット数がそれ以上のときだけ一致する (IGMPv3 / MLDv2 クエリは v1/v2 と同じ type で長さだけが違う)
 3. `alt_field` の値に一致するエントリ (UDP / TCP の送信元ポート。応答パケットもデコードできる)
 4. `default`

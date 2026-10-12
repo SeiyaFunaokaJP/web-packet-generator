@@ -34,6 +34,7 @@
   - [SCTP (P2)](protocols/sctp.md)
   - [OSPF Opaque / SR, BGP MP / EVPN (P2)](protocols/routing-ext.md)
   - [LDP / RSVP-TE / BFD (P2)](protocols/mpls-bfd.md)
+  - [SRv6 SRH / SR-MPLS (P2)](protocols/srv6.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)
@@ -47,6 +48,7 @@
 - [Upgrading](operations/upgrade.md)
 - [DPDK and AF_XDP setup](operations/dpdk-afxdp.md)
 - [CML2 notes](operations/cml2.md)
+- [Interop checks](operations/interop.md)
 - [Performance tuning](operations/tuning.md)
 - [Authentication and TLS](operations/security.md)
 

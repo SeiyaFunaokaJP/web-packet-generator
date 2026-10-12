@@ -34,6 +34,7 @@
   - [SCTP (P2)](protocols/sctp.md)
   - [OSPF Opaque / SR、BGP MP / EVPN (P2)](protocols/routing-ext.md)
   - [LDP / RSVP-TE / BFD (P2)](protocols/mpls-bfd.md)
+  - [SRv6 SRH / SR-MPLS (P2)](protocols/srv6.md)
 - [テンプレートスキーマ](reference/template-schema.md)
 - [API リファレンス](reference/api.md)
 - [CLI リファレンス](reference/cli.md)
@@ -47,6 +48,7 @@
 - [アップグレード](operations/upgrade.md)
 - [DPDK / AF_XDP のセットアップ](operations/dpdk-afxdp.md)
 - [CML2 での注意点](operations/cml2.md)
+- [相互接続確認](operations/interop.md)
 - [性能チューニング](operations/tuning.md)
 - [認証と TLS](operations/security.md)
 

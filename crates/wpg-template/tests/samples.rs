@@ -67,10 +67,11 @@ fn library_layout_has_the_expected_groups() {
     assert!(count("protocols/") >= 30, "{files:?}");
     assert!(count("scenarios/") >= 8, "{files:?}");
     assert!(count("malformed/") >= 4, "{files:?}");
+    assert!(count("interop/") >= 7, "{files:?}");
     for f in &files {
         let top = f.split('/').next().unwrap();
         assert!(
-            ["examples", "protocols", "scenarios", "malformed"].contains(&top),
+            ["examples", "protocols", "scenarios", "interop", "malformed"].contains(&top),
             "unexpected top-level group in {f}"
         );
     }
@@ -192,6 +193,9 @@ fn tags_match_the_layer_stack() {
         );
         if name.starts_with("scenarios/") {
             assert!(t.meta.tags.iter().any(|x| x == "scenario"), "{name}");
+        }
+        if name.starts_with("interop/") {
+            assert!(t.meta.tags.iter().any(|x| x == "interop"), "{name}");
         }
     }
 }
