@@ -52,5 +52,6 @@
 
 ## サンプルテンプレート
 
+- [interop-pim-hello-neighbor](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/pim-hello-neighbor.wpg.yaml) — `templates/interop/pim-hello-neighbor.wpg.yaml`
 - [pim-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mcast/pim-hello.wpg.yaml) — `templates/protocols/mcast/pim-hello.wpg.yaml`
 - [pim-join-prune](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mcast/pim-join-prune.wpg.yaml) — `templates/protocols/mcast/pim-join-prune.wpg.yaml`

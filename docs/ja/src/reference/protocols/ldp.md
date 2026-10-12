@@ -2055,6 +2055,7 @@
 
 ## サンプルテンプレート
 
+- [interop-ldp-link-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ldp-link-hello.wpg.yaml) — `templates/interop/ldp-link-hello.wpg.yaml`
 - [ldp-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-hello.wpg.yaml) — `templates/protocols/mpls/ldp-hello.wpg.yaml`
 - [ldp-initialization](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-initialization.wpg.yaml) — `templates/protocols/mpls/ldp-initialization.wpg.yaml`
 - [ldp-label-mapping](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-label-mapping.wpg.yaml) — `templates/protocols/mpls/ldp-label-mapping.wpg.yaml`

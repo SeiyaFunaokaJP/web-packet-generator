@@ -49,5 +49,6 @@ Each item is a group of the fields below.
 
 ## Sample templates
 
+- [interop-ripv2-response-route](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ripv2-response-route.wpg.yaml) — `templates/interop/ripv2-response-route.wpg.yaml`
 - [ripv1-request](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/ripv1-request.wpg.yaml) — `templates/protocols/routing/ripv1-request.wpg.yaml`
 - [ripv2-response](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/ripv2-response.wpg.yaml) — `templates/protocols/routing/ripv2-response.wpg.yaml`

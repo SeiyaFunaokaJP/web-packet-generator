@@ -69,6 +69,9 @@
 
 ## サンプルテンプレート
 
+- [interop-bfd-session-up](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/bfd-session-up.wpg.yaml) — `templates/interop/bfd-session-up.wpg.yaml`
+- [interop-ldp-link-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ldp-link-hello.wpg.yaml) — `templates/interop/ldp-link-hello.wpg.yaml`
+- [interop-ripv2-response-route](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ripv2-response-route.wpg.yaml) — `templates/interop/ripv2-response-route.wpg.yaml`
 - [bad-fcs](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/malformed/bad-fcs.wpg.yaml) — `templates/malformed/bad-fcs.wpg.yaml`
 - [bad-ipv4-checksum](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/malformed/ipv4-bad-checksum.wpg.yaml) — `templates/malformed/ipv4-bad-checksum.wpg.yaml`
 - [bad-ipv4-ihl](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/malformed/ipv4-bad-ihl.wpg.yaml) — `templates/malformed/ipv4-bad-ihl.wpg.yaml`

@@ -63,6 +63,7 @@ The next layer is selected by `type`; when the field is Auto the builder writes 
 
 ## Sample templates
 
+- [interop-ospfv2-hello-2way](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ospfv2-hello-2way.wpg.yaml) — `templates/interop/ospfv2-hello-2way.wpg.yaml`
 - [ospfv2-dbd](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/ospfv2-dbd.wpg.yaml) — `templates/protocols/routing/ospfv2-dbd.wpg.yaml`
 - [ospfv2-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/ospfv2-hello.wpg.yaml) — `templates/protocols/routing/ospfv2-hello.wpg.yaml`
 - [ospfv2-lsack](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/ospfv2-lsack.wpg.yaml) — `templates/protocols/routing/ospfv2-lsack.wpg.yaml`

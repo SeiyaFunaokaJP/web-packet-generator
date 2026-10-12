@@ -71,6 +71,12 @@
 
 ## サンプルテンプレート
 
+- [interop-bfd-session-up](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/bfd-session-up.wpg.yaml) — `templates/interop/bfd-session-up.wpg.yaml`
+- [interop-ldp-link-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ldp-link-hello.wpg.yaml) — `templates/interop/ldp-link-hello.wpg.yaml`
+- [interop-ospfv2-hello-2way](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ospfv2-hello-2way.wpg.yaml) — `templates/interop/ospfv2-hello-2way.wpg.yaml`
+- [interop-pim-hello-neighbor](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/pim-hello-neighbor.wpg.yaml) — `templates/interop/pim-hello-neighbor.wpg.yaml`
+- [interop-ripv2-response-route](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/ripv2-response-route.wpg.yaml) — `templates/interop/ripv2-response-route.wpg.yaml`
+- [interop-vrrpv3-preempt](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/vrrpv3-preempt.wpg.yaml) — `templates/interop/vrrpv3-preempt.wpg.yaml`
 - [arp-bad-address-lengths](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/malformed/arp-bad-lengths.wpg.yaml) — `templates/malformed/arp-bad-lengths.wpg.yaml`
 - [bad-fcs](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/malformed/bad-fcs.wpg.yaml) — `templates/malformed/bad-fcs.wpg.yaml`
 - [bad-ipv4-checksum](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/malformed/ipv4-bad-checksum.wpg.yaml) — `templates/malformed/ipv4-bad-checksum.wpg.yaml`

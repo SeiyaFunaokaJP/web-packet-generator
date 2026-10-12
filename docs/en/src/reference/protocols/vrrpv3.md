@@ -48,4 +48,5 @@ The next layer is selected by `version`; when the field is Auto the builder writ
 
 ## Sample templates
 
+- [interop-vrrpv3-preempt](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/vrrpv3-preempt.wpg.yaml) — `templates/interop/vrrpv3-preempt.wpg.yaml`
 - [vrrpv3](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/fhrp/vrrpv3.wpg.yaml) — `templates/protocols/fhrp/vrrpv3.wpg.yaml`

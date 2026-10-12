@@ -128,6 +128,7 @@
 
 ## Sample templates
 
+- [interop-bfd-session-up](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/bfd-session-up.wpg.yaml) — `templates/interop/bfd-session-up.wpg.yaml`
 - [bfd-auth](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-auth.wpg.yaml) — `templates/protocols/oam/bfd-auth.wpg.yaml`
 - [bfd-multihop-ipv6](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml) — `templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml`
 - [bfd-single-hop](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-single-hop.wpg.yaml) — `templates/protocols/oam/bfd-single-hop.wpg.yaml`

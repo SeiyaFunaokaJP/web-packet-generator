@@ -598,4 +598,5 @@
 
 ## サンプルテンプレート
 
+- [interop-isis-l2-lan-hello-up](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/isis-l2-lan-hello-up.wpg.yaml) — `templates/interop/isis-l2-lan-hello-up.wpg.yaml`
 - [isis-l2-lan-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/isis-l2-lan-hello.wpg.yaml) — `templates/protocols/routing/isis-l2-lan-hello.wpg.yaml`

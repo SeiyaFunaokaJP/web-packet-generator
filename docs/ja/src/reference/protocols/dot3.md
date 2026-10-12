@@ -37,6 +37,7 @@
 
 ## サンプルテンプレート
 
+- [interop-isis-l2-lan-hello-up](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/interop/isis-l2-lan-hello-up.wpg.yaml) — `templates/interop/isis-l2-lan-hello-up.wpg.yaml`
 - [dot3-llc-osi](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/dot3-llc-osi.wpg.yaml) — `templates/protocols/l2/dot3-llc-osi.wpg.yaml`
 - [dot3-llc-snap-frame](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/dot3-llc-snap.wpg.yaml) — `templates/protocols/l2/dot3-llc-snap.wpg.yaml`
 - [dot3-llc-frame](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/dot3-llc.wpg.yaml) — `templates/protocols/l2/dot3-llc.wpg.yaml`
