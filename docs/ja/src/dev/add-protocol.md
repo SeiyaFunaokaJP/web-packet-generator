@@ -10,12 +10,12 @@ Status: draft
 
 | 目的 | 部品 | 例 |
 |---|---|---|
-| 要素数フィールド | `auto = count(list_field)` (リスト要素・TLV 値の中でも可) | IGMPv3 `num_group_records`、VRRP `count_ip_addrs` |
+| 要素数フィールド | `auto = count(list_field)` (リスト要素・TLV 値の中でも可。`count(list_field, adjust = -1)` で「最後の要素の位置」) | IGMPv3 `num_group_records`、VRRP `count_ip_addrs`、SRH `last_entry` |
 | 一部を除いたチェックサム | `auto = checksum(kind, coverage, exclude = [field])` | OSPFv2 `authentication`、LSA `ls_age` |
 | 後続の可変長フィールドのオクテット数 | `auto = size(field)` (リスト要素・TLV 値の中でも可) | IS-IS のサブ TLV 長 |
 | `ceil(ビット数 / 8)` オクテットのプレフィックス | `bytes(from = len, adjust = 7, div = 8)` (`Length::FromField { div }`) | IS-IS 拡張 IP / IPv6 到達性 |
 | 可変長要素 N 個のリスト | `Length::Count { field }` | IS-IS の省略可能なサブ TLV ブロック (S ビット) |
-| 可変長フィールドの後、ヘッダ長フィールドの位置で終わる領域 | `Length::UntilOffset { field, unit }` | 長さ指示子までの CLNP / ES-IS オプション |
+| 可変長フィールドの後、ヘッダ長フィールドの位置で終わる領域 | `Length::UntilOffset { field, unit, adjust }` (終わりは `field * unit + adjust`) | 長さ指示子までの CLNP / ES-IS オプション、SRH の TLV (`hdr_ext_len * 8 + 8`) |
 | TLV の型と長さの間にある値オクテット | `TlvDef::head_octets` | SCTP チャンクのフラグ |
 | N オクテット境界まで詰める TLV 項目 (詰め物は長さに含めない) | `TlvDef::align` (`unpadded_last`: 最後の項目は外側の項目が詰める) | SCTP のチャンク・パラメータ・エラー原因 |
 | 同じタイプで値によってレイアウトが変わる TLV 項目 | `TlvVariant::when_value_starts` / `when_value_len` (タイプを共有するバリアント。判別条件のないものが既定) | AFI / SAFI ごとの BGP `MP_REACH_NLRI`、3 / 4 オクテットの OSPF SR の SID、EVPN の IPv4 / IPv6 IP Prefix ルート |
@@ -25,7 +25,8 @@ Status: draft
 | NUL 終端文字列 | `cstring` 型 | TFTP `filename` / `mode` |
 | 長さ指示子付き OSI アドレス | `nsap` 型 (長さオクテットは自動) | CLNP / ES-IS / IS-IS の NSAP・NET |
 | 送信元ポートでも demux | `Binding::alt_field` | UDP / TCP の `src_port` |
-| ペイロード先頭ビットで demux | `Binding::peek` (`Peek { on, bits, table }`) | MPLS、GTP-U、OSI (NLPID) |
+| ペイロード先頭ビットで demux | `Binding::peek` (`Peek { on, bits, table }`。`skipping(n)` で先頭 `n` ビットを飛ばしてから読む) | MPLS、GTP-U、OSI (NLPID)、IPv6 ルーティングタイプ (`skip = 16`) |
+| 上位層チェックサムの宛先を置き換えるルーティングヘッダ | `ProtocolDef::final_destination` (`FinalDestination { list, when }`: `when` が 0 以外のとき `list` の要素 0 を疑似ヘッダの宛先に) | SRv6 SRH |
 | 長さだけが違うメッセージ | `BindingEntry::with_min_len` | IGMPv3 / MLDv2 クエリ |
 | 同じ番号でレイアウト違い | `BindingEntry::reparsing` | VRRPv2/v3、HSRPv1/v2、TFTP |
 

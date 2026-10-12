@@ -117,7 +117,10 @@ pub fn nvgre() -> ProtocolDef {
 // --------------------------------------------------------------------------
 
 /// One MPLS label entry (RFC 3032): 20-bit label, 3-bit traffic class, 1-bit
-/// bottom-of-stack `s` (Auto: 0 when another label follows) and 8-bit TTL. Below
+/// bottom-of-stack `s` (Auto: 0 when another label follows) and 8-bit TTL. The
+/// reserved labels 0-15 (RFC 3032 / 6790 / 5586 / 3429 / 7274) have names, e.g.
+/// `entropy_label_indicator` (7) before an entropy label; SR-MPLS SIDs are plain
+/// labels (SRGB base + SID index, see the SR-MPLS guide). Below
 /// the bottom label the payload's first nibble selects IPv4 (4) or IPv6 (6);
 /// other payloads (pseudowires) parse as `raw`.
 #[must_use]
@@ -127,7 +130,16 @@ pub fn mpls() -> ProtocolDef {
         name: "MPLS",
         layer: L2,
         fields: {
-            label: uint(20) = 16, desc = "mpls-label";
+            label: enum(20) {
+                0 => ipv4_explicit_null,
+                1 => router_alert,
+                2 => ipv6_explicit_null,
+                3 => implicit_null,
+                7 => entropy_label_indicator,
+                13 => gal,
+                14 => oam_alert,
+                15 => extension,
+            } = 16, desc = "mpls-label";
             tc: uint(3) = 0, desc = "mpls-tc";
             s: uint(1) = 1, auto = next_protocol, desc = "mpls-s";
             ttl: uint(8) = 64, desc = "mpls-ttl";

@@ -138,6 +138,7 @@ fn count_def() -> ProtocolDef {
                 wpg_core::FieldDef::new("n", FieldType::UInt { bits: 8 }).with_auto(
                     wpg_core::AutoCompute::Count {
                         field: "addrs".into(),
+                        adjust: 0,
                     },
                 ),
                 wpg_core::FieldDef::new("addrs", ipv4_list("n"))
@@ -309,6 +310,7 @@ fn invalid_extensions_are_rejected() {
     let mut d = count_def();
     d.fields[0].auto = Some(wpg_core::AutoCompute::Count {
         field: "secret".into(),
+        adjust: 0,
     });
     assert!(d.validate().is_err(), "count of a non-list field");
     let mut d = count_def();
