@@ -78,6 +78,8 @@ AF_XDP の copy モードは、どのネットワークデバイスでも動き�
 
 ## DPDK
 
+`scripts/deploy.sh <host> --dpdk [--hugepages N]` が以下のホスト側の準備 (hugepages の確保と起動時の設定、`hugetlbfs`、`vfio-pci`、IOMMU の確認) を行います。NIC のバインドは行いません。[scripts/deploy.sh によるデプロイ](deploy.md) を参照してください。
+
 要件 (ADR 0004 の決定に基づく):
 
 - DPDK **24.11 LTS** (23.11 LTS も CI で確認)。`--features dpdk` でビルドし、DPDK の開発パッケージが必要です。

@@ -326,6 +326,8 @@ mod tests {
                     "area",
                     "sys",
                     "nsel",
+                    // wpg template migrate
+                    "found",
                 ] {
                     args.set(name, "1");
                 }

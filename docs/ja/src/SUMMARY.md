@@ -43,6 +43,10 @@
 
 # 運用
 
+- [scripts/deploy.sh によるデプロイ](operations/deploy.md)
+- [サービスとして動かす](operations/services.md)
+- [Docker](operations/docker.md)
+- [アップグレード](operations/upgrade.md)
 - [DPDK / AF_XDP のセットアップ](operations/dpdk-afxdp.md)
 - [CML2 での注意点](operations/cml2.md)
 - [相互接続確認](operations/interop.md)

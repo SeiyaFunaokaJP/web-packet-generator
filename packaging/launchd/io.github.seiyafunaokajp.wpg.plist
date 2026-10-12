@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd job for the wpg server (macOS), installed to /Library/LaunchDaemons/.
+  Install, start and remove steps: docs/en/src/operations/services.md
+  (docs/ja/src/operations/services.md).
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.seiyafunaokajp.wpg</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/wpg</string>
+        <string>serve</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>WPG_CONFIG</key>
+        <string>/usr/local/etc/wpg/wpg.toml</string>
+        <key>WPG_DATA_DIR</key>
+        <string>/usr/local/var/wpg</string>
+    </dict>
+    <key>WorkingDirectory</key>
+    <string>/usr/local/var/wpg</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+    <key>StandardOutPath</key>
+    <string>/usr/local/var/log/wpg.log</string>
+    <key>StandardErrorPath</key>
+    <string>/usr/local/var/log/wpg.log</string>
+</dict>
+</plist>

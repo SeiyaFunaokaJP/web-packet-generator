@@ -154,21 +154,22 @@ Options:
 
 ### `wpg template`
 
-テンプレートのツール。`lint` はエラー時に終了ステータス 1 を返します。`export` と `import` は未実装です。
+テンプレートのツール。`lint` はエラー時に終了ステータス 1 を返します。`migrate` はテンプレートを現在の `schema:` バージョンに移行します ([アップグレード](../operations/upgrade.md) を参照)。
 
 ```text
-Template tools (lint, list, export, import)
+Template tools (lint, list, migrate, export, import)
 
 Usage: wpg template <COMMAND>
 
 Commands:
-  lint    Check templates for errors and warnings (exit status 1 on errors)
-  list    List the templates of a directory (default: `templates/`)
-  show    Print the built packet (hex dump and layout tree) of a template
-  schema  Print the JSON Schema of the template format
-  export  Export templates (not implemented yet)
-  import  Import templates (not implemented yet)
-  help    Print this message or the help of the given subcommand(s)
+  lint     Check templates for errors and warnings (exit status 1 on errors)
+  list     List the templates of a directory (default: `templates/`)
+  show     Print the built packet (hex dump and layout tree) of a template
+  schema   Print the JSON Schema of the template format
+  export   Pack templates (files or ids) into a `.wpgbundle` archive
+  migrate  Upgrade templates to the current schema version
+  import   Extract the templates of a `.wpgbundle` archive into a directory
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help
@@ -231,4 +232,33 @@ Usage: wpg template schema
 Options:
   -h, --help     Print help
   -V, --version  Print version
+```
+
+### `wpg template migrate`
+
+古い `schema:` のテンプレートを現在のバージョンに書き換えます。`--check` は一覧を出すだけで、移行が必要なものがあれば終了ステータス 1 を返すので CI に向いています。
+
+```text
+Upgrade templates to the current schema version.
+
+Directories are scanned recursively. The original of a rewritten file is kept as `<file>.bak`; the new file loses its comments. Files already at the current version are not touched.
+
+Usage: wpg template migrate [OPTIONS] <PATHS>...
+
+Arguments:
+  <PATHS>...
+          Template files or directories
+
+Options:
+      --check
+          Only report outdated templates (exit status 1 if any needs migrating)
+
+      --no-backup
+          Do not keep a `.bak` copy of migrated files
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
 ```

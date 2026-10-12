@@ -388,12 +388,12 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] GUI 受信画面
 
 ### M10: デプロイ・配布・運用（2 週）
-- [ ] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション
+- [x] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション（ホスト側は `scripts/lib/deploy-remote.sh`。`--service` で `wpg` ユーザ / `/etc/wpg/wpg.env` / unit 投入、パスワード無しの非ループバック起動を拒否、`/api/health` 待ち、`wpg.prev` と `--rollback`。systemd + sshd の Ubuntu 24.04 コンテナで確認、shellcheck 済み。`--dpdk` は hugepages / hugetlbfs / vfio-pci / IOMMU 確認の準備のみで NIC バインドと DPDK 本体は対象外 (M8)。CML2 実機は未確認）
 - [ ] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS
 - [ ] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順
 - [ ] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認
-- [ ] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)
-- [ ] アップグレード手順・テンプレマイグレーション
+- [x] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)（Gatekeeper / quarantine の回避手順を install-macos に記載、署名は Developer ID 未取得のため見送りと dev/release に記載。実機での確認は未実施）
+- [x] アップグレード手順・テンプレマイグレーション（`wpg template migrate [--check] [--no-backup]` を追加。`schema:` の移行機構 `MIGRATIONS` と DB の `schema_version` は既存。docs `operations/upgrade.md` に手順、DB / 設定 / テンプレの互換方針、スキーマ追加手順。schema は 1 のみのため実移行のテストは対象外）
 
 ### M11: ドキュメント仕上げ（継続 + 2 週）
 - [x] Getting Started (3 OS)、チュートリアル 5 本 (ja/en)（Linux / macOS / Windows のインストール・権限・初回ログイン、ARP スイープ / VLAN SYN / IPv6 NDP / レート制御 / pcap 再生のチュートリアルを ja/en で整備し、CLI の実出力と tshark 突合で確認）
