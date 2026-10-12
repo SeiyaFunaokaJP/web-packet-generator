@@ -46,6 +46,8 @@ pub mod keys {
     pub const LENGTH_TOO_LONG: &str = "diag-length-too-long";
     /// Manual length differs from the computed one. Args: `field`, `value`, `expected`.
     pub const LENGTH_MISMATCH: &str = "diag-length-mismatch";
+    /// Manual element count differs from the actual one. Args: `field`, `value`, `expected`.
+    pub const COUNT_MISMATCH: &str = "diag-count-mismatch";
     /// Manual checksum differs from the computed one. Args: `field`, `value`, `expected`.
     pub const CHECKSUM_MISMATCH: &str = "diag-checksum-mismatch";
     /// Manual next-protocol value does not announce the next layer.

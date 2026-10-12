@@ -26,8 +26,12 @@ layers:
   - protocol: tftp
     fields:
       opcode: rrq
-      # NUL-terminated filename, mode and option name / value strings
-      body: '"pxelinux.0\0octet\0blksize\01428\0"'
+      # NUL-terminated strings; the terminators are added automatically
+      filename: '"pxelinux.0"'
+      mode: '"octet"'
+      options:
+        - name: '"blksize"'
+          value: '"1428"'
 
 tx:
   count: 1

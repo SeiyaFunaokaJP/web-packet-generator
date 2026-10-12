@@ -238,11 +238,10 @@ fn well_formed_protocol_samples_parse_back_to_their_stack() {
             .filter_map(|x| x.strip_prefix("parse-as:")?.split_once('='))
             .collect();
         // `opaque-inner:<id>`: whatever follows the last `<id>` layer cannot be
-        // decoded back (MPLS has no first-nibble payload demux, since a `Binding`
-        // selects on a whole field, not a peeked nibble, so IPv4 after the bottom
-        // label parses as `raw`; NVGRE shares IP protocol 47 with GRE, which does
-        // not know its key field). Only the stack up to and including the last
-        // `<id>` layer is compared, and decode errors after it are tolerated.
+        // decoded back (NVGRE shares IP protocol 47 with GRE, which does not know
+        // its key field; TFTP transfers run between two ephemeral ports). Only the
+        // stack up to and including the last `<id>` layer is compared, and decode
+        // errors after it are tolerated.
         let opaque_inner: Option<&str> = t
             .meta
             .tags

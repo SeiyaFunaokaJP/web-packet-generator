@@ -27,12 +27,10 @@ layers:
       max_resp_code: 0 # reserved in reports
   - protocol: igmpv3_report
     fields:
-      num_group_records: 2 # manual: must match the records below
       group_records:
         - record_type: change_to_exclude # EXCLUDE {} = join
           multicast_address: 239.1.1.1
         - record_type: allow_new_sources
-          num_sources: 1 # manual: must match `sources`
           multicast_address: 232.1.1.1
           sources: [192.0.2.10]
 

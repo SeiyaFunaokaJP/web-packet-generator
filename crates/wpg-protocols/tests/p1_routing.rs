@@ -898,3 +898,85 @@ proptest! {
         prop_assert_eq!(parsed.packet.build(catalog()).unwrap().bytes, bytes);
     }
 }
+
+// --------------------------------------------------------------------------
+// Checksum exclusions, Auto counts and source-port demux
+// --------------------------------------------------------------------------
+
+#[test]
+fn ospfv2_checksums_skip_authentication_and_ls_age() {
+    // Simple-password authentication: the packet checksum leaves the
+    // authentication field out (RFC 2328 D.4.3), so it changes nothing.
+    let hello = |auth: &[u8; 8]| {
+        build(vec![
+            ipv4([192, 0, 2, 1], [224, 0, 0, 5], 1),
+            Layer::new("ospfv2")
+                .with("au_type", 1u16)
+                .with("authentication", auth.to_vec()),
+            Layer::new("ospfv2_hello"),
+        ])
+    };
+    let a = hello(b"secret12");
+    let b = hello(&[0; 8]);
+    assert!(ospfv2_verifies(&a[20..]), "OSPF checksum with a password");
+    assert_eq!(a[32..34], b[32..34], "same checksum for any password");
+
+    // An aged LSA: the Fletcher checksum excludes LS age.
+    let bytes = build(vec![
+        ipv4([192, 0, 2, 1], [224, 0, 0, 5], 3),
+        Layer::new("ospfv2"),
+        Layer::new("ospfv2_lsu"),
+        Layer::new("ospfv2_lsa").with("ls_age", 1234u16),
+        Layer::new("ospfv2_router_lsa"),
+    ]);
+    let lsa = &bytes[20 + 28..];
+    assert_eq!(u16::from_be_bytes([lsa[0], lsa[1]]), 1234);
+    assert!(
+        lsa_fletcher_verifies(lsa),
+        "LSA checksum with a non-zero age"
+    );
+}
+
+#[test]
+fn ospfv2_router_lsa_link_count_is_auto() {
+    let link = |id: [u8; 4], metric: u64| {
+        st(&[
+            ("link_id", v4(id)),
+            ("link_data", v4([255, 255, 255, 0])),
+            ("type", FieldValue::UInt(3)),
+            ("num_tos", FieldValue::UInt(0)),
+            ("metric", FieldValue::UInt(metric)),
+        ])
+    };
+    let bytes = build(vec![
+        ipv4([192, 0, 2, 1], [224, 0, 0, 5], 3),
+        Layer::new("ospfv2"),
+        Layer::new("ospfv2_lsu"),
+        Layer::new("ospfv2_lsa"),
+        Layer::new("ospfv2_router_lsa").with(
+            "links",
+            vec![
+                link([192, 0, 2, 0], 10),
+                link([198, 51, 100, 0], 20),
+                link([203, 0, 113, 0], 30),
+            ],
+        ),
+    ]);
+    let body = &bytes[20 + 28 + 20..];
+    assert_eq!(u16::from_be_bytes([body[2], body[3]]), 3, "num_links");
+    assert_eq!(body.len(), 4 + 3 * 12);
+}
+
+#[test]
+fn bgp_decodes_from_source_port_179() {
+    // A reply from the speaker on port 179 to the peer's ephemeral port.
+    let bytes = build(vec![
+        ipv4([192, 0, 2, 2], [192, 0, 2, 1], 6).with("ttl", 64u8),
+        Layer::new("tcp")
+            .with("src_port", 179u16)
+            .with("dst_port", 49152u16)
+            .with("flags", 0x18u8),
+        Layer::new("bgp"),
+    ]);
+    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "tcp", "bgp"]);
+}

@@ -6,7 +6,7 @@ meta:
   descriptions:
     ja: "MPLS (RFC 3032): 2 ラベルスタックで IPv4/UDP を Ethernet 上に転送"
     en: "MPLS (RFC 3032): a two-label stack over Ethernet carrying IPv4/UDP"
-  tags: ["protocol:mpls", "layer:l2", encap, sample, "opaque-inner:mpls"]
+  tags: ["protocol:mpls", "layer:l2", encap, sample]
   author: wpg
   created: 2026-09-29
 

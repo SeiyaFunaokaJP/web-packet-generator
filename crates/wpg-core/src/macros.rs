@@ -39,18 +39,22 @@
 /// [, auto = rule] [, desc = "fluent-key"];`
 ///
 /// * types: `uint(N)`, `int(N)`, `enum(N) { v => name, .. }`,
-///   `flags(N) { bit => name, .. }`, `mac`, `ipv4`, `ipv6`, `nsap`, `raw`,
+///   `flags(N) { bit => name, .. }`, `mac`, `ipv4`, `ipv6`, `nsap`, `cstring`, `raw`,
 ///   `bytes(N)`, `bytes(to_end)`, `bytes(from = field[, unit = U][, adjust = A])`,
 ///   `padding(ALIGN)`, and `ty(expr)` for any [`FieldType`](crate::FieldType)
 ///   expression (TLV / list fields, whose defaults are `FieldValue::from(..)`)
 /// * defaults are typed by the field: integers for `uint`/`enum`/`flags`/`int`,
 ///   `[u8; 6]` for `mac`, anything `Ipv4Addr::from` / `Ipv6Addr::from` accepts for
-///   addresses, anything `Vec::<u8>::from` accepts for byte types
-/// * binding entries are single values; ranges / defaults / re-parse entries are
-///   added to `def.next` afterwards ([`BindingEntry::range`](crate::BindingEntry::range))
-/// * auto rules: `next_protocol`, `counter`,
+///   addresses, anything `Vec::<u8>::from` accepts for byte types (`cstring`:
+///   without the terminating NUL)
+/// * binding entries are single values; ranges / defaults / re-parse entries,
+///   length conditions, a source-port style `alt_field` and payload peeks are
+///   added to `def.next` afterwards ([`BindingEntry::range`](crate::BindingEntry::range),
+///   [`Peek`](crate::Peek))
+/// * auto rules: `next_protocol`, `counter`, `count(list_field)`,
 ///   `length(header|payload|total[, unit = bytes|words16|words32|words64][, adjust = A])`,
-///   `checksum(internet|internet_pseudo|fletcher|crc32c|crc32, header|header_payload[, nonzero])`
+///   `checksum(internet|internet_pseudo|fletcher|crc32c|crc32, header|header_payload[, nonzero])`,
+///   `checksum(kind, coverage, exclude = [field, ..])`
 /// * constraints: `error|warning|info: in_range(f, min, max) | equals(f, v) |
 ///   not_equals(f, v) | min_length(span, n) | max_length(span, n);`
 #[macro_export]
@@ -141,6 +145,9 @@ macro_rules! __wpg_field_type {
     };
     (nsap) => {
         $crate::FieldType::Nsap
+    };
+    (cstring) => {
+        $crate::FieldType::CString
     };
     (raw) => {
         $crate::FieldType::Raw
@@ -254,11 +261,17 @@ macro_rules! __wpg_auto {
             adjust: $crate::__wpg_or!($($a)?; 0),
         }
     };
-    (checksum ($kind:ident, $cov:ident)) => {
+    (count ($f:ident)) => {
+        $crate::AutoCompute::Count {
+            field: ::std::string::String::from(stringify!($f)),
+        }
+    };
+    (checksum ($kind:ident, $cov:ident $(, exclude = [ $($ex:ident),* $(,)? ])?)) => {
         $crate::AutoCompute::Checksum {
             algorithm: $crate::__wpg_checksum_kind!($kind),
             covers: $crate::__wpg_coverage!($cov),
             nonzero: false,
+            exclude: ::std::vec![ $($( ::std::string::String::from(stringify!($ex)) ),*)? ],
         }
     };
     (checksum ($kind:ident, $cov:ident, nonzero)) => {
@@ -266,6 +279,7 @@ macro_rules! __wpg_auto {
             algorithm: $crate::__wpg_checksum_kind!($kind),
             covers: $crate::__wpg_coverage!($cov),
             nonzero: true,
+            exclude: ::std::vec::Vec::new(),
         }
     };
 }

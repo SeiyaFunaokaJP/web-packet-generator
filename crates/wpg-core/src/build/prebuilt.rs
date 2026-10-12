@@ -36,7 +36,7 @@ use crate::ir::{
 use crate::packet::{FcsMode, FieldValue, Packet};
 use crate::stream::FieldRef;
 
-use super::{build, resolve, Built, LayerLayout};
+use super::{build, resolve, zero_bits, Built, LayerLayout};
 
 /// How a fixed-size field is written.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -124,8 +124,8 @@ struct Csum {
     /// Field position relative to `start`, in bits.
     rel_bit: usize,
     bits: usize,
-    /// Later Auto checksums of the same layer (relative bit, bits): still zero when
-    /// the builder computes this one.
+    /// Later Auto checksums of the same layer and excluded fields (relative bit,
+    /// bits): read as zero when the builder computes this one.
     zero_also: Vec<(usize, usize)>,
     /// `None` with [`ChecksumKind::InternetPseudoHeader`]: computed without.
     pseudo: Option<Pseudo>,
@@ -319,10 +319,21 @@ impl Prebuilt {
                     algorithm,
                     covers,
                     nonzero,
+                    exclude,
                 } = auto
                 else {
                     continue;
                 };
+                // Later checksums of the layer are still zero, excluded fields
+                // always read as zero.
+                let mut zero_also: Vec<(usize, usize)> =
+                    pending[k + 1..].iter().map(|p| (p.0, p.1)).collect();
+                zero_also.extend(
+                    exclude
+                        .iter()
+                        .filter_map(|n| field_bit(i, n))
+                        .map(|(b, n)| (b - lay.offset * 8, n)),
+                );
                 let end = match covers {
                     ChecksumCoverage::Header => lay.offset + lay.header_len,
                     ChecksumCoverage::HeaderAndPayload => total,
@@ -339,7 +350,7 @@ impl Prebuilt {
                     end,
                     rel_bit,
                     bits,
-                    zero_also: pending[k + 1..].iter().map(|p| (p.0, p.1)).collect(),
+                    zero_also,
                     pseudo,
                 });
             }
@@ -466,6 +477,7 @@ impl Prebuilt {
                     AutoCompute::Length { .. }
                         | AutoCompute::Checksum { .. }
                         | AutoCompute::NextProtocol
+                        | AutoCompute::Count { .. }
                 )
             );
             if auto && !self.base.layers[layer].fields.contains_key(&r.field) {
@@ -566,7 +578,7 @@ impl Prebuilt {
         let width = |b: usize| u32::try_from(b).unwrap_or(64);
         put_bits(&mut self.scratch, c.rel_bit, width(c.bits), 0);
         for &(b, n) in &c.zero_also {
-            put_bits(&mut self.scratch, b, width(n), 0);
+            zero_bits(&mut self.scratch, b, n);
         }
         let v: u64 = match c.kind {
             ChecksumKind::Fletcher => u64::from(fletcher_checksum(&self.scratch, c.rel_bit / 8)),
@@ -718,6 +730,7 @@ mod tests {
                 algorithm: ChecksumKind::Fletcher,
                 covers: ChecksumCoverage::Header,
                 nonzero: false,
+                exclude: Vec::new(),
             }),
             FieldDef::new("b", FieldType::Int { bits: 12 }),
             FieldDef::new("pad", FieldType::UInt { bits: 4 }),
@@ -725,6 +738,7 @@ mod tests {
                 algorithm: ChecksumKind::Crc32c,
                 covers: ChecksumCoverage::HeaderAndPayload,
                 nonzero: false,
+                exclude: Vec::new(),
             }),
         ];
         let d = vec![p];

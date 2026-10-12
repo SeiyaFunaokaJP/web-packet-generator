@@ -14,6 +14,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 | `bytes(len\|var)` | 固定長または可変長バイト列 |
 | `mac` / `ipv4` / `ipv6` | アドレス型 |
 | `nsap` | 可変長 OSI アドレス (AFI/IDI/HO-DSP/SystemID/SEL に分解表示) |
+| `cstring` | NUL 終端文字列 (値は終端なし、合成時に `0x00` を付加。TFTP のファイル名など) |
 | `enum` | 名前付き値 |
 | `flags(bit set)` | ビット集合 |
 | `tlv` / `list<T>` | 反復・入れ子構造 |
@@ -24,7 +25,20 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 - 長さ系: IPv4 total length, UDP length, IS-IS PDU length, TLV length など
 - チェックサム系: IPv4 header, TCP/UDP (v4/v6 疑似ヘッダ), ICMP, OSPF, IS-IS (Fletcher), SCTP CRC32c, GRE など
 - 次ヘッダ / EtherType / Protocol 番号: 下位レイヤの選択から自動決定し、上書き可
+- 件数系 (`count(list)`): 同じフィールド群の `list` / `tlv` の要素数 (IGMPv3 の `num_group_records`、グループレコード内の `num_sources` など)。リスト要素・TLV 値の中でも使える唯一の Auto 規則
+- チェックサムの除外指定 (`exclude = [field, ..]`): 指定フィールドを 0 とみなして計算 (OSPFv2 の認証フィールド、LSA の LS age)
 - ストリーム内カウンタ: シーケンス番号など
+
+### 次プロトコルの選択 (demux)
+
+解析時は各プロトコルの binding で次レイヤを決める。評価順は次のとおり。
+
+1. `peek`: セレクタ値が `on` のとき、ペイロード先頭の数ビットを覗いて決める (MPLS の bottom-of-stack / GTP-U G-PDU / PIM Register: 先頭ニブル 4 → IPv4、6 → IPv6)
+2. セレクタフィールドの値に一致するエントリ。`min_len` 付きのエントリは、ヘッダ後に残るオクテット数がそれ以上のときだけ一致する (IGMPv3 / MLDv2 クエリは v1/v2 と同じ type で長さだけが違う)
+3. `alt_field` の値に一致するエントリ (UDP / TCP の送信元ポート。応答パケットもデコードできる)
+4. `default`
+
+`reparse` エントリは同じ位置を別の定義で読み直す (VRRPv3 → v2、HSRPv1 → v2、TFTP のオペコード別レイアウト)。読み直しは、元の定義ではヘッダ全体をデコードできない場合でもセレクタまで読めれば行う。合成時はセレクタフィールドだけを書き、`peek` 経由のプロトコルには `on` を書く。
 
 ### 意図的に壊す (malformed)
 

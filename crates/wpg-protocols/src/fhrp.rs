@@ -4,27 +4,24 @@
 //! ## Engine limitations exercised here
 //!
 //! * **`VRRPv2` and `VRRPv3`** share IP protocol 112 and are told apart only by the
-//!   version nibble. A [`wpg_core::Binding`] selects on a whole field of the
-//!   *lower* layer, so IPv4 protocol 112 lists `vrrpv3` first (parsed) and
-//!   `vrrpv2` second (used only to fill the protocol number when building); a
-//!   `VRRPv2` advertisement decodes as `vrrpv3` with the 8 authentication octets as
-//!   a trailing `raw` layer. A "peek first nibble" selector would fix it.
+//!   version nibble: IPv4 protocol 112 decodes as [`vrrpv3`], which re-decodes
+//!   itself as [`vrrpv2`] when `version` is 2 (a re-parse binding entry).
 //! * **`VRRPv3`** carries IPv4 *or* IPv6 addresses depending on the IP version of the
 //!   enclosing packet. The engine cannot size a field from a lower layer, so there
 //!   are two definitions: [`vrrpv3`] (IPv4 addresses, bound from IPv4) and
-//!   [`vrrpv3_ipv6`] (IPv6 addresses, bound from IPv6 next header 112). The IPv6
-//!   address count is Manual: an auto length can only be expressed in 1/2/4/8
-//!   octet units, not 16.
-//! * **`HSRPv1` and `HSRPv2`** both use UDP port 1985; UDP 1985 decodes as `hsrp`
-//!   (v1) and `HSRPv2` is only reachable on parse through its IPv6 port 2029.
-//!   `HSRPv2`'s 16-octet virtual address is IPv4 (zero padded) or IPv6 according to
-//!   the `ip_version` octet, so it is opaque `bytes(16)`.
+//!   [`vrrpv3_ipv6`] (IPv6 addresses, bound from IPv6 next header 112). The address
+//!   counts are Auto ([`wpg_core::AutoCompute::Count`]).
+//! * **`HSRPv1` and `HSRPv2`** both use UDP port 1985. The first octet is the
+//!   version (0) in v1 and the first TLV type (1, Group State) in v2, so UDP 1985
+//!   decodes as [`hsrp`], which re-decodes itself as [`hsrpv2`] for a first octet
+//!   of 1. `HSRPv2`'s 16-octet virtual address is IPv4 (zero padded) or IPv6
+//!   according to the `ip_version` octet, so it is opaque `bytes(16)`.
 //! * **GLBP** is undocumented; only the Hello TLV (IPv4 virtual address) is typed,
 //!   Request/Response and Authentication TLVs keep their value octets.
 
 use wpg_core::{
-    protocol, FieldDef, FieldType, FieldValue, ItemDef, Length, LengthUnit, ProtocolDef, TlvDef,
-    TlvItem, TlvVariant,
+    protocol, Binding, BindingEntry, FieldDef, FieldType, FieldValue, ItemDef, Length, LengthUnit,
+    ProtocolDef, TlvDef, TlvItem, TlvVariant,
 };
 
 fn u(name: &str, bits: u8, default: u64) -> FieldDef {
@@ -64,7 +61,7 @@ pub fn vrrpv2() -> ProtocolDef {
             type: enum(4) { 1 => advertisement } = 1, desc = "vrrp-type";
             vrid: uint(8) = 1, desc = "vrrp-vrid";
             priority: uint(8) = 100, desc = "vrrp-priority";
-            count_ip_addrs: uint(8), auto = length(header, unit = words32, adjust = -4), desc = "vrrp-count";
+            count_ip_addrs: uint(8), auto = count(ip_addresses), desc = "vrrp-count";
             auth_type: enum(8) {
                 0 => no_authentication,
                 1 => simple_text_password,
@@ -84,9 +81,10 @@ pub fn vrrpv2() -> ProtocolDef {
 /// `VRRPv3` for IPv4 (RFC 5798, IPv4 protocol 112): version 3 / type 1, VRID,
 /// priority, `count_ipvx_addrs` (Auto), 12-bit `max_adver_int` (centiseconds),
 /// `checksum` (Auto, with the IPv4 pseudo header) and the IPv4 `ip_addresses`.
+/// A `version` of 2 re-decodes the message as [`vrrpv2`].
 #[must_use]
 pub fn vrrpv3() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "vrrpv3",
         name: "VRRPv3",
         layer: L3,
@@ -95,7 +93,7 @@ pub fn vrrpv3() -> ProtocolDef {
             type: enum(4) { 1 => advertisement } = 1, desc = "vrrp-type";
             vrid: uint(8) = 1, desc = "vrrp-vrid";
             priority: uint(8) = 100, desc = "vrrp-priority";
-            count_ipvx_addrs: uint(8), auto = length(header, unit = words32, adjust = -2), desc = "vrrp-count";
+            count_ipvx_addrs: uint(8), auto = count(ip_addresses), desc = "vrrp-count";
             reserved: uint(4) = 0;
             max_adver_int: uint(12) = 100, desc = "vrrp-max-adver-int";
             checksum: uint(16), auto = checksum(internet_pseudo, header_payload), desc = "vrrp-checksum";
@@ -104,12 +102,16 @@ pub fn vrrpv3() -> ProtocolDef {
         constraints: {
             warning: equals(version, 3);
         },
-    }
+    };
+    d.next = Some(Binding::new(
+        "version",
+        vec![BindingEntry::new(2, "vrrpv2").reparsing()],
+    ));
+    d
 }
 
 /// `VRRPv3` for IPv6 (RFC 5798, IPv6 next header 112): as [`vrrpv3`] but with IPv6
-/// addresses (the first one is the link-local virtual address). `count_ipvx_addrs`
-/// is Manual (see the module docs).
+/// addresses (the first one is the link-local virtual address).
 #[must_use]
 pub fn vrrpv3_ipv6() -> ProtocolDef {
     protocol! {
@@ -121,7 +123,7 @@ pub fn vrrpv3_ipv6() -> ProtocolDef {
             type: enum(4) { 1 => advertisement } = 1, desc = "vrrp-type";
             vrid: uint(8) = 1, desc = "vrrp-vrid";
             priority: uint(8) = 100, desc = "vrrp-priority";
-            count_ipvx_addrs: uint(8) = 1, desc = "vrrp-count";
+            count_ipvx_addrs: uint(8), auto = count(ip_addresses), desc = "vrrp-count";
             reserved: uint(4) = 0;
             max_adver_int: uint(12) = 100, desc = "vrrp-max-adver-int";
             checksum: uint(16), auto = checksum(internet_pseudo, header_payload), desc = "vrrp-checksum";
@@ -142,10 +144,11 @@ pub fn vrrpv3_ipv6() -> ProtocolDef {
 
 /// `HSRPv1` (RFC 2281, UDP 1985 to 224.0.0.2): the fixed 20-octet message.
 /// Timers are in seconds; `auth_data` is the 8-octet clear-text password
-/// (default `cisco`).
+/// (default `cisco`). A first octet of 1 (an `HSRPv2` Group State TLV) re-decodes
+/// the message as [`hsrpv2`].
 #[must_use]
 pub fn hsrp() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "hsrp",
         name: "HSRPv1",
         layer: L7,
@@ -173,7 +176,12 @@ pub fn hsrp() -> ProtocolDef {
             auth_data: bytes(8) = *b"cisco\0\0\0", desc = "hsrp-auth-data";
             virtual_ip: ipv4 = [192, 0, 2, 254], desc = "hsrp-virtual-ip";
         },
-    }
+    };
+    d.next = Some(Binding::new(
+        "version",
+        vec![BindingEntry::new(1, "hsrpv2").reparsing()],
+    ));
+    d
 }
 
 /// `HSRPv2` TLVs: 8-bit type, 8-bit length excluding the header. Group State (1,

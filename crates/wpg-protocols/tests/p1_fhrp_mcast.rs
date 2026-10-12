@@ -118,9 +118,9 @@ fn vrrpv2_golden() {
     assert_eq!(&bytes[20..26], &[0x21, 10, 100, 2, 0, 1]);
     assert!(verifies(&bytes[0..20]), "IPv4");
     assert!(verifies(&bytes[20..]), "VRRPv2 checksum (no pseudo header)");
-    // VRRPv2 shares protocol 112 with VRRPv3 and decodes as `vrrpv3`; the
-    // authentication data is left over as `raw`. The bytes still round-trip.
-    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "vrrpv3", "raw"]);
+    // VRRPv2 shares protocol 112 with VRRPv3: `vrrpv3` re-decodes version 2 as
+    // `vrrpv2`.
+    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "vrrpv2"]);
     assert_eq!(roundtrip(&bytes[20..], "vrrpv2"), ["vrrpv2"]);
 
     assert_dissects(&bytes, Some(0x0800), "vrrp");
@@ -249,7 +249,9 @@ fn hsrpv2_golden() {
         Layer::new("hsrpv2"),
     ]);
     assert_eq!(&bytes[28..32], &[1, 40, 2, 0]);
-    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "udp", "hsrp", "raw"]);
+    // UDP 1985 decodes as `hsrp`, which re-decodes a first octet of 1 (the Group
+    // State TLV type) as `hsrpv2`.
+    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "udp", "hsrpv2"]);
 
     // tshark files HSRPv2 under the `hsrp` protocol; `hsrp2.*` fields mark v2.
     assert_dissects(&bytes, Some(0x0800), "hsrp2.version");
@@ -321,8 +323,8 @@ fn igmpv3_query_golden() {
     // QRV 2, QQIC 125, one source (Auto).
     assert_eq!(&bytes[28..32], &[0x02, 125, 0, 1]);
     assert!(verifies(&bytes[20..]), "IGMP checksum");
-    // A v3 query decodes as the v2 body plus the extension as `raw`.
-    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "igmp", "igmpv2", "raw"]);
+    // A query of 12 octets or more decodes as the v3 body.
+    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "igmp", "igmpv3_query"]);
     assert_eq!(
         roundtrip(&bytes[24..], "igmpv3_query"),
         ["igmpv3_query"],
@@ -336,9 +338,9 @@ const IGMPV3_REPORT: &str = "45000028 0008 0000 01 02 17b5 c0000201 e0000016 \
 
 #[test]
 fn igmpv3_report_golden() {
+    // `num_group_records` and the record's `num_sources` are Auto counts.
     let record = FieldValue::Struct(BTreeMap::from([
         ("record_type".to_owned(), FieldValue::UInt(1)),
-        ("num_sources".to_owned(), FieldValue::UInt(1)),
         (
             "multicast_address".to_owned(),
             FieldValue::Ipv4(Ipv4Addr::new(239, 1, 1, 1)),
@@ -424,8 +426,8 @@ fn mldv2_query_golden() {
         verifies(&with_v6_pseudo(&bytes, 58, &bytes[40..])),
         "ICMPv6 checksum"
     );
-    // A v2 query decodes as the v1 body plus the extension as `raw`.
-    assert_eq!(roundtrip(&bytes, "ipv6"), ["ipv6", "icmpv6", "mld", "raw"]);
+    // A query of 28 octets or more decodes as the v2 body.
+    assert_eq!(roundtrip(&bytes, "ipv6"), ["ipv6", "icmpv6", "mldv2_query"]);
     assert_eq!(roundtrip(&bytes[44..], "mldv2_query"), ["mldv2_query"]);
 }
 
@@ -569,8 +571,11 @@ fn mpls_in_udp_golden() {
         "UDP checksum"
     );
     assert!(verifies(&bytes[32..52]), "inner IPv4");
-    // UDP 6635 → MPLS; the bottom-of-stack payload has no binding (raw).
-    assert_eq!(roundtrip(&bytes, "ipv4"), ["ipv4", "udp", "mpls", "raw"]);
+    // UDP 6635 → MPLS; the bottom-of-stack payload is IPv4 by its first nibble.
+    assert_eq!(
+        roundtrip(&bytes, "ipv4"),
+        ["ipv4", "udp", "mpls", "ipv4", "raw"]
+    );
 
     assert_dissects(&bytes, Some(0x0800), "mpls");
 }

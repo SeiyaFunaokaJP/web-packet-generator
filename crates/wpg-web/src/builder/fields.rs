@@ -38,6 +38,7 @@ fn short_type(ty: &FieldType) -> String {
         FieldType::Ipv4 => "ipv4".into(),
         FieldType::Ipv6 => "ipv6".into(),
         FieldType::Nsap => "nsap".into(),
+        FieldType::CString => "cstr".into(),
         FieldType::Bytes { .. } => "bytes".into(),
         FieldType::Tlv(_) => "tlv".into(),
         FieldType::List { .. } => "list".into(),
@@ -451,6 +452,7 @@ fn placeholder_for(ty: &FieldType) -> &'static str {
         FieldType::Mac => "00:11:22:33:44:55",
         FieldType::Nsap => "49.0001.1921.6800.1001.00",
         FieldType::Bytes { .. } | FieldType::Raw => "de ad be ef",
+        FieldType::CString => "\"boot.bin\"",
         FieldType::Enum { .. } => "name or 0x…",
         _ => "0x… / 123",
     }

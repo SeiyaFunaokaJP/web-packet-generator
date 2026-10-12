@@ -6,7 +6,7 @@ meta:
   descriptions:
     ja: "MLDv2 (RFC 3810): マルチキャストアドレス・送信元指定クエリ"
     en: "MLDv2 (RFC 3810): a Multicast Address and Source Specific Query"
-  tags: ["protocol:icmpv6", "protocol:mldv2_query", "layer:l3", multicast, sample, "parse-as:mldv2_query=mld"]
+  tags: ["protocol:icmpv6", "protocol:mldv2_query", "layer:l3", multicast, sample]
   author: wpg
   created: 2026-10-11
 
@@ -23,12 +23,11 @@ layers:
   - protocol: ipv6_hopopts
     fields:
       options: "05 02 00 00 01 00" # Router Alert (MLD) + PadN
-  - protocol: icmpv6 # type 130 is shared with MLDv1 queries, which decode it
+  - protocol: icmpv6 # type 130 is shared with MLDv1 queries; v2 is the longer one
   - protocol: mldv2_query
     fields:
       max_resp_code: 1000
       multicast_address: ff05::1
-      num_sources: 1 # manual: must match `sources`
       sources: [2001:db8::10]
 
 tx:

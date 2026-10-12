@@ -24,7 +24,6 @@ layers:
     fields:
       vrid: 10
       priority: 200
-      count_ipvx_addrs: 2 # manual: one per IPv6 address below
       ip_addresses: [fe80::1, 2001:db8::1]
 
 tx:

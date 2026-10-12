@@ -324,6 +324,9 @@ fn bytes_to_input(ty: &FieldType, b: &[u8]) -> Option<FieldInput> {
             Some(text(&FieldValue::Ipv6(Ipv6Addr::from(o))))
         }
         FieldType::Nsap => Some(FieldInput::Str(format_nsap(b))),
+        FieldType::CString => Some(text(&FieldValue::Bytes(
+            b.strip_suffix(&[0]).unwrap_or(b).to_vec(),
+        ))),
         FieldType::Bytes { .. } | FieldType::Raw | FieldType::Padding { .. } => {
             Some(FieldInput::Str(format_bytes(b)))
         }

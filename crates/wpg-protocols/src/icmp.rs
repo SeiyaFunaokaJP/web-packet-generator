@@ -58,7 +58,7 @@ pub fn icmpv4() -> ProtocolDef {
 /// + payload including the body layers).
 #[must_use]
 pub fn icmpv6() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "icmpv6",
         name: "ICMPv6",
         layer: L3,
@@ -100,7 +100,10 @@ pub fn icmpv6() -> ProtocolDef {
         constraints: {
             warning: in_range(type, 1, 255);
         },
-    }
+    };
+    // A type 130 query of 28 octets or more is an MLDv2 query.
+    crate::mcast::v3_by_length(&mut d, "mldv2_query", 24);
+    d
 }
 
 /// ICMPv6 Echo Request / Reply body: identifier and sequence number (the data

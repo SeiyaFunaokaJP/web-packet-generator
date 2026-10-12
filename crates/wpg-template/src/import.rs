@@ -476,6 +476,7 @@ fn auto_fields(
                     AutoCompute::Length { .. }
                         | AutoCompute::Checksum { .. }
                         | AutoCompute::NextProtocol
+                        | AutoCompute::Count { .. }
                 )
             ) {
                 continue;
