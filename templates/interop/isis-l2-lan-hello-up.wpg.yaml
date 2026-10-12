@@ -1,0 +1,54 @@
+# Interop: IS-IS L2 LAN Hello that lists the peer's MAC, so the adjacency comes Up
+schema: 1
+
+meta:
+  name: interop-isis-l2-lan-hello-up
+  descriptions:
+    ja: "相互接続確認: 相手の MAC を IS Neighbors TLV に載せた IS-IS L2 LAN Hello を 3 秒間隔で送り、相手側で隣接が Up になることを確認 (優先度 0 で DIS にはならない)"
+    en: "Interop check: IS-IS L2 LAN Hellos every 3 s listing the peer's MAC in the IS Neighbors TLV, so the peer brings the adjacency Up (priority 0: never the DIS)"
+  tags: ["protocol:dot3", "protocol:llc", "protocol:isis_l2_lan_hello", "layer:l2", interop, isis]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC (SNPA) of wpg
+  - name: peer_mac
+    default: "02:00:00:00:00:02"
+    description: MAC of the peer's interface (its SNPA)
+  - name: system_id
+    default: "0000 0000 0001"
+    description: System ID of wpg (6 octets)
+  - name: area
+    default: "49.0001"
+    description: Area address (must match the peer's NET)
+  - name: ip
+    default: 10.99.0.1
+    description: IPv4 interface address of wpg
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "01:80:c2:00:00:15" # AllL2ISs
+      src: ${src_mac}
+      length: auto
+  - protocol: llc
+  - protocol: isis_l2_lan_hello
+    fields:
+      circuit_type: l2
+      source_id: ${system_id}
+      holding_time: 30
+      priority: 0 # wpg does not flood LSPs, so let the peer be the DIS
+      lan_id: "0000 0000 0001 01" # overwritten by the DIS's LAN ID once the peer elects itself
+      # Manual PDU length: Padding TLVs fill the PDU up to it (MTU 1500 - LLC 3).
+      pdu_length: 1497
+      tlvs:
+        - { protocols_supported: [ipv4] }
+        - { area_addresses: [{ address: "${area}" }] }
+        - { ip_interface_addresses: ["${ip}"] }
+        - { is_neighbors: ["${peer_mac}"] }
+
+tx:
+  count: 40 # two minutes of Hellos
+  rate: ifg=3s
