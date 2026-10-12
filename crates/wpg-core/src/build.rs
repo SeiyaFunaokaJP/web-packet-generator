@@ -438,7 +438,8 @@ pub(crate) fn encode_value(
         (FieldType::Tlv(t), FieldValue::Tlv(items)) => {
             let mut out = Vec::with_capacity(items.len());
             for (k, item) in items.iter().enumerate() {
-                let (bytes, mut lay) = encode_tlv_item(fd, t, k, item, diags)?;
+                let pad = !(t.unpadded_last && k + 1 == items.len());
+                let (bytes, mut lay) = encode_tlv_item(fd, t, k, item, pad, diags)?;
                 let at = w.bits;
                 lay.bit_offset += at;
                 lay.children = shift(lay.children, at);
@@ -535,13 +536,14 @@ fn encode_group(
     Ok(out)
 }
 
-/// Encodes one TLV item; returns its octets and its layout (offsets relative to
-/// the item start).
+/// Encodes one TLV item (with its [`TlvDef::align`] padding when `pad`); returns
+/// its octets and its layout (offsets relative to the item start).
 pub(crate) fn encode_tlv_item(
     fd: &FieldDef,
     t: &TlvDef,
     index: usize,
     item: &TlvItem,
+    pad: bool,
     diags: &mut Vec<Diagnostic>,
 ) -> Result<(Vec<u8>, FieldLayout)> {
     if let Some(raw) = &item.raw {
@@ -576,7 +578,18 @@ pub(crate) fn encode_tlv_item(
         type_bits as usize,
         FieldValue::UInt(ty),
     )];
-    let finish = |bytes: Vec<u8>, children: Vec<FieldLayout>| {
+    let finish = |mut bytes: Vec<u8>, mut children: Vec<FieldLayout>| {
+        let align = if pad { t.align.max(1) as usize } else { 1 };
+        let pad = (align - bytes.len() % align) % align;
+        if pad > 0 {
+            children.push(FieldLayout::leaf(
+                "padding",
+                bytes.len() * 8,
+                pad * 8,
+                FieldValue::Bytes(vec![0; pad]),
+            ));
+            bytes.resize(bytes.len() + pad, 0);
+        }
         let lay = FieldLayout {
             children,
             ..FieldLayout::leaf(
@@ -597,7 +610,8 @@ pub(crate) fn encode_tlv_item(
         }
         return Ok(finish(w.buf, children));
     }
-    let hdr = ((type_bits + len_bits) / 8) as usize;
+    let head = usize::from(t.head_octets);
+    let hdr = ((type_bits + len_bits) / 8) as usize + head;
     let mut vw = BitWriter::default();
     let vchildren = match (&item.data, variant) {
         (Some(d), _) => {
@@ -608,12 +622,20 @@ pub(crate) fn encode_tlv_item(
                 ));
             }
             vw.push_bytes(d);
-            vec![FieldLayout::leaf(
+            // Octets in the head are shown apart: they precede the length field.
+            let h = head.min(d.len());
+            let mut leaves = vec![FieldLayout::leaf(
                 "data",
-                0,
-                d.len() * 8,
-                FieldValue::Bytes(d.clone()),
-            )]
+                h * 8,
+                (d.len() - h) * 8,
+                FieldValue::Bytes(d[h..].to_vec()),
+            )];
+            if h > 0 {
+                let head_leaf =
+                    FieldLayout::leaf("head", 0, h * 8, FieldValue::Bytes(d[..h].to_vec()));
+                leaves.insert(0, head_leaf);
+            }
+            leaves
         }
         (None, Some(v)) => encode_group(
             &mut vw,
@@ -631,8 +653,11 @@ pub(crate) fn encode_tlv_item(
         }
     };
     let mut value = vw.buf;
+    if value.len() < head {
+        value.resize(head, 0);
+    }
     let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
-    let counted = if t.len_includes_header { hdr } else { 0 } + value.len();
+    let counted = if t.len_includes_header { hdr } else { 0 } + value.len() - head;
     let expected = counted.div_ceil(unit);
     let field_name = format!("{}[{index}].length", fd.name);
     let (len, auto) = match item.length {
@@ -677,18 +702,23 @@ pub(crate) fn encode_tlv_item(
             (l & mask(len_bits), true)
         }
     };
+    // Value fields in the head sit right after the type, the others after the length.
+    let (in_head, after): (Vec<_>, Vec<_>) =
+        vchildren.into_iter().partition(|c| c.bit_offset < head * 8);
+    children.extend(shift(in_head, type_bits as usize));
+    w.push_bytes(&value[..head]);
     w.push_bits(len_bits, len);
     children.push(FieldLayout {
         auto,
         ..FieldLayout::leaf(
             "length",
-            type_bits as usize,
+            type_bits as usize + head * 8,
             len_bits as usize,
             FieldValue::UInt(len),
         )
     });
-    children.extend(shift(vchildren, hdr * 8));
-    w.push_bytes(&value);
+    children.extend(shift(after, (type_bits + len_bits) as usize));
+    w.push_bytes(&value[head..]);
     Ok(finish(w.buf, children))
 }
 
@@ -827,7 +857,7 @@ fn fill_items(
     let Ok(mut left) = usize::try_from(target - have as i128) else {
         return Vec::new(); // already larger: the length mismatch warning says so
     };
-    let hdr = usize::from((t.type_bits + t.len_bits) / 8);
+    let hdr = usize::from((t.type_bits + t.len_bits) / 8 + t.head_octets);
     let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
     let counted = if t.len_includes_header { hdr } else { 0 };
     // Largest value that the length field can describe, in whole units.

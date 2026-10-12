@@ -29,6 +29,7 @@ pub mod mcast;
 pub mod osi;
 pub mod payload;
 pub mod routing;
+pub mod sctp;
 
 /// Registry of protocol definitions, in palette order.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -225,6 +226,8 @@ pub fn builtin() -> Vec<ProtocolDef> {
         isis::isis_l2_csnp(),
         isis::isis_l1_psnp(),
         isis::isis_l2_psnp(),
+        // P2 transport.
+        sctp::sctp(),
         payload::payload(),
         payload::raw(),
     ]

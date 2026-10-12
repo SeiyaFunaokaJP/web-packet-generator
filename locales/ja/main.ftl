@@ -980,3 +980,10 @@ isis-snp-source-id = 送信元の System ID と回線 ID（0）。
 isis-start-lsp-id = CSNP が対象とする最初の LSP ID。
 isis-end-lsp-id = CSNP が対象とする最後の LSP ID。
 isis-data = 共通ヘッダ以降の PDU（不透明なオクテット列）。
+
+# --- P2 SCTP field descriptions ---
+sctp-src-port = 送信元ポート。
+sctp-dst-port = 宛先ポート。
+sctp-verification-tag = 検証タグ: 相手の Initiate Tag（INIT を含むパケットでは 0）。
+sctp-checksum = このフィールドを 0 とした SCTP パケット全体の CRC32c（Auto）。下位オクテットから送出。
+sctp-chunks = チャンク（8 ビット型、8 ビットフラグ、4 オクテットのヘッダを含む 16 ビット長、4 オクテット境界までゼロ詰め）: DATA、INIT、INIT ACK、SACK、HEARTBEAT、ABORT、SHUTDOWN、ERROR、COOKIE ECHO / ACK、AUTH、I-DATA、ASCONF、RE-CONFIG、FORWARD TSN、PAD。長さ・詰め物・SACK の件数は Auto。

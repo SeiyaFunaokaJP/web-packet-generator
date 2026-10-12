@@ -31,6 +31,16 @@ fn is_zero(v: &i64) -> bool {
     *v == 0
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde skip_serializing_if signature
+fn is_zero_u8(v: &u8) -> bool {
+    *v == 0
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde skip_serializing_if signature
+fn is_zero_u32(v: &u32) -> bool {
+    *v == 0
+}
+
 fn is_false(v: &bool) -> bool {
     !*v
 }
@@ -351,6 +361,21 @@ pub struct TlvDef {
     /// Unit of the length value (NDP options: 8 octets).
     #[serde(default, skip_serializing_if = "LengthUnit::is_bytes")]
     pub len_unit: LengthUnit,
+    /// Leading octets of the value carried between the type and the length field
+    /// (SCTP chunk flags): the first value fields of a variant (or the first
+    /// `data` octets) are written there. With `len_includes_header` they count as
+    /// header; otherwise the length covers only the value after the length field.
+    #[serde(default, skip_serializing_if = "is_zero_u8")]
+    pub head_octets: u8,
+    /// Every item is followed by zero octets up to a multiple of `align` octets
+    /// (0 or 1 = no padding). The padding is not counted in the length field
+    /// (SCTP chunks and parameters).
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
+    pub align: u32,
+    /// The last item of the region is not padded: the padding of the enclosing
+    /// item covers it (SCTP parameters and error causes inside a chunk).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub unpadded_last: bool,
     /// Known item types.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub variants: Vec<TlvVariant>,
@@ -413,11 +438,11 @@ pub enum ChecksumKind {
     /// RFC 1071 Internet checksum prefixed with the IPv4 or IPv6 pseudo header of the
     /// nearest lower layer that declares a [`PseudoHeader`] (TCP, UDP, ICMPv6).
     InternetPseudoHeader,
-    /// ISO 8473 / IS-IS Fletcher checksum (not implemented yet).
+    /// ISO 8473 / IS-IS Fletcher checksum.
     Fletcher,
-    /// CRC-32C, SCTP (not implemented yet).
+    /// CRC-32C (SCTP), sent least significant octet first.
     Crc32c,
-    /// CRC-32, IEEE 802.3 (not implemented yet).
+    /// CRC-32 (IEEE 802.3), sent least significant octet first.
     Crc32,
 }
 

@@ -365,7 +365,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] 802.2 LLC (0xFE) / SNAP 上の OSI カプセル化基盤、NSAP 型とエディタ（LLC `0xfe` / PPP `0x0023` で NLPID を peek、未対応 NLPID は汎用 `osi` PDU。`nsap` は長さ指示子付きで合成・解析、ビルダーで AFI / エリア / System ID / NSEL を分解表示。SNAP 上の OSI は一般的でないため対象外）
 - [x] IS-IS: IIH (LAN L1/L2, P2P) / LSP / CSNP / PSNP、主要 TLV / sub-TLV、Fletcher checksum、Padding 自動（NLPID `0x83` → 汎用 `isis` → `pdu_type` で各 PDU に読み直し。Padding は Hello の `pdu_length` を Manual にするとその長さまで TLV 8 を自動追加。wpg-core に `size(field)` Auto・`FromField { div }`・`Length::Count`・`TlvFill` を追加。HMAC-MD5 認証値は手動、System ID は 6 オクテット固定）
 - [x] CLNP / ES-IS（NLPID `0x81` → `clnp`（DT / MD / ER / ERQ / ERP を 1 レイヤ、データは次レイヤ）、`0x82` → 汎用 `esis` → `pdu_type` で ESH / ISH / RD に読み直し。長さ指示子・セグメント長・Fletcher チェックサム・SP ビット・ESH アドレス数は Auto、オプションは長さ指示子まで（wpg-core に `Length::UntilOffset` を追加）。セグメンテーション部の全長は手動、分割 / 再構成はしない）
-- [ ] SCTP (CRC32c)
+- [x] SCTP (CRC32c)（`sctp` 1 レイヤに共通ヘッダと全チャンク（DATA / INIT / INIT ACK / SACK / HEARTBEAT / ABORT / SHUTDOWN 系 / ERROR / COOKIE 系 / AUTH / I-DATA / ASCONF / RE-CONFIG / FORWARD TSN / PAD）、パラメータ・エラー原因。CRC32c・長さ・4 オクテット詰め・SACK 件数は Auto。IPv4/IPv6 protocol 132、UDP 9899。wpg-core の TLV に `head_octets`（型と長さの間のフラグ）・`align` / `unpadded_last`（長さに含めない詰め物）を追加。DATA のユーザデータはチャンク内のオクテット列で PPID による demux はしない）
 - [ ] OSPF Opaque/SR、BGP MP/EVPN/VPNv4 NLRI
 - [ ] LDP / RSVP-TE (基本) / BFD
 - [ ] SRv6 SRH / SR-MPLS 補助

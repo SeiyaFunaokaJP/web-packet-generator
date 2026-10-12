@@ -1,0 +1,31 @@
+# SCTP (RFC 9260): a SHUTDOWN over IPv6
+schema: 1
+
+meta:
+  name: sctp-shutdown
+  descriptions:
+    ja: "SCTP (RFC 9260): IPv6 上の SHUTDOWN"
+    en: "SCTP (RFC 9260): a SHUTDOWN over IPv6"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:sctp", "layer:l4", sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6 # next header 132 is Auto
+    fields:
+      src: "2001:db8::1"
+      dst: "2001:db8::2"
+  - protocol: sctp
+    fields:
+      src_port: 5001
+      dst_port: 5001
+      verification_tag: 0x3a5c7e91
+      chunks:
+        - shutdown: { cumulative_tsn_ack: 100 }
+
+tx:
+  count: 1

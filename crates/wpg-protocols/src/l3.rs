@@ -29,6 +29,9 @@ pub fn ipv4_options() -> FieldType {
             div: 1,
         },
         fill: None,
+        head_octets: 0,
+        align: 0,
+        unpadded_last: false,
     })
 }
 
@@ -94,6 +97,7 @@ pub fn ipv4() -> ProtocolDef {
             112 => "vrrpv3",
             112 => "vrrpv2",
             115 => "l2tpv3",
+            132 => "sctp",
         },
         pseudo_header: (src, dst),
         constraints: {

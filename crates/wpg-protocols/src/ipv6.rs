@@ -19,6 +19,7 @@ fn next_header_binding() -> Binding {
         (89, "ospfv3"),
         (112, "vrrpv3_ipv6"),
         (115, "l2tpv3"),
+        (132, "sctp"),
     ];
     Binding::new(
         "next_header",
@@ -65,6 +66,7 @@ pub fn ipv6() -> ProtocolDef {
                 88 => eigrp,
                 89 => ospf,
                 112 => vrrp,
+                132 => sctp,
                 253 => experimental,
             } = 253, auto = next_protocol;
             hop_limit: uint(8) = 64;

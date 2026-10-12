@@ -1,0 +1,38 @@
+# SCTP (RFC 9260): a SACK with two gap ack blocks and one duplicate TSN
+schema: 1
+
+meta:
+  name: sctp-sack
+  descriptions:
+    ja: "SCTP (RFC 9260): Gap Ack ブロック 2 つと重複 TSN 1 つの SACK"
+    en: "SCTP (RFC 9260): a SACK with two gap ack blocks and one duplicate TSN"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:sctp", "layer:l4", sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4 # protocol 132 is Auto
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: sctp
+    fields:
+      src_port: 5001
+      dst_port: 5001
+      verification_tag: 0x3a5c7e91
+      chunks:
+        - sack:
+            cumulative_tsn_ack: 100
+            a_rwnd: 106496
+            # number_of_gap_ack_blocks / number_of_duplicate_tsns: Auto
+            gap_ack_blocks:
+              - { start: 2, end: 3 } # TSN 102-103 received
+              - { start: 5, end: 5 } # TSN 105 received
+            duplicate_tsns: [99]
+
+tx:
+  count: 1

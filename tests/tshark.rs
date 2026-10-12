@@ -42,6 +42,7 @@ fn dissect(pcap: &Path) -> Value {
         .args(["-o", "ip.check_checksum:TRUE"])
         .args(["-o", "udp.check_checksum:TRUE"])
         .args(["-o", "tcp.check_checksum:TRUE"])
+        .args(["-o", "sctp.checksum:CRC-32C"])
         .args(["-T", "json"])
         .output()
         .expect("failed to run tshark (is it installed?)");
@@ -175,6 +176,30 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ("esis.net", "49000100.000000000100"),
             ],
         ),
+        (
+            "eth_ipv4_sctp_init",
+            vec![
+                ("ip.proto", "132"),
+                ("sctp.srcport", "36412"),
+                ("sctp.verification_tag", "0x00000000"),
+                ("sctp.chunk_type", "1"),
+                ("sctp.chunk_length", "38"),
+                ("sctp.init_initiate_tag", "0x01020304"),
+                ("sctp.parameter_ipv4_address", "192.0.2.1"),
+                ("sctp.parameter_supported_address_type", "5"),
+            ],
+        ),
+        (
+            "eth_ipv4_sctp_data_sack",
+            vec![
+                ("sctp.verification_tag", "0x01020304"),
+                ("sctp.sack_number_of_gap_blocks", "0"),
+                ("sctp.data_tsn_raw", "7"),
+                ("sctp.data_sid", "0x0001"),
+                ("sctp.data_payload_proto_id", "0"),
+                ("data.data", "68:65:6c:6c:6f"),
+            ],
+        ),
     ]
 }
 
@@ -228,6 +253,12 @@ fn tshark_agrees_with_golden_pcaps() {
         if stem.contains("udp") {
             assert!(
                 status.iter().any(|(k, _)| *k == "udp.checksum.status"),
+                "{stem}"
+            );
+        }
+        if stem.contains("sctp") {
+            assert!(
+                status.iter().any(|(k, _)| *k == "sctp.checksum.status"),
                 "{stem}"
             );
         }

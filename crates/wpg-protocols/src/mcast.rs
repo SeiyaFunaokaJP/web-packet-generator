@@ -361,6 +361,9 @@ pub fn pim_hello_options() -> FieldType {
         unknown_as_raw: true,
         length: Length::ToEnd,
         fill: None,
+        head_octets: 0,
+        align: 0,
+        unpadded_last: false,
     })
 }
 
