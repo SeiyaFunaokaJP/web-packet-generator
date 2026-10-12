@@ -1,0 +1,48 @@
+# Interop: LDP link Hellos; the peer discovers wpg as an LDP neighbor (discovery only)
+schema: 1
+
+meta:
+  name: interop-ldp-link-hello
+  descriptions:
+    ja: "相互接続確認: LDP リンク Hello (224.0.0.2、UDP 646、ホールドタイム 15 秒) を 5 秒間隔で送り、相手のディスカバリ一覧に載ることを確認 (TCP セッションは張らない)"
+    en: "Interop check: LDP link Hellos (224.0.0.2, UDP 646, 15 s hold time) every 5 s; the peer lists wpg in its discovery table (no TCP session)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:ldp", "layer:l4", interop, mpls]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: lsr_id
+    default: 10.99.0.1
+    description: LSR ID, source and transport address of wpg
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC of wpg
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:02" # all routers 224.0.0.2
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: ${lsr_id}
+      dst: 224.0.0.2
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 646
+      dst_port: 646
+  - protocol: ldp
+    fields:
+      lsr_id: ${lsr_id}
+      label_space: 0
+      messages:
+        - hello:
+            message_id: 1
+            tlvs:
+              - common_hello_parameters: { hold_time: 15, t: 0, r: 0, g: 0 }
+              - ipv4_transport_address: ${lsr_id}
+
+tx:
+  count: 24 # two minutes
+  rate: ifg=5s

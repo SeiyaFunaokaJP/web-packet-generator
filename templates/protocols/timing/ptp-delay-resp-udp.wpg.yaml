@@ -1,0 +1,37 @@
+# PTP over UDP/IPv4: Delay_Resp answering a Delay_Req, to 224.0.1.129 port 320
+schema: 1
+
+meta:
+  name: ptp-delay-resp-udp
+  descriptions:
+    ja: "PTP over UDP/IPv4: Delay_Req への応答 Delay_Resp (224.0.1.129、UDP 320、受信時刻と要求元ポート ID)"
+    en: "PTP over UDP/IPv4: Delay_Resp answering a Delay_Req (224.0.1.129, UDP 320, receive timestamp and requesting port identity)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:ptp_delay_resp", "layer:l4", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:01:81"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 224.0.1.129
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 320
+      dst_port: 320
+  - protocol: ptp_delay_resp
+    fields:
+      sequence_id: 1 # of the Delay_Req
+      log_message_interval: 0 # logMinDelayReqInterval
+      receive_timestamp_seconds: 1700000000
+      receive_timestamp_nanoseconds: 500000123
+      requesting_port_clock_identity: 0x020000fffe000002
+      requesting_port_port_number: 1
+
+tx:
+  count: 1

@@ -1,0 +1,24 @@
+# ITU-T Y.1731: locked signal (LCK) to the client MEG level during an administrative lock
+schema: 1
+
+meta:
+  name: y1731-lck
+  descriptions:
+    ja: "ITU-T Y.1731: 管理ロック中にクライアント MEG レベルへ送るロック信号 (LCK、1 秒周期)"
+    en: "ITU-T Y.1731: locked signal (LCK) to the client MEG level during an administrative lock (once a second)"
+  tags: ["protocol:ethernet2", "protocol:cfm_lck", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:36"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_lck
+    fields:
+      md_level: 6
+      period: s_1
+
+tx:
+  count: 1

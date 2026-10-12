@@ -551,6 +551,106 @@ fn case_eth_ipv4_tcp_bgp_evpn() -> Packet {
     )
 }
 
+/// PTP two-step Sync over Ethernet (EtherType 0x88f7) to the default multicast.
+fn case_eth_ptp_sync() -> Packet {
+    Packet::from_layers(vec![
+        eth().with("dst", FieldValue::Mac([0x01, 0x1b, 0x19, 0, 0, 0])),
+        Layer::new("ptp_sync")
+            .with("flags", 0x0200u16)
+            .with("sequence_id", 7u16)
+            .with("log_message_interval", -3i8)
+            .with("origin_timestamp_seconds", 1_700_000_000u64),
+    ])
+}
+
+/// PTP Announce from a GPS-locked grandmaster to 224.0.1.129 (UDP 320).
+fn case_eth_ipv4_udp_ptp_announce() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0011, [10, 0, 0, 1], [224, 0, 1, 129]).with("ttl", 1u8),
+        Layer::new("udp")
+            .with("src_port", 320u16)
+            .with("dst_port", 320u16),
+        Layer::new("ptp_announce")
+            .with("flags", 0x003cu16)
+            .with("sequence_id", 3u16)
+            .with("grandmaster_priority1", 100u8)
+            .with("grandmaster_clock_class", 6u8)
+            .with("grandmaster_clock_accuracy", 0x21u8)
+            .with("grandmaster_offset_scaled_log_variance", 0x4e5du16)
+            .with("time_source", 0x20u8),
+    ])
+}
+
+/// `SyncE` ESMC information PDU (QL-PRC) with an Extended QL TLV.
+fn case_eth_esmc() -> Packet {
+    Packet::from_layers(vec![
+        eth().with("dst", FieldValue::Mac([0x01, 0x80, 0xc2, 0, 0, 0x02])),
+        Layer::new("esmc"),
+    ])
+}
+
+/// CFM CCM (MD level 5, MEP 10, Y.1731 ICC MEG ID) on VLAN 100 with Port Status /
+/// Interface Status TLVs.
+fn case_eth_dot1q_cfm_ccm() -> Packet {
+    Packet::from_layers(vec![
+        eth().with("dst", FieldValue::Mac([0x01, 0x80, 0xc2, 0, 0, 0x35])),
+        Layer::new("dot1q").with("vid", 100u16),
+        Layer::new("cfm_ccm")
+            .with("md_level", 5u8)
+            .with("sequence_number", 1u32)
+            .with("mep_id", 10u16)
+            .with(
+                "tlvs",
+                vec![
+                    TlvItem::named("port_status"),
+                    TlvItem::named("interface_status"),
+                    TlvItem::named("end"),
+                ],
+            ),
+    ])
+}
+
+/// ERPS R-APS (SF, BPR 1) on ring 1 (`01:19:a7:00:00:01`), MEL 7.
+fn case_eth_cfm_raps() -> Packet {
+    Packet::from_layers(vec![
+        eth().with("dst", FieldValue::Mac([0x01, 0x19, 0xa7, 0, 0, 0x01])),
+        Layer::new("cfm_raps")
+            .with("md_level", 7u8)
+            .with("request_state", 0b1011u8)
+            .with("rb", 0u8)
+            .with("bpr", 1u8)
+            .with("node_id", FieldValue::Mac([0x02, 0, 0, 0, 0, 0x05])),
+    ])
+}
+
+/// Y.1731 DMM (MEG level 5) with a transmit timestamp.
+fn case_eth_cfm_dmm() -> Packet {
+    Packet::from_layers(vec![
+        eth().with("dst", FieldValue::Mac([0x01, 0x80, 0xc2, 0, 0, 0x35])),
+        Layer::new("cfm_dmm")
+            .with("md_level", 5u8)
+            .with("tx_timestamp_f_seconds", 1_700_000_000u32)
+            .with("tx_timestamp_f_nanoseconds", 250_000_000u32),
+    ])
+}
+
+/// 802.3ah OAM Information OAMPDU with Local and Remote Information TLVs.
+fn case_eth_efm_oam_information() -> Packet {
+    let info = |name: &str| TlvItem::named(name).with("oam_configuration", 0x1du8);
+    Packet::from_layers(vec![
+        eth().with("dst", FieldValue::Mac([0x01, 0x80, 0xc2, 0, 0, 0x02])),
+        Layer::new("efm_oam_information").with(
+            "tlvs",
+            vec![
+                info("local_information"),
+                info("remote_information"),
+                TlvItem::named("end"),
+            ],
+        ),
+    ])
+}
+
 /// The golden table: `(file stem, packet)`. One line per case.
 fn cases() -> Vec<(&'static str, Packet)> {
     vec![
@@ -586,6 +686,16 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ("eth_ipv6_srh_udp", case_eth_ipv6_srh_udp()),
         ("eth_ipv6_srh_hmac_ipv4", case_eth_ipv6_srh_hmac_ipv4()),
         ("eth_mpls_sr_eli_ipv4_udp", case_eth_mpls_sr_eli_ipv4_udp()),
+        ("eth_ptp_sync", case_eth_ptp_sync()),
+        (
+            "eth_ipv4_udp_ptp_announce",
+            case_eth_ipv4_udp_ptp_announce(),
+        ),
+        ("eth_esmc", case_eth_esmc()),
+        ("eth_dot1q_cfm_ccm", case_eth_dot1q_cfm_ccm()),
+        ("eth_cfm_raps", case_eth_cfm_raps()),
+        ("eth_cfm_dmm", case_eth_cfm_dmm()),
+        ("eth_efm_oam_information", case_eth_efm_oam_information()),
     ]
 }
 

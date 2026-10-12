@@ -122,6 +122,7 @@ tx: { ... }                # 任意
 | `examples/` | 小さな出発点 5 本 |
 | `protocols/l2`, `l3`, `l4`, `payload`, `frame` | カタログの全プロトコルのサンプル。ジャンボ、最小サイズ、ランツ、FCS の例を含む |
 | `scenarios/` | すぐ使える試験: ARP スイープ、SYN フラッドとポートスキャン、QinQ、NDP と RA、ping と TTL スイープ、QoS マトリクス、MTU 探索、フレーム長スイープ、MAC フラッド |
+| `interop/` | 実機・FRR との相互接続確認: OSPFv2 2-Way、RIPv2 経路、IS-IS 隣接 Up、VRRPv3 プリエンプト、PIM ネイバー、LDP ディスカバリ、BFD セッション Up (`interop` タグ。手順は運用ガイドの「相互接続確認」) |
 | `malformed/` | わざと壊したパケット (チェックサム不正、長さ不一致、切り詰め、FCS 不正)。設計上 lint が警告を出し、`malformed` タグが付く |
 
 一覧は `wpg template list templates` で表示できます。

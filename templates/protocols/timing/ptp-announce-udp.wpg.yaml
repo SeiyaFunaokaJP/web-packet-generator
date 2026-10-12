@@ -1,0 +1,45 @@
+# PTP over UDP/IPv4: Announce of a GPS-locked grandmaster to 224.0.1.129, port 320
+schema: 1
+
+meta:
+  name: ptp-announce-udp
+  descriptions:
+    ja: "PTP over UDP/IPv4: GPS 同期のグランドマスタの Announce (224.0.1.129、UDP 320、クロッククラス 6、精度 100 ns 以内、UTC オフセット 37 秒)"
+    en: "PTP over UDP/IPv4: Announce of a GPS-locked grandmaster (224.0.1.129, UDP 320, clock class 6, accuracy within 100 ns, UTC offset 37 s)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:ptp_announce", "layer:l4", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:01:81"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 224.0.1.129
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 320
+      dst_port: 320 # general messages
+  - protocol: ptp_announce
+    fields:
+      flags: 0x003c # ptpTimescale, currentUtcOffsetValid, time / frequency traceable
+      log_message_interval: 1 # every 2 s
+      current_utc_offset: 37
+      grandmaster_priority1: 128
+      grandmaster_clock_class: 6 # locked to a primary reference
+      grandmaster_clock_accuracy: within_100ns
+      grandmaster_offset_scaled_log_variance: 0x4e5d
+      grandmaster_priority2: 128
+      grandmaster_identity: 0x020000fffe000001
+      steps_removed: 0
+      time_source: gps
+    generators:
+      sequence_id: 0-65535
+
+tx:
+  count: 4
+  rate: 1pps

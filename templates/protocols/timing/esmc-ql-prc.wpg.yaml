@@ -1,0 +1,31 @@
+# SyncE ESMC (ITU-T G.8264): once-a-second information PDU announcing QL-PRC
+schema: 1
+
+meta:
+  name: esmc-ql-prc
+  descriptions:
+    ja: "SyncE ESMC (ITU-T G.8264): QL-PRC を通知する毎秒 1 回の情報 PDU (Slow Protocols サブタイプ 0x0a、拡張 QL TLV 付き)"
+    en: "SyncE ESMC (ITU-T G.8264): once-a-second information PDU announcing QL-PRC (Slow Protocols subtype 0x0a, with an Extended QL TLV)"
+  tags: ["protocol:ethernet2", "protocol:esmc", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02" # Slow Protocols multicast
+      src: "02:00:00:00:00:01"
+  - protocol: esmc
+    fields:
+      event_flag: 0 # information PDU
+      tlvs:
+        - ql: { ssm_code: prc }
+        - extended_ql:
+            enhanced_ssm_code: none
+            synce_clock_identity: 0x020000fffe000001
+            cascaded_eeecs: 1
+            cascaded_eecs: 0
+
+tx:
+  count: 5
+  rate: 1pps

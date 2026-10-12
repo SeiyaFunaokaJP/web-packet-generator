@@ -1,0 +1,25 @@
+# ITU-T Y.1731: one-way delay measurement (1DM) with a transmit timestamp
+schema: 1
+
+meta:
+  name: y1731-1dm
+  descriptions:
+    ja: "ITU-T Y.1731: 送信タイムスタンプ付きの片方向遅延測定 (1DM)"
+    en: "ITU-T Y.1731: one-way delay measurement (1DM) with a transmit timestamp"
+  tags: ["protocol:ethernet2", "protocol:cfm_1dm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_1dm
+    fields:
+      md_level: 5
+      tx_timestamp_f_seconds: 1700000000
+      tx_timestamp_f_nanoseconds: 0
+
+tx:
+  count: 1

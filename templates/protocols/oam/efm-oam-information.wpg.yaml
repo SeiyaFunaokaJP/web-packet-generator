@@ -1,0 +1,34 @@
+# 802.3ah OAM (IEEE 802.3 clause 57): Information OAMPDU with Local and Remote Information TLVs
+schema: 1
+
+meta:
+  name: efm-oam-information
+  descriptions:
+    ja: "802.3ah OAM (IEEE 802.3 57 章): Local / Remote Information TLV 付きの Information OAMPDU (アクティブモード、毎秒 1 回、TLV 長は自動)"
+    en: "802.3ah OAM (IEEE 802.3 clause 57): Information OAMPDU with Local and Remote Information TLVs (active mode, once a second, TLV lengths Auto)"
+  tags: ["protocol:ethernet2", "protocol:efm_oam_information", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02" # Slow Protocols multicast
+      src: "02:00:00:00:00:01"
+  - protocol: efm_oam_information
+    fields:
+      flags: 0x0050 # local and remote stable
+      tlvs:
+        - local_information:
+            revision: 1
+            oam_configuration: 0x1d # active, remote loopback, link events, variable retrieval
+            max_oampdu_size: 1518
+        - remote_information:
+            revision: 1
+            oam_configuration: 0x1c
+            max_oampdu_size: 1518
+        - end
+
+tx:
+  count: 3
+  rate: 1pps

@@ -1,0 +1,30 @@
+# PTP Management (IEEE 1588-2008 §15): GET of the default data set from every clock
+schema: 1
+
+meta:
+  name: ptp-management-get
+  descriptions:
+    ja: "PTP Management (IEEE 1588-2008 §15): 全クロックへの DEFAULT_DATA_SET の GET (Ethernet、TLV 長と messageLength は自動)"
+    en: "PTP Management (IEEE 1588-2008 §15): GET of DEFAULT_DATA_SET from every clock (Ethernet, TLV length and messageLength Auto)"
+  tags: ["protocol:ethernet2", "protocol:ptp_management", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:1b:19:00:00:00"
+      src: "02:00:00:00:00:09"
+  - protocol: ptp_management
+    fields:
+      clock_identity: 0x020000fffe000009
+      target_port_clock_identity: 0xffffffffffffffff # all clocks
+      target_port_port_number: 0xffff # all ports
+      starting_boundary_hops: 2
+      boundary_hops: 2
+      action: get
+      tlvs:
+        - management: { management_id: default_data_set }
+
+tx:
+  count: 1

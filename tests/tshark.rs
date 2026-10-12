@@ -297,6 +297,94 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
             ],
         ),
         (
+            "eth_ptp_sync",
+            vec![
+                ("eth.type", "0x88f7"),
+                ("ptp.v2.messagetype", "0x00"),
+                ("ptp.v2.messagelength", "44"),
+                ("ptp.v2.flags.twostep", "1"),
+                ("ptp.v2.clockidentity", "0x020000fffe000001"),
+                ("ptp.v2.sequenceid", "7"),
+                ("ptp.v2.logmessageperiod", "-3"),
+                ("ptp.v2.sdr.origintimestamp.seconds", "1700000000"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_ptp_announce",
+            vec![
+                ("udp.dstport", "320"),
+                ("ptp.v2.messagetype", "0x0b"),
+                ("ptp.v2.messagelength", "64"),
+                ("ptp.v2.flags.utcreasonable", "1"),
+                ("ptp.v2.controlfield", "5"),
+                ("ptp.v2.an.origincurrentutcoffset", "37"),
+                ("ptp.v2.an.priority1", "100"),
+                ("ptp.v2.an.grandmasterclockclass", "6"),
+                ("ptp.v2.an.grandmasterclockaccuracy", "0x21"),
+                ("ptp.v2.an.grandmasterclockvariance", "20061"),
+            ],
+        ),
+        (
+            "eth_esmc",
+            vec![
+                ("slow.subtype", "0x0a"),
+                ("ossp.itu.subtype", "0x0001"),
+                ("ossp.esmc.version", "0x01"),
+                ("ossp.esmc.ql", "0xff02"), // enhanced SSM 0xff, QL-PRC
+                ("ossp.esmc.tlv_ext_ql_essm", "0xff"),
+                ("ossp.esmc.tlv_ext_ql_clockid", "0x020000fffe000001"),
+                ("ossp.esmc.tlv_ext_ql_eeec", "1"),
+            ],
+        ),
+        (
+            "eth_dot1q_cfm_ccm",
+            vec![
+                ("vlan.id", "100"),
+                ("cfm.md_level", "5"),
+                ("cfm.opcode", "1"),
+                ("cfm.ccm.flags.interval", "4"),
+                ("cfm.first_tlv_offset", "70"),
+                ("cfm.mep_id", "10"),
+                ("cfm.maid.ma_name.icc", "WPG001MEG0001"),
+                ("cfm.tlv.port_status.value", "2"),
+                ("cfm.tlv.intf_status.value", "1"),
+            ],
+        ),
+        (
+            "eth_cfm_raps",
+            vec![
+                ("cfm.md_level", "7"),
+                ("cfm.version", "1"),
+                ("cfm.opcode", "40"),
+                ("cfm.first_tlv_offset", "32"),
+                ("cfm.raps.req_st", "0x0b"),
+                ("cfm.raps.status.bpr", "1"),
+                ("cfm.raps.node_id", "02:00:00:00:00:05"),
+            ],
+        ),
+        (
+            "eth_cfm_dmm",
+            vec![
+                ("cfm.opcode", "47"),
+                ("cfm.first_tlv_offset", "32"),
+                ("cfm.odm.dmm.dmr.txtimestampf", "1700000000.250000000"),
+                ("cfm.tlv.type", "0"),
+            ],
+        ),
+        (
+            "eth_efm_oam_information",
+            vec![
+                ("slow.subtype", "0x03"),
+                ("oampdu.flags", "0x0050"),
+                ("oampdu.code", "0x00"),
+                // Duplicate JSON keys: the last (Remote Information) TLV wins.
+                ("oampdu.info.type", "0x02"),
+                ("oampdu.info.length", "16"),
+                ("oampdu.info.oamConfig", "0x1d"),
+                ("oampdu.info.oampduConfig", "1518"),
+            ],
+        ),
+        (
             "eth_ipv6_srh_udp",
             vec![
                 ("ipv6.routing.type", "4"),
