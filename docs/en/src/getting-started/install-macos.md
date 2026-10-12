@@ -51,3 +51,24 @@ sudo ./target/release/wpg send templates/examples/arp-sweep.wpg.yaml -i en0 --ra
 ```
 
 Only send on networks you own or are authorised to test. Continue with the [ARP sweep tutorial](../tutorials/arp-sweep.md).
+
+## Release binaries: Gatekeeper and quarantine
+
+Release archives (`wpg-<version>-aarch64-apple-darwin.tar.gz` for Apple silicon, `...-x86_64-apple-darwin.tar.gz` for Intel) are **not signed or notarised**. A file downloaded with a browser gets the `com.apple.quarantine` attribute, and Gatekeeper then refuses to run it ("“wpg” cannot be opened because Apple cannot check it for malicious software" or "... is damaged"). Building from source as above avoids this completely.
+
+Check the download first, then remove the attribute from the extracted files:
+
+```sh
+shasum -a 256 -c wpg-0.2.0-aarch64-apple-darwin.tar.gz.sha256   # or compare with SHA256SUMS
+tar -xzf wpg-0.2.0-aarch64-apple-darwin.tar.gz
+xattr -dr com.apple.quarantine wpg-0.2.0-aarch64-apple-darwin
+./wpg-0.2.0-aarch64-apple-darwin/wpg --version
+```
+
+Alternatives:
+
+- Download with `curl -LO` instead of a browser: `curl` does not set the quarantine attribute.
+- Try to run it once, then allow it in **System Settings → Privacy & Security** ("Open Anyway"); macOS asks again on the next start and then remembers it.
+- The Finder shortcut (Control-click → Open) was removed in macOS 15 and never applied to command-line tools; use `xattr` or System Settings.
+
+Do not disable Gatekeeper globally (`spctl --master-disable`). Remove the attribute again after every upgrade, since each new download is quarantined. For running wpg at boot, see [Running as a service](../operations/services.md).

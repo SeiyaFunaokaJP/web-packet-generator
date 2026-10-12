@@ -1,0 +1,24 @@
+# 802.3ah OAM: Organization Specific OAMPDU with a vendor OUI and data
+schema: 1
+
+meta:
+  name: efm-oam-organization-specific
+  descriptions:
+    ja: "802.3ah OAM: ベンダー OUI とデータ付きの Organization Specific OAMPDU"
+    en: "802.3ah OAM: Organization Specific OAMPDU with a vendor OUI and data"
+  tags: ["protocol:ethernet2", "protocol:efm_oam_organization_specific", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: efm_oam_organization_specific
+    fields:
+      oui: 0x00000c
+      data: "01020304"
+
+tx:
+  count: 1

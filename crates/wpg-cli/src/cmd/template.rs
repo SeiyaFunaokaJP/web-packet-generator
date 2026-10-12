@@ -1,4 +1,4 @@
-//! `wpg template` subcommand: lint, list, show, schema, export, import.
+//! `wpg template` subcommand: lint, list, show, schema, migrate, export, import.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -11,8 +11,8 @@ use wpg_i18n::{t, t_args, t_diag, FluentArgs, Locale};
 use wpg_protocols::catalog;
 use wpg_template::bundle::slug;
 use wpg_template::{
-    apply_overrides, compile, export_bundle, import_bundle, lint, Compiled, LintIssue, LintLevel,
-    Template, TemplateError, VarOverrides,
+    apply_overrides, compile, export_bundle, import_bundle, lint, schema_version, Compiled,
+    LintIssue, LintLevel, Template, TemplateError, VarOverrides, SCHEMA_VERSION,
 };
 
 use crate::cmd::cli_locale;
@@ -52,6 +52,11 @@ pub(crate) fn run(args: TemplateArgs) -> ExitCode {
             dir.as_deref().unwrap_or(Path::new(DEFAULT_DIR)),
             locale,
         ),
+        TemplateAction::Migrate {
+            paths,
+            check,
+            no_backup,
+        } => migrate(&paths, check, !no_backup, locale),
         TemplateAction::Import {
             bundle,
             output,
@@ -388,6 +393,89 @@ fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
+/// Outcome of `wpg template migrate` for one file.
+#[derive(Debug, PartialEq, Eq)]
+enum MigrateOutcome {
+    /// Already at [`SCHEMA_VERSION`].
+    Current,
+    /// Older; would be migrated (`--check`).
+    Outdated(u32),
+    /// Rewritten from this version.
+    Migrated(u32),
+}
+
+/// Migrates one file (pure apart from the file system; tested with temp files).
+fn migrate_file(path: &Path, check: bool, backup: bool) -> Result<MigrateOutcome, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let found = schema_version(&text).map_err(|e| e.to_string())?;
+    if found == SCHEMA_VERSION {
+        return Ok(MigrateOutcome::Current);
+    }
+    // Validates the version range and the migrated shape before touching the file.
+    let template = Template::from_path(path).map_err(|e| e.to_string())?;
+    if check {
+        return Ok(MigrateOutcome::Outdated(found));
+    }
+    if backup {
+        let mut bak = path.as_os_str().to_owned();
+        bak.push(".bak");
+        std::fs::write(&bak, &text).map_err(|e| e.to_string())?;
+    }
+    template.save(path).map_err(|e| e.to_string())?;
+    Ok(MigrateOutcome::Migrated(found))
+}
+
+fn migrate(paths: &[PathBuf], check: bool, backup: bool, locale: Locale) -> ExitCode {
+    let mut files = Vec::new();
+    for p in paths {
+        if p.is_dir() {
+            collect(p, &mut files);
+        } else {
+            files.push(p.clone());
+        }
+    }
+    let (mut current, mut changed, mut failed) = (0i64, 0i64, 0i64);
+    for f in &files {
+        let mut a = FluentArgs::new();
+        a.set("value", f.display().to_string());
+        a.set("expected", i64::from(SCHEMA_VERSION));
+        match migrate_file(f, check, backup) {
+            Ok(MigrateOutcome::Current) => current += 1,
+            Ok(MigrateOutcome::Outdated(v)) => {
+                changed += 1;
+                a.set("found", i64::from(v));
+                println!("{}", t_args(locale, "template-migrate-outdated", &a));
+            }
+            Ok(MigrateOutcome::Migrated(v)) => {
+                changed += 1;
+                a.set("found", i64::from(v));
+                println!("{}", t_args(locale, "template-migrate-done", &a));
+            }
+            Err(e) => {
+                failed += 1;
+                a.set("error", e);
+                eprintln!("{}", t_args(locale, "template-migrate-error", &a));
+            }
+        }
+    }
+    let mut a = FluentArgs::new();
+    a.set("ok", current);
+    a.set("count", changed);
+    a.set("fail", failed);
+    a.set("expected", i64::from(SCHEMA_VERSION));
+    let key = if check {
+        "template-migrate-check-summary"
+    } else {
+        "template-migrate-summary"
+    };
+    println!("{}", t_args(locale, key, &a));
+    if failed > 0 || (check && changed > 0) {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
 fn list(dir: &Path, locale: Locale) -> ExitCode {
     let mut files = Vec::new();
     collect(dir, &mut files);
@@ -568,6 +656,52 @@ fn print_fields(fields: &[FieldLayout], def: Option<&ProtocolDef>, depth: usize)
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn migrate_reports_current_and_refuses_unknown_versions() {
+        let dir = tempfile::tempdir().unwrap();
+        let ok = dir.path().join("ok.wpg.yaml");
+        std::fs::write(&ok, "schema: 1\nmeta: {name: ok}\n").unwrap();
+        assert_eq!(
+            migrate_file(&ok, false, true).unwrap(),
+            MigrateOutcome::Current
+        );
+        assert!(!dir.path().join("ok.wpg.yaml.bak").exists());
+
+        let newer = dir.path().join("newer.wpg.yaml");
+        std::fs::write(&newer, "schema: 99\nmeta: {name: x}\n").unwrap();
+        assert!(migrate_file(&newer, true, true).is_err());
+        let missing = dir.path().join("missing.wpg.json");
+        std::fs::write(&missing, "{\"meta\": {\"name\": \"x\"}}").unwrap();
+        assert!(migrate_file(&missing, false, true).is_err());
+
+        // Directories are scanned; errors make the exit status non-zero.
+        assert_eq!(
+            migrate(&[dir.path().to_path_buf()], true, true, Locale::En),
+            ExitCode::FAILURE
+        );
+        std::fs::remove_file(&newer).unwrap();
+        std::fs::remove_file(&missing).unwrap();
+        assert_eq!(
+            migrate(&[dir.path().to_path_buf()], true, true, Locale::En),
+            ExitCode::SUCCESS
+        );
+    }
+
+    #[test]
+    fn migrate_keys_are_translated() {
+        for key in [
+            "template-migrate-outdated",
+            "template-migrate-done",
+            "template-migrate-error",
+            "template-migrate-summary",
+            "template-migrate-check-summary",
+        ] {
+            for locale in Locale::ALL {
+                assert_ne!(t(locale, key), key, "{key} missing in {locale}");
+            }
+        }
+    }
 
     #[test]
     fn parses_var_arguments() {

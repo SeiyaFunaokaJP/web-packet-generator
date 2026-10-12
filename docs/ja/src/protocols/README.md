@@ -25,6 +25,8 @@ Status: draft
 | [SCTP (P2)](sctp.md) | CRC32c 付き共通ヘッダ、バンドルされたチャンク (DATA、INIT、SACK、HEARTBEAT、ABORT、ASCONF、RE-CONFIG など)、パラメータとエラー原因 |
 | [OSPF Opaque / SR、BGP MP / EVPN (P2)](routing-ext.md) | SR の SID 付き OSPFv2 TE / Router Information / Extended Prefix / Extended Link LSA、IPv6・VPN-IPv4 / VPN-IPv6・EVPN の BGP NLRI |
 | [LDP / RSVP-TE / BFD (P2)](mpls-bfd.md) | LDP の PDU・メッセージ・TLV (FEC、ラベル、Hello / セッションパラメータ)、RSVP-TE の Path / Resv などとオブジェクト (ERO / RRO、SESSION_ATTRIBUTE、IntServ)、BFD 制御パケットと認証 (Micro-BFD 含む) |
+| [SRv6 SRH / SR-MPLS (P2)](srv6.md) | SRv6 Segment Routing Header (セグメントリスト、Pad / HMAC TLV、最終宛先での上位層チェックサム、IPv4 / IPv6 / Ethernet のカプセル化)、SR-MPLS のラベルスタック (予約ラベル名、SRGB + インデックス、エントロピーラベル) |
+| [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](timing-oam.md) | Ethernet / UDP 上の PTP メッセージと TLV、SyncE ESMC、Ethernet CFM / Y.1731 (CCM、LB、LT、AIS / LCK、LM / DM / SLM など) と ERPS R-APS、802.3ah OAMPDU |
 
 ## 共通の考え方
 

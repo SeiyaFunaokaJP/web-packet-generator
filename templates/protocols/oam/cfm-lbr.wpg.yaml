@@ -1,0 +1,27 @@
+# Ethernet CFM: Loopback Reply echoing the transaction ID and Data TLV of an LBM
+schema: 1
+
+meta:
+  name: cfm-lbr
+  descriptions:
+    ja: "Ethernet CFM: LBM のトランザクション ID と Data TLV を折り返すループバック応答 (LBR)"
+    en: "Ethernet CFM: Loopback Reply (LBR) echoing the transaction ID and Data TLV of an LBM"
+  tags: ["protocol:ethernet2", "protocol:cfm_lbr", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: cfm_lbr
+    fields:
+      md_level: 5
+      transaction_id: 1
+      tlvs:
+        - data_tlv: { value: "0001020304050607" }
+        - end
+
+tx:
+  count: 1

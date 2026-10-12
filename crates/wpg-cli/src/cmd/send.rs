@@ -18,8 +18,9 @@ use wpg_tx::job::{
     FinishReason, JobConfig, JobHandle, JobReport, JobState, SignatureConfig, TxJob,
 };
 use wpg_tx::rate::{link_speed_bps, parse_duration, parse_start_time, Rate, RateUnit};
+use wpg_tx::rate::{PacerConfig, WaitMode};
 use wpg_tx::source::{FrameSource, PreRendered, Rendered};
-use wpg_tx::{backend, TxError, TxOptions};
+use wpg_tx::{backend, pin, TxError, TxOptions, XdpMode};
 
 use crate::cmd::cli_locale;
 use crate::cmd::template::load_compiled;
@@ -49,6 +50,20 @@ pub(crate) struct TxTuningArgs {
     /// Use `sendmmsg` instead of the TPACKET_V3 TX ring (`afpacket`).
     #[arg(long)]
     pub(crate) no_tx_ring: bool,
+    /// Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux;
+    /// ignored when --pin-cores is given).
+    #[arg(long)]
+    pub(crate) auto_pin: bool,
+    /// First hardware queue (`afxdp`; worker i binds queue N+i).
+    #[arg(long, value_name = "N")]
+    pub(crate) queue: Option<u32>,
+    /// AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy.
+    #[arg(long, value_name = "MODE", default_value = "auto")]
+    pub(crate) xdp_mode: XdpMode,
+    /// Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and
+    /// `wpg send` paces with `--wait busy-poll` unless --wait says otherwise.
+    #[arg(long)]
+    pub(crate) busy_poll: bool,
 }
 
 impl TxTuningArgs {
@@ -60,6 +75,21 @@ impl TxTuningArgs {
             pin_core: self.pin_core,
             qdisc_bypass: self.qdisc_bypass,
             tx_ring: !self.no_tx_ring,
+            queue: self.queue,
+            xdp_mode: self.xdp_mode,
+            busy_poll: self.busy_poll,
+        }
+    }
+
+    /// Cores for `workers` workers: `--pin-cores`, else `--auto-pin` (NUMA-local
+    /// cores of `iface`), else none.
+    pub(crate) fn pin_cores_for(&self, iface: &str, workers: usize) -> Vec<usize> {
+        if !self.pin_cores.is_empty() {
+            self.pin_cores.clone()
+        } else if self.auto_pin {
+            pin::auto_cores(iface, workers)
+        } else {
+            Vec::new()
         }
     }
 
@@ -396,7 +426,8 @@ fn print_summary(r: &JobReport, locale: Locale) {
             let core = w
                 .core
                 .map(|c| tr(locale, "summary-worker-core", &[("core", c.to_string())]))
-                .unwrap_or_default();
+                .unwrap_or_default()
+                + &paren(w.detail.as_deref());
             line(
                 "summary-worker",
                 &[
@@ -602,7 +633,7 @@ pub(crate) fn run(args: crate::SendArgs) -> ExitCode {
             rate: r.rate,
             burst: r.burst,
             pin_core: opts.pin_core,
-            pin_cores: args.tuning.pin_cores.clone(),
+            pin_cores: args.tuning.pin_cores_for(&r.iface, workers),
             workers,
             batch_size: opts.batch_size,
             ramp_up: r.ramp_up,
@@ -610,6 +641,15 @@ pub(crate) fn run(args: crate::SendArgs) -> ExitCode {
             signature: args.signature.then_some(SignatureConfig {
                 stream_id_base: args.stream_id,
             }),
+            pacer: PacerConfig {
+                wait: args.wait.unwrap_or(if opts.busy_poll {
+                    WaitMode::BusyPoll
+                } else {
+                    WaitMode::default()
+                }),
+                clock: args.clock,
+                ..PacerConfig::default()
+            },
             ..JobConfig::default()
         },
     ) {

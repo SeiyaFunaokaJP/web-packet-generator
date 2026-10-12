@@ -16,6 +16,9 @@ default = ["afpacket"]
 # Each backend pulls in its own optional dependencies.
 pcap = ["dep:pcap"]
 afpacket = []
+# AF_XDP backend (Linux 5.10+). Talks to the kernel ABI directly (no libbpf /
+# libxdp), so it needs no extra build dependencies; off by default while it has
+# only been verified in copy mode (see docs/*/src/operations/dpdk-afxdp.md).
 afxdp = []
 dpdk = []
 
@@ -28,7 +31,7 @@ serde.workspace = true
 pcap = { version = "2", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-# AF_PACKET backend and `sched_setaffinity` core pinning.
+# AF_PACKET / AF_XDP backends, `sched_setaffinity` core pinning, `mbind`.
 libc = "0.2.186"
 
 [dev-dependencies]

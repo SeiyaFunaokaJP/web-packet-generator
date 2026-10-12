@@ -1,0 +1,29 @@
+# ITU-T Y.1731: test signal (TST) with a 64-octet null test pattern
+schema: 1
+
+meta:
+  name: y1731-tst
+  descriptions:
+    ja: "ITU-T Y.1731: 64 オクテットのヌルパターン Test TLV 付きのテスト信号 (TST、シーケンス番号を加算)"
+    en: "ITU-T Y.1731: test signal (TST) with a 64-octet null test pattern Test TLV (incrementing sequence number)"
+  tags: ["protocol:ethernet2", "protocol:cfm_tst", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_tst
+    fields:
+      md_level: 5
+      tlvs:
+        - test: { pattern_type: null_without_crc, test_pattern: "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" }
+        - end
+    generators:
+      sequence_number: 1-1000
+
+tx:
+  count: 10
+  rate: 100pps

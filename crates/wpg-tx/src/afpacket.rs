@@ -23,13 +23,14 @@
 //! `EMSGSIZE`) or that cannot be queued (`ENOBUFS` persisting) are counted in
 //! `dropped`.
 
-use std::ffi::CString;
 use std::io;
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd, RawFd};
 use std::ptr;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, Instant};
 
+pub use crate::sys::ifindex;
+use crate::sys::{cvt, iface_mtu, page_size, setsockopt_int, socklen};
 use crate::{Frame, TxBackend, TxError, TxOptions, TxStats};
 
 // Constants from <linux/if_packet.h> (defined here so the backend does not depend on
@@ -85,53 +86,6 @@ fn map_err(ctx: &str, iface: &str, e: io::Error) -> TxError {
     }
 }
 
-/// `size_of::<T>()` as `socklen_t` (socket address / option structs are tiny).
-#[allow(clippy::cast_possible_truncation)]
-const fn socklen<T>() -> libc::socklen_t {
-    size_of::<T>() as libc::socklen_t
-}
-
-fn cvt(rc: libc::c_int) -> io::Result<libc::c_int> {
-    if rc < 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(rc)
-    }
-}
-
-fn setsockopt_int(
-    fd: RawFd,
-    level: libc::c_int,
-    opt: libc::c_int,
-    v: libc::c_int,
-) -> io::Result<()> {
-    // SAFETY: passes a pointer to a live c_int with its exact size.
-    cvt(unsafe {
-        libc::setsockopt(
-            fd,
-            level,
-            opt,
-            (&raw const v).cast(),
-            socklen::<libc::c_int>(),
-        )
-    })
-    .map(drop)
-}
-
-/// Interface index of `iface` (`if_nametoindex`).
-///
-/// # Errors
-/// [`TxError::Interface`] if the interface does not exist.
-pub fn ifindex(iface: &str) -> Result<i32, TxError> {
-    let c = CString::new(iface).map_err(|_| TxError::Interface(iface.to_owned()))?;
-    // SAFETY: `c` is a valid NUL-terminated string.
-    let idx = unsafe { libc::if_nametoindex(c.as_ptr()) };
-    if idx == 0 {
-        return Err(TxError::Interface(iface.to_owned()));
-    }
-    i32::try_from(idx).map_err(|_| TxError::Interface(iface.to_owned()))
-}
-
 /// Creates an `AF_PACKET` raw socket with protocol `proto` (host order; 0 = receive
 /// nothing).
 fn packet_socket(proto: u16) -> io::Result<OwnedFd> {
@@ -159,20 +113,6 @@ fn bind_ll(fd: RawFd, ifindex: i32, proto: u16) -> io::Result<()> {
     // SAFETY: pointer and length describe `sll`.
     cvt(unsafe { libc::bind(fd, (&raw const sll).cast(), socklen::<libc::sockaddr_ll>()) })
         .map(drop)
-}
-
-fn iface_mtu(iface: &str) -> Option<usize> {
-    std::fs::read_to_string(format!("/sys/class/net/{iface}/mtu"))
-        .ok()?
-        .trim()
-        .parse()
-        .ok()
-}
-
-fn page_size() -> usize {
-    // SAFETY: sysconf has no preconditions.
-    let p = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
-    usize::try_from(p).ok().filter(|p| *p > 0).unwrap_or(4096)
 }
 
 /// The mapped TX ring.
@@ -714,6 +654,7 @@ mod tests {
     }
 
     fn roundtrip(tx_ring: bool, tag: u8, len: usize) {
+        let _lo = crate::lo_test_lock();
         let Some(mut b) = open_lo(tx_ring) else {
             return;
         };
@@ -769,6 +710,7 @@ mod tests {
     fn job_on_lo() {
         use crate::job::{JobConfig, TxJob};
         use crate::source::PreRendered;
+        let _lo = crate::lo_test_lock();
         let Some(b) = open_lo(true) else { return };
         let src = PreRendered::new(vec![synthetic_frame(60)], Some(1000));
         let r = TxJob::start(Box::new(b), Box::new(src), JobConfig::default())

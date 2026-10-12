@@ -1,0 +1,41 @@
+# Interop: PIMv2 Hellos; the peer lists wpg as a PIM neighbor
+schema: 1
+
+meta:
+  name: interop-pim-hello-neighbor
+  descriptions:
+    ja: "相互接続確認: PIMv2 Hello (ホールドタイム 105 秒、DR 優先度 0) を 30 秒間隔で送り、相手の PIM ネイバー一覧に載ることを確認"
+    en: "Interop check: PIMv2 Hellos every 30 s (105 s holdtime, DR priority 0); the peer lists wpg as a PIM neighbor"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:pim", "protocol:pim_hello", "layer:l3", interop, pim]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: src_ip
+    default: 10.99.0.1
+    description: Source address of wpg (on the peer's subnet)
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC of wpg
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:0d" # ALL-PIM-ROUTERS 224.0.0.13
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: ${src_ip}
+      dst: 224.0.0.13
+      ttl: 1
+  - protocol: pim # type: auto -> 0 (Hello)
+  - protocol: pim_hello
+    fields:
+      options:
+        - holdtime: 105
+        - dr_priority: 0 # never the DR
+        - generation_id: 0x12345678
+
+tx:
+  count: 4 # two minutes
+  rate: ifg=30s

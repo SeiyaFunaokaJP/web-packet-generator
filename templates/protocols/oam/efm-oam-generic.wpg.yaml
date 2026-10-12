@@ -1,0 +1,26 @@
+# 802.3ah OAM: an OAMPDU in the generic layout (header + opaque octets), here an Information OAMPDU
+schema: 1
+
+meta:
+  name: efm-oam-generic
+  descriptions:
+    ja: "802.3ah OAM: 汎用レイアウト (ヘッダ + 不透明なオクテット列) の OAMPDU (ここでは Local Information TLV だけの Information OAMPDU)"
+    en: "802.3ah OAM: an OAMPDU in the generic layout (header + opaque octets), here an Information OAMPDU with a Local Information TLV"
+  tags: ["protocol:ethernet2", "protocol:efm_oam", "parse-as:efm_oam=efm_oam_information", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: efm_oam
+    fields:
+      flags: 0x0008 # local evaluating (discovery)
+      code: information
+      # Local Information TLV (type 1, length 16), then the End TLV
+      data: "01 10 01 0000 00 09 05ee 000000 00000000 00"
+
+tx:
+  count: 1

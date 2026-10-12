@@ -54,3 +54,23 @@ cd web-packet-generator
 ```
 
 インタフェース名は `wpg ifaces` の表示を使います。送信してよいのは、自分が所有する、または試験を許可されたネットワークだけです。続けて [ARP スイープのチュートリアル](../tutorials/arp-sweep.md) に進んでください。
+
+## リリースアーカイブと Npcap の確認
+
+リリースアーカイブ (`wpg-<version>-x86_64-pc-windows-msvc.zip`) には、Web UI を組み込んだ `wpg.exe`、サンプルテンプレート、`packaging\windows\wpg-service.ps1` が入っています。コード署名はしていません。
+
+```powershell
+# 確認してから、展開前に「インターネットからダウンロードした」印を外す
+(Get-FileHash .\wpg-0.2.0-x86_64-pc-windows-msvc.zip -Algorithm SHA256).Hash   # SHA256SUMS と比べる
+Unblock-File .\wpg-0.2.0-x86_64-pc-windows-msvc.zip
+Expand-Archive .\wpg-0.2.0-x86_64-pc-windows-msvc.zip -DestinationPath "C:\Program Files\wpg"
+```
+
+それでも SmartScreen が「Windows によって PC が保護されました」と表示した場合は、一度だけ **詳細情報 → 実行** を選びます。
+
+Npcap は同梱していません (無償版のライセンスでは再配布できません)。`wpg doctor` と `scripts\build.ps1` の両方が確認します。
+
+- `wpg doctor` は、Npcap が無いと `npcap` のチェックを失敗にし、**WinPcap API 互換モード** 無しでインストールされているときは警告します (その場合 `wpcap.dll` が既定の DLL 検索パスにありません)。対処の行に <https://npcap.com/#download> へのリンクが出ます。
+- `scripts\build.ps1` もビルドの前に同じ警告を出します。Npcap が無くてもビルドは成功しますが、送信はできないためです。
+
+起動時に wpg をバックグラウンドで動かす方法は [サービスとして動かす](../operations/services.md) を参照してください。

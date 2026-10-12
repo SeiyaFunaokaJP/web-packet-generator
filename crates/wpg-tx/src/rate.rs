@@ -9,6 +9,14 @@
 //!   [`WaitMode::Hybrid::spin_threshold`] (~50 µs by default), so timer slack does not
 //!   ruin the spacing. It also measures its own accuracy ([`RateAccuracy`]).
 //!
+//! Precision (M8): the pacer reads a [`Clock`] (the invariant TSC on `x86_64` where
+//! available, a few ns per read, else `Instant`); the hybrid wait learns how late
+//! `sleep` wakes up (EWMA of the oversleep) and sleeps that much less, and
+//! [`reduce_timer_slack`] drops the thread's timer slack from 50 µs to 1 µs
+//! (Linux); [`WaitMode::BusyPoll`] never sleeps and services the backend (e.g.
+//! the AF_XDP completion ring) while it spins. `docs/perf.md` has the measured
+//! jitter of each mode.
+//!
 //! Bit rates are **layer-1** rates: every frame occupies
 //! `max(len, 60) + 24` octets on an Ethernet wire (8 preamble/SFD + 12 inter-frame
 //! gap + 4 FCS; frames shorter than 60 octets are padded by the NIC). So `10Gbps` with
@@ -21,6 +29,7 @@ use std::time::{Duration, Instant, SystemTime};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
+use crate::clock::{Clock, ClockSource};
 use crate::TxError;
 
 /// Minimum Ethernet frame length without FCS; shorter frames are padded on the wire.
@@ -470,6 +479,42 @@ pub enum WaitMode {
     Sleep,
     /// Only spin (a full core, lowest jitter).
     Spin,
+    /// Spin like [`WaitMode::Spin`] and call the backend's `service` hook (reap
+    /// completions, kick the driver) on every iteration; with `afxdp` and
+    /// `TxOptions::busy_poll` the socket also busy-polls the driver.
+    BusyPoll,
+}
+
+impl FromStr for WaitMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "hybrid" => Ok(WaitMode::default()),
+            "sleep" => Ok(WaitMode::Sleep),
+            "spin" => Ok(WaitMode::Spin),
+            "busy-poll" | "busypoll" | "busy_poll" => Ok(WaitMode::BusyPoll),
+            _ => Err(format!(
+                "unknown wait mode `{s}` (hybrid, sleep, spin, busy-poll)"
+            )),
+        }
+    }
+}
+
+/// Lowers the calling thread's timer slack to 1 µs (`PR_SET_TIMERSLACK`; the
+/// default is 50 µs), so `sleep` wakes up closer to the requested time. Returns
+/// whether it was applied (always `false` outside Linux).
+pub fn reduce_timer_slack() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        const PR_SET_TIMERSLACK: libc::c_int = 29;
+        // SAFETY: prctl(PR_SET_TIMERSLACK) only changes the calling thread's slack.
+        unsafe { libc::prctl(PR_SET_TIMERSLACK, 1000 as libc::c_ulong, 0, 0, 0) == 0 }
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
 }
 
 impl Default for WaitMode {
@@ -498,6 +543,9 @@ pub struct PacerConfig {
     /// active time (TODO §2.1 "ランプアップ"). `None` = full rate from the start.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ramp_up: Option<Duration>,
+    /// Clock the pacer reads (TSC where invariant by default).
+    #[serde(default)]
+    pub clock: ClockSource,
 }
 
 impl Default for PacerConfig {
@@ -508,6 +556,7 @@ impl Default for PacerConfig {
             yield_while_spinning: false,
             max_backlog: Duration::from_millis(10),
             ramp_up: None,
+            clock: ClockSource::Auto,
         }
     }
 }
@@ -563,10 +612,79 @@ pub struct RateAccuracy {
     pub max_jitter: Duration,
     /// Mean lateness of wake-ups.
     pub mean_jitter: Duration,
+    /// Median lateness of wake-ups (log-scale histogram, ±10 %).
+    #[serde(default)]
+    pub p50_jitter: Duration,
+    /// 99th percentile of the wake-up lateness (log-scale histogram, ±10 %).
+    #[serde(default)]
+    pub p99_jitter: Duration,
     /// Frames charged.
     pub frames: u64,
     /// Active time (excluding pauses).
     pub active: Duration,
+    /// Whether the pacer's clock was the TSC.
+    #[serde(default)]
+    pub tsc: bool,
+}
+
+/// Log-scale histogram of wake-up lateness: 8 buckets per power of two from 1 ns
+/// to ~4 s (bucket upper bounds are reported, so percentiles err on the late side
+/// by at most ~9 %).
+#[derive(Debug, Clone)]
+struct JitterHistogram {
+    counts: Box<[u64; JitterHistogram::BUCKETS]>,
+    total: u64,
+}
+
+impl Default for JitterHistogram {
+    fn default() -> Self {
+        Self {
+            counts: Box::new([0; Self::BUCKETS]),
+            total: 0,
+        }
+    }
+}
+
+impl JitterHistogram {
+    const SUB: usize = 8;
+    const BUCKETS: usize = 32 * Self::SUB;
+
+    fn bucket(ns: f64) -> usize {
+        if ns < 1.0 {
+            return 0;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // clamped
+        let b = (ns.log2() * Self::SUB as f64)
+            .ceil()
+            .clamp(0.0, (Self::BUCKETS - 1) as f64) as usize;
+        b
+    }
+
+    fn record(&mut self, ns: f64) {
+        self.counts[Self::bucket(ns)] += 1;
+        self.total += 1;
+    }
+
+    fn percentile(&self, p: f64) -> Duration {
+        if self.total == 0 {
+            return Duration::ZERO;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 0 < p <= 1
+        let rank = ((self.total as f64 * p).ceil() as u64).max(1);
+        let mut seen = 0;
+        for (i, c) in self.counts.iter().enumerate() {
+            seen += c;
+            if seen >= rank {
+                let ns = if i == 0 {
+                    0.0
+                } else {
+                    (i as f64 / Self::SUB as f64).exp2()
+                };
+                return Duration::from_secs_f64(ns / 1e9);
+            }
+        }
+        Duration::ZERO
+    }
 }
 
 /// Unit of [`RateAccuracy`].
@@ -593,6 +711,9 @@ pub struct Pacer {
     rate: Rate,
     cfg: PacerConfig,
     origin: Instant,
+    clock: Clock,
+    /// EWMA of how late `sleep` returns (ns), subtracted from the next sleep.
+    oversleep: f64,
     /// Theoretical time (ns since `origin`) at which the next frame may start.
     tat: f64,
     last_cost: f64,
@@ -601,6 +722,7 @@ pub struct Pacer {
     waits: u64,
     jitter_sum: f64,
     jitter_max: f64,
+    jitter_hist: JitterHistogram,
     paused_at: Option<Instant>,
     paused_total: Duration,
 }
@@ -616,10 +738,13 @@ impl Pacer {
         if matches!(rate, Rate::Ifg(_)) {
             cfg.burst = 1;
         }
+        let clock = Clock::new(cfg.clock);
         Ok(Pacer {
             rate,
             cfg,
             origin: Instant::now(),
+            clock,
+            oversleep: 0.0,
             tat: 0.0,
             last_cost: rate.interval_ns(MIN_FRAME_LEN).unwrap_or(0.0),
             frames: 0,
@@ -627,6 +752,7 @@ impl Pacer {
             waits: 0,
             jitter_sum: 0.0,
             jitter_max: 0.0,
+            jitter_hist: JitterHistogram::default(),
             paused_at: None,
             paused_total: Duration::ZERO,
         })
@@ -639,27 +765,59 @@ impl Pacer {
     }
 
     fn now_ns(&self) -> f64 {
-        self.origin.elapsed().as_secs_f64() * 1e9
+        self.clock.now_ns()
     }
 
-    fn ns_to_instant(&self, ns: f64) -> Instant {
-        self.origin + Duration::from_secs_f64(ns.max(0.0) / 1e9)
+    /// Whether the pacer reads the TSC.
+    #[must_use]
+    pub fn uses_tsc(&self) -> bool {
+        self.clock.is_tsc()
+    }
+
+    /// Sleeps for `ns` and learns how late the wake-up was.
+    fn sleep_ns(&mut self, ns: f64) {
+        let start = self.now_ns();
+        std::thread::sleep(Duration::from_secs_f64(ns.max(0.0) / 1e9));
+        // Clamp: one preemption on a shared host must not make every later sleep
+        // much shorter.
+        let late = (self.now_ns() - start - ns).clamp(0.0, 200e3);
+        self.oversleep += (late - self.oversleep) / 8.0;
     }
 
     /// Waits until `deadline` according to the [`WaitMode`].
-    pub fn wait_until(&self, deadline: Instant) {
+    pub fn wait_until(&mut self, deadline: Instant) {
+        let ns = deadline
+            .checked_duration_since(self.origin)
+            .map_or(0.0, |d| d.as_secs_f64() * 1e9);
+        // `origin` and the clock start within nanoseconds of each other.
+        self.wait_until_ns(ns, &mut || {});
+    }
+
+    /// Waits until `deadline` ns on the pacer's clock; `service` runs on every
+    /// spin of [`WaitMode::BusyPoll`].
+    fn wait_until_ns(&mut self, deadline: f64, service: &mut dyn FnMut()) {
         loop {
-            let now = Instant::now();
+            let now = self.now_ns();
             if now >= deadline {
                 return;
             }
             let rem = deadline - now;
             let spin = match self.cfg.wait {
-                WaitMode::Sleep => false,
+                WaitMode::Sleep => {
+                    self.sleep_ns(rem - self.oversleep);
+                    // Never spin in sleep mode: accept the residual lateness.
+                    return;
+                }
                 WaitMode::Spin => true,
+                WaitMode::BusyPoll => {
+                    service();
+                    true
+                }
                 WaitMode::Hybrid { spin_threshold } => {
-                    if rem > spin_threshold {
-                        std::thread::sleep(rem - spin_threshold);
+                    let thr = spin_threshold.as_secs_f64() * 1e9;
+                    let sleep = rem - thr - self.oversleep;
+                    if sleep > 1_000.0 {
+                        self.sleep_ns(sleep);
                         continue;
                     }
                     true
@@ -671,8 +829,6 @@ impl Pacer {
                 } else {
                     std::hint::spin_loop();
                 }
-            } else {
-                std::thread::sleep(rem);
             }
         }
     }
@@ -681,6 +837,11 @@ impl Pacer {
     /// that may be sent now (`u32::MAX` when unlimited), or `None` if the deadline is
     /// further away than `max_block`.
     pub fn poll(&mut self, max_block: Duration) -> Option<u32> {
+        self.poll_with(max_block, &mut || {})
+    }
+
+    /// [`Pacer::poll`] calling `service` while it spins in [`WaitMode::BusyPoll`].
+    pub fn poll_with(&mut self, max_block: Duration, service: &mut dyn FnMut()) -> Option<u32> {
         if self.rate.is_unlimited() {
             return Some(u32::MAX);
         }
@@ -688,7 +849,7 @@ impl Pacer {
         if self.tat > now {
             let cap = now + max_block.as_secs_f64() * 1e9;
             let target = self.tat.min(cap);
-            self.wait_until(self.ns_to_instant(target));
+            self.wait_until_ns(target, service);
             now = self.now_ns();
             if now < self.tat {
                 return None;
@@ -697,6 +858,7 @@ impl Pacer {
             self.waits += 1;
             self.jitter_sum += late;
             self.jitter_max = self.jitter_max.max(late);
+            self.jitter_hist.record(late);
         }
         let backlog_cap = self.cfg.max_backlog.as_secs_f64() * 1e9;
         if now - self.tat > backlog_cap {
@@ -775,9 +937,12 @@ impl Pacer {
             unit,
             ratio: target.map(|t| achieved / (t * ramp_fraction(active, self.cfg.ramp_up))),
             max_jitter: Duration::from_secs_f64(self.jitter_max / 1e9),
+            p50_jitter: self.jitter_hist.percentile(0.5),
+            p99_jitter: self.jitter_hist.percentile(0.99),
             mean_jitter: Duration::from_secs_f64(mean / 1e9),
             frames: self.frames,
             active,
+            tsc: self.clock.is_tsc(),
         }
     }
 }
@@ -1056,6 +1221,24 @@ mod tests {
             Pacer::new(r, PacerConfig::default()),
             Err(TxError::Config(_))
         ));
+    }
+
+    #[test]
+    fn jitter_histogram_percentiles() {
+        let mut h = JitterHistogram::default();
+        assert_eq!(h.percentile(0.99), Duration::ZERO);
+        for _ in 0..98 {
+            h.record(1_000.0);
+        }
+        h.record(50_000.0);
+        h.record(0.0);
+        let p50 = h.percentile(0.5).as_nanos();
+        assert!((1_000..=1_100).contains(&p50), "{p50}");
+        let p99 = h.percentile(0.99).as_nanos();
+        assert!((1_000..=1_100).contains(&p99), "{p99}");
+        let p100 = h.percentile(1.0).as_nanos();
+        assert!((50_000..=55_000).contains(&p100), "{p100}");
+        assert_eq!(JitterHistogram::bucket(1e12), JitterHistogram::BUCKETS - 1);
     }
 
     /// 1000 pps for 0.5 s must land within ±5 % (timing-sensitive, so it can be

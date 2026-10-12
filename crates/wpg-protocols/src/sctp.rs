@@ -168,6 +168,7 @@ pub fn error_causes() -> FieldType {
                 vec![
                     u("number_of_missing_parameters", 32).with_auto(AutoCompute::Count {
                         field: "missing_parameters".into(),
+                        adjust: 0,
                     }),
                     uint_list(
                         "missing_parameters",
@@ -387,9 +388,11 @@ pub fn chunks() -> FieldType {
                     uint("a_rwnd", 32, 106_496),
                     u("number_of_gap_ack_blocks", 16).with_auto(AutoCompute::Count {
                         field: "gap_ack_blocks".into(),
+                        adjust: 0,
                     }),
                     u("number_of_duplicate_tsns", 16).with_auto(AutoCompute::Count {
                         field: "duplicate_tsns".into(),
+                        adjust: 0,
                     }),
                     FieldDef::new(
                         "gap_ack_blocks",

@@ -2,7 +2,7 @@
 
 Status: draft
 
-`wpg` バイナリは serve、send、render、import、template、ifaces、doctor、bench、capture、config の各サブコマンドを提供します。サーバとヘッドレス送出が同一バイナリで動くため、CI や ssh 先での実行に向いています。例えば `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` でテンプレートを送出します。以下のコードブロックは現行ビルドの `--help` 出力そのままです。ここに載せていないサブコマンド (`serve`、`import`) は未整備で、`wpg <command> --help` を参照してください。計画中のフラグ (`--workers`、`--ramp-up`、`--start-at`、テンプレートを使う bench) は、`--help` に現れた時点でここに載ります。
+`wpg` バイナリは serve、send、render、import、template、ifaces、doctor、bench、capture、config の各サブコマンドを提供します。サーバとヘッドレス送出が同一バイナリで動くため、CI や ssh 先での実行に向いています。例えば `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` でテンプレートを送出します。以下のコードブロックは現行ビルドの `--help` 出力そのままです。ここに載せていないサブコマンド (`serve`、`import`) は未整備で、`wpg <command> --help` を参照してください。
 
 ## コマンド
 
@@ -18,7 +18,7 @@ Commands:
   send      Send a template headlessly
   render    Render a template to a pcapng file without transmitting
   import    Convert a pcap/pcapng capture into a template
-  template  Template tools (lint, list, export, import)
+  template  Template tools (lint, list, migrate, export, import)
   ifaces    List network interfaces usable for transmission
   doctor    Diagnose privileges, drivers, hugepages and Npcap
   bench     Measure transmit performance
@@ -50,6 +50,8 @@ Options:
       --duration <DURATION>  Duration limit, e.g. `10s`, `2m`
       --rate <RATE>          Rate, e.g. `1Mpps`, `10Gbps`, `50%`, `ifg=10us`, `unlimited`
       --burst <BURST>        Frames sent back to back per rate-control grant
+      --wait <MODE>          How the rate control waits: hybrid (sleep, then spin), sleep, spin or busy-poll (spin and service the backend)
+      --clock <CLOCK>        Rate-control clock: auto (TSC when invariant), tsc or monotonic [default: auto]
       --ramp-up <DURATION>   Ramp the rate up linearly from 0 over this time, e.g. `5s`
       --start-at <TIME>      Start at this time: RFC 3339 (`2026-09-29T12:00:00Z`) or a delay (`+10s`)
       --plan <PLAN>          Expansion strategy: auto, prerender or onthefly [default: auto]
@@ -64,6 +66,10 @@ Options:
       --workers <N>          TX worker threads, each with its own backend instance (afpacket: socket and ring) and share of the stream and rate [default: 1]
       --qdisc-bypass         Bypass the qdisc layer (`afpacket`, `PACKET_QDISC_BYPASS`)
       --no-tx-ring           Use `sendmmsg` instead of the TPACKET_V3 TX ring (`afpacket`)
+      --auto-pin             Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
+      --queue <N>            First hardware queue (`afxdp`; worker i binds queue N+i)
+      --xdp-mode <MODE>      AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy [default: auto]
+      --busy-poll            Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
   -h, --help                 Print help
   -V, --version              Print version
 ```
@@ -90,7 +96,7 @@ Options:
 
 ### `wpg bench`
 
-合成フレーム (EtherType 0x88b5) をレート無制限で送出します。ベースラインは `docs/perf.md` を参照。`--json` の項目: backend、detail、iface、frame_size、batch_size、packets、dropped、pps、bps (L2)、l1_bps、elapsed。
+合成フレーム (EtherType 0x88b5) をレート無制限で送出します。ベースラインは `docs/perf.md` を参照。`--json` の項目: backend、detail、iface、frame_size、batch_size、workers、worker_details (複数ワーカー時)、template、packets、dropped、pps、bps (L2)、l1_bps、elapsed。`--backend afxdp` は `--features afxdp` 付きのビルドが必要です ([DPDK / AF_XDP](../operations/dpdk-afxdp.md))。`--auto-pin`、`--queue`、`--busy-poll`、`--wait`、`--clock` は[性能チューニング](../operations/tuning.md)を参照。
 
 ```text
 Measure transmit performance
@@ -102,12 +108,20 @@ Options:
   -i, --iface <IFACE>            Interface (for real backends)
       --duration <DURATION>      Duration in seconds [default: 5]
       --frame-size <FRAME_SIZE>  Frame size in bytes (without FCS) [default: 64]
+      --template <FILE>          Benchmark on-the-fly generation of this template instead of a fixed frame
+      --var <NAME=VALUE>         Template variable override (`name=value`), repeatable (with --template)
       --json                     Output JSON
       --batch <N>                Frames per `send_batch` call
       --ring-depth <N>           TX ring depth in frames (`afpacket`)
-      --pin-core <CORE>          Pin the TX thread to this CPU core (Linux)
+      --pin-core <CORE>          Pin the TX thread to this CPU core (Linux; the first worker)
+      --pin-cores <CORES>        Pin worker i to the i-th core of this list, e.g. `1,2` (Linux)
+      --workers <N>              TX worker threads, each with its own backend instance (afpacket: socket and ring) and share of the stream and rate [default: 1]
       --qdisc-bypass             Bypass the qdisc layer (`afpacket`, `PACKET_QDISC_BYPASS`)
       --no-tx-ring               Use `sendmmsg` instead of the TPACKET_V3 TX ring (`afpacket`)
+      --auto-pin                 Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
+      --queue <N>                First hardware queue (`afxdp`; worker i binds queue N+i)
+      --xdp-mode <MODE>          AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy [default: auto]
+      --busy-poll                Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
   -h, --help                     Print help
   -V, --version                  Print version
 ```
@@ -170,21 +184,22 @@ Options:
 
 ### `wpg template`
 
-テンプレートのツール。`lint` はエラー時に終了ステータス 1 を返します。`export` と `import` は未実装です。
+テンプレートのツール。`lint` はエラー時に終了ステータス 1 を返します。`migrate` はテンプレートを現在の `schema:` バージョンに移行します ([アップグレード](../operations/upgrade.md) を参照)。
 
 ```text
-Template tools (lint, list, export, import)
+Template tools (lint, list, migrate, export, import)
 
 Usage: wpg template <COMMAND>
 
 Commands:
-  lint    Check templates for errors and warnings (exit status 1 on errors)
-  list    List the templates of a directory (default: `templates/`)
-  show    Print the built packet (hex dump and layout tree) of a template
-  schema  Print the JSON Schema of the template format
-  export  Export templates (not implemented yet)
-  import  Import templates (not implemented yet)
-  help    Print this message or the help of the given subcommand(s)
+  lint     Check templates for errors and warnings (exit status 1 on errors)
+  list     List the templates of a directory (default: `templates/`)
+  show     Print the built packet (hex dump and layout tree) of a template
+  schema   Print the JSON Schema of the template format
+  export   Pack templates (files or ids) into a `.wpgbundle` archive
+  migrate  Upgrade templates to the current schema version
+  import   Extract the templates of a `.wpgbundle` archive into a directory
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help
@@ -247,4 +262,33 @@ Usage: wpg template schema
 Options:
   -h, --help     Print help
   -V, --version  Print version
+```
+
+### `wpg template migrate`
+
+古い `schema:` のテンプレートを現在のバージョンに書き換えます。`--check` は一覧を出すだけで、移行が必要なものがあれば終了ステータス 1 を返すので CI に向いています。
+
+```text
+Upgrade templates to the current schema version.
+
+Directories are scanned recursively. The original of a rewritten file is kept as `<file>.bak`; the new file loses its comments. Files already at the current version are not touched.
+
+Usage: wpg template migrate [OPTIONS] <PATHS>...
+
+Arguments:
+  <PATHS>...
+          Template files or directories
+
+Options:
+      --check
+          Only report outdated templates (exit status 1 if any needs migrating)
+
+      --no-backup
+          Do not keep a `.bak` copy of migrated files
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
 ```

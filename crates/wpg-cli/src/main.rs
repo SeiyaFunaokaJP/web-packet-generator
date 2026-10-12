@@ -33,7 +33,7 @@ enum Command {
     Render(RenderArgs),
     /// Convert a pcap/pcapng capture into a template.
     Import(ImportArgs),
-    /// Template tools (lint, list, export, import).
+    /// Template tools (lint, list, migrate, export, import).
     Template(TemplateArgs),
     /// List network interfaces usable for transmission.
     Ifaces(IfacesArgs),
@@ -155,6 +155,13 @@ pub(crate) struct SendArgs {
     /// Frames sent back to back per rate-control grant.
     #[arg(long)]
     pub(crate) burst: Option<u32>,
+    /// How the rate control waits: hybrid (sleep, then spin), sleep, spin or
+    /// busy-poll (spin and service the backend).
+    #[arg(long, value_name = "MODE")]
+    pub(crate) wait: Option<wpg_tx::rate::WaitMode>,
+    /// Rate-control clock: auto (TSC when invariant), tsc or monotonic.
+    #[arg(long, value_name = "CLOCK", default_value = "auto")]
+    pub(crate) clock: wpg_tx::clock::ClockSource,
     /// Ramp the rate up linearly from 0 over this time, e.g. `5s`.
     #[arg(long, value_name = "DURATION")]
     pub(crate) ramp_up: Option<String>,
@@ -269,6 +276,22 @@ pub(crate) enum TemplateAction {
         /// Template library used to resolve ids (default: `templates/`).
         #[arg(long, value_name = "DIR")]
         dir: Option<PathBuf>,
+    },
+    /// Upgrade templates to the current schema version.
+    ///
+    /// Directories are scanned recursively. The original of a rewritten file is kept
+    /// as `<file>.bak`; the new file loses its comments. Files already at the current
+    /// version are not touched.
+    Migrate {
+        /// Template files or directories.
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+        /// Only report outdated templates (exit status 1 if any needs migrating).
+        #[arg(long)]
+        check: bool,
+        /// Do not keep a `.bak` copy of migrated files.
+        #[arg(long)]
+        no_backup: bool,
     },
     /// Extract the templates of a `.wpgbundle` archive into a directory.
     Import {

@@ -1,0 +1,33 @@
+# Ethernet CFM: Linktrace Reply of the target MEP (TerminalMEP, RlyHit)
+schema: 1
+
+meta:
+  name: cfm-ltr
+  descriptions:
+    ja: "Ethernet CFM: 宛先 MEP からのリンクトレース応答 (TerminalMEP、RlyHit、LTR Egress Identifier / Reply Ingress TLV)"
+    en: "Ethernet CFM: Linktrace Reply of the target MEP (TerminalMEP, RlyHit, LTR Egress Identifier / Reply Ingress TLVs)"
+  tags: ["protocol:ethernet2", "protocol:cfm_ltr", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: cfm_ltr
+    fields:
+      md_level: 5
+      use_fdb_only: 1
+      fwd_yes: 0
+      terminal_mep: 1
+      transaction_id: 1
+      reply_ttl: 63
+      relay_action: rly_hit
+      tlvs:
+        - ltr_egress_identifier: { last_egress_identifier: 0x0000020000000001, next_egress_identifier: 0x0000020000000009 }
+        - reply_ingress: { ingress_action: ok, ingress_mac: "02:00:00:00:00:09" }
+        - end
+
+tx:
+  count: 1

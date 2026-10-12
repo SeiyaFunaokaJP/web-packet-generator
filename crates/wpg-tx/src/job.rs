@@ -32,7 +32,7 @@ use std::time::{Duration, Instant, SystemTime};
 use serde::{Deserialize, Serialize};
 use wpg_core::signature::{self, Signature};
 
-use crate::rate::{ramp_fraction, Pacer, PacerConfig, Rate, RateAccuracy, RateUnit};
+use crate::rate::{ramp_fraction, Pacer, PacerConfig, Rate, RateAccuracy, RateUnit, WaitMode};
 use crate::source::FrameSource;
 use crate::{backend, Frame, TxBackend, TxError, TxOptions, TxStats};
 
@@ -233,6 +233,9 @@ pub struct WorkerReport {
     pub core: Option<usize>,
     /// Whether it was pinned (`None` if no pinning was requested).
     pub pinned: Option<bool>,
+    /// [`TxBackend::detail`] of its backend (e.g. the AF_XDP queue and mode).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 
 /// Final result of a job.
@@ -831,6 +834,12 @@ impl Worker {
             }
             std::thread::park_timeout(Duration::from_millis(50));
         }
+        if !self.rate.is_unlimited()
+            && !matches!(self.pacer_cfg.wait, WaitMode::Spin | WaitMode::BusyPoll)
+        {
+            crate::rate::reduce_timer_slack();
+        }
+        let busy_poll = self.pacer_cfg.wait == WaitMode::BusyPoll;
         // Validated in `start_workers`.
         let mut pacer = Pacer::new(self.rate, self.pacer_cfg).expect("validated rate");
         let batch = self.batch;
@@ -879,7 +888,16 @@ impl Worker {
                 Some(d) => max_block.min(d.saturating_sub(active)),
                 None => max_block,
             };
-            let Some(grant) = pacer.poll(block) else {
+            let polled = if busy_poll {
+                let backend = &mut self.backend;
+                pacer.poll_with(block, &mut || {
+                    // Errors resurface on the next send_batch.
+                    let _ = backend.service();
+                })
+            } else {
+                pacer.poll(block)
+            };
+            let Some(grant) = polled else {
                 continue;
             };
             let mut n = batch.min(usize::try_from(grant).unwrap_or(usize::MAX));
@@ -1142,6 +1160,7 @@ impl Monitor {
                     active: o.active,
                     core: o.core,
                     pinned: o.pinned,
+                    detail: o.detail.clone(),
                 }
             })
             .collect();
@@ -1191,8 +1210,11 @@ fn merge_accuracy(outs: &[WorkerOut], rate: Rate, active: Duration) -> RateAccur
                 .sum::<f64>()
                 / waits,
         ),
+        p50_jitter: accs.iter().map(|a| a.p50_jitter).max().unwrap_or_default(),
+        p99_jitter: accs.iter().map(|a| a.p99_jitter).max().unwrap_or_default(),
         frames: accs.iter().map(|a| a.frames).sum(),
         active,
+        tsc: !accs.is_empty() && accs.iter().all(|a| a.tsc),
     }
 }
 

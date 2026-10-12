@@ -7,7 +7,8 @@
 //! to a multiple of 4 octets (`TlvDef::align`); for BGP, variants told apart by
 //! their value (`TlvVariant::value_prefix` / `value_len`) and a type flag that
 //! widens the length (`TlvDef::long_length`); for RSVP, items whose length comes
-//! before the type (`TlvDef::len_first`).
+//! before the type (`TlvDef::len_first`); for CFM / 802.3ah OAM, TLV regions
+//! closed by an End TLV (`Length::UntilTlv`).
 
 use std::collections::BTreeMap;
 
@@ -68,6 +69,7 @@ fn prefix_def() -> ProtocolDef {
             uint("metric", 8),
             uint("s", 1).with_auto(AutoCompute::Count {
                 field: "block".into(),
+                adjust: 0,
             }),
             uint("plen", 7),
             FieldDef::new(
@@ -344,7 +346,7 @@ fn until_def() -> ProtocolDef {
             address: nsap = vec![0x49, 0, 1];
             options: ty(FieldType::Tlv(tlv(
                 vec![TlvVariant::new(0xcd, "priority", vec![uint("value", 8)])],
-                Length::UntilOffset { field: "li".into(), unit: 1 },
+                Length::UntilOffset { field: "li".into(), unit: 1, adjust: 0 },
             ))) = Vec::<TlvItem>::new();
         },
     };
@@ -405,6 +407,7 @@ fn regions_end_at_the_header_length() {
         t.length = Length::UntilOffset {
             field: "nope".into(),
             unit: 1,
+            adjust: 0,
         };
     }
     assert!(d.validate().is_err(), "until an unknown field");
@@ -701,5 +704,74 @@ fn length_before_type() {
         unreachable!()
     };
     t.variants.push(TlvVariant::type_only(0x0001, "pad"));
+    assert!(bad.validate().is_err());
+}
+
+/// CFM-like PDU: a version octet, then TLVs (8-bit type, 16-bit length) closed
+/// by the type-only End TLV 0, as the outermost layer of a 16-octet minimum frame.
+fn end_tlv_def() -> ProtocolDef {
+    let mut t = tlv(
+        vec![
+            TlvVariant::type_only(0, "end"),
+            TlvVariant::new(
+                3,
+                "data",
+                vec![FieldDef::new(
+                    "data",
+                    FieldType::Bytes { len: Length::ToEnd },
+                )],
+            ),
+        ],
+        Length::UntilTlv { type_value: 0 },
+    );
+    t.len_bits = 16;
+    let mut d = ProtocolDef::new("pdu", "PDU", wpg_core::ProtocolLayer::L2);
+    d.fields = vec![uint("version", 8), FieldDef::new("tlvs", FieldType::Tlv(t))];
+    d.min_frame_len = Some(16);
+    d
+}
+
+#[test]
+fn tlv_regions_closed_by_an_end_item() {
+    let defs = vec![end_tlv_def()];
+    defs[0].validate().unwrap();
+    let p = Packet::from_layers(vec![Layer::new("pdu").with("version", 1u8).with(
+        "tlvs",
+        vec![
+            TlvItem::named("data").with("data", vec![0xaa, 0xbb]),
+            TlvItem::named("end"),
+        ],
+    )]);
+    let built = p.build(&defs).unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    let mut want = vec![1, 3, 0, 2, 0xaa, 0xbb, 0];
+    want.resize(16, 0); // zero padding up to the minimum frame
+    assert_eq!(built.bytes, want);
+
+    // The zero padding after the End TLV is padding, not more End TLVs.
+    let parsed = parse(&built.bytes, "pdu", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    assert_eq!(parsed.packet.layers.len(), 1);
+    assert!(parsed.packet.pad_to_min);
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["tlvs"] else {
+        panic!("not decoded as items");
+    };
+    let names: Vec<_> = items.iter().map(|i| i.name.as_deref()).collect();
+    assert_eq!(names, [Some("data"), Some("end")]);
+
+    // Without an End TLV the region runs to the end of the PDU.
+    let open = [1, 3, 0, 1, 0xaa, 3, 0, 0];
+    let parsed = parse(&open, "pdu", &defs).unwrap();
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["tlvs"] else {
+        panic!("not decoded as items");
+    };
+    assert_eq!(items.len(), 2);
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, open);
+
+    // Only TLV fields can end at an item.
+    let mut bad = end_tlv_def();
+    bad.fields[1].ty = FieldType::Bytes {
+        len: Length::UntilTlv { type_value: 0 },
+    };
     assert!(bad.validate().is_err());
 }

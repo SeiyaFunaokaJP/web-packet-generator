@@ -1,0 +1,28 @@
+# ITU-T Y.1731: synthetic loss reply (SLR) from responder MEP 2
+schema: 1
+
+meta:
+  name: y1731-slr
+  descriptions:
+    ja: "ITU-T Y.1731: 応答側 MEP 2 からの合成ロス応答 (SLR)"
+    en: "ITU-T Y.1731: synthetic loss reply (SLR) from responder MEP 2"
+  tags: ["protocol:ethernet2", "protocol:cfm_slr", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: cfm_slr
+    fields:
+      md_level: 5
+      source_mep_id: 1
+      responder_mep_id: 2
+      test_id: 7
+      tx_fcf: 10
+      tx_fcb: 10
+
+tx:
+  count: 1
