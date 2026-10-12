@@ -1,0 +1,13 @@
+# cargo-audit configuration (the "Security audit" workflow, rustsec/audit-check).
+# Keep in sync with [advisories].ignore in deny.toml, which records the reasons.
+
+[advisories]
+ignore = [
+    # paste: unmaintained, compile-time proc-macro helper pulled in by leptos 0.8 (wpg-web).
+    # Still a dependency of the newest leptos 0.8; revisit with leptos 0.9.
+    "RUSTSEC-2024-0436",
+    # proc-macro-error2: unmaintained, compile-time only, via leptos 0.8.21 (syn_derive).
+    # leptos 0.8.22 drops it but is pinned back until server_fn_macro_default moves to
+    # syn 3 (see #22); revisit then.
+    "RUSTSEC-2026-0173",
+]
