@@ -1014,13 +1014,6 @@ mod tests {
         assert!(b.close().is_ok());
     }
 
-    /// One AF_XDP socket per queue: tests that bind `lo` queue 0 run one at a time.
-    static LO: Mutex<()> = Mutex::new(());
-
-    fn lo_lock() -> std::sync::MutexGuard<'static, ()> {
-        LO.lock().unwrap_or_else(PoisonError::into_inner)
-    }
-
     /// Opens on `iface`, or `None` (test skipped) where AF_XDP is not usable.
     fn open_on(iface: &str, opts: &TxOptions) -> Option<AfXdpBackend> {
         let mut b = AfXdpBackend::new();
@@ -1107,7 +1100,7 @@ mod tests {
     /// receiver; auto mode must fall back to copy (lo has no native XDP).
     #[test]
     fn lo_copy_mode_frames_arrive() {
-        let _lo = lo_lock();
+        let _lo = crate::lo_test_lock();
         for (mode, tag) in [(XdpMode::Copy, 0xb1), (XdpMode::Auto, 0xb2)] {
             let opts = TxOptions {
                 xdp_mode: mode,
@@ -1121,11 +1114,13 @@ mod tests {
             let d = b.detail().unwrap();
             assert!(d.contains("copy mode") && d.contains("queue 0"), "{d}");
             let rx = receiver("lo");
-            // 4 x 300 frames: more than the 256-slot ring, so chunks are recycled.
-            let frames: Vec<Frame> = (0..300).map(|_| tagged(tag, 64)).collect();
+            // 12 x 100 frames: more than the 256-slot ring, so chunks are recycled;
+            // small batches with a pause keep lo's receive backlog from overflowing.
+            let frames: Vec<Frame> = (0..100).map(|_| tagged(tag, 64)).collect();
             let mut sent = 0;
-            for _ in 0..4 {
+            for _ in 0..12 {
                 sent += b.send_batch(&frames).unwrap();
+                std::thread::sleep(Duration::from_millis(2));
             }
             b.close().unwrap();
             assert_eq!(sent, 1200);
@@ -1137,7 +1132,7 @@ mod tests {
 
     #[test]
     fn oversized_frames_are_dropped() {
-        let _lo = lo_lock();
+        let _lo = crate::lo_test_lock();
         let opts = TxOptions {
             xdp_mode: XdpMode::Copy,
             ..TxOptions::default()
@@ -1157,7 +1152,7 @@ mod tests {
 
     #[test]
     fn job_on_lo_with_busy_poll() {
-        let _lo = lo_lock();
+        let _lo = crate::lo_test_lock();
         use crate::job::{JobConfig, TxJob};
         use crate::rate::{PacerConfig, Rate, WaitMode};
         use crate::source::PreRendered;

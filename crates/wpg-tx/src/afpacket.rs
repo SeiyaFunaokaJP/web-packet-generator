@@ -654,6 +654,7 @@ mod tests {
     }
 
     fn roundtrip(tx_ring: bool, tag: u8, len: usize) {
+        let _lo = crate::lo_test_lock();
         let Some(mut b) = open_lo(tx_ring) else {
             return;
         };
@@ -709,6 +710,7 @@ mod tests {
     fn job_on_lo() {
         use crate::job::{JobConfig, TxJob};
         use crate::source::PreRendered;
+        let _lo = crate::lo_test_lock();
         let Some(b) = open_lo(true) else { return };
         let src = PreRendered::new(vec![synthetic_frame(60)], Some(1000));
         let r = TxJob::start(Box::new(b), Box::new(src), JobConfig::default())

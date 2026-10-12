@@ -42,6 +42,15 @@ pub mod source;
 mod sys;
 
 pub use null::NullBackend;
+
+/// Serialises tests that transmit on `lo`: the loopback receive backlog
+/// (`netdev_max_backlog`, 1000 frames) overflows when several of them burst at
+/// once, and only one AF_XDP socket can bind `lo` queue 0.
+#[cfg(all(test, target_os = "linux"))]
+pub(crate) fn lo_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LO: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LO.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
 pub use pcapfile::PcapFileBackend;
 
 /// One Ethernet frame ready to transmit (without FCS).
