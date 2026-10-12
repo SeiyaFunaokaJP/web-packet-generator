@@ -1,0 +1,63 @@
+# systemd unit for the wpg server (installed by scripts/deploy.sh --service).
+#
+# Manual install:
+#   sudo useradd --system --home-dir /var/lib/wpg --shell /usr/sbin/nologin wpg
+#   sudo install -m 0755 wpg /usr/local/bin/wpg
+#   sudo install -m 0644 wpg.service /etc/systemd/system/wpg.service
+#   sudo install -d -m 0750 -o root -g wpg /etc/wpg
+#   sudo wpg config init --path /etc/wpg/wpg.toml      # then edit it
+#   sudo wpg config set-password --config /etc/wpg/wpg.toml
+#   sudo systemctl daemon-reload && sudo systemctl enable --now wpg
+#
+# Settings that differ per host (bind address, allowed interfaces, ...) go into
+# /etc/wpg/wpg.toml or /etc/wpg/wpg.env (WPG_<SECTION>__<KEY>=..., see
+# `wpg config init`), not into this file.
+
+[Unit]
+Description=Web Packet Generator (wpg)
+Documentation=https://github.com/SeiyaFunaokaJP/web-packet-generator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wpg
+Group=wpg
+Environment=WPG_CONFIG=/etc/wpg/wpg.toml
+Environment=WPG_DATA_DIR=/var/lib/wpg
+EnvironmentFile=-/etc/wpg/wpg.env
+ExecStart=/usr/local/bin/wpg serve
+WorkingDirectory=/var/lib/wpg
+StateDirectory=wpg
+StateDirectoryMode=0750
+Restart=on-failure
+RestartSec=2s
+
+# Raw sockets (AF_PACKET / AF_XDP) without running as root. The ambient set is
+# used instead of file capabilities (setcap) because NoNewPrivileges ignores those.
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+# AF_XDP UMEM is locked memory.
+LimitMEMLOCK=infinity
+
+# Hardening.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_PACKET AF_NETLINK AF_XDP
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

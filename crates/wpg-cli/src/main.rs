@@ -33,7 +33,7 @@ enum Command {
     Render(RenderArgs),
     /// Convert a pcap/pcapng capture into a template.
     Import(ImportArgs),
-    /// Template tools (lint, list, export, import).
+    /// Template tools (lint, list, migrate, export, import).
     Template(TemplateArgs),
     /// List network interfaces usable for transmission.
     Ifaces(IfacesArgs),
@@ -259,6 +259,22 @@ pub(crate) enum TemplateAction {
         /// Template library used to resolve ids (default: `templates/`).
         #[arg(long, value_name = "DIR")]
         dir: Option<PathBuf>,
+    },
+    /// Upgrade templates to the current schema version.
+    ///
+    /// Directories are scanned recursively. The original of a rewritten file is kept
+    /// as `<file>.bak`; the new file loses its comments. Files already at the current
+    /// version are not touched.
+    Migrate {
+        /// Template files or directories.
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+        /// Only report outdated templates (exit status 1 if any needs migrating).
+        #[arg(long)]
+        check: bool,
+        /// Do not keep a `.bak` copy of migrated files.
+        #[arg(long)]
+        no_backup: bool,
     },
     /// Extract the templates of a `.wpgbundle` archive into a directory.
     Import {

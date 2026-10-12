@@ -54,3 +54,23 @@ wpg listens on `127.0.0.1:8080` by default and loads the templates under `.\temp
 ```
 
 Use the interface name printed by `wpg ifaces`. Only send on networks you own or are authorised to test. Continue with the [ARP sweep tutorial](../tutorials/arp-sweep.md).
+
+## Release archive and Npcap check
+
+Release archives (`wpg-<version>-x86_64-pc-windows-msvc.zip`) contain `wpg.exe` with the web UI, the sample templates and `packaging\windows\wpg-service.ps1`. They are not code-signed:
+
+```powershell
+# Verify, then clear the "downloaded from the Internet" mark before extracting
+(Get-FileHash .\wpg-0.2.0-x86_64-pc-windows-msvc.zip -Algorithm SHA256).Hash   # compare with SHA256SUMS
+Unblock-File .\wpg-0.2.0-x86_64-pc-windows-msvc.zip
+Expand-Archive .\wpg-0.2.0-x86_64-pc-windows-msvc.zip -DestinationPath "C:\Program Files\wpg"
+```
+
+If SmartScreen still shows "Windows protected your PC", choose **More info → Run anyway** once.
+
+Npcap is not bundled (its licence does not allow redistribution with the free edition). Both `wpg doctor` and `scripts\build.ps1` check for it:
+
+- `wpg doctor` fails the `npcap` check when Npcap is missing and warns when it is installed without **WinPcap API-compatible Mode** (then `wpcap.dll` is not on the default DLL path). The fix line links to <https://npcap.com/#download>.
+- `scripts\build.ps1` prints the same warning before building, since a build without Npcap succeeds but cannot send.
+
+To run wpg in the background at boot, see [Running as a service](../operations/services.md#windows).

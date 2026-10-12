@@ -20,6 +20,8 @@ sudo ethtool -L ens3 combined 4
 
 ## DPDK
 
+`scripts/deploy.sh <host> --dpdk [--hugepages N]` does the host-side part below (hugepages now and at boot, `hugetlbfs`, `vfio-pci`, an IOMMU check) but leaves binding the NIC to you; see [Deploying with scripts/deploy.sh](deploy.md#--dpdk-host-preparation-only).
+
 Requirements (from the design decision in ADR 0004):
 
 - DPDK **24.11 LTS** (23.11 LTS is also checked in CI). Build wpg with `--features dpdk`; the DPDK development packages must be installed.

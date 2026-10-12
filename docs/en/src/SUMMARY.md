@@ -41,6 +41,10 @@
 
 # Operations
 
+- [Deploying with scripts/deploy.sh](operations/deploy.md)
+- [Running as a service](operations/services.md)
+- [Docker](operations/docker.md)
+- [Upgrading](operations/upgrade.md)
 - [DPDK and AF_XDP setup](operations/dpdk-afxdp.md)
 - [CML2 notes](operations/cml2.md)
 - [Performance tuning](operations/tuning.md)

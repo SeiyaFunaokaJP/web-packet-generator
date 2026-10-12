@@ -107,7 +107,7 @@ doctor-fix-hugepages = ヒュージページを確保し NIC を DPDK にバイ�
 doctor-npcap-ok = Npcap がインストールされています (WinPcap 互換モード)
 doctor-npcap-missing = Npcap がインストールされていません。Windows での送出に必要です
 doctor-npcap-not-compat = Npcap は WinPcap API 互換モードではないため、wpcap.dll が見つからない場合があります
-doctor-fix-npcap = Npcap をインストールしてください: { $hint }
+doctor-fix-npcap = 「Install Npcap in WinPcap API-compatible Mode」にチェックを入れて Npcap をインストールし、wpg doctor を再実行してください: { $hint }
 doctor-fix-npcap-compat = { $hint }
 doctor-pcaplib-ok = libpcap を利用できます
 doctor-pcaplib-missing = libpcap が見つかりません。pcap バックエンドは利用できません
@@ -223,6 +223,11 @@ template-export-error = { $value }: { $error }
 template-import-done = { $value } から { $count } 個のテンプレートを { $detail } に展開しました。
 template-import-exists = { $value }: 既に存在します (上書きするには --force)
 template-import-error = { $value }: { $error }
+template-migrate-outdated = { $value }: schema { $found } のため { $expected } への移行が必要です
+template-migrate-done = { $value }: schema { $found } から { $expected } へ移行しました
+template-migrate-error = { $value }: { $error }
+template-migrate-summary = 移行 { $count } 件、schema { $expected } のまま { $ok } 件、エラー { $fail } 件
+template-migrate-check-summary = 移行が必要 { $count } 件、schema { $expected } のまま { $ok } 件、エラー { $fail } 件
 
 ## API errors (wpg-server)
 api-error-not-found = { $what } が見つかりません。

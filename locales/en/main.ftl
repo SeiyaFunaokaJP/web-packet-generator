@@ -107,7 +107,7 @@ doctor-fix-hugepages = Reserve hugepages and bind the NIC to DPDK: { $hint }
 doctor-npcap-ok = Npcap is installed (WinPcap-compatible mode)
 doctor-npcap-missing = Npcap is not installed; it is required to transmit on Windows
 doctor-npcap-not-compat = Npcap is installed but not in WinPcap API-compatible mode, so wpcap.dll may not be found
-doctor-fix-npcap = Install Npcap: { $hint }
+doctor-fix-npcap = Install Npcap with "Install Npcap in WinPcap API-compatible Mode" ticked, then run wpg doctor again: { $hint }
 doctor-fix-npcap-compat = { $hint }
 doctor-pcaplib-ok = libpcap is available
 doctor-pcaplib-missing = libpcap was not found; the pcap backend cannot be used
@@ -223,6 +223,11 @@ template-export-error = { $value }: { $error }
 template-import-done = Extracted { $count } template(s) from { $value } to { $detail }.
 template-import-exists = { $value }: already exists (use --force to overwrite)
 template-import-error = { $value }: { $error }
+template-migrate-outdated = { $value }: schema { $found }, needs migrating to { $expected }
+template-migrate-done = { $value }: migrated from schema { $found } to { $expected }
+template-migrate-error = { $value }: { $error }
+template-migrate-summary = { $count } migrated, { $ok } already at schema { $expected }, { $fail } error(s)
+template-migrate-check-summary = { $count } to migrate, { $ok } already at schema { $expected }, { $fail } error(s)
 
 ## API errors (wpg-server)
 api-error-not-found = { $what } was not found.

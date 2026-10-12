@@ -134,3 +134,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
+
+  # Deployment / packaging scripts (M10).
+  scripts:
+    name: shellcheck / systemd
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: shellcheck scripts/*.sh scripts/lib/*.sh docs/build.sh
+      - run: systemd-analyze verify packaging/systemd/wpg.service 2>&1 | grep -v 'is not executable' | tee /dev/stderr | (! grep .)
