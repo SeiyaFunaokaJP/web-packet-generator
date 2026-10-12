@@ -42,6 +42,15 @@ wpg-server serves a REST (JSON) API under `/api` and pushes live statistics, job
 | jobs | [`GET /api/jobs/{id}/stats`](#op-get-api-jobs-id-stats) | Latest statistics snapshot of a job. |
 | jobs | [`POST /api/jobs/{id}/stop`](#op-post-api-jobs-id-stop) | Stops a job (asynchronously; watch `job_state` or poll the job). |
 | jobs | [`GET /api/stats/overview`](#op-get-api-stats-overview) | Dashboard summary. |
+| captures | [`GET /api/captures`](#op-get-api-captures) | All captures (running and the last finished ones), newest first. |
+| captures | [`POST /api/captures`](#op-post-api-captures) | Starts a capture. |
+| captures | [`GET /api/captures/backends`](#op-get-api-captures-backends) | Receive backend availability on this build / OS. |
+| captures | [`POST /api/captures/filter`](#op-post-api-captures-filter) | Checks a capture filter without starting a capture. |
+| captures | [`GET /api/captures/{id}`](#op-get-api-captures-id) | One capture. |
+| captures | [`DELETE /api/captures/{id}`](#op-delete-api-captures-id) | Removes a capture (a running one is stopped first; a saved pcapng file stays on disk). |
+| captures | [`GET /api/captures/{id}/packets`](#op-get-api-captures-id-packets) | The first N matching frames of a capture (live while it runs). |
+| captures | [`GET /api/captures/{id}/pcapng`](#op-get-api-captures-id-pcapng) | The pcapng file of a finished capture started with `save`. |
+| captures | [`POST /api/captures/{id}/stop`](#op-post-api-captures-id-stop) | Stops a running capture (asynchronously; watch `capture_state`). |
 | events | [`GET /api/ws`](#op-get-api-ws) | WebSocket upgrade. |
 
 ### `auth`
@@ -640,6 +649,162 @@ Dashboard summary.
 |---|---|---|
 | `200` | Dashboard data | `application/json` [`Overview`](#schema-overview) |
 
+### `captures`
+
+Receive counters, captured frames and signature verification
+
+<a id="op-get-api-captures"></a>
+
+#### `GET /api/captures`
+
+All captures (running and the last finished ones), newest first.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Captures | `application/json` [`CaptureInfo`](#schema-captureinfo)`[]` |
+
+<a id="op-post-api-captures"></a>
+
+#### `POST /api/captures`
+
+Starts a capture.
+
+**Request body**: `application/json` [`CaptureSpec`](#schema-capturespec)
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `201` | Started | `application/json` [`CaptureInfo`](#schema-captureinfo) |
+| `400` | Invalid spec or filter | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `404` | Unknown interface / input file | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `backend_error`: the backend could not be opened | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-captures-backends"></a>
+
+#### `GET /api/captures/backends`
+
+Receive backend availability on this build / OS.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Backends (`name`, `available`, `reason`) | `application/json` `object``[]` |
+
+<a id="op-post-api-captures-filter"></a>
+
+#### `POST /api/captures/filter`
+
+Checks a capture filter without starting a capture.
+
+**Request body**: `application/json` [`FilterCheck`](#schema-filtercheck)
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Result | `application/json` [`FilterCheckResult`](#schema-filtercheckresult) |
+
+<a id="op-get-api-captures-id"></a>
+
+#### `GET /api/captures/{id}`
+
+One capture.
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `id` | path | `string` | yes | Capture id |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Capture | `application/json` [`CaptureInfo`](#schema-captureinfo) |
+| `404` | Unknown id | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-delete-api-captures-id"></a>
+
+#### `DELETE /api/captures/{id}`
+
+Removes a capture (a running one is stopped first; a saved pcapng file stays on disk).
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `id` | path | `string` | yes | Capture id |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `204` | Deleted |   |
+| `404` | Unknown id | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-captures-id-packets"></a>
+
+#### `GET /api/captures/{id}/packets`
+
+The first N matching frames of a capture (live while it runs).
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `id` | path | `string` | yes | Capture id |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Kept frames | `application/json` [`CapturedFrame`](#schema-capturedframe)`[]` |
+| `404` | Unknown id | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-captures-id-pcapng"></a>
+
+#### `GET /api/captures/{id}/pcapng`
+
+The pcapng file of a finished capture started with `save`.
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `id` | path | `string` | yes | Capture id |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | pcapng file | `application/octet-stream` |
+| `404` | Unknown id or nothing saved | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `409` | Still running | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-captures-id-stop"></a>
+
+#### `POST /api/captures/{id}/stop`
+
+Stops a running capture (asynchronously; watch `capture_state`).
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `id` | path | `string` | yes | Capture id |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Stopping | `application/json` [`CaptureInfo`](#schema-captureinfo) |
+| `404` | Unknown id | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `409` | Already ended | `application/json` [`ErrorBody`](#schema-errorbody) |
+
 ### `events`
 
 The WebSocket event stream.
@@ -697,6 +862,60 @@ One transmit backend.
 |---|---|---|---|
 | `backends` | [`BackendItem`](#schema-backenditem)`[]` | yes | All backends. |
 | `default` | `string` | yes | Backend used when a job names none. |
+
+<a id="schema-captureinfo"></a>
+
+### `CaptureInfo`
+
+A capture as returned by the API.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `backend` | `string` | yes | Resolved backend. |
+| `filter` | `string` | yes | Normalised filter text (empty = every frame). |
+| `finished` | `integer` \| `null` |   | End time, Unix milliseconds. |
+| `id` | `string` | yes | Capture id. |
+| `iface` | `string` | yes | Resolved interface (input path for `pcapfile`). |
+| `name` | `string` | yes | Display name (`spec.name`, else `<backend>:<iface>`). |
+| `saved` | `boolean` | yes | Whether a pcapng file was written (download with `GET /api/captures/{id}/pcapng`). |
+| `spec` | [`CaptureSpec`](#schema-capturespec) | yes | The request. |
+| `started` | `integer` | yes | Start time, Unix milliseconds. |
+| `stats` | `object` \| `null` |   | Latest statistics (`wpg_rx::RxSnapshot`). |
+| `status` | `object` | yes | `{ "state": "running" }`, `{ "state": "finished", "detail": "count_reached" \| "duration_elapsed" \| "end_of_input" \| "stopped" }`, `{ "state": "failed", "detail": "<error>" }`. |
+
+<a id="schema-capturespec"></a>
+
+### `CaptureSpec`
+
+What to capture (all fields are optional).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `backend` | `string` \| `null` |   | Backend: `afpacket`, `pcap`, `pcapfile`, `null` (default: `afpacket` on Linux, else `pcap`). |
+| `count` | `integer` \| `null` |   | Stop after this many matching frames. |
+| `duration` | `string` \| `null` |   | Stop after this long, e.g. `10s`, `2m`. |
+| `filter` | `string` \| `null` |   | tcpdump-style filter (`udp port 5001 and wpg`); empty = every frame. |
+| `iface` | `string` \| `null` |   | Interface (`any` = every interface with `afpacket`); for `pcapfile` the name of a capture file under `<data_dir>/captures` (e.g. a dry-run output). |
+| `include_outgoing` | `boolean` |   | Also count frames this host transmits. |
+| `keep` | `integer` |   | Matching frames kept for display (default 100, at most 10000). |
+| `name` | `string` \| `null` |   | Display name. |
+| `promisc` | `boolean` |   | Promiscuous mode. |
+| `save` | `string` \| `null` |   | Save the matching frames as a pcapng file of this name under `<data_dir>/captures`. |
+| `verify` | `boolean` |   | Check the signatures of matching frames (loss / order / latency). |
+
+<a id="schema-capturedframe"></a>
+
+### `CapturedFrame`
+
+One kept frame.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `hex` | `string` | yes | Captured octets as lower-case hex (decode with `POST /api/parse`). |
+| `index` | `integer` | yes | Position among the matching frames (0-based). |
+| `len` | `integer` | yes | Original length. |
+| `signature` | `object` \| `null` |   | The frame's signature (`stream_id`, `seq`, `ts_ns`), if any. |
+| `ts_ns` | `integer` | yes | Capture time, nanoseconds since the Unix epoch. |
 
 <a id="schema-clientmessage"></a>
 
@@ -774,6 +993,29 @@ Body of `POST /api/templates/{id}/favorite` (empty body = toggle).
 |---|---|---|---|
 | `favorite` | `boolean` | yes | Current value. |
 | `id` | `string` | yes | Template id. |
+
+<a id="schema-filtercheck"></a>
+
+### `FilterCheck`
+
+`POST /api/captures/filter` request.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `filter` | `string` | yes | Filter text. |
+
+<a id="schema-filtercheckresult"></a>
+
+### `FilterCheckResult`
+
+`POST /api/captures/filter` response.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `error` | `string` \| `null` |   | What is wrong (when invalid). |
+| `normalized` | `string` \| `null` |   | Normalised filter text (when valid). |
+| `ok` | `boolean` | yes | The filter is valid. |
+| `pos` | `integer` \| `null` |   | Byte offset of the error (when invalid). |
 
 <a id="schema-health"></a>
 
@@ -865,7 +1107,9 @@ What to send, where and how (all fields but `streams` are optional).
 | `plan` | `string` \| `null` |   | Expansion strategy: `auto`, `prerender`, `onthefly`. |
 | `ramp_up` | `string` \| `null` |   | Linear rate ramp-up time, e.g. `5s`. |
 | `rate` | `string` \| `null` |   | Rate: `1000pps`, `1Mpps`, `10Gbps`, `50%`, `ifg=10us`, `unlimited` (default: the first template's `tx.rate`, then `tx.max_rate`, else unlimited). |
+| `signature` | `boolean` |   | Stamp every frame with a receive-verification signature (magic + stream id + sequence number + TX time over the last 24 payload octets; see `/api/captures` with `verify`). |
 | `start_at` | `string` \| `null` |   | Scheduled start: RFC 3339 or `+10s`. |
+| `stream_id` | `integer` \| `null` |   | Signature stream id of the first stream (stream `i` gets `stream_id + i`; default 0). |
 | `streams` | [`JobStream`](#schema-jobstream)`[]` |   | Streams (at least one). Several streams are mixed into one TX worker. |
 | `workers` | `integer` \| `null` |   | TX worker threads (single stream only). |
 
@@ -1142,6 +1386,27 @@ The template index changed (file watcher or API write).
 | Key | Type | Required | Description |
 |---|---|---|---|
 | `type` | `"templates_changed"` | yes |   |
+
+#### `type: "rx_stats"`
+
+Latest statistics of a capture (every 100 ms while it runs, once more at
+the end).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `capture_id` | `string` | yes | Capture id. |
+| `snapshot` | `object` | yes | Counters, rates and verification (`wpg_rx::RxSnapshot`). |
+| `type` | `"rx_stats"` | yes |   |
+
+#### `type: "capture_state"`
+
+A capture started or ended.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `capture_id` | `string` | yes | Capture id. |
+| `state` | `object` | yes | New state (`{ "state": "running" \| "finished" \| "failed", "detail" }`). |
+| `type` | `"capture_state"` | yes |   |
 
 <a id="schema-setuprequest"></a>
 

@@ -1,0 +1,23 @@
+# 802.3ah OAM: Variable Response OAMPDU returning aFramesTransmittedOK
+schema: 1
+
+meta:
+  name: efm-oam-variable-response
+  descriptions:
+    ja: "802.3ah OAM: aFramesTransmittedOK を返す Variable Response OAMPDU (コンテナはブランチ + リーフ + 幅 + 値のオクテット列)"
+    en: "802.3ah OAM: Variable Response OAMPDU returning aFramesTransmittedOK (containers as branch + leaf + width + value octets)"
+  tags: ["protocol:ethernet2", "protocol:efm_oam_variable_response", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: efm_oam_variable_response
+    fields:
+      variable_containers: "07 0002 04 0001e240 00" # 123456 frames, end
+
+tx:
+  count: 1

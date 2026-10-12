@@ -4,11 +4,13 @@
 
 - **Layer**: L2 (data link)
 - **Header**: 110 octets (fixed)
-- **Notes**: [L2 control protocols](../../protocols/l2-control.md)
+- **Notes**: [L2 control protocols](../../protocols/l2-control.md), [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../../protocols/timing-oam.md)
 
 ## Reached from
 
-No protocol of the catalog leads here: use it as the first layer or stack it explicitly.
+| Lower layer | Selector | Value |
+|---|---|---|
+| [`ethernet2`](ethernet2.md) | First 8 bits of the payload when `ethertype` = 34825 (0x8809) | 2 (0x02) |
 
 ## Fields
 

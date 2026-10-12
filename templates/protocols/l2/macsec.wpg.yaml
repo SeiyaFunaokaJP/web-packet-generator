@@ -1,0 +1,30 @@
+# MACsec (IEEE 802.1AE): an encrypted frame with an explicit SCI (structure only: the secure data and the ICV are opaque)
+schema: 1
+
+meta:
+  name: macsec
+  descriptions:
+    ja: "MACsec (IEEE 802.1AE): 明示的な SCI 付きの暗号化フレーム (構造のみ。セキュアデータと ICV は不透明な値で、暗号化・ICV 計算はしない)"
+    en: "MACsec (IEEE 802.1AE): an encrypted frame with an explicit SCI (structure only: the secure data and the ICV are opaque, nothing is encrypted or computed)"
+  tags: ["protocol:ethernet2", "protocol:macsec", "layer:l2", sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: macsec
+    fields:
+      # TCI: SC (Auto with the SCI), E and C set; association number 1
+      an: 1
+      pn: 1000
+      sci:
+        - { system_identifier: "02:00:00:00:00:01", port_identifier: 1 }
+      # 48 octets or more: the short length stays 0
+      secure_data: "6b 2f 91 0c 5e d4 a8 33 07 e1 9a 54 c2 7d 16 f0 88 3b ae 61 d9 02 4c b7 15 ea 70 2d 93 c6 58 0f a1 34 7b e8 26 9d 51 cf 0a 84 f3 6e 17 b2 49 dc"
+      icv: "00 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff" # opaque, not computed
+
+tx:
+  count: 1

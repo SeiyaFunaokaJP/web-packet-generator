@@ -105,6 +105,8 @@
 |---|---|---|
 | 179 (0x00b3) | [`bgp`](bgp.md) |   |
 | 646 (0x0286) | [`ldp`](ldp.md) |   |
+| 3868 (0x0f1c) | [`diameter`](diameter.md) |   |
+| 5060 (0x13c4) | [`sip`](sip.md) |   |
 
 ## 制約
 
@@ -117,9 +119,12 @@
 - [bad-tcp-checksum](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/malformed/tcp-bad-checksum.wpg.yaml) — `templates/malformed/tcp-bad-checksum.wpg.yaml`
 - [tcp-data-psh-ack](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/tcp-data.wpg.yaml) — `templates/protocols/l4/tcp-data.wpg.yaml`
 - [tcp-syn-options](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/tcp-syn.wpg.yaml) — `templates/protocols/l4/tcp-syn.wpg.yaml`
+- [diameter-ccr-initial](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mobile/diameter-ccr-initial.wpg.yaml) — `templates/protocols/mobile/diameter-ccr-initial.wpg.yaml`
+- [diameter-cer](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mobile/diameter-cer.wpg.yaml) — `templates/protocols/mobile/diameter-cer.wpg.yaml`
 - [ldp-initialization](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-initialization.wpg.yaml) — `templates/protocols/mpls/ldp-initialization.wpg.yaml`
 - [ldp-label-mapping](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-label-mapping.wpg.yaml) — `templates/protocols/mpls/ldp-label-mapping.wpg.yaml`
 - [ldp-label-withdraw](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-label-withdraw.wpg.yaml) — `templates/protocols/mpls/ldp-label-withdraw.wpg.yaml`
 - [bgp-open](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/bgp-open.wpg.yaml) — `templates/protocols/routing/bgp-open.wpg.yaml`
+- [sip-register](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/sip-register.wpg.yaml) — `templates/protocols/voip/sip-register.wpg.yaml`
 - [scenario-tcp-syn-port-scan](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/tcp-syn-port-scan.wpg.yaml) — `templates/scenarios/tcp-syn-port-scan.wpg.yaml`
 - [scenario-vlan-syn-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/vlan-syn-flood.wpg.yaml) — `templates/scenarios/vlan-syn-flood.wpg.yaml`

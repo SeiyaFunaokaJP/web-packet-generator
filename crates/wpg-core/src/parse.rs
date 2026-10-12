@@ -116,7 +116,13 @@ fn region_len(
                 Ok(n)
             }
         }
-        Length::ToEnd => Ok(remaining),
+        // TLV regions closed by an item are measured in `decode_fields`.
+        Length::ToEnd | Length::UntilTlv { .. } => Ok(remaining),
+        Length::ToEndExcept { octets } => remaining
+            .checked_sub(*octets as usize)
+            .ok_or_else(|| short(who, at + remaining)),
+        // Terminated regions are found by their terminator (see `terminated`).
+        Length::Until { .. } => Ok(remaining),
         // Count lists are bounded by their elements (see `decode_counted`).
         Length::Count { .. } => Ok(remaining),
         Length::FromField { field, .. } | Length::UntilOffset { field, .. } => {
@@ -222,6 +228,14 @@ fn decode_fields(
                     _ => FieldValue::Bytes(b.to_vec()),
                 }
             }
+            FieldType::Bytes {
+                len: Length::Until { terminator },
+            } => {
+                let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                let n = find_octets(rest, terminator).ok_or_else(|| short(who, at + remaining))?;
+                bit += (n + terminator.len()) * 8;
+                FieldValue::Bytes(rest[..n].to_vec())
+            }
             FieldType::Bytes { len } => {
                 let n = region_len(len, fd, &fields, remaining, who, at, bit / 8, diags)?;
                 let b = take(data, bit, n).ok_or_else(|| short(who, at))?;
@@ -257,7 +271,13 @@ fn decode_fields(
                 FieldValue::Bytes(b.to_vec())
             }
             FieldType::Tlv(t) => {
-                let n = region_len(&t.length, fd, &fields, remaining, who, at, bit / 8, diags)?;
+                let n = match &t.length {
+                    Length::UntilTlv { type_value } => {
+                        let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                        tlv_span_until(t, rest, *type_value)
+                    }
+                    len => region_len(len, fd, &fields, remaining, who, at, bit / 8, diags)?,
+                };
                 let region = take(data, bit, n).ok_or_else(|| short(who, at))?;
                 bit += n * 8;
                 let items = decode_tlv(fd, t, region, Some((who, at, &mut *diags)));
@@ -276,6 +296,21 @@ fn decode_fields(
                 let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
                 let (elems, n) =
                     decode_counted(who, fd, item, rest, at, want).ok_or_else(|| short(who, at))?;
+                bit += n * 8;
+                let v = FieldValue::List(elems);
+                if reproduces(fd, &v, &rest[..n]) {
+                    v
+                } else {
+                    FieldValue::Bytes(rest[..n].to_vec())
+                }
+            }
+            FieldType::List {
+                item,
+                length: Length::Until { terminator },
+            } => {
+                let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                let (elems, n) = decode_terminated(who, fd, item, rest, at, terminator)
+                    .ok_or_else(|| short(who, at))?;
                 bit += n * 8;
                 let v = FieldValue::List(elems);
                 if reproduces(fd, &v, &rest[..n]) {
@@ -332,6 +367,41 @@ fn decode_counted(
     Some((out, pos))
 }
 
+/// Position of the first occurrence of `needle` (non-empty) in `hay`.
+fn find_octets(hay: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() {
+        return None;
+    }
+    hay.windows(needle.len()).position(|w| w == needle)
+}
+
+/// Decodes list elements from the start of `data` until the next ones are
+/// `terminator`; returns them and the octets they span with the terminator,
+/// `None` if an element does not decode or the terminator is missing.
+fn decode_terminated(
+    who: Who<'_>,
+    fd: &FieldDef,
+    item: &ItemDef,
+    data: &[u8],
+    base: usize,
+    terminator: &[u8],
+) -> Option<(Vec<FieldValue>, usize)> {
+    let mut out = Vec::new();
+    let mut pos = 0;
+    loop {
+        let rest = data.get(pos..)?;
+        if rest.starts_with(terminator) {
+            return Some((out, pos + terminator.len()));
+        }
+        let (elem, n) = decode_element(who, fd, item, rest, base + pos)?;
+        if n == 0 {
+            return None;
+        }
+        out.push(elem);
+        pos += n;
+    }
+}
+
 /// Decodes one list element from the start of `data`: the value and its size.
 fn decode_element(
     who: Who<'_>,
@@ -344,7 +414,12 @@ fn decode_element(
     match item {
         ItemDef::Field { ty } => {
             let efd = [FieldDef::new(fd.name.clone(), (**ty).clone())];
-            let n = ty.fixed_bits()? as usize / 8;
+            // Self-delimiting elements (terminated text) find their own end.
+            let n = match ty.fixed_bits() {
+                Some(bits) => bits as usize / 8,
+                None if ty.is_self_delimiting() => data.len(),
+                None => return None,
+            };
             let h = decode_fields(who, &efd, data.get(..n)?, base, scratch).ok()?;
             Some((h.fields.into_values().next()?, h.len))
         }
@@ -380,6 +455,50 @@ fn decode_list(
 /// Reads a big-endian unsigned value of `octets` octets.
 fn be(data: &[u8]) -> u64 {
     data.iter().fold(0u64, |acc, b| (acc << 8) | u64::from(*b))
+}
+
+/// Octets of `data` up to and including the first item of type `end` (with its
+/// padding), or all of `data` when no such item is framed.
+fn tlv_span_until(t: &TlvDef, data: &[u8], end: u64) -> usize {
+    let tb = usize::from(t.type_bits / 8);
+    let ty_at = if t.len_first {
+        usize::from(t.len_bits / 8)
+    } else {
+        0
+    };
+    let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
+    let align = t.align.max(1) as usize;
+    let padded = |n: usize| n + (align - n % align) % align;
+    let mut pos = 0;
+    while let Some(rest) = data.get(pos..).filter(|r| r.len() >= ty_at + tb) {
+        let ty = be(&rest[ty_at..ty_at + tb]);
+        let total = if t.variant_by_type(ty).is_some_and(|v| v.type_only) {
+            Some(tb)
+        } else {
+            let hl = tb + usize::from(t.head_octets) + usize::from(t.len_bits_for(ty) / 8);
+            let len = if t.len_first {
+                rest.get(..ty_at).map(be)
+            } else {
+                rest.get(tb + usize::from(t.head_octets)..hl).map(be)
+            };
+            len.and_then(|l| usize::try_from(l).ok()?.checked_mul(unit))
+                .and_then(|l| {
+                    if t.len_includes_header {
+                        (l >= hl).then_some(l)
+                    } else {
+                        l.checked_add(hl)
+                    }
+                })
+        };
+        let Some(total) = total.filter(|n| *n <= rest.len()) else {
+            break;
+        };
+        pos += padded(total).min(rest.len());
+        if t.same_type(ty, end) {
+            return pos;
+        }
+    }
+    data.len()
 }
 
 /// Decodes a TLV region into items. Never fails: whatever cannot be framed becomes
@@ -472,7 +591,7 @@ fn decode_tlv(
                 if t.len_includes_header {
                     (l >= hl).then_some(l)
                 } else {
-                    l.checked_add(hl)
+                    l.checked_add(hl + usize::from(t.uncounted_octets))
                 }
             });
         let Some(total) = total.filter(|n| *n <= rest.len()) else {
@@ -745,8 +864,16 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
             truncate: None,
         });
         if next.is_none() && pos < limit {
-            layers.push(raw_layer(&bytes[pos..limit]));
-            pos = limit;
+            // Zero padding up to the minimum frame is left for `pad_to_min`.
+            let padding = limit == bytes.len()
+                && outer
+                    .and_then(|d| d.min_frame_len)
+                    .is_some_and(|m| bytes.len() == m as usize)
+                && bytes[pos..].iter().all(|b| *b == 0);
+            if !padding {
+                layers.push(raw_layer(&bytes[pos..limit]));
+                pos = limit;
+            }
         }
     }
 
@@ -988,6 +1115,7 @@ mod tests {
             unpadded_last: false,
             long_length: None,
             len_first: false,
+            uncounted_octets: 0,
         };
         let outer = TlvDef {
             type_bits: 8,
@@ -1031,6 +1159,7 @@ mod tests {
             unpadded_last: false,
             long_length: None,
             len_first: false,
+            uncounted_octets: 0,
         };
         let mut p = ProtocolDef::new("tlvs", "TLVs", ProtocolLayer::L7);
         p.fields = vec![

@@ -1,0 +1,26 @@
+# ITU-T Y.1731: loss measurement reply (LMR) with the three frame counters
+schema: 1
+
+meta:
+  name: y1731-lmr
+  descriptions:
+    ja: "ITU-T Y.1731: 3 つのフレームカウンタ付きのロス測定応答 (LMR)"
+    en: "ITU-T Y.1731: loss measurement reply (LMR) with the three frame counters"
+  tags: ["protocol:ethernet2", "protocol:cfm_lmr", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: cfm_lmr
+    fields:
+      md_level: 5
+      tx_fcf: 1000 # copied from the LMM
+      rx_fcf: 998
+      tx_fcb: 1001
+
+tx:
+  count: 1

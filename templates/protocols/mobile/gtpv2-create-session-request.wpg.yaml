@@ -1,0 +1,49 @@
+# GTPv2-C (3GPP TS 29.274): an S11 Create Session Request from the MME to the SGW
+schema: 1
+
+meta:
+  name: gtpv2-create-session-request
+  descriptions:
+    ja: "GTPv2-C (3GPP TS 29.274): MME から SGW への S11 Create Session Request (IMSI、MSISDN、RAT Type、送信側 F-TEID、APN、PDN Type、PAA、AMBR、Bearer Context)"
+    en: "GTPv2-C (3GPP TS 29.274): an S11 Create Session Request from the MME to the SGW (IMSI, MSISDN, RAT type, sender F-TEID, APN, PDN type, PAA, AMBR, bearer context)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:gtpv2", "layer:l4", mobile, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 2123
+      dst_port: 2123
+  - protocol: gtpv2
+    fields:
+      message_type: create_session_request
+      teid: [0] # T flag Auto; 0 in an initial request
+      sequence_number: 0x000101
+      ies:
+        - imsi: { digits: "00 01 01 21 43 65 87 f9" } # 001010123456789 (TBCD)
+        - msisdn: { digits: "18 09 21 43 65 87" } # 819012345678 (TBCD)
+        - serving_network: {} # MCC 001, MNC 01
+        - rat_type: { rat_type: eutran }
+        - fteid: { interface_type: s11_mme_gtp_c, teid: 0x00001001, ipv4: 192.0.2.1 }
+        - fteid: { instance: 1, interface_type: s5_s8_pgw_gtp_c, teid: 0, ipv4: 192.0.2.3 }
+        - apn: { apn: "08 69 6e 74 65 72 6e 65 74" } # DNS labels: length 8, "internet"
+        - selection_mode: {}
+        - pdn_type: { pdn_type: ipv4 }
+        - paa: { ipv4: 0.0.0.0 }
+        - ambr: { uplink: 50000, downlink: 100000 }
+        - bearer_context:
+            ies:
+              - ebi: { ebi: 5 }
+              - bearer_qos: { pl: 9, qci: 9 }
+
+tx:
+  count: 1

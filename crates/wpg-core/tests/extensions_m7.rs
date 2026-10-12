@@ -7,7 +7,12 @@
 //! to a multiple of 4 octets (`TlvDef::align`); for BGP, variants told apart by
 //! their value (`TlvVariant::value_prefix` / `value_len`) and a type flag that
 //! widens the length (`TlvDef::long_length`); for RSVP, items whose length comes
-//! before the type (`TlvDef::len_first`).
+//! before the type (`TlvDef::len_first`); for CFM / 802.3ah OAM, TLV regions
+//! closed by an End TLV (`Length::UntilTlv`); for SIP / RTCP SDES, terminated
+//! text and lists (`Length::Until`); for GTPv2-C / RTCP, regions ending at an
+//! adjusted offset (`Length::UntilOffset { adjust }`) and TLV octets the length
+//! does not count (`TlvDef::uncounted_octets`); for `MACsec`, a region that leaves
+//! a trailer (`Length::ToEndExcept`).
 
 use std::collections::BTreeMap;
 
@@ -37,6 +42,7 @@ fn tlv(variants: Vec<TlvVariant>, length: Length) -> TlvDef {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     }
 }
 
@@ -703,5 +709,359 @@ fn length_before_type() {
         unreachable!()
     };
     t.variants.push(TlvVariant::type_only(0x0001, "pad"));
+    assert!(bad.validate().is_err());
+}
+
+/// CFM-like PDU: a version octet, then TLVs (8-bit type, 16-bit length) closed
+/// by the type-only End TLV 0, as the outermost layer of a 16-octet minimum frame.
+fn end_tlv_def() -> ProtocolDef {
+    let mut t = tlv(
+        vec![
+            TlvVariant::type_only(0, "end"),
+            TlvVariant::new(
+                3,
+                "data",
+                vec![FieldDef::new(
+                    "data",
+                    FieldType::Bytes { len: Length::ToEnd },
+                )],
+            ),
+        ],
+        Length::UntilTlv { type_value: 0 },
+    );
+    t.len_bits = 16;
+    let mut d = ProtocolDef::new("pdu", "PDU", wpg_core::ProtocolLayer::L2);
+    d.fields = vec![uint("version", 8), FieldDef::new("tlvs", FieldType::Tlv(t))];
+    d.min_frame_len = Some(16);
+    d
+}
+
+#[test]
+fn tlv_regions_closed_by_an_end_item() {
+    let defs = vec![end_tlv_def()];
+    defs[0].validate().unwrap();
+    let p = Packet::from_layers(vec![Layer::new("pdu").with("version", 1u8).with(
+        "tlvs",
+        vec![
+            TlvItem::named("data").with("data", vec![0xaa, 0xbb]),
+            TlvItem::named("end"),
+        ],
+    )]);
+    let built = p.build(&defs).unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    let mut want = vec![1, 3, 0, 2, 0xaa, 0xbb, 0];
+    want.resize(16, 0); // zero padding up to the minimum frame
+    assert_eq!(built.bytes, want);
+
+    // The zero padding after the End TLV is padding, not more End TLVs.
+    let parsed = parse(&built.bytes, "pdu", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    assert_eq!(parsed.packet.layers.len(), 1);
+    assert!(parsed.packet.pad_to_min);
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["tlvs"] else {
+        panic!("not decoded as items");
+    };
+    let names: Vec<_> = items.iter().map(|i| i.name.as_deref()).collect();
+    assert_eq!(names, [Some("data"), Some("end")]);
+
+    // Without an End TLV the region runs to the end of the PDU.
+    let open = [1, 3, 0, 1, 0xaa, 3, 0, 0];
+    let parsed = parse(&open, "pdu", &defs).unwrap();
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["tlvs"] else {
+        panic!("not decoded as items");
+    };
+    assert_eq!(items.len(), 2);
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, open);
+
+    // Only TLV fields can end at an item.
+    let mut bad = end_tlv_def();
+    bad.fields[1].ty = FieldType::Bytes {
+        len: Length::UntilTlv { type_value: 0 },
+    };
+    assert!(bad.validate().is_err());
+}
+
+fn crlf() -> Length {
+    Length::Until {
+        terminator: b"\r\n".to_vec(),
+    }
+}
+
+/// SIP-shaped text: a start line, header lines ended by an empty line, a body.
+fn text_def() -> ProtocolDef {
+    let mut d = ProtocolDef::new("text", "Text", wpg_core::ProtocolLayer::L7);
+    d.fields = vec![
+        FieldDef::new("start", FieldType::Bytes { len: crlf() }),
+        FieldDef::new(
+            "lines",
+            FieldType::List {
+                item: ItemDef::Field {
+                    ty: Box::new(FieldType::Bytes { len: crlf() }),
+                },
+                length: crlf(),
+            },
+        ),
+        FieldDef::new("body", FieldType::Bytes { len: Length::ToEnd }),
+    ];
+    d
+}
+
+#[test]
+fn terminated_text_lines() {
+    let defs = vec![text_def()];
+    defs[0].validate().unwrap();
+    let line = |s: &str| FieldValue::Bytes(s.as_bytes().to_vec());
+    let p = Packet::from_layers(vec![Layer::new("text")
+        .with("start", b"GET x".to_vec())
+        .with("lines", FieldValue::List(vec![line("A: 1"), line("B: 2")]))
+        .with("body", b"hi".to_vec())]);
+    let built = p.build(&defs).unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    assert_eq!(built.bytes, b"GET x\r\nA: 1\r\nB: 2\r\n\r\nhi");
+    // The terminators belong to their fields.
+    let f = &built.layout[0].fields;
+    assert_eq!((f[0].bit_offset, f[0].bit_len), (0, 7 * 8));
+    assert_eq!(f[1].bit_len, 14 * 8);
+    assert_eq!(f[1].children[1].bit_len, 6 * 8);
+
+    let parsed = parse(&built.bytes, "text", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let l = &parsed.packet.layers[0].fields;
+    assert_eq!(l["start"], line("GET x"));
+    assert_eq!(
+        l["lines"],
+        FieldValue::List(vec![line("A: 1"), line("B: 2")])
+    );
+    assert_eq!(l["body"], line("hi"));
+    assert_eq!(
+        wpg_core::notation::format_value(&l["start"], &defs[0].fields[0].ty),
+        "\"GET x\""
+    );
+
+    // No header lines: the empty line follows the start line.
+    let parsed = parse(b"OK\r\n\r\n", "text", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    assert_eq!(
+        parsed.packet.layers[0].fields["lines"],
+        FieldValue::List(Vec::new())
+    );
+
+    // A missing terminator is a short header (the octets stay raw).
+    let parsed = parse(b"GET x\r\nA: 1", "text", &defs).unwrap();
+    assert!(parsed
+        .diagnostics
+        .iter()
+        .any(|d| d.key == keys::SHORT_HEADER));
+    assert_eq!(parsed.packet.layers[0].protocol, "raw");
+
+    // A value cannot contain its terminator.
+    let bad = Packet::from_layers(vec![Layer::new("text").with("start", b"a\r\nb".to_vec())]);
+    assert!(bad.build(&defs).is_err());
+
+    // Terminated lengths need a terminator and are not for TLVs.
+    let mut d = text_def();
+    d.fields[0].ty = FieldType::Bytes {
+        len: Length::Until {
+            terminator: Vec::new(),
+        },
+    };
+    assert!(d.validate().is_err());
+    let mut d = text_def();
+    d.fields[2].ty = FieldType::Tlv(tlv(Vec::new(), crlf()));
+    assert!(d.validate().is_err());
+}
+
+#[test]
+fn null_terminated_item_lists_with_padding() {
+    // RTCP SDES-shaped chunks: id, items {type, len (Auto), text} ended by a null
+    // octet, padding to 4 octets; `n` chunks.
+    let item = ItemDef::Struct {
+        fields: vec![
+            uint("type", 8),
+            uint("len", 8).with_auto(AutoCompute::Size {
+                field: "text".into(),
+            }),
+            FieldDef::new(
+                "text",
+                FieldType::Bytes {
+                    len: Length::FromField {
+                        field: "len".into(),
+                        unit: 1,
+                        adjust: 0,
+                        div: 1,
+                    },
+                },
+            ),
+        ],
+    };
+    let chunk = ItemDef::Struct {
+        fields: vec![
+            uint("id", 32),
+            FieldDef::new(
+                "items",
+                FieldType::List {
+                    item,
+                    length: Length::Until {
+                        terminator: vec![0],
+                    },
+                },
+            ),
+            FieldDef::new("pad", FieldType::Padding { align: 4 }),
+        ],
+    };
+    let mut d = ProtocolDef::new("sdes", "SDES", wpg_core::ProtocolLayer::L7);
+    d.fields = vec![
+        uint("n", 8).with_auto(AutoCompute::Count {
+            field: "chunks".into(),
+            adjust: 0,
+        }),
+        FieldDef::new(
+            "pad0",
+            FieldType::Bytes {
+                len: Length::Fixed { octets: 3 },
+            },
+        )
+        .with_default(FieldValue::Bytes(vec![0; 3])),
+        FieldDef::new(
+            "chunks",
+            FieldType::List {
+                item: chunk,
+                length: Length::Count { field: "n".into() },
+            },
+        ),
+    ];
+    let defs = vec![d];
+    defs[0].validate().unwrap();
+    let st = |kv: Vec<(&str, FieldValue)>| {
+        FieldValue::Struct(kv.into_iter().map(|(k, v)| (k.to_owned(), v)).collect())
+    };
+    let text = |t: u8, s: &[u8]| {
+        st(vec![
+            ("type", FieldValue::UInt(u64::from(t))),
+            ("text", FieldValue::Bytes(s.to_vec())),
+        ])
+    };
+    let chunks = FieldValue::List(vec![
+        st(vec![
+            ("id", FieldValue::UInt(1)),
+            ("items", FieldValue::List(vec![text(1, b"ab")])),
+        ]),
+        st(vec![
+            ("id", FieldValue::UInt(2)),
+            ("items", FieldValue::List(vec![text(1, b"x"), text(6, b"")])),
+        ]),
+    ]);
+    let built = Packet::from_layers(vec![Layer::new("sdes").with("chunks", chunks)])
+        .build(&defs)
+        .unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    assert_eq!(
+        built.bytes,
+        [
+            2, 0, 0, 0, // count, filler
+            0, 0, 0, 1, 1, 2, b'a', b'b', 0, 0, 0, 0, // id 1, "ab", null, pad
+            0, 0, 0, 2, 1, 1, b'x', 6, 0, 0, 0, 0, // id 2, "x", empty, null, pad
+        ]
+    );
+    let parsed = parse(&built.bytes, "sdes", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let FieldValue::List(c) = &parsed.packet.layers[0].fields["chunks"] else {
+        panic!("chunks not decoded");
+    };
+    assert_eq!(c.len(), 2);
+    assert_eq!(parsed.packet.build(&defs).unwrap().bytes, built.bytes);
+}
+
+#[test]
+fn adjusted_offsets_trailers_and_uncounted_octets() {
+    // GTPv2-C shaped: `len` counts from octet 3; IEs {type, len, instance
+    // (uncounted), value} end at `len + 2`; the rest is the next layer.
+    let mut ies = tlv(
+        vec![TlvVariant::new(
+            1,
+            "ie",
+            vec![uint("instance", 8), uint("value", 16)],
+        )],
+        Length::UntilOffset {
+            field: "len".into(),
+            unit: 1,
+            adjust: 2,
+        },
+    );
+    ies.len_bits = 16;
+    ies.uncounted_octets = 1;
+    let mut d = ProtocolDef::new("msg", "Msg", wpg_core::ProtocolLayer::L7);
+    d.fields = vec![
+        uint("len", 16).with_auto(AutoCompute::Length {
+            of: wpg_core::LengthOf::Header,
+            unit: LengthUnit::Bytes,
+            adjust: -2,
+        }),
+        FieldDef::new("ies", FieldType::Tlv(ies.clone())),
+    ];
+    // MACsec shaped: data up to a 2-octet trailer.
+    let mut tr = ProtocolDef::new("tr", "Trailer", wpg_core::ProtocolLayer::L2);
+    tr.fields = vec![
+        FieldDef::new(
+            "data",
+            FieldType::Bytes {
+                len: Length::ToEndExcept { octets: 2 },
+            },
+        ),
+        FieldDef::new(
+            "icv",
+            FieldType::Bytes {
+                len: Length::Fixed { octets: 2 },
+            },
+        ),
+    ];
+    let defs = vec![d, tr];
+    for d in &defs {
+        d.validate().unwrap();
+    }
+    let built = Packet::from_layers(vec![
+        Layer::new("msg").with(
+            "ies",
+            vec![TlvItem::named("ie")
+                .with("instance", 3u8)
+                .with("value", 0xabcdu16)],
+        ),
+        Layer::new("raw").with("data", vec![9u8, 9]),
+    ])
+    .build(&defs)
+    .unwrap();
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    // len 6: the IE (3 + 1 + 2 octets); the IE length 2 leaves out the instance.
+    assert_eq!(built.bytes, [0, 6, 1, 0, 2, 3, 0xab, 0xcd, 9, 9]);
+    let parsed = parse(&built.bytes, "msg", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let names: Vec<_> = parsed
+        .packet
+        .layers
+        .iter()
+        .map(|l| l.protocol.as_str())
+        .collect();
+    assert_eq!(names, ["msg", "raw"]);
+    let FieldValue::Tlv(items) = &parsed.packet.layers[0].fields["ies"] else {
+        panic!("ies not decoded");
+    };
+    assert_eq!(items[0].fields["instance"], FieldValue::UInt(3));
+    assert_eq!(items[0].length, None);
+
+    let parsed = parse(&[1, 2, 3, 4, 5], "tr", &defs).unwrap();
+    assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
+    let f = &parsed.packet.layers[0].fields;
+    assert_eq!(f["data"], FieldValue::Bytes(vec![1, 2, 3]));
+    assert_eq!(f["icv"], FieldValue::Bytes(vec![4, 5]));
+    let parsed = parse(&[1], "tr", &defs).unwrap();
+    assert!(parsed
+        .diagnostics
+        .iter()
+        .any(|d| d.key == keys::SHORT_HEADER));
+
+    // Uncounted octets need a length without the header.
+    ies.len_includes_header = true;
+    let mut bad = defs[0].clone();
+    bad.fields[1].ty = FieldType::Tlv(ies);
     assert!(bad.validate().is_err());
 }

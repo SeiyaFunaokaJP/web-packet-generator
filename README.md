@@ -98,7 +98,7 @@ Workspace crates: `wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-rx`, `wpg-template
 |---|---|---|---|
 | `pcap` (libpcap / Npcap / BPF) | Windows / macOS / Linux | up to several hundred kpps | Portable fallback |
 | `afpacket` (TPACKET_V3 + `sendmmsg`) | Linux | ~1-3 Mpps/core | Main path on CML2 Ubuntu (virtio); needs CAP_NET_RAW |
-| `afxdp` | Linux 5.10+ | several Mpps/core | Driver support required; zero-copy/copy auto |
+| `afxdp` | Linux 5.10+ (`--features afxdp`) | several Mpps/core | Driver support for zero-copy; zero-copy/copy auto (zero-copy not yet verified on real NICs) |
 | `dpdk` | Linux | 10 Mpps+/core | `--features dpdk`, DPDK 24.11 LTS (23.11 also) |
 | `pcapfile` | all | n/a | Writes pcapng instead of sending (dry run, CI) |
 | `loopback` / `null` | all | n/a | Benchmarks and tests |

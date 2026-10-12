@@ -93,6 +93,202 @@
         ],
         "type": "object"
       },
+      "CaptureInfo": {
+        "description": "A capture as returned by the API.",
+        "properties": {
+          "backend": {
+            "description": "Resolved backend.",
+            "type": "string"
+          },
+          "filter": {
+            "description": "Normalised filter text (empty = every frame).",
+            "type": "string"
+          },
+          "finished": {
+            "description": "End time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Capture id.",
+            "type": "string"
+          },
+          "iface": {
+            "description": "Resolved interface (input path for `pcapfile`).",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name (`spec.name`, else `<backend>:<iface>`).",
+            "type": "string"
+          },
+          "saved": {
+            "description": "Whether a pcapng file was written (download with\n`GET /api/captures/{id}/pcapng`).",
+            "type": "boolean"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/CaptureSpec",
+            "description": "The request."
+          },
+          "started": {
+            "description": "Start time, Unix milliseconds.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stats": {
+            "description": "Latest statistics (`wpg_rx::RxSnapshot`).",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "`{ \"state\": \"running\" }`, `{ \"state\": \"finished\", \"detail\":\n\"count_reached\" | \"duration_elapsed\" | \"end_of_input\" | \"stopped\" }`,\n`{ \"state\": \"failed\", \"detail\": \"<error>\" }`.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "spec",
+          "status",
+          "backend",
+          "iface",
+          "filter",
+          "started",
+          "saved"
+        ],
+        "type": "object"
+      },
+      "CaptureSpec": {
+        "description": "What to capture (all fields are optional).",
+        "properties": {
+          "backend": {
+            "default": null,
+            "description": "Backend: `afpacket`, `pcap`, `pcapfile`, `null` (default: `afpacket` on\nLinux, else `pcap`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "count": {
+            "default": null,
+            "description": "Stop after this many matching frames.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "duration": {
+            "default": null,
+            "description": "Stop after this long, e.g. `10s`, `2m`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "filter": {
+            "default": null,
+            "description": "tcpdump-style filter (`udp port 5001 and wpg`); empty = every frame.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "iface": {
+            "default": null,
+            "description": "Interface (`any` = every interface with `afpacket`); for `pcapfile` the\nname of a capture file under `<data_dir>/captures` (e.g. a dry-run output).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "include_outgoing": {
+            "default": false,
+            "description": "Also count frames this host transmits.",
+            "type": "boolean"
+          },
+          "keep": {
+            "default": 100,
+            "description": "Matching frames kept for display (default 100, at most 10000).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "default": null,
+            "description": "Display name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "promisc": {
+            "default": false,
+            "description": "Promiscuous mode.",
+            "type": "boolean"
+          },
+          "save": {
+            "default": null,
+            "description": "Save the matching frames as a pcapng file of this name under\n`<data_dir>/captures`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verify": {
+            "default": false,
+            "description": "Check the signatures of matching frames (loss / order / latency).",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "CapturedFrame": {
+        "description": "One kept frame.",
+        "properties": {
+          "hex": {
+            "description": "Captured octets as lower-case hex (decode with `POST /api/parse`).",
+            "type": "string"
+          },
+          "index": {
+            "description": "Position among the matching frames (0-based).",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "len": {
+            "description": "Original length.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "signature": {
+            "description": "The frame's signature (`stream_id`, `seq`, `ts_ns`), if any.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "ts_ns": {
+            "description": "Capture time, nanoseconds since the Unix epoch.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index",
+          "ts_ns",
+          "len",
+          "hex"
+        ],
+        "type": "object"
+      },
       "ClientMessage": {
         "description": "Client → server message.",
         "oneOf": [
@@ -214,6 +410,54 @@
         "required": [
           "id",
           "favorite"
+        ],
+        "type": "object"
+      },
+      "FilterCheck": {
+        "description": "`POST /api/captures/filter` request.",
+        "properties": {
+          "filter": {
+            "description": "Filter text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filter"
+        ],
+        "type": "object"
+      },
+      "FilterCheckResult": {
+        "description": "`POST /api/captures/filter` response.",
+        "properties": {
+          "error": {
+            "description": "What is wrong (when invalid).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "normalized": {
+            "description": "Normalised filter text (when valid).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ok": {
+            "description": "The filter is valid.",
+            "type": "boolean"
+          },
+          "pos": {
+            "description": "Byte offset of the error (when invalid).",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ok"
         ],
         "type": "object"
       },
@@ -552,11 +796,26 @@
               "null"
             ]
           },
+          "signature": {
+            "default": false,
+            "description": "Stamp every frame with a receive-verification signature (magic + stream\nid + sequence number + TX time over the last 24 payload octets; see\n`/api/captures` with `verify`).",
+            "type": "boolean"
+          },
           "start_at": {
             "default": null,
             "description": "Scheduled start: RFC 3339 or `+10s`.",
             "type": [
               "string",
+              "null"
+            ]
+          },
+          "stream_id": {
+            "default": null,
+            "description": "Signature stream id of the first stream (stream `i` gets `stream_id + i`;\ndefault 0).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
               "null"
             ]
           },
@@ -1219,6 +1478,56 @@
               "type"
             ],
             "type": "object"
+          },
+          {
+            "description": "Latest statistics of a capture (every 100 ms while it runs, once more at\nthe end).",
+            "properties": {
+              "capture_id": {
+                "description": "Capture id.",
+                "type": "string"
+              },
+              "snapshot": {
+                "description": "Counters, rates and verification (`wpg_rx::RxSnapshot`).",
+                "type": "object"
+              },
+              "type": {
+                "enum": [
+                  "rx_stats"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "capture_id",
+              "snapshot",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A capture started or ended.",
+            "properties": {
+              "capture_id": {
+                "description": "Capture id.",
+                "type": "string"
+              },
+              "state": {
+                "description": "New state (`{ \"state\": \"running\" | \"finished\" | \"failed\", \"detail\" }`).",
+                "type": "object"
+              },
+              "type": {
+                "enum": [
+                  "capture_state"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "capture_id",
+              "state",
+              "type"
+            ],
+            "type": "object"
           }
         ]
       },
@@ -1668,6 +1977,364 @@
         "summary": "Authentication state of the caller (never requires a session).",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/captures": {
+      "get": {
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CaptureInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Captures"
+          }
+        },
+        "summary": "All captures (running and the last finished ones), newest first.",
+        "tags": [
+          "captures"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureInfo"
+                }
+              }
+            },
+            "description": "Started"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid spec or filter"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown interface / input file"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`backend_error`: the backend could not be opened"
+          }
+        },
+        "summary": "Starts a capture.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/backends": {
+      "get": {
+        "operationId": "backends",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Backends (`name`, `available`, `reason`)"
+          }
+        },
+        "summary": "Receive backend availability on this build / OS.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/filter": {
+      "post": {
+        "operationId": "check_filter",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilterCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterCheckResult"
+                }
+              }
+            },
+            "description": "Result"
+          }
+        },
+        "summary": "Checks a capture filter without starting a capture.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}": {
+      "delete": {
+        "operationId": "delete",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Removes a capture (a running one is stopped first; a saved pcapng file stays\non disk).",
+        "tags": [
+          "captures"
+        ]
+      },
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureInfo"
+                }
+              }
+            },
+            "description": "Capture"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "One capture.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}/packets": {
+      "get": {
+        "operationId": "packets",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CapturedFrame"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Kept frames"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "The first N matching frames of a capture (live while it runs).",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}/pcapng": {
+      "get": {
+        "operationId": "pcapng",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "pcapng file"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id or nothing saved"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Still running"
+          }
+        },
+        "summary": "The pcapng file of a finished capture started with `save`.",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/captures/{id}/stop": {
+      "post": {
+        "operationId": "stop",
+        "parameters": [
+          {
+            "description": "Capture id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureInfo"
+                }
+              }
+            },
+            "description": "Stopping"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Already ended"
+          }
+        },
+        "summary": "Stops a running capture (asynchronously; watch `capture_state`).",
+        "tags": [
+          "captures"
         ]
       }
     },
@@ -3009,6 +3676,10 @@
     {
       "description": "Transmit jobs and statistics",
       "name": "jobs"
+    },
+    {
+      "description": "Receive counters, captured frames and signature verification",
+      "name": "captures"
     },
     {
       "description": "WebSocket event stream",

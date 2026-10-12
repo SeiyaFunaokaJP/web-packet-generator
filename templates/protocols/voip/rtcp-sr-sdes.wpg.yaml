@@ -1,0 +1,44 @@
+# RTCP (RFC 3550): a compound packet with a Sender Report (one report block) and an SDES CNAME
+schema: 1
+
+meta:
+  name: rtcp-sr-sdes
+  descriptions:
+    ja: "RTCP (RFC 3550): 送信者レポート (受信レポート 1 件) と SDES の CNAME からなる複合パケット。各パケットの件数と長さは自動"
+    en: "RTCP (RFC 3550): a compound packet with a Sender Report (one reception report) and an SDES CNAME. Counts and lengths are Auto"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:rtcp_sr", "protocol:rtcp_sdes", "layer:l4", voip, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 5005
+      dst_port: 5005 # IANA rtcp-avp (any port works with the layers placed explicitly)
+  - protocol: rtcp_sr
+    fields:
+      ssrc: 0x12345678
+      ntp_timestamp_msw: 0xeb000000
+      ntp_timestamp_lsw: 0x80000000
+      rtp_timestamp: 8000
+      packet_count: 50
+      octet_count: 8000
+      report_blocks:
+        - { ssrc: 0x87654321, fraction_lost: 0, cumulative_lost: 0, highest_sequence: 50, jitter: 12, lsr: 0, dlsr: 0 }
+  - protocol: rtcp_sdes
+    fields:
+      chunks:
+        - ssrc: 0x12345678
+          items:
+            - { type: cname, text: '"alice@192.0.2.1"' }
+
+tx:
+  count: 1

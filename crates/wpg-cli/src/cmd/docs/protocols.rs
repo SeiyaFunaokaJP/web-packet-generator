@@ -724,6 +724,24 @@ fn length_text(locale: Locale, len: &Length) -> String {
             &[("expr", code(&length_expr(field, *unit, *adjust, 1)))],
         ),
         Length::ToEnd => tx(locale, "docgen-len-to-end"),
+        Length::ToEndExcept { octets } => txa(
+            locale,
+            "docgen-len-to-end-except",
+            &[("octets", octets.to_string())],
+        ),
+        Length::Until { terminator } => txa(
+            locale,
+            "docgen-len-until-terminator",
+            &[(
+                "octets",
+                code(&wpg_core::notation::format_bytes(terminator)),
+            )],
+        ),
+        Length::UntilTlv { type_value } => txa(
+            locale,
+            "docgen-len-until-tlv",
+            &[("type", type_value.to_string())],
+        ),
     }
 }
 
@@ -1041,6 +1059,13 @@ fn tlv_details(s: &mut String, locale: Locale, t: &TlvDef, path: &[&str], level:
             locale,
             "docgen-tlv-unit",
             &[("unit", tx(locale, unit_key(t.len_unit)))],
+        ));
+    }
+    if t.uncounted_octets > 0 {
+        facts.push(txa(
+            locale,
+            "docgen-tlv-uncounted",
+            &[("octets", t.uncounted_octets.to_string())],
         ));
     }
     if t.head_octets > 0 {

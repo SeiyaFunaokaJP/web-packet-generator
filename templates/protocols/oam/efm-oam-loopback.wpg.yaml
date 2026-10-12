@@ -1,0 +1,24 @@
+# 802.3ah OAM: Loopback Control OAMPDU enabling remote loopback on the peer
+schema: 1
+
+meta:
+  name: efm-oam-loopback
+  descriptions:
+    ja: "802.3ah OAM: 対向のリモートループバックを有効にする Loopback Control OAMPDU"
+    en: "802.3ah OAM: Loopback Control OAMPDU enabling remote loopback on the peer"
+  tags: ["protocol:ethernet2", "protocol:efm_oam_loopback_control", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: efm_oam_loopback_control
+    fields:
+      flags: 0x0050
+      remote_loopback_command: enable
+
+tx:
+  count: 1

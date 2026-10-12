@@ -1,0 +1,35 @@
+# GTPv2-C (3GPP TS 29.274): an Echo Request (no TEID) with the Recovery IE
+schema: 1
+
+meta:
+  name: gtpv2-echo-request
+  descriptions:
+    ja: "GTPv2-C (3GPP TS 29.274): Recovery IE 付きの Echo Request (TEID なし、T フラグは自動で 0)"
+    en: "GTPv2-C (3GPP TS 29.274): an Echo Request with the Recovery IE (no TEID, the T flag is Auto 0)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:gtpv2", "layer:l4", mobile, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 2123
+      dst_port: 2123
+  - protocol: gtpv2
+    fields:
+      message_type: echo_request
+      teid: []
+      sequence_number: 1
+      ies:
+        - recovery: { restart_counter: 3 }
+
+tx:
+  count: 1

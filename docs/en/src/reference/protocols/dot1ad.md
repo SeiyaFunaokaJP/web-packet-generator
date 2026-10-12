@@ -32,6 +32,8 @@
 | 34525 (0x86dd) | `ipv6` |
 | 34984 (0x88a8) | `qinq` |
 | 34997 (0x88b5) | `local_experimental` |
+| 35063 (0x88f7) | `ptp` |
+| 35074 (0x8902) | `cfm` |
 
 ## Next layer
 
@@ -44,6 +46,36 @@ The next layer is selected by `ethertype`; when the field is Auto the builder wr
 | 2048 (0x0800) | [`ipv4`](ipv4.md) |   |
 | 34525 (0x86dd) | [`ipv6`](ipv6.md) |   |
 | 2054 (0x0806) | [`arp`](arp.md) |   |
+| 35063 (0x88f7) | [`ptp`](ptp.md) |   |
+| 35063 (0x88f7) | [`ptp_sync`](ptp_sync.md) |   |
+| 35063 (0x88f7) | [`ptp_delay_req`](ptp_delay_req.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_req`](ptp_pdelay_req.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_resp`](ptp_pdelay_resp.md) |   |
+| 35063 (0x88f7) | [`ptp_follow_up`](ptp_follow_up.md) |   |
+| 35063 (0x88f7) | [`ptp_delay_resp`](ptp_delay_resp.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_resp_follow_up`](ptp_pdelay_resp_follow_up.md) |   |
+| 35063 (0x88f7) | [`ptp_announce`](ptp_announce.md) |   |
+| 35063 (0x88f7) | [`ptp_signaling`](ptp_signaling.md) |   |
+| 35063 (0x88f7) | [`ptp_management`](ptp_management.md) |   |
+| 35074 (0x8902) | [`cfm`](cfm.md) |   |
+| 35074 (0x8902) | [`cfm_ccm`](cfm_ccm.md) |   |
+| 35074 (0x8902) | [`cfm_lbr`](cfm_lbr.md) |   |
+| 35074 (0x8902) | [`cfm_lbm`](cfm_lbm.md) |   |
+| 35074 (0x8902) | [`cfm_ltr`](cfm_ltr.md) |   |
+| 35074 (0x8902) | [`cfm_ltm`](cfm_ltm.md) |   |
+| 35074 (0x8902) | [`cfm_ais`](cfm_ais.md) |   |
+| 35074 (0x8902) | [`cfm_lck`](cfm_lck.md) |   |
+| 35074 (0x8902) | [`cfm_tst`](cfm_tst.md) |   |
+| 35074 (0x8902) | [`cfm_raps`](cfm_raps.md) |   |
+| 35074 (0x8902) | [`cfm_lmr`](cfm_lmr.md) |   |
+| 35074 (0x8902) | [`cfm_lmm`](cfm_lmm.md) |   |
+| 35074 (0x8902) | [`cfm_1dm`](cfm_1dm.md) |   |
+| 35074 (0x8902) | [`cfm_dmr`](cfm_dmr.md) |   |
+| 35074 (0x8902) | [`cfm_dmm`](cfm_dmm.md) |   |
+| 35074 (0x8902) | [`cfm_csf`](cfm_csf.md) |   |
+| 35074 (0x8902) | [`cfm_1sl`](cfm_1sl.md) |   |
+| 35074 (0x8902) | [`cfm_slr`](cfm_slr.md) |   |
+| 35074 (0x8902) | [`cfm_slm`](cfm_slm.md) |   |
 
 ## Constraints
 

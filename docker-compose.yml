@@ -1,0 +1,37 @@
+# wpg with Docker Compose (TODO §2.8). Usage:
+#
+#   WPG_PASSWORD='change me' docker compose up -d --build
+#   docker compose logs -f wpg
+#
+# The host network is required to send on the host's interfaces; the container gets
+# only CAP_NET_RAW and CAP_NET_ADMIN. Docker Desktop (macOS / Windows) runs containers
+# in a VM, so frames leave that VM, not your physical NIC: use Linux hosts for sending.
+# See docs/en/src/operations/docker.md.
+services:
+  wpg:
+    build:
+      context: .
+      args:
+        FEATURES: ${WPG_FEATURES:-}
+    image: wpg:latest
+    network_mode: host
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    environment:
+      # Listen address on the host (network_mode: host). With a non-loopback address
+      # a password is required.
+      WPG_SERVER__BIND: ${WPG_BIND:-0.0.0.0:8080}
+      WPG_PASSWORD: ${WPG_PASSWORD:?set WPG_PASSWORD (admin password or argon2 hash)}
+      # Interfaces jobs may send on, e.g. '["eth1"]'; empty = all.
+      WPG_TX__ALLOWED_IFACES: ${WPG_ALLOWED_IFACES:-[]}
+    volumes:
+      - wpg-data:/var/lib/wpg
+      # Your own template library (read-only), in addition to the samples:
+      # - ./my-templates:/srv/templates:ro    # and set WPG_TEMPLATES__LIBRARY_PATHS
+    restart: unless-stopped
+
+volumes:
+  wpg-data:

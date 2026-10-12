@@ -5,7 +5,7 @@
 - **レイヤ**: ペイロード
 - **ヘッダ**: 可変長
 - **生成方式**: 組み込みのペイロード生成 (以下のフィールドはワイヤ上のフィールドではなくパラメータ)
-- **補足**: [CLNP / ES-IS (P2)](../../protocols/clnp.md)
+- **補足**: [CLNP / ES-IS (P2)](../../protocols/clnp.md), [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../../protocols/mobile-voip.md)
 
 ## 下位レイヤからの到達
 

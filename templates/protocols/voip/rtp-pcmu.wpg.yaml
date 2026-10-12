@@ -1,0 +1,45 @@
+# RTP (RFC 3550): a G.711 PCMU stream (20 ms, 160 samples per packet) on a port signalled by SDP
+schema: 1
+
+meta:
+  name: rtp-pcmu
+  descriptions:
+    ja: "RTP (RFC 3550): G.711 PCMU のストリーム (20 ms、1 パケット 160 サンプル)。ポートは SDP で決まるため rtp レイヤを明示的に置く"
+    en: "RTP (RFC 3550): a G.711 PCMU stream (20 ms, 160 samples per packet). The port comes from SDP, so the rtp layer is placed explicitly"
+  # a port from SDP is not demultiplexed: the payload of UDP parses as raw
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:rtp", "layer:l4", voip, sample, "opaque-inner:udp"]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      dscp: 46
+  - protocol: udp
+    fields:
+      src_port: 49170
+      dst_port: 3456 # from the SDP answer
+  - protocol: rtp
+    fields:
+      payload_type: pcmu
+      ssrc: 0x12345678
+    generators:
+      sequence_number: { kind: range, start: 1, end: 50, step: 1 }
+      timestamp: { kind: range, start: 0, end: 7840, step: 160 }
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "ff"
+      length: 160 # 20 ms of PCMU silence
+
+stream:
+  mode: zip # sequence number and timestamp advance together
+
+tx:
+  count: 50

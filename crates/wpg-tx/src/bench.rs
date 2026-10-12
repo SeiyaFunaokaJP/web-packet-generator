@@ -29,6 +29,9 @@ pub struct BenchResult {
     /// TX workers (threads / backend instances).
     #[serde(default = "one")]
     pub workers: usize,
+    /// Backend detail of each worker when there are several (e.g. AF_XDP queue).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub worker_details: Vec<String>,
     /// Template benchmarked on the fly (`None`: synthetic frame).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub template: Option<String>,
@@ -192,6 +195,11 @@ pub fn bench_result(
         frame_size: frame_size.max(14),
         batch_size: opts.tx.batch_size.max(1),
         workers: r.workers.len().max(1),
+        worker_details: if r.workers.len() > 1 {
+            r.workers.iter().filter_map(|w| w.detail.clone()).collect()
+        } else {
+            Vec::new()
+        },
         template: None,
         packets: r.stats.packets,
         dropped: r.stats.dropped,

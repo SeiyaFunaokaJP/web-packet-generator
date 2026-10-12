@@ -1,0 +1,27 @@
+# 802.3ah OAM: Event Notification OAMPDU reporting errored frames and an errored symbol period
+schema: 1
+
+meta:
+  name: efm-oam-event
+  descriptions:
+    ja: "802.3ah OAM: Errored Frame / Errored Symbol Period イベントを通知する Event Notification OAMPDU"
+    en: "802.3ah OAM: Event Notification OAMPDU reporting an Errored Frame and an Errored Symbol Period event"
+  tags: ["protocol:ethernet2", "protocol:efm_oam_event_notification", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: efm_oam_event_notification
+    fields:
+      sequence_number: 1
+      tlvs:
+        - errored_frame: { timestamp: 120, window: 10, threshold: 1, errors: 4, error_running_total: 4, event_running_total: 1 }
+        - errored_symbol_period: { timestamp: 120, window: 125000000, threshold: 1, errors: 9, error_running_total: 9, event_running_total: 1 }
+        - end
+
+tx:
+  count: 1

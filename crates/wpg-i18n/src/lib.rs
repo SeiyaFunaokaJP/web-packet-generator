@@ -309,6 +309,25 @@ mod tests {
                     "core",
                     "batch",
                     "mode",
+                    // wpg capture (receive / verification)
+                    "layers",
+                    "signature",
+                    "stream",
+                    "seq",
+                    "matched",
+                    "mpps",
+                    "mbps",
+                    "signed",
+                    "unsigned",
+                    "received",
+                    "first",
+                    "last",
+                    "lost",
+                    "reordered",
+                    "duplicates",
+                    "avg",
+                    "jitter",
+                    "filter",
                     // wpg-server API errors / wpg serve / wpg config
                     "id",
                     "state",
@@ -351,6 +370,8 @@ mod tests {
                     "n",
                     "skip",
                     "when",
+                    // wpg template migrate
+                    "found",
                 ] {
                     args.set(name, "1");
                 }

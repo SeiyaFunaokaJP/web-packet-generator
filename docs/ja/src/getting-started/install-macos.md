@@ -51,3 +51,24 @@ sudo ./target/release/wpg send templates/examples/arp-sweep.wpg.yaml -i en0 --ra
 ```
 
 送信してよいのは、自分が所有する、または試験を許可されたネットワークだけです。続けて [ARP スイープのチュートリアル](../tutorials/arp-sweep.md) に進んでください。
+
+## リリースバイナリ: Gatekeeper と quarantine
+
+リリースアーカイブ (Apple シリコン用の `wpg-<version>-aarch64-apple-darwin.tar.gz`、Intel 用の `...-x86_64-apple-darwin.tar.gz`) は**署名も公証もしていません**。ブラウザでダウンロードしたファイルには `com.apple.quarantine` 属性が付き、Gatekeeper が実行を拒否します (「Apple は悪質なソフトウェアかどうかを確認できないため、“wpg” を開けません」や「壊れているため開けません」と表示されます)。上の手順でソースからビルドすれば、この問題は起きません。
+
+まずダウンロードしたファイルを確認し、展開したファイルから属性を外します。
+
+```sh
+shasum -a 256 -c wpg-0.2.0-aarch64-apple-darwin.tar.gz.sha256   # または SHA256SUMS と比べる
+tar -xzf wpg-0.2.0-aarch64-apple-darwin.tar.gz
+xattr -dr com.apple.quarantine wpg-0.2.0-aarch64-apple-darwin
+./wpg-0.2.0-aarch64-apple-darwin/wpg --version
+```
+
+別の方法:
+
+- ブラウザではなく `curl -LO` でダウンロードします。`curl` は quarantine 属性を付けません。
+- 一度実行してから、**システム設定 → プライバシーとセキュリティ** で許可します (「このまま開く」)。次の起動時にもう一度確認され、以後は記憶されます。
+- Finder の近道 (Control キーを押しながらクリック → 開く) は macOS 15 で廃止され、コマンドラインツールにはもともと使えません。`xattr` かシステム設定を使ってください。
+
+Gatekeeper 全体を無効にする (`spctl --master-disable`) ことはしないでください。新しくダウンロードしたファイルにはそのたびに属性が付くので、アップグレードのたびに外し直してください。起動時に wpg を動かす方法は [サービスとして動かす](../operations/services.md) を参照してください。

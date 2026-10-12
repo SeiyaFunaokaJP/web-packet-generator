@@ -86,12 +86,20 @@ docs-gen *args:
 docs:
     ./docs/build.sh
 
-# Deploy to a remote host: `just deploy user@192.0.2.10` or `just deploy host=user@192.0.2.10`.
-deploy host:
+# Deploy over SSH, e.g. `just deploy user@192.0.2.10 --service --iface ens3` (scripts/deploy.sh --help).
+deploy host *args:
     #!/usr/bin/env bash
     set -euo pipefail
     h='{{host}}'
-    ./scripts/deploy.sh "${h#host=}"
+    ./scripts/deploy.sh "${h#host=}" {{args}}
+
+# Release archive for the host target in dist/ (see docs: Release process).
+dist *args:
+    ./scripts/release.sh {{args}}
+
+# Lint the shell scripts (requires shellcheck).
+shellcheck:
+    shellcheck scripts/*.sh scripts/lib/*.sh docs/build.sh
 
 # Remove build artefacts.
 clean:

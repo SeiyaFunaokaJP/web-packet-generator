@@ -4,13 +4,13 @@
 
 - **Layer**: L2 (data link)
 - **Header**: 110 octets (fixed)
-- **Notes**: [L2 control protocols](../../protocols/l2-control.md)
+- **Notes**: [L2 control protocols](../../protocols/l2-control.md), [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../../protocols/timing-oam.md)
 
 ## Reached from
 
 | Lower layer | Selector | Value |
 |---|---|---|
-| [`ethernet2`](ethernet2.md) | `ethertype` | 34825 (0x8809) |
+| [`ethernet2`](ethernet2.md) | First 8 bits of the payload when `ethertype` = 34825 (0x8809) | 1 (0x01) |
 
 ## Fields
 

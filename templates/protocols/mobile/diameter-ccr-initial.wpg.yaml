@@ -1,0 +1,52 @@
+# Diameter Credit-Control (RFC 4006): an initial Credit-Control-Request with a Subscription-Id
+schema: 1
+
+meta:
+  name: diameter-ccr-initial
+  descriptions:
+    ja: "Diameter Credit-Control (RFC 4006): Subscription-Id (グループ化 AVP) 付きの初回 Credit-Control-Request"
+    en: "Diameter Credit-Control (RFC 4006): an initial Credit-Control-Request with a Subscription-Id (grouped AVP)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "protocol:diameter", "layer:l4", mobile, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 3868
+      seq: 1001
+      ack: 1
+      flags: psh|ack
+  - protocol: diameter
+    fields:
+      p: 1
+      command_code: credit_control
+      application_id: 4 # Diameter Credit Control Application
+      hop_by_hop: 0x00000002
+      end_to_end: 0x00000002
+      avps:
+        - session_id: { value: '"pgw.example.com;1;1"' }
+        - origin_host: { value: '"pgw.example.com"' }
+        - origin_realm: { value: '"example.com"' }
+        - destination_realm: { value: '"example.net"' }
+        - auth_application_id: { value: 4 }
+        - service_context_id: { value: '"32251@3gpp.org"' }
+        - cc_request_type: { value: initial_request }
+        - cc_request_number: { value: 0 }
+        - subscription_id:
+            avps:
+              - subscription_id_type: { value: end_user_e164 }
+              - subscription_id_data: { value: '"819012345678"' }
+        - multiple_services_indicator: { value: supported }
+
+tx:
+  count: 1

@@ -40,11 +40,7 @@ pub fn available() -> Vec<BackendInfo> {
     ];
     v.push(afpacket_info());
     v.push(pcap_info());
-    v.push(info(
-        "afxdp",
-        false,
-        Some("not implemented yet (planned for M8)"),
-    ));
+    v.push(afxdp_info());
     v.push(info(
         "dpdk",
         false,
@@ -72,6 +68,31 @@ fn afpacket_info() -> BackendInfo {
         )
     } else {
         info("afpacket", false, Some("Linux only"))
+    }
+}
+
+#[cfg(all(feature = "afxdp", target_os = "linux"))]
+fn afxdp_info() -> BackendInfo {
+    info(
+        "afxdp",
+        true,
+        Some(
+            "Linux 5.10+, zero-copy or copy mode (auto), one queue per worker; needs \
+             CAP_NET_RAW (zero-copy: also CAP_NET_ADMIN, CAP_BPF)",
+        ),
+    )
+}
+
+#[cfg(not(all(feature = "afxdp", target_os = "linux")))]
+fn afxdp_info() -> BackendInfo {
+    if cfg!(target_os = "linux") {
+        info(
+            "afxdp",
+            false,
+            Some("not compiled in (build with --features afxdp)"),
+        )
+    } else {
+        info("afxdp", false, Some("Linux only"))
     }
 }
 
@@ -118,6 +139,8 @@ pub fn open_by_name(
             Ok(Box::new(b))
         }
         "afpacket" => open_afpacket(iface, opts),
+        #[cfg(all(feature = "afxdp", target_os = "linux"))]
+        "afxdp" => crate::afxdp::open(iface, opts),
         // pcap: added by pcap module
         #[cfg(feature = "pcap")]
         "pcap" => crate::pcap::open(iface, opts),
@@ -141,8 +164,10 @@ pub fn supports_workers(name: &str) -> bool {
 }
 
 /// Opens `n` independent instances of the backend `name` on `iface`, one per TX
-/// worker (`afpacket`: one socket and TX ring each). The core in `opts.pin_core`
-/// is ignored here; workers pin themselves (see `JobConfig::pin_cores`).
+/// worker (`afpacket`: one socket and TX ring each; `afxdp`: one socket and UMEM
+/// each, worker `i` bound to queue `opts.queue + i`, see [`worker_options`]). The
+/// core in `opts.pin_core` is ignored here; workers pin themselves (see
+/// `JobConfig::pin_cores`).
 ///
 /// # Errors
 /// [`TxError::Config`] when `n > 1` for a backend that is limited to one worker
@@ -161,8 +186,8 @@ pub fn open_workers(
         )));
     }
     let mut out: Vec<Box<dyn TxBackend>> = Vec::with_capacity(n);
-    for _ in 0..n {
-        match open_by_name(name, iface, opts) {
+    for i in 0..n {
+        match open_by_name(name, iface, &worker_options(name, opts, i)) {
             Ok(b) => out.push(b),
             Err(e) => {
                 for b in &mut out {
@@ -173,6 +198,18 @@ pub fn open_workers(
         }
     }
     Ok(out)
+}
+
+/// Options of TX worker `i`: `afxdp` workers bind consecutive queues starting at
+/// `opts.queue` (default 0); other backends share `opts`.
+#[must_use]
+pub fn worker_options(name: &str, opts: &TxOptions, i: usize) -> TxOptions {
+    let mut o = opts.clone();
+    if name == "afxdp" {
+        let base = opts.queue.unwrap_or(0);
+        o.queue = Some(base.saturating_add(u32::try_from(i).unwrap_or(u32::MAX)));
+    }
+    o
 }
 
 #[cfg(all(feature = "afpacket", target_os = "linux"))]
@@ -216,7 +253,12 @@ mod tests {
 
         let b = open_by_name("null", "x", &TxOptions::default()).unwrap();
         assert_eq!(b.name(), "null");
-        for n in ["afxdp", "dpdk", "bogus"] {
+        #[cfg(not(all(feature = "afxdp", target_os = "linux")))]
+        assert!(matches!(
+            open_by_name("afxdp", "x", &TxOptions::default()),
+            Err(TxError::Unsupported(_))
+        ));
+        for n in ["dpdk", "bogus"] {
             match open_by_name(n, "x", &TxOptions::default()) {
                 Err(TxError::Unsupported(m)) => assert!(m.contains(n), "{m}"),
                 other => panic!("{n}: {:?}", other.map(|b| b.name())),
@@ -233,6 +275,17 @@ mod tests {
             Err(TxError::Config(_))
         ));
         assert!(supports_workers("afpacket") && !supports_workers("pcap"));
+        assert!(supports_workers("afxdp"));
+        let o = TxOptions {
+            queue: Some(2),
+            ..TxOptions::default()
+        };
+        assert_eq!(worker_options("afxdp", &o, 3).queue, Some(5));
+        assert_eq!(
+            worker_options("afxdp", &TxOptions::default(), 1).queue,
+            Some(1)
+        );
+        assert_eq!(worker_options("afpacket", &o, 3).queue, Some(2));
         #[cfg(not(feature = "pcap"))]
         assert!(matches!(
             open_by_name("pcap", "eth0", &TxOptions::default()),

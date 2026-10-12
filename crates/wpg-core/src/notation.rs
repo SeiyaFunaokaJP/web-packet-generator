@@ -309,7 +309,17 @@ pub fn format_value(v: &FieldValue, ty: &FieldType) -> String {
         FieldValue::Ipv6(a) => a.to_string(),
         FieldValue::Mac(m) => format_mac(m),
         FieldValue::Nsap(b) => format_nsap(b),
-        FieldValue::Bytes(b) if matches!(ty, FieldType::CString) => format_text(b),
+        FieldValue::Bytes(b)
+            if matches!(
+                ty,
+                FieldType::CString
+                    | FieldType::Bytes {
+                        len: Length::Until { .. }
+                    }
+            ) =>
+        {
+            format_text(b)
+        }
         FieldValue::Bytes(b) => format_bytes(b),
         // Composite values have no human notation yet (the GUI edits them as trees).
         FieldValue::List(_) | FieldValue::Struct(_) | FieldValue::Tlv(_) => format!("{v:?}"),

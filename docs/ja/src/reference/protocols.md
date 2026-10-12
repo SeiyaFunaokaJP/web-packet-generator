@@ -2,7 +2,7 @@
 
 # プロトコルリファレンス
 
-本章は `wpg-protocols` のプロトコル定義 IR (`GET /api/protocols` で返すカタログ) から自動生成しているため、常にコードと一致します。対象は 134 プロトコルです。各ページには、ワイヤ順のフィールド (型、既定値、Auto の規則、説明)、そのプロトコルに至る下位レイヤ、次レイヤの対応表、組み立て後に検査する制約、同梱のサンプルテンプレートを載せています。到達経路、手で設定するフィールド、残っている近似は手書きの[プロトコル補足](../protocols/README.md)を参照してください。定義を変更したら `just docs-gen` で再生成します。
+本章は `wpg-protocols` のプロトコル定義 IR (`GET /api/protocols` で返すカタログ) から自動生成しているため、常にコードと一致します。対象は 183 プロトコルです。各ページには、ワイヤ順のフィールド (型、既定値、Auto の規則、説明)、そのプロトコルに至る下位レイヤ、次レイヤの対応表、組み立て後に検査する制約、同梱のサンプルテンプレートを載せています。到達経路、手で設定するフィールド、残っている近似は手書きの[プロトコル補足](../protocols/README.md)を参照してください。定義を変更したら `just docs-gen` で再生成します。
 
 ## L2 (データリンク)
 
@@ -18,8 +18,8 @@
 | [`lldp`](protocols/lldp.md) | LLDP | 1 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
 | [`cdp`](protocols/cdp.md) | CDP | 4 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
 | [`stp`](protocols/stp.md) | STP BPDU | 15 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
-| [`lacp`](protocols/lacp.md) | LACP | 27 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
-| [`marker`](protocols/marker.md) | Marker Protocol | 11 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
+| [`lacp`](protocols/lacp.md) | LACP | 27 |   | [L2 制御プロトコル](../protocols/l2-control.md), [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`marker`](protocols/marker.md) | Marker Protocol | 11 |   | [L2 制御プロトコル](../protocols/l2-control.md), [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
 | [`eapol`](protocols/eapol.md) | EAPOL | 4 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
 | [`pppoe_discovery`](protocols/pppoe_discovery.md) | PPPoE Discovery | 6 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
 | [`pppoe_session`](protocols/pppoe_session.md) | PPPoE Session | 5 | `session_id` | [L2 制御プロトコル](../protocols/l2-control.md) |
@@ -29,13 +29,41 @@
 | [`vxlan`](protocols/vxlan.md) | VXLAN | 4 | `flags` | [カプセル化・トンネル](../protocols/encap.md) |
 | [`mpls`](protocols/mpls.md) | MPLS | 4 | `s` | [カプセル化・トンネル](../protocols/encap.md), [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`geneve`](protocols/geneve.md) | Geneve | 9 | `protocol_type` | [カプセル化・トンネル](../protocols/encap.md) |
+| [`macsec`](protocols/macsec.md) | MACsec | 13 |   | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`esmc`](protocols/esmc.md) | ESMC | 8 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm`](protocols/cfm.md) | CFM | 6 | `opcode` | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_ccm`](protocols/cfm_ccm.md) | CFM CCM | 16 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_lbm`](protocols/cfm_lbm.md) | CFM LBM | 7 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_lbr`](protocols/cfm_lbr.md) | CFM LBR | 7 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_ltm`](protocols/cfm_ltm.md) | CFM LTM | 11 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_ltr`](protocols/cfm_ltr.md) | CFM LTR | 12 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_ais`](protocols/cfm_ais.md) | Y.1731 AIS | 7 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_lck`](protocols/cfm_lck.md) | Y.1731 LCK | 7 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_tst`](protocols/cfm_tst.md) | Y.1731 TST | 7 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_raps`](protocols/cfm_raps.md) | ERPS R-APS | 14 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_lmm`](protocols/cfm_lmm.md) | Y.1731 LMM | 9 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_lmr`](protocols/cfm_lmr.md) | Y.1731 LMR | 9 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_1dm`](protocols/cfm_1dm.md) | Y.1731 1DM | 10 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_dmm`](protocols/cfm_dmm.md) | Y.1731 DMM | 14 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_dmr`](protocols/cfm_dmr.md) | Y.1731 DMR | 14 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_csf`](protocols/cfm_csf.md) | Y.1731 CSF | 8 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_slm`](protocols/cfm_slm.md) | Y.1731 SLM | 11 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_slr`](protocols/cfm_slr.md) | Y.1731 SLR | 11 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`cfm_1sl`](protocols/cfm_1sl.md) | Y.1731 1SL | 11 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`efm_oam`](protocols/efm_oam.md) | 802.3ah OAM | 4 | `code` | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`efm_oam_information`](protocols/efm_oam_information.md) | 802.3ah OAM Information | 4 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`efm_oam_event_notification`](protocols/efm_oam_event_notification.md) | 802.3ah OAM Event Notification | 5 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`efm_oam_variable_request`](protocols/efm_oam_variable_request.md) | 802.3ah OAM Variable Request | 4 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`efm_oam_variable_response`](protocols/efm_oam_variable_response.md) | 802.3ah OAM Variable Response | 4 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`efm_oam_loopback_control`](protocols/efm_oam_loopback_control.md) | 802.3ah OAM Loopback Control | 4 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`efm_oam_organization_specific`](protocols/efm_oam_organization_specific.md) | 802.3ah OAM Organization Specific | 5 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
 
 ## L3 (ネットワーク)
 
 | ID | 名前 | フィールド数 | 次レイヤの判別 | 補足 |
 |---|---|---|---|---|
-| [`ipv4`](protocols/ipv4.md) | IPv4 | 15 | `protocol` | [カプセル化・トンネル](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md), [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md), [マルチキャスト制御プロトコル](../protocols/multicast.md) |
-| [`ipv6`](protocols/ipv6.md) | IPv6 | 9 | `next_header` | [カプセル化・トンネル](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md) |
+| [`ipv4`](protocols/ipv4.md) | IPv4 | 15 | `protocol` | [カプセル化・トンネル](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md), [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md), [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md), [マルチキャスト制御プロトコル](../protocols/multicast.md) |
+| [`ipv6`](protocols/ipv6.md) | IPv6 | 9 | `next_header` | [カプセル化・トンネル](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md), [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
 | [`ipv6_hopopts`](protocols/ipv6_hopopts.md) | IPv6 Hop-by-Hop Options | 4 | `next_header` | [マルチキャスト制御プロトコル](../protocols/multicast.md) |
 | [`ipv6_route`](protocols/ipv6_route.md) | IPv6 Routing | 6 | `next_header` | [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`ipv6_srh`](protocols/ipv6_srh.md) | IPv6 Segment Routing Header | 10 | `next_header` | [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
@@ -117,7 +145,7 @@
 | ID | 名前 | フィールド数 | 次レイヤの判別 | 補足 |
 |---|---|---|---|---|
 | [`tcp`](protocols/tcp.md) | TCP | 12 | `dst_port` |   |
-| [`udp`](protocols/udp.md) | UDP | 4 | `dst_port` |   |
+| [`udp`](protocols/udp.md) | UDP | 4 | `dst_port` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
 | [`gtpu`](protocols/gtpu.md) | GTP-U | 9 | `message_type` | [カプセル化・トンネル](../protocols/encap.md) |
 | [`l2tpv2`](protocols/l2tpv2.md) | L2TPv2 | 2 |   | [カプセル化・トンネル](../protocols/encap.md) |
 | [`l2tpv3`](protocols/l2tpv3.md) | L2TPv3 | 2 |   | [カプセル化・トンネル](../protocols/encap.md) |
@@ -155,10 +183,31 @@
 | [`tftp_oack`](protocols/tftp_oack.md) | TFTP OACK | 2 |   | [アプリケーションプロトコル](../protocols/app.md) |
 | [`ldp`](protocols/ldp.md) | LDP | 5 |   | [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md) |
 | [`bfd`](protocols/bfd.md) | BFD | 17 |   | [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md) |
+| [`gtpv2`](protocols/gtpv2.md) | GTPv2-C | 12 | `p` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`diameter`](protocols/diameter.md) | Diameter | 12 |   | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`sip`](protocols/sip.md) | SIP | 3 |   | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`rtp`](protocols/rtp.md) | RTP | 11 |   | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`rtcp`](protocols/rtcp.md) | RTCP | 6 | `packet_type` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`rtcp_sr`](protocols/rtcp_sr.md) | RTCP SR | 13 | `version` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`rtcp_rr`](protocols/rtcp_rr.md) | RTCP RR | 8 | `version` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`rtcp_sdes`](protocols/rtcp_sdes.md) | RTCP SDES | 6 | `version` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`rtcp_bye`](protocols/rtcp_bye.md) | RTCP BYE | 7 | `version` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`rtcp_app`](protocols/rtcp_app.md) | RTCP APP | 8 | `version` | [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`ptp`](protocols/ptp.md) | PTP | 16 | `message_type` | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_sync`](protocols/ptp_sync.md) | PTP Sync | 18 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_delay_req`](protocols/ptp_delay_req.md) | PTP Delay_Req | 18 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_pdelay_req`](protocols/ptp_pdelay_req.md) | PTP Pdelay_Req | 19 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_pdelay_resp`](protocols/ptp_pdelay_resp.md) | PTP Pdelay_Resp | 20 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_follow_up`](protocols/ptp_follow_up.md) | PTP Follow_Up | 18 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_delay_resp`](protocols/ptp_delay_resp.md) | PTP Delay_Resp | 20 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_pdelay_resp_follow_up`](protocols/ptp_pdelay_resp_follow_up.md) | PTP Pdelay_Resp_Follow_Up | 20 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_announce`](protocols/ptp_announce.md) | PTP Announce | 28 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_signaling`](protocols/ptp_signaling.md) | PTP Signaling | 18 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
+| [`ptp_management`](protocols/ptp_management.md) | PTP Management | 23 |   | [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |
 
 ## ペイロード
 
 | ID | 名前 | フィールド数 | 次レイヤの判別 | 補足 |
 |---|---|---|---|---|
-| [`payload`](protocols/payload.md) | Payload | 7 |   | [CLNP / ES-IS (P2)](../protocols/clnp.md) |
-| [`raw`](protocols/raw.md) | Raw payload | 1 |   | [アプリケーションプロトコル](../protocols/app.md), [CLNP / ES-IS (P2)](../protocols/clnp.md), [カプセル化・トンネル](../protocols/encap.md), [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md), [マルチキャスト制御プロトコル](../protocols/multicast.md), [OSPF Opaque / SR、BGP MP / VPN / EVPN (P2)](../protocols/routing-ext.md) |
+| [`payload`](protocols/payload.md) | Payload | 7 |   | [CLNP / ES-IS (P2)](../protocols/clnp.md), [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md) |
+| [`raw`](protocols/raw.md) | Raw payload | 1 |   | [アプリケーションプロトコル](../protocols/app.md), [CLNP / ES-IS (P2)](../protocols/clnp.md), [カプセル化・トンネル](../protocols/encap.md), [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../protocols/mobile-voip.md), [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md), [マルチキャスト制御プロトコル](../protocols/multicast.md), [OSPF Opaque / SR、BGP MP / VPN / EVPN (P2)](../protocols/routing-ext.md), [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](../protocols/timing-oam.md) |

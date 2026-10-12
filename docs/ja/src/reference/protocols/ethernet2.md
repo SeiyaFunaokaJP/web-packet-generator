@@ -47,7 +47,9 @@
 | 34984 (0x88a8) | `qinq` |
 | 34997 (0x88b5) | `local_experimental` |
 | 35020 (0x88cc) | `lldp` |
+| 35045 (0x88e5) | `macsec` |
 | 35063 (0x88f7) | `ptp` |
+| 35074 (0x8902) | `cfm` |
 
 ## 次レイヤ
 
@@ -61,13 +63,58 @@
 | 33024 (0x8100) | [`dot1q`](dot1q.md) |   |
 | 34984 (0x88a8) | [`dot1ad`](dot1ad.md) |   |
 | 35020 (0x88cc) | [`lldp`](lldp.md) |   |
-| 34825 (0x8809) | [`lacp`](lacp.md) |   |
 | 34958 (0x888e) | [`eapol`](eapol.md) |   |
 | 34915 (0x8863) | [`pppoe_discovery`](pppoe_discovery.md) |   |
 | 34916 (0x8864) | [`pppoe_session`](pppoe_session.md) |   |
 | 34887 (0x8847) | [`mpls`](mpls.md) |   |
 | 34888 (0x8848) | [`mpls`](mpls.md) |   |
+| 35045 (0x88e5) | [`macsec`](macsec.md) |   |
+| 35063 (0x88f7) | [`ptp`](ptp.md) |   |
+| 35063 (0x88f7) | [`ptp_sync`](ptp_sync.md) |   |
+| 35063 (0x88f7) | [`ptp_delay_req`](ptp_delay_req.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_req`](ptp_pdelay_req.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_resp`](ptp_pdelay_resp.md) |   |
+| 35063 (0x88f7) | [`ptp_follow_up`](ptp_follow_up.md) |   |
+| 35063 (0x88f7) | [`ptp_delay_resp`](ptp_delay_resp.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_resp_follow_up`](ptp_pdelay_resp_follow_up.md) |   |
+| 35063 (0x88f7) | [`ptp_announce`](ptp_announce.md) |   |
+| 35063 (0x88f7) | [`ptp_signaling`](ptp_signaling.md) |   |
+| 35063 (0x88f7) | [`ptp_management`](ptp_management.md) |   |
+| 35074 (0x8902) | [`cfm`](cfm.md) |   |
+| 35074 (0x8902) | [`cfm_ccm`](cfm_ccm.md) |   |
+| 35074 (0x8902) | [`cfm_lbr`](cfm_lbr.md) |   |
+| 35074 (0x8902) | [`cfm_lbm`](cfm_lbm.md) |   |
+| 35074 (0x8902) | [`cfm_ltr`](cfm_ltr.md) |   |
+| 35074 (0x8902) | [`cfm_ltm`](cfm_ltm.md) |   |
+| 35074 (0x8902) | [`cfm_ais`](cfm_ais.md) |   |
+| 35074 (0x8902) | [`cfm_lck`](cfm_lck.md) |   |
+| 35074 (0x8902) | [`cfm_tst`](cfm_tst.md) |   |
+| 35074 (0x8902) | [`cfm_raps`](cfm_raps.md) |   |
+| 35074 (0x8902) | [`cfm_lmr`](cfm_lmr.md) |   |
+| 35074 (0x8902) | [`cfm_lmm`](cfm_lmm.md) |   |
+| 35074 (0x8902) | [`cfm_1dm`](cfm_1dm.md) |   |
+| 35074 (0x8902) | [`cfm_dmr`](cfm_dmr.md) |   |
+| 35074 (0x8902) | [`cfm_dmm`](cfm_dmm.md) |   |
+| 35074 (0x8902) | [`cfm_csf`](cfm_csf.md) |   |
+| 35074 (0x8902) | [`cfm_1sl`](cfm_1sl.md) |   |
+| 35074 (0x8902) | [`cfm_slr`](cfm_slr.md) |   |
+| 35074 (0x8902) | [`cfm_slm`](cfm_slm.md) |   |
 | 0 (0x0000) – 1535 (0x05ff) | [`dot3`](dot3.md) | このレイヤを読み直す |
+
+`ethertype` = 34825 (0x8809) のときのペイロード先頭 8 ビット
+
+| 値 | プロトコル |
+|---|---|
+| 1 (0x01) | [`lacp`](lacp.md) |
+| 2 (0x02) | [`marker`](marker.md) |
+| 3 (0x03) | [`efm_oam`](efm_oam.md) |
+| 3 (0x03) | [`efm_oam_information`](efm_oam_information.md) |
+| 3 (0x03) | [`efm_oam_event_notification`](efm_oam_event_notification.md) |
+| 3 (0x03) | [`efm_oam_variable_request`](efm_oam_variable_request.md) |
+| 3 (0x03) | [`efm_oam_variable_response`](efm_oam_variable_response.md) |
+| 3 (0x03) | [`efm_oam_loopback_control`](efm_oam_loopback_control.md) |
+| 3 (0x03) | [`efm_oam_organization_specific`](efm_oam_organization_specific.md) |
+| 10 (0x0a) | [`esmc`](esmc.md) |
 
 ## サンプルテンプレート
 
@@ -98,6 +145,7 @@
 - [dot1ad-qinq-frame](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/dot1ad.wpg.yaml) — `templates/protocols/l2/dot1ad.wpg.yaml`
 - [dot1q-frame](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/dot1q.wpg.yaml) — `templates/protocols/l2/dot1q.wpg.yaml`
 - [eth-ii-frame](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/ethernet2.wpg.yaml) — `templates/protocols/l2/ethernet2.wpg.yaml`
+- [macsec](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/macsec.wpg.yaml) — `templates/protocols/l2/macsec.wpg.yaml`
 - [icmpv4-echo-request](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l3/icmpv4-echo.wpg.yaml) — `templates/protocols/l3/icmpv4-echo.wpg.yaml`
 - [icmpv6-echo-request](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l3/icmpv6-echo.wpg.yaml) — `templates/protocols/l3/icmpv6-echo.wpg.yaml`
 - [ipv4-dscp-ecn-matrix](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l3/ipv4-dscp-ecn-matrix.wpg.yaml) — `templates/protocols/l3/ipv4-dscp-ecn-matrix.wpg.yaml`
@@ -127,6 +175,11 @@
 - [tcp-syn-options](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/tcp-syn.wpg.yaml) — `templates/protocols/l4/tcp-syn.wpg.yaml`
 - [udp-over-ipv6](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/udp-ipv6.wpg.yaml) — `templates/protocols/l4/udp-ipv6.wpg.yaml`
 - [udp-datagram](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/udp.wpg.yaml) — `templates/protocols/l4/udp.wpg.yaml`
+- [diameter-ccr-initial](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mobile/diameter-ccr-initial.wpg.yaml) — `templates/protocols/mobile/diameter-ccr-initial.wpg.yaml`
+- [diameter-cer](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mobile/diameter-cer.wpg.yaml) — `templates/protocols/mobile/diameter-cer.wpg.yaml`
+- [gtpv2-create-session-request](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mobile/gtpv2-create-session-request.wpg.yaml) — `templates/protocols/mobile/gtpv2-create-session-request.wpg.yaml`
+- [gtpv2-create-session-response](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mobile/gtpv2-create-session-response.wpg.yaml) — `templates/protocols/mobile/gtpv2-create-session-response.wpg.yaml`
+- [gtpv2-echo-request](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mobile/gtpv2-echo-request.wpg.yaml) — `templates/protocols/mobile/gtpv2-echo-request.wpg.yaml`
 - [ldp-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-hello.wpg.yaml) — `templates/protocols/mpls/ldp-hello.wpg.yaml`
 - [ldp-initialization](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-initialization.wpg.yaml) — `templates/protocols/mpls/ldp-initialization.wpg.yaml`
 - [ldp-label-mapping](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-label-mapping.wpg.yaml) — `templates/protocols/mpls/ldp-label-mapping.wpg.yaml`
@@ -141,10 +194,56 @@
 - [bfd-auth](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-auth.wpg.yaml) — `templates/protocols/oam/bfd-auth.wpg.yaml`
 - [bfd-multihop-ipv6](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml) — `templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml`
 - [bfd-single-hop](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-single-hop.wpg.yaml) — `templates/protocols/oam/bfd-single-hop.wpg.yaml`
+- [cfm-ccm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/cfm-ccm.wpg.yaml) — `templates/protocols/oam/cfm-ccm.wpg.yaml`
+- [cfm-generic](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/cfm-generic.wpg.yaml) — `templates/protocols/oam/cfm-generic.wpg.yaml`
+- [cfm-lbm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/cfm-lbm.wpg.yaml) — `templates/protocols/oam/cfm-lbm.wpg.yaml`
+- [cfm-lbr](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/cfm-lbr.wpg.yaml) — `templates/protocols/oam/cfm-lbr.wpg.yaml`
+- [cfm-ltm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/cfm-ltm.wpg.yaml) — `templates/protocols/oam/cfm-ltm.wpg.yaml`
+- [cfm-ltr](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/cfm-ltr.wpg.yaml) — `templates/protocols/oam/cfm-ltr.wpg.yaml`
+- [efm-oam-event](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/efm-oam-event.wpg.yaml) — `templates/protocols/oam/efm-oam-event.wpg.yaml`
+- [efm-oam-generic](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/efm-oam-generic.wpg.yaml) — `templates/protocols/oam/efm-oam-generic.wpg.yaml`
+- [efm-oam-information](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/efm-oam-information.wpg.yaml) — `templates/protocols/oam/efm-oam-information.wpg.yaml`
+- [efm-oam-loopback](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/efm-oam-loopback.wpg.yaml) — `templates/protocols/oam/efm-oam-loopback.wpg.yaml`
+- [efm-oam-organization-specific](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/efm-oam-organization-specific.wpg.yaml) — `templates/protocols/oam/efm-oam-organization-specific.wpg.yaml`
+- [efm-oam-variable-request](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/efm-oam-variable-request.wpg.yaml) — `templates/protocols/oam/efm-oam-variable-request.wpg.yaml`
+- [efm-oam-variable-response](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/efm-oam-variable-response.wpg.yaml) — `templates/protocols/oam/efm-oam-variable-response.wpg.yaml`
+- [erps-raps-nr-rb](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/erps-raps-nr-rb.wpg.yaml) — `templates/protocols/oam/erps-raps-nr-rb.wpg.yaml`
+- [erps-raps-sf](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/erps-raps-sf.wpg.yaml) — `templates/protocols/oam/erps-raps-sf.wpg.yaml`
 - [micro-bfd](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/micro-bfd.wpg.yaml) — `templates/protocols/oam/micro-bfd.wpg.yaml`
+- [y1731-1dm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-1dm.wpg.yaml) — `templates/protocols/oam/y1731-1dm.wpg.yaml`
+- [y1731-1sl](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-1sl.wpg.yaml) — `templates/protocols/oam/y1731-1sl.wpg.yaml`
+- [y1731-ais](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-ais.wpg.yaml) — `templates/protocols/oam/y1731-ais.wpg.yaml`
+- [y1731-csf](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-csf.wpg.yaml) — `templates/protocols/oam/y1731-csf.wpg.yaml`
+- [y1731-dmm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-dmm.wpg.yaml) — `templates/protocols/oam/y1731-dmm.wpg.yaml`
+- [y1731-dmr](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-dmr.wpg.yaml) — `templates/protocols/oam/y1731-dmr.wpg.yaml`
+- [y1731-lck](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-lck.wpg.yaml) — `templates/protocols/oam/y1731-lck.wpg.yaml`
+- [y1731-lmm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-lmm.wpg.yaml) — `templates/protocols/oam/y1731-lmm.wpg.yaml`
+- [y1731-lmr](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-lmr.wpg.yaml) — `templates/protocols/oam/y1731-lmr.wpg.yaml`
+- [y1731-slm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-slm.wpg.yaml) — `templates/protocols/oam/y1731-slm.wpg.yaml`
+- [y1731-slr](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-slr.wpg.yaml) — `templates/protocols/oam/y1731-slr.wpg.yaml`
+- [y1731-tst](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/y1731-tst.wpg.yaml) — `templates/protocols/oam/y1731-tst.wpg.yaml`
 - [srv6-end-dx2-hmac](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml) — `templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml`
 - [srv6-h-encaps-ipv4](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml) — `templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml`
 - [srv6-srh-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-srh-udp.wpg.yaml) — `templates/protocols/srv6/srv6-srh-udp.wpg.yaml`
+- [esmc-event-dnu](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/esmc-event-dnu.wpg.yaml) — `templates/protocols/timing/esmc-event-dnu.wpg.yaml`
+- [esmc-ql-prc](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/esmc-ql-prc.wpg.yaml) — `templates/protocols/timing/esmc-ql-prc.wpg.yaml`
+- [ptp-announce-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-announce-udp.wpg.yaml) — `templates/protocols/timing/ptp-announce-udp.wpg.yaml`
+- [ptp-delay-req-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-delay-req-udp.wpg.yaml) — `templates/protocols/timing/ptp-delay-req-udp.wpg.yaml`
+- [ptp-delay-resp-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-delay-resp-udp.wpg.yaml) — `templates/protocols/timing/ptp-delay-resp-udp.wpg.yaml`
+- [ptp-follow-up-l2](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-follow-up-l2.wpg.yaml) — `templates/protocols/timing/ptp-follow-up-l2.wpg.yaml`
+- [ptp-generic](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-generic.wpg.yaml) — `templates/protocols/timing/ptp-generic.wpg.yaml`
+- [ptp-management-get](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-management-get.wpg.yaml) — `templates/protocols/timing/ptp-management-get.wpg.yaml`
+- [ptp-pdelay-req-l2](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-pdelay-req-l2.wpg.yaml) — `templates/protocols/timing/ptp-pdelay-req-l2.wpg.yaml`
+- [ptp-pdelay-resp-follow-up-l2](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-pdelay-resp-follow-up-l2.wpg.yaml) — `templates/protocols/timing/ptp-pdelay-resp-follow-up-l2.wpg.yaml`
+- [ptp-pdelay-resp-l2](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-pdelay-resp-l2.wpg.yaml) — `templates/protocols/timing/ptp-pdelay-resp-l2.wpg.yaml`
+- [ptp-signaling-unicast](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-signaling-unicast.wpg.yaml) — `templates/protocols/timing/ptp-signaling-unicast.wpg.yaml`
+- [ptp-sync-two-step-l2](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/timing/ptp-sync-two-step-l2.wpg.yaml) — `templates/protocols/timing/ptp-sync-two-step-l2.wpg.yaml`
+- [rtcp-feedback-app](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/rtcp-feedback-app.wpg.yaml) — `templates/protocols/voip/rtcp-feedback-app.wpg.yaml`
+- [rtcp-rr-bye](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/rtcp-rr-bye.wpg.yaml) — `templates/protocols/voip/rtcp-rr-bye.wpg.yaml`
+- [rtcp-sr-sdes](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/rtcp-sr-sdes.wpg.yaml) — `templates/protocols/voip/rtcp-sr-sdes.wpg.yaml`
+- [rtp-pcmu](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/rtp-pcmu.wpg.yaml) — `templates/protocols/voip/rtp-pcmu.wpg.yaml`
+- [sip-invite](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/sip-invite.wpg.yaml) — `templates/protocols/voip/sip-invite.wpg.yaml`
+- [sip-register](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/voip/sip-register.wpg.yaml) — `templates/protocols/voip/sip-register.wpg.yaml`
 - [scenario-arp-sweep-slash22](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/arp-sweep-slash22.wpg.yaml) — `templates/scenarios/arp-sweep-slash22.wpg.yaml`
 - [scenario-frame-size-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/frame-size-sweep.wpg.yaml) — `templates/scenarios/frame-size-sweep.wpg.yaml`
 - [scenario-jumbo-udp-mtu-probe](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml) — `templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml`

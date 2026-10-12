@@ -18,10 +18,11 @@ Commands:
   send      Send a template headlessly
   render    Render a template to a pcapng file without transmitting
   import    Convert a pcap/pcapng capture into a template
-  template  Template tools (lint, list, export, import)
+  template  Template tools (lint, list, migrate, export, import)
   ifaces    List network interfaces usable for transmission
   doctor    Diagnose privileges, drivers, hugepages and Npcap
   bench     Measure transmit performance
+  capture   Receive: counters, the first frames, pcapng output, signature verification
   config    Configuration file tools (init, show, validate)
   help      Print this message or the help of the given subcommand(s)
 
@@ -111,6 +112,14 @@ Options:
       --burst <BURST>
           Frames sent back to back per rate-control grant
 
+      --wait <MODE>
+          How the rate control waits: hybrid (sleep, then spin), sleep, spin or busy-poll (spin and service the backend)
+
+      --clock <CLOCK>
+          Rate-control clock: auto (TSC when invariant), tsc or monotonic
+
+          [default: auto]
+
       --ramp-up <DURATION>
           Ramp the rate up linearly from 0 over this time, e.g. `5s`
 
@@ -127,6 +136,14 @@ Options:
 
       --var <NAME=VALUE>
           Template variable override (`name=value`), repeatable
+
+      --signature
+          Stamp every frame with a receive-verification signature (magic, stream id, sequence number, TX time over the last 24 payload octets; see `wpg capture --verify`)
+
+      --stream-id <ID>
+          Signature stream id (with `--signature`)
+
+          [default: 0]
 
       --batch <N>
           Frames per `send_batch` call
@@ -150,6 +167,20 @@ Options:
 
       --no-tx-ring
           Use `sendmmsg` instead of the TPACKET_V3 TX ring (`afpacket`)
+
+      --auto-pin
+          Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
+
+      --queue <N>
+          First hardware queue (`afxdp`; worker i binds queue N+i)
+
+      --xdp-mode <MODE>
+          AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy
+
+          [default: auto]
+
+      --busy-poll
+          Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
 
   -h, --help
           Print help
@@ -234,18 +265,19 @@ Options:
 テンプレートのツール。`lint` はエラー時に終了ステータス 1 を返します。`export` と `import` はテンプレートを `.wpgbundle` アーカイブにまとめ、展開します。
 
 ```text
-Template tools (lint, list, export, import)
+Template tools (lint, list, migrate, export, import)
 
 Usage: wpg template <COMMAND>
 
 Commands:
-  lint    Check templates for errors and warnings (exit status 1 on errors)
-  list    List the templates of a directory (default: `templates/`)
-  show    Print the built packet (hex dump and layout tree) of a template
-  schema  Print the JSON Schema of the template format
-  export  Pack templates (files or ids) into a `.wpgbundle` archive
-  import  Extract the templates of a `.wpgbundle` archive into a directory
-  help    Print this message or the help of the given subcommand(s)
+  lint     Check templates for errors and warnings (exit status 1 on errors)
+  list     List the templates of a directory (default: `templates/`)
+  show     Print the built packet (hex dump and layout tree) of a template
+  schema   Print the JSON Schema of the template format
+  export   Pack templates (files or ids) into a `.wpgbundle` archive
+  migrate  Upgrade templates to the current schema version
+  import   Extract the templates of a `.wpgbundle` archive into a directory
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help
@@ -353,6 +385,33 @@ Options:
 
   -h, --help
           Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg template migrate`
+
+```text
+Upgrade templates to the current schema version.
+
+Directories are scanned recursively. The original of a rewritten file is kept as `<file>.bak`; the new file loses its comments. Files already at the current version are not touched.
+
+Usage: wpg template migrate [OPTIONS] <PATHS>...
+
+Arguments:
+  <PATHS>...
+          Template files or directories
+
+Options:
+      --check
+          Only report outdated templates (exit status 1 if any needs migrating)
+
+      --no-backup
+          Do not keep a `.bak` copy of migrated files
+
+  -h, --help
+          Print help (see a summary with '-h')
 
   -V, --version
           Print version
@@ -480,6 +539,73 @@ Options:
 
       --no-tx-ring
           Use `sendmmsg` instead of the TPACKET_V3 TX ring (`afpacket`)
+
+      --auto-pin
+          Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
+
+      --queue <N>
+          First hardware queue (`afxdp`; worker i binds queue N+i)
+
+      --xdp-mode <MODE>
+          AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy
+
+          [default: auto]
+
+      --busy-poll
+          Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg capture`
+
+```text
+Receive: counters, the first frames, pcapng output, signature verification
+
+Usage: wpg capture [OPTIONS]
+
+Options:
+  -i, --iface <IFACE>
+          Interface to receive on (`any` = every interface with `afpacket`); for the `pcapfile` backend the capture file to replay
+
+      --backend <BACKEND>
+          Receive backend: afpacket (Linux), pcap (feature `pcap`), pcapfile, null
+
+  -f, --filter <EXPR>
+          tcpdump-style filter, e.g. `udp port 5001 and wpg` (default: every frame)
+
+  -c, --count <COUNT>
+          Stop after this many matching frames
+
+      --duration <DURATION>
+          Stop after this long, e.g. `10s`
+
+      --show <N>
+          Print the first N matching frames
+
+          [default: 5]
+
+      --hex
+          Also print a hex dump of the shown frames
+
+  -w, --write <FILE>
+          Write the matching frames to this pcapng file
+
+      --verify
+          Check the signatures stamped by `wpg send --signature` (loss / order / latency)
+
+      --promisc
+          Promiscuous mode
+
+      --include-outgoing
+          Also count frames this host transmits
+
+      --json
+          Machine-readable output
 
   -h, --help
           Print help

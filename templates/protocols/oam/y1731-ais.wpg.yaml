@@ -1,0 +1,25 @@
+# ITU-T Y.1731: alarm indication signal (AIS) sent once a second to the client MEG level
+schema: 1
+
+meta:
+  name: y1731-ais
+  descriptions:
+    ja: "ITU-T Y.1731: クライアント MEG レベル 6 への警報表示信号 (AIS、1 秒周期)"
+    en: "ITU-T Y.1731: alarm indication signal (AIS) to client MEG level 6, once a second"
+  tags: ["protocol:ethernet2", "protocol:cfm_ais", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:36" # class 1 multicast of level 6
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_ais
+    fields:
+      md_level: 6
+      period: s_1
+
+tx:
+  count: 3
+  rate: 1pps

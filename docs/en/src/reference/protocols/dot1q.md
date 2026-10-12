@@ -32,6 +32,9 @@
 | 33024 (0x8100) | `vlan` |
 | 34525 (0x86dd) | `ipv6` |
 | 34997 (0x88b5) | `local_experimental` |
+| 35045 (0x88e5) | `macsec` |
+| 35063 (0x88f7) | `ptp` |
+| 35074 (0x8902) | `cfm` |
 
 ## Next layer
 
@@ -44,6 +47,37 @@ The next layer is selected by `ethertype`; when the field is Auto the builder wr
 | 2054 (0x0806) | [`arp`](arp.md) |   |
 | 33024 (0x8100) | [`dot1q`](dot1q.md) |   |
 | 34984 (0x88a8) | [`dot1ad`](dot1ad.md) |   |
+| 35045 (0x88e5) | [`macsec`](macsec.md) |   |
+| 35063 (0x88f7) | [`ptp`](ptp.md) |   |
+| 35063 (0x88f7) | [`ptp_sync`](ptp_sync.md) |   |
+| 35063 (0x88f7) | [`ptp_delay_req`](ptp_delay_req.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_req`](ptp_pdelay_req.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_resp`](ptp_pdelay_resp.md) |   |
+| 35063 (0x88f7) | [`ptp_follow_up`](ptp_follow_up.md) |   |
+| 35063 (0x88f7) | [`ptp_delay_resp`](ptp_delay_resp.md) |   |
+| 35063 (0x88f7) | [`ptp_pdelay_resp_follow_up`](ptp_pdelay_resp_follow_up.md) |   |
+| 35063 (0x88f7) | [`ptp_announce`](ptp_announce.md) |   |
+| 35063 (0x88f7) | [`ptp_signaling`](ptp_signaling.md) |   |
+| 35063 (0x88f7) | [`ptp_management`](ptp_management.md) |   |
+| 35074 (0x8902) | [`cfm`](cfm.md) |   |
+| 35074 (0x8902) | [`cfm_ccm`](cfm_ccm.md) |   |
+| 35074 (0x8902) | [`cfm_lbr`](cfm_lbr.md) |   |
+| 35074 (0x8902) | [`cfm_lbm`](cfm_lbm.md) |   |
+| 35074 (0x8902) | [`cfm_ltr`](cfm_ltr.md) |   |
+| 35074 (0x8902) | [`cfm_ltm`](cfm_ltm.md) |   |
+| 35074 (0x8902) | [`cfm_ais`](cfm_ais.md) |   |
+| 35074 (0x8902) | [`cfm_lck`](cfm_lck.md) |   |
+| 35074 (0x8902) | [`cfm_tst`](cfm_tst.md) |   |
+| 35074 (0x8902) | [`cfm_raps`](cfm_raps.md) |   |
+| 35074 (0x8902) | [`cfm_lmr`](cfm_lmr.md) |   |
+| 35074 (0x8902) | [`cfm_lmm`](cfm_lmm.md) |   |
+| 35074 (0x8902) | [`cfm_1dm`](cfm_1dm.md) |   |
+| 35074 (0x8902) | [`cfm_dmr`](cfm_dmr.md) |   |
+| 35074 (0x8902) | [`cfm_dmm`](cfm_dmm.md) |   |
+| 35074 (0x8902) | [`cfm_csf`](cfm_csf.md) |   |
+| 35074 (0x8902) | [`cfm_1sl`](cfm_1sl.md) |   |
+| 35074 (0x8902) | [`cfm_slr`](cfm_slr.md) |   |
+| 35074 (0x8902) | [`cfm_slm`](cfm_slm.md) |   |
 
 ## Constraints
 
@@ -55,6 +89,9 @@ The next layer is selected by `ethertype`; when the field is Auto the builder wr
 
 - [dot1ad-qinq-frame](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/dot1ad.wpg.yaml) — `templates/protocols/l2/dot1ad.wpg.yaml`
 - [dot1q-frame](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/dot1q.wpg.yaml) — `templates/protocols/l2/dot1q.wpg.yaml`
+- [cfm-ccm](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/cfm-ccm.wpg.yaml) — `templates/protocols/oam/cfm-ccm.wpg.yaml`
+- [erps-raps-nr-rb](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/erps-raps-nr-rb.wpg.yaml) — `templates/protocols/oam/erps-raps-nr-rb.wpg.yaml`
+- [erps-raps-sf](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/erps-raps-sf.wpg.yaml) — `templates/protocols/oam/erps-raps-sf.wpg.yaml`
 - [scenario-qinq-service-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/qinq-service-sweep.wpg.yaml) — `templates/scenarios/qinq-service-sweep.wpg.yaml`
 - [scenario-vlan-arp-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/vlan-arp-sweep.wpg.yaml) — `templates/scenarios/vlan-arp-sweep.wpg.yaml`
 - [scenario-vlan-id-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/vlan-id-sweep.wpg.yaml) — `templates/scenarios/vlan-id-sweep.wpg.yaml`

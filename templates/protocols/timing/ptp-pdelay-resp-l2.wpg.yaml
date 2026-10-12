@@ -1,0 +1,30 @@
+# PTP (IEEE 802.1AS): two-step Pdelay_Resp answering a Pdelay_Req
+schema: 1
+
+meta:
+  name: ptp-pdelay-resp-l2
+  descriptions:
+    ja: "PTP (IEEE 802.1AS): Pdelay_Req に応答する 2 ステップの Pdelay_Resp (要求受信時刻と要求元ポート ID)"
+    en: "PTP (IEEE 802.1AS): two-step Pdelay_Resp answering a Pdelay_Req (request receipt timestamp and requesting port identity)"
+  tags: ["protocol:ethernet2", "protocol:ptp_pdelay_resp", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:0e"
+      src: "02:00:00:00:00:02"
+  - protocol: ptp_pdelay_resp
+    fields:
+      major_sdo_id: 1
+      flags: 0x0200 # two-step: the response origin time follows
+      clock_identity: 0x020000fffe000002
+      sequence_id: 1
+      request_receipt_timestamp_seconds: 1700000000
+      request_receipt_timestamp_nanoseconds: 1000
+      requesting_port_clock_identity: 0x020000fffe000001
+      requesting_port_port_number: 1
+
+tx:
+  count: 1

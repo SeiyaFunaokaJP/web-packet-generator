@@ -32,7 +32,9 @@ fields:
         - { value: 0x88a8, name: qinq }
         - { value: 0x88b5, name: local_experimental }
         - { value: 0x88cc, name: lldp }
+        - { value: 0x88e5, name: macsec }
         - { value: 0x88f7, name: ptp }
+        - { value: 0x8902, name: cfm }
     default: { uint: 0x88b5 }
     auto: { kind: next_protocol }
 next:
@@ -44,13 +46,57 @@ next:
     - { value: 0x8100, protocol: dot1q }
     - { value: 0x88a8, protocol: dot1ad }
     - { value: 0x88cc, protocol: lldp }
-    - { value: 0x8809, protocol: lacp }
     - { value: 0x888e, protocol: eapol }
     - { value: 0x8863, protocol: pppoe_discovery }
     - { value: 0x8864, protocol: pppoe_session }
     - { value: 0x8847, protocol: mpls }
     - { value: 0x8848, protocol: mpls }
+    - { value: 0x88e5, protocol: macsec }
+    - { value: 0x88f7, protocol: ptp }
+    - { value: 0x88f7, protocol: ptp_sync }
+    - { value: 0x88f7, protocol: ptp_delay_req }
+    - { value: 0x88f7, protocol: ptp_pdelay_req }
+    - { value: 0x88f7, protocol: ptp_pdelay_resp }
+    - { value: 0x88f7, protocol: ptp_follow_up }
+    - { value: 0x88f7, protocol: ptp_delay_resp }
+    - { value: 0x88f7, protocol: ptp_pdelay_resp_follow_up }
+    - { value: 0x88f7, protocol: ptp_announce }
+    - { value: 0x88f7, protocol: ptp_signaling }
+    - { value: 0x88f7, protocol: ptp_management }
+    - { value: 0x8902, protocol: cfm }
+    - { value: 0x8902, protocol: cfm_ccm }
+    - { value: 0x8902, protocol: cfm_lbr }
+    - { value: 0x8902, protocol: cfm_lbm }
+    - { value: 0x8902, protocol: cfm_ltr }
+    - { value: 0x8902, protocol: cfm_ltm }
+    - { value: 0x8902, protocol: cfm_ais }
+    - { value: 0x8902, protocol: cfm_lck }
+    - { value: 0x8902, protocol: cfm_tst }
+    - { value: 0x8902, protocol: cfm_raps }
+    - { value: 0x8902, protocol: cfm_lmr }
+    - { value: 0x8902, protocol: cfm_lmm }
+    - { value: 0x8902, protocol: cfm_1dm }
+    - { value: 0x8902, protocol: cfm_dmr }
+    - { value: 0x8902, protocol: cfm_dmm }
+    - { value: 0x8902, protocol: cfm_csf }
+    - { value: 0x8902, protocol: cfm_1sl }
+    - { value: 0x8902, protocol: cfm_slr }
+    - { value: 0x8902, protocol: cfm_slm }
     - { value: 0, max: 0x5ff, protocol: dot3, reparse: true }
+  peek:
+    on: 0x8809
+    bits: 8
+    table:
+      - { value: 1, protocol: lacp }
+      - { value: 2, protocol: marker }
+      - { value: 3, protocol: efm_oam }
+      - { value: 3, protocol: efm_oam_information }
+      - { value: 3, protocol: efm_oam_event_notification }
+      - { value: 3, protocol: efm_oam_variable_request }
+      - { value: 3, protocol: efm_oam_variable_response }
+      - { value: 3, protocol: efm_oam_loopback_control }
+      - { value: 3, protocol: efm_oam_organization_specific }
+      - { value: 0x0a, protocol: esmc }
 min_frame_len: 60
 ";
 

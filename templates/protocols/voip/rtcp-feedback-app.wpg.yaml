@@ -1,0 +1,43 @@
+# RTCP (RFC 3550 / RFC 4585): a Receiver Report, a Picture Loss Indication (generic packet) and an APP packet
+schema: 1
+
+meta:
+  name: rtcp-feedback-app
+  descriptions:
+    ja: "RTCP (RFC 3550 / RFC 4585): 受信者レポート、PLI (型付けしていないパケットは汎用 rtcp レイヤで本体をオクテット列で指定)、APP パケット"
+    en: "RTCP (RFC 3550 / RFC 4585): a Receiver Report, a Picture Loss Indication (untyped packets use the generic rtcp layer with the body as octets) and an APP packet"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:rtcp_rr", "protocol:rtcp", "protocol:rtcp_app", "layer:l4", voip, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.2
+      dst: 192.0.2.1
+  - protocol: udp
+    fields:
+      src_port: 5005
+      dst_port: 5005
+  - protocol: rtcp_rr
+    fields:
+      ssrc: 0x87654321
+      report_blocks: []
+  - protocol: rtcp
+    fields:
+      count: 1 # FMT 1: Picture Loss Indication
+      packet_type: psfb
+      body: "87654321 12345678" # sender SSRC, media source SSRC
+  - protocol: rtcp_app
+    fields:
+      subtype: 0
+      ssrc: 0x87654321
+      name: '"WPG0"'
+      data: "00 00 00 01"
+
+tx:
+  count: 1

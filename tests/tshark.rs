@@ -34,7 +34,11 @@ fn collect<'a>(v: &'a Value, pred: &dyn Fn(&str) -> bool, out: &mut Vec<(&'a str
     }
 }
 
-fn dissect(pcap: &Path) -> Value {
+/// Cases whose repeated JSON keys are merged into arrays (`find` then sees the
+/// first occurrence instead of only the last).
+const MERGE_KEYS: &[&str] = &["eth_ipv4_tcp_diameter_ccr", "eth_ipv4_udp_rtcp_compound"];
+
+fn dissect(pcap: &Path, merge_keys: bool) -> Value {
     let out = Command::new("tshark")
         .arg("-r")
         .arg(pcap)
@@ -43,7 +47,12 @@ fn dissect(pcap: &Path) -> Value {
         .args(["-o", "udp.check_checksum:TRUE"])
         .args(["-o", "tcp.check_checksum:TRUE"])
         .args(["-o", "sctp.checksum:CRC-32C"])
+        // RTP / RTCP have no well-known port in Wireshark: decode the IANA
+        // `rtp-avp` / `rtcp-avp` ports as they are.
+        .args(["-d", "udp.port==5004,rtp", "-d", "udp.port==5005,rtcp"])
         .args(["-T", "json"])
+        // Repeated keys (one per AVP) otherwise keep only the last one.
+        .args(merge_keys.then_some("--no-duplicate-keys"))
         .output()
         .expect("failed to run tshark (is it installed?)");
     assert!(
@@ -297,6 +306,94 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
             ],
         ),
         (
+            "eth_ptp_sync",
+            vec![
+                ("eth.type", "0x88f7"),
+                ("ptp.v2.messagetype", "0x00"),
+                ("ptp.v2.messagelength", "44"),
+                ("ptp.v2.flags.twostep", "1"),
+                ("ptp.v2.clockidentity", "0x020000fffe000001"),
+                ("ptp.v2.sequenceid", "7"),
+                ("ptp.v2.logmessageperiod", "-3"),
+                ("ptp.v2.sdr.origintimestamp.seconds", "1700000000"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_ptp_announce",
+            vec![
+                ("udp.dstport", "320"),
+                ("ptp.v2.messagetype", "0x0b"),
+                ("ptp.v2.messagelength", "64"),
+                ("ptp.v2.flags.utcreasonable", "1"),
+                ("ptp.v2.controlfield", "5"),
+                ("ptp.v2.an.origincurrentutcoffset", "37"),
+                ("ptp.v2.an.priority1", "100"),
+                ("ptp.v2.an.grandmasterclockclass", "6"),
+                ("ptp.v2.an.grandmasterclockaccuracy", "0x21"),
+                ("ptp.v2.an.grandmasterclockvariance", "20061"),
+            ],
+        ),
+        (
+            "eth_esmc",
+            vec![
+                ("slow.subtype", "0x0a"),
+                ("ossp.itu.subtype", "0x0001"),
+                ("ossp.esmc.version", "0x01"),
+                ("ossp.esmc.ql", "0xff02"), // enhanced SSM 0xff, QL-PRC
+                ("ossp.esmc.tlv_ext_ql_essm", "0xff"),
+                ("ossp.esmc.tlv_ext_ql_clockid", "0x020000fffe000001"),
+                ("ossp.esmc.tlv_ext_ql_eeec", "1"),
+            ],
+        ),
+        (
+            "eth_dot1q_cfm_ccm",
+            vec![
+                ("vlan.id", "100"),
+                ("cfm.md_level", "5"),
+                ("cfm.opcode", "1"),
+                ("cfm.ccm.flags.interval", "4"),
+                ("cfm.first_tlv_offset", "70"),
+                ("cfm.mep_id", "10"),
+                ("cfm.maid.ma_name.icc", "WPG001MEG0001"),
+                ("cfm.tlv.port_status.value", "2"),
+                ("cfm.tlv.intf_status.value", "1"),
+            ],
+        ),
+        (
+            "eth_cfm_raps",
+            vec![
+                ("cfm.md_level", "7"),
+                ("cfm.version", "1"),
+                ("cfm.opcode", "40"),
+                ("cfm.first_tlv_offset", "32"),
+                ("cfm.raps.req_st", "0x0b"),
+                ("cfm.raps.status.bpr", "1"),
+                ("cfm.raps.node_id", "02:00:00:00:00:05"),
+            ],
+        ),
+        (
+            "eth_cfm_dmm",
+            vec![
+                ("cfm.opcode", "47"),
+                ("cfm.first_tlv_offset", "32"),
+                ("cfm.odm.dmm.dmr.txtimestampf", "1700000000.250000000"),
+                ("cfm.tlv.type", "0"),
+            ],
+        ),
+        (
+            "eth_efm_oam_information",
+            vec![
+                ("slow.subtype", "0x03"),
+                ("oampdu.flags", "0x0050"),
+                ("oampdu.code", "0x00"),
+                // Duplicate JSON keys: the last (Remote Information) TLV wins.
+                ("oampdu.info.type", "0x02"),
+                ("oampdu.info.length", "16"),
+                ("oampdu.info.oamConfig", "0x1d"),
+                ("oampdu.info.oampduConfig", "1518"),
+            ],
+        ),
+        (
             "eth_ipv6_srh_udp",
             vec![
                 ("ipv6.routing.type", "4"),
@@ -323,6 +420,120 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ("ip.dst", "10.0.0.2"),
             ],
         ),
+        (
+            "eth_macsec",
+            vec![
+                ("eth.type", "0x88e5"),
+                ("macsec.TCI.SC", "1"),
+                ("macsec.TCI.E", "1"),
+                ("macsec.TCI.C", "1"),
+                ("macsec.AN", "0x01"),
+                ("macsec.SL", "0"),
+                ("macsec.PN", "16909060"),
+                ("macsec.SCI.system_identifier", "02:00:00:00:00:01"),
+                ("macsec.SCI.port_identifier", "1"),
+                (
+                    "macsec.ICV",
+                    "a5:a5:a5:a5:a5:a5:a5:a5:a5:a5:a5:a5:a5:a5:a5:a5",
+                ),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_gtpv2_create_session",
+            vec![
+                ("udp.dstport", "2123"),
+                ("gtpv2.flags", "0x48"),
+                ("gtpv2.message_type", "32"),
+                ("gtpv2.msg_length", "129"),
+                ("gtpv2.teid", "0x00000000"),
+                ("gtpv2.seq", "0x001234"),
+                ("e212.imsi", "001010123456789"),
+                ("gtpv2.rat_type", "6"),
+                ("gtpv2.f_teid_interface_type", "10"),
+                ("gtpv2.f_teid_gre_key", "0x00001001"),
+                ("gtpv2.f_teid_ipv4", "192.0.2.1"),
+                ("gtpv2.apn", "internet"),
+                ("gtpv2.pdn_addr_and_prefix.ipv4", "0.0.0.0"),
+                ("gtpv2.ambr_up", "50000"),
+                ("gtpv2.ambr_down", "100000"),
+                ("gtpv2.ebi", "5"),
+                ("gtpv2.bearer_qos_pl", "9"),
+                ("gtpv2.bearer_qos_label_qci", "9"),
+            ],
+        ),
+        (
+            "eth_ipv4_tcp_diameter_ccr",
+            vec![
+                ("tcp.dstport", "3868"),
+                ("diameter.length", "236"),
+                ("diameter.flags", "0xc0"),
+                ("diameter.cmd.code", "272"),
+                ("diameter.applicationId", "4"),
+                ("diameter.hopbyhopid", "0x22334455"),
+                ("diameter.endtoendid", "0x66778899"),
+                ("diameter.Session-Id", "client.example.com;1;1"),
+                ("diameter.Origin-Host", "client.example.com"),
+                ("diameter.Destination-Realm", "example.net"),
+                ("diameter.Service-Context-Id", "32251@3gpp.org"),
+                ("diameter.CC-Request-Type", "1"),
+                ("diameter.Subscription-Id-Data", "819012345678"),
+                ("diameter.avp.vendorId", "10415"),
+                ("diameter.RAT-Type", "1004"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_sip_invite",
+            vec![
+                ("udp.dstport", "5060"),
+                ("sip.Method", "INVITE"),
+                ("sip.r-uri.user", "bob"),
+                ("sip.Via.branch", "z9hG4bK74bf9"),
+                ("sip.CSeq.seq", "1"),
+                ("sip.Content-Type", "application/sdp"),
+                ("sip.Content-Length", "132"),
+                ("sdp.owner.username", "alice"),
+                ("sdp.media.port", "49170"),
+                ("sdp.media.proto", "RTP/AVP"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_rtp",
+            vec![
+                ("udp.dstport", "5004"),
+                ("rtp.version", "2"),
+                ("rtp.ext", "1"),
+                ("rtp.cc", "2"),
+                ("rtp.marker", "1"),
+                ("rtp.p_type", "0"),
+                ("rtp.seq", "1000"),
+                ("rtp.timestamp", "160000"),
+                ("rtp.ssrc", "0x12345678"),
+                // Repeated key: the last CSRC.
+                ("rtp.csrc.item", "0x22222222"),
+                ("rtp.ext.profile", "0xbede"),
+                ("rtp.ext.len", "1"),
+                ("rtp.ext.rfc5285.id", "1"),
+                ("rtp.ext.rfc5285.data", "ab"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_rtcp_compound",
+            vec![
+                ("udp.dstport", "5005"),
+                // The first packet of the compound: the Receiver Report.
+                ("rtcp.pt", "201"),
+                ("rtcp.rc", "1"),
+                ("rtcp.length", "7"),
+                ("rtcp.senderssrc", "0x12345678"),
+                ("rtcp.ssrc.fraction", "10"),
+                ("rtcp.ssrc.cum_nr", "25"),
+                ("rtcp.ssrc.jitter", "42"),
+                ("rtcp.ssrc.dlsr", "65536"),
+                ("rtcp.sdes.text", "user@192.0.2.1"),
+                ("rtcp.sc", "1"),
+                ("rtcp.length_check", "1"),
+            ],
+        ),
     ]
 }
 
@@ -344,10 +555,13 @@ fn tshark_agrees_with_golden_pcaps() {
 
     for pcap in pcaps {
         let stem = pcap.file_stem().unwrap().to_str().unwrap().to_owned();
-        let doc = dissect(&pcap);
+        let doc = dissect(&pcap, MERGE_KEYS.contains(&stem.as_str()));
         let packets = doc.as_array().expect("array of packets");
         assert_eq!(packets.len(), 1, "{stem}: one packet expected");
         let pkt = &packets[0];
+
+        // Whole name tokens (`rtcp` does not mean TCP).
+        let has_token = |t: &str| stem.split('_').any(|x| x == t);
 
         // Generic checks: nothing malformed / expert-flagged, every checksum good.
         assert!(find(pkt, "_ws.malformed").is_none(), "{stem}: malformed");
@@ -367,25 +581,25 @@ fn tshark_agrees_with_golden_pcaps() {
             bad.iter().all(|(_, v)| v.as_str() == Some("0")),
             "{stem}: {bad:?}"
         );
-        if stem.contains("ipv4") {
+        if has_token("ipv4") {
             assert!(
                 status.iter().any(|(k, _)| *k == "ip.checksum.status"),
                 "{stem}: no ip.checksum.status reported"
             );
         }
-        if stem.contains("udp") {
+        if has_token("udp") {
             assert!(
                 status.iter().any(|(k, _)| *k == "udp.checksum.status"),
                 "{stem}"
             );
         }
-        if stem.contains("sctp") {
+        if has_token("sctp") {
             assert!(
                 status.iter().any(|(k, _)| *k == "sctp.checksum.status"),
                 "{stem}"
             );
         }
-        if stem.contains("tcp") {
+        if has_token("tcp") {
             assert!(
                 status.iter().any(|(k, _)| *k == "tcp.checksum.status"),
                 "{stem}"

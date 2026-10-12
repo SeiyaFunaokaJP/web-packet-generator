@@ -46,6 +46,17 @@ if (-not $haveTrunk) {
     Write-Warning "trunk not found; the frontend build will be skipped. Install: cargo install trunk --locked"
 }
 
+# Npcap runtime: needed to transmit (not to build). `wpg doctor` checks it in detail.
+# ($env:SystemRoot is only set on Windows; pwsh on Linux / macOS skips the check.)
+if ($env:SystemRoot) {
+    $system32 = Join-Path $env:SystemRoot "System32"
+    if (-not (Test-Path (Join-Path $system32 "Npcap\wpcap.dll"))) {
+        Write-Warning "Npcap not found: building works, but sending will not. Install it from https://npcap.com/#download and tick 'Install Npcap in WinPcap API-compatible Mode', then run: wpg doctor"
+    } elseif (-not (Test-Path (Join-Path $system32 "wpcap.dll"))) {
+        Write-Warning "Npcap is installed without 'WinPcap API-compatible Mode'; reinstall it with that option if wpg cannot load wpcap.dll (see: wpg doctor)"
+    }
+}
+
 # Npcap SDK (only needed once the pcap feature is used).
 if (-not ($env:LIB -and (Test-Path (Join-Path $env:LIB "wpcap.lib"))) -and -not (Test-Path "C:\Npcap-SDK")) {
     Write-Warning "Npcap SDK not found (https://npcap.com/#download). Not required yet: the pcap feature is unused. Set LIB to the SDK Lib\x64 directory when it is."
