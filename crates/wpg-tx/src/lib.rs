@@ -8,9 +8,13 @@
 //! * backends: [`NullBackend`] (counts and discards), [`PcapFileBackend`] (writes
 //!   pcapng / pcap instead of transmitting), `afpacket` (Linux, feature `afpacket`,
 //!   on by default: TPACKET_V3 TX ring with a `sendmmsg` fallback), `pcap` (feature
-//!   `pcap`); [`backend::open_by_name`] / [`backend::available`] form the registry;
+//!   `pcap`), `afxdp` (Linux 5.10+, feature `afxdp`: AF_XDP socket per queue,
+//!   zero-copy / copy chosen automatically, no libbpf); [`backend::open_by_name`] /
+//!   [`backend::available`] form the registry;
 //! * [`rate`]: rate strings (`1.5Mpps`, `10Gbps`, `50%`), rate → inter-frame
-//!   interval, and the [`rate::Pacer`] (token bucket + hybrid sleep / spin wait);
+//!   interval, and the [`rate::Pacer`] (token bucket + hybrid sleep / spin /
+//!   busy-poll wait on a [`clock::Clock`], TSC where it is invariant);
+//! * [`pin`]: core pinning and NUMA / queue topology for multi-core sending;
 //! * [`source`]: [`source::FrameSource`] implementations (pre-rendered, on-the-fly
 //!   from a `wpg-core` [`wpg_core::stream::Expansion`], multi-stream [`source::Mixer`]);
 //! * [`job`]: [`job::TxJob`] runs a source through a backend on a dedicated thread
@@ -21,16 +25,21 @@ use thiserror::Error;
 
 #[cfg(all(feature = "afpacket", target_os = "linux"))]
 pub mod afpacket;
+#[cfg(all(feature = "afxdp", target_os = "linux"))]
+pub mod afxdp;
 pub mod backend;
 pub mod bench;
+pub mod clock;
 pub mod job;
 mod null;
 #[cfg(feature = "pcap")]
 pub mod pcap;
 pub mod pcapfile;
-mod pin;
+pub mod pin;
 pub mod rate;
 pub mod source;
+#[cfg(target_os = "linux")]
+mod sys;
 
 pub use null::NullBackend;
 pub use pcapfile::PcapFileBackend;
@@ -108,6 +117,42 @@ pub struct TxOptions {
     /// Use a memory-mapped TX ring where the backend has one (`afpacket`:
     /// TPACKET_V3 `PACKET_TX_RING`); `false` forces the plain `sendmmsg` path.
     pub tx_ring: bool,
+    /// Hardware queue to bind to (`afxdp`; default 0). Several workers use
+    /// consecutive queues from here (see [`backend::open_workers`]).
+    pub queue: Option<u32>,
+    /// AF_XDP bind mode (`afxdp`).
+    pub xdp_mode: XdpMode,
+    /// Busy polling: `afxdp` sets `SO_PREFER_BUSY_POLL` / `SO_BUSY_POLL` so the
+    /// sending thread drives the driver itself (kernel 5.11+); the job's pacer
+    /// spins and services the backend instead of sleeping
+    /// ([`rate::WaitMode::BusyPoll`]).
+    pub busy_poll: bool,
+}
+
+/// How an AF_XDP socket is bound.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum XdpMode {
+    /// Zero-copy when the driver supports it, else copy mode.
+    #[default]
+    Auto,
+    /// Copy mode (`XDP_COPY`): works on every interface, including `veth` and `lo`.
+    Copy,
+    /// Zero-copy (`XDP_ZEROCOPY`) or fail.
+    ZeroCopy,
+}
+
+impl std::str::FromStr for XdpMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "auto" => Ok(XdpMode::Auto),
+            "copy" => Ok(XdpMode::Copy),
+            "zerocopy" | "zero-copy" | "zc" => Ok(XdpMode::ZeroCopy),
+            _ => Err(format!("unknown AF_XDP mode `{s}` (auto, copy, zerocopy)")),
+        }
+    }
 }
 
 impl Default for TxOptions {
@@ -118,6 +163,9 @@ impl Default for TxOptions {
             pin_core: None,
             qdisc_bypass: false,
             tx_ring: true,
+            queue: None,
+            xdp_mode: XdpMode::Auto,
+            busy_poll: false,
         }
     }
 }
@@ -187,6 +235,15 @@ pub trait TxBackend: Send {
     /// `afpacket`: `TPACKET_V3 ring` or `sendmmsg`), shown by `wpg send` / `wpg bench`.
     fn detail(&self) -> Option<String> {
         None
+    }
+
+    /// Housekeeping while the pacer waits in [`rate::WaitMode::BusyPoll`] (e.g.
+    /// `afxdp`: reap the completion ring and kick the driver). Default: nothing.
+    ///
+    /// # Errors
+    /// OS errors.
+    fn service(&mut self) -> Result<(), TxError> {
+        Ok(())
     }
 
     /// Flushes and releases resources. Idempotent.

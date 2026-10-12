@@ -41,6 +41,8 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # The optional libpcap backend (needs libpcap-dev, installed above).
       - run: cargo clippy -p wpg-tx -p wpg-cli --all-targets --features wpg-tx/pcap,wpg-cli/pcap -- -D warnings
+      # The optional AF_XDP backend (no extra build dependencies).
+      - run: cargo clippy -p wpg-tx -p wpg-cli --all-targets --features wpg-tx/afxdp,wpg-cli/afxdp -- -D warnings
 
   test:
     name: test (${{ matrix.os }})
@@ -61,6 +63,10 @@ jobs:
       - name: Test the pcap backend (Linux / macOS)
         if: runner.os != 'Windows'
         run: cargo test -p wpg-tx --features pcap
+      # AF_XDP compiles to nothing outside Linux; on Linux the socket tests run when
+      # the runner may create XDP sockets (they skip without the privileges).
+      - name: Test the AF_XDP backend
+        run: cargo test -p wpg-tx --features afxdp
 
   wasm-check:
     name: wasm-check

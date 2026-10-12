@@ -374,12 +374,12 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [ ] 実機 (or CML2 上 IOS-XR / Junos / FRR) との相互接続確認シナリオをドキュメント化
 
 ### M8: 高速バックエンド（3–5 週）
-- [ ] AF_XDP バックエンド (`xsk-rs`、copy / zero-copy 自動、kernel 5.10+)、対応 NIC 一覧
+- [x] AF_XDP バックエンド (`xsk-rs`、copy / zero-copy 自動、kernel 5.10+)、対応 NIC 一覧（`xsk-rs` / libbpf を使わずカーネル ABI を直接呼ぶ最小実装 `wpg-tx::afxdp`、`--features afxdp` で任意化（Linux 以外ではモジュールごと無効、wasm チェック対象外）。ワーカーごとにソケット + UMEM（NIC の NUMA ノードに `mbind`）+ TX / completion リング、need_wakeup、`--xdp-mode auto|copy|zerocopy`（auto は `XDP_PASS` を `bpf_link` でドライバモードに付けて zero-copy を試し、失敗理由を表示して copy に切り替え）、`--queue`、`--busy-poll`（`SO_PREFER_BUSY_POLL`）。`lo` / 4 キュー veth で copy モードの送出・到着・zero-copy 拒否時の切り替えを確認、対応 NIC 一覧を docs に記載。**物理 NIC での zero-copy は実機未確認**。マルチバッファ（ジャンボフレーム）、RX、共有 UMEM は対象外）
 - [ ] `dpdk-sys` crate (bindgen、DPDK 24.11 / 23.11 LTS)
 - [ ] DPDK バックエンド (`--features dpdk`)、EAL 設定、hugepages / `dpdk-devbind` 手順、virtio PMD (CML2)
-- [ ] マルチキュー・マルチコア送出、NUMA 配慮
-- [ ] レート制御精度の改善 (busy-poll、TSC)
-- [ ] 性能レグレッションテスト (`wpg bench` を CI nightly)
+- [x] マルチキュー・マルチコア送出、NUMA 配慮（`--workers` の afxdp はワーカー i をキュー `--queue`+i に bind、afpacket は送出 CPU から XPS / `CPU mod キュー数` で分散。`--auto-pin` で NIC の NUMA ノードのコアを優先して固定（許可 cpuset 内、コア 0 は最後）、`wpg_tx::pin` に cpulist / NUMA / キュー数の取得と `mbind`、ワーカー別の backend 詳細をレポートに。veth 4 キューで 1→4 ワーカーの伸びを計測。XPS / IRQ アフィニティの自動設定は対象外（手順を docs に記載））
+- [x] レート制御精度の改善 (busy-poll、TSC)（`wpg_tx::clock`: invariant TSC を `rdtsc` で読む時計（1 回校正、使えなければ monotonic）、送出スレッドのタイマスラックを 1 µs に、sleep の寝過ごしを EWMA で補正、`WaitMode::BusyPoll`（spin 中に `TxBackend::service` を呼ぶ）、`--wait` / `--clock`、遅れの p50 / p99 ヒストグラム。`examples/pacing.rs` で変更前後を計測し docs/perf.md に記録（hybrid 1 kpps の平均遅れ 74.5 → 10–15 µs など）。共有ホストの vCPU 横取りによる ms 級の外れ値は対象外）
+- [x] 性能レグレッションテスト (`wpg bench` を CI nightly)（`.github/workflows/nightly-bench.yml`: 毎日 + 手動、release で null（1 / 2 ワーカー）・afpacket `lo`（ring / sendmmsg）・afxdp `lo`（copy、使えなければ省略）と pacer 精度を計測し、`scripts/bench-check.py` が `scripts/bench-thresholds.json` のしきい値と比較してジョブのサマリと 90 日の artifact に残す。しきい値は共有ランナー向けに緩め。前回値との自動比較・グラフ化は対象外）
 
 ### M9: 受信 / 検証（2–3 週）
 - [ ] 受信カウンタ (pps/bps、BPF フィルタ一致)

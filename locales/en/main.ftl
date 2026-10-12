@@ -197,6 +197,7 @@ summary-worker = worker { $index }   { $packets } pkts  { $bytes } bytes{ $core 
 summary-worker-core = , core { $core }
 summary-warning = warning    { $error }
 bench-iface = iface      { $iface }
+bench-worker = worker { $index }   { $detail }
 bench-frame = frame      { $len } B (+4 FCS)  batch { $batch }
 bench-template = template   { $value } (on the fly, { $mode })
 bench-mode-patch = patched in place

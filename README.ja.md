@@ -94,7 +94,7 @@ workspace の crate: `wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-rx`, `wpg-templ
 |---|---|---|---|
 | `pcap` (libpcap / Npcap / BPF) | Win / mac / Linux | 〜数十万 pps | 全 OS 共通のフォールバック |
 | `afpacket` (TPACKET_V3 + `sendmmsg`) | Linux | 〜1–3 Mpps/core | CML2 上 Ubuntu (virtio) の主経路。CAP_NET_RAW 必要 |
-| `afxdp` | Linux 5.10+ | 〜数 Mpps/core | ドライバ対応要。zero-copy / copy 自動 |
+| `afxdp` | Linux 5.10+ (`--features afxdp`) | 〜数 Mpps/core | zero-copy はドライバ対応要。zero-copy / copy 自動 (zero-copy は実機未確認) |
 | `dpdk` | Linux | 10 Mpps+/core | `--features dpdk`、DPDK 24.11 LTS（23.11 も可） |
 | `pcapfile` | 全 | — | 送出せず pcapng に書き出す（ドライラン、CI） |
 | `loopback` / `null` | 全 | — | ベンチ・テスト用 |

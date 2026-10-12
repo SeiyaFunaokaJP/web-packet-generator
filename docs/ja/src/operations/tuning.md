@@ -22,16 +22,51 @@ afpacket の既定は TPACKET_V3 の TX リングです。フレームを共有�
 
 qdisc 層を通らず、`lo` で約 30% 高速になりますが、そのトラフィックには tc のシェーピングや netem が効かなくなります。[CML2 での注意点](cml2.md)を参照。
 
-## レート精度とスピンしきい値
+## レート精度: 待ち方 (`--wait`) とクロック (`--clock`)
 
-レート制御はトークンバケットで、待ち方はハイブリッドです。次の期限が遠い間は `sleep` し、最後の 50 マイクロ秒 (既定のスピンしきい値) は busy-spin します。`sleep` だけだとカーネルのタイマスラック (通常 50–100 マイクロ秒) 分のジッタが出て、高 pps の正確な間隔が崩れます。spin だけだと 1 コアを使い切ります。フレーム間隔が待ちの分解能より短い場合、制御は複数フレームをまとめて許可する (`--burst`) ので、*平均* レートは目標に沿いますが個々の間隔は揃いません。`ifg=<時間>` はバースト 1 を強制します。達成レートが指定より低い場合は経路側が限界で、停止後の追い付きバーストは 10 ms 分に制限されるため、詰まりのあとに一気に送り出すことはありません。`wpg send` の最終レポートに達成レートの精度が含まれます。
+レート制御はトークンバケットです (`wpg send`)。待ち方は `--wait` で選びます。
+
+| `--wait` | 動作 | CPU |
+|---|---|---|
+| `hybrid` (既定) | 期限が遠い間は `sleep`、最後の 50 マイクロ秒は busy-spin | 待ち時間に比例して少し |
+| `sleep` | `sleep` のみ | 最小 |
+| `spin` | busy-spin のみ | 1 コアを使い切る |
+| `busy-poll` | spin しながらバックエンドの後処理 (afxdp の completion リング回収、ドライバの起動) も行う。`--busy-poll` を付けると既定になる | 1 コアを使い切る |
+
+精度のための工夫 (M8):
+
+- **送出スレッドのタイマスラックを 50 マイクロ秒から 1 マイクロ秒に下げます** (`PR_SET_TIMERSLACK`、Linux。`sleep` を使う待ち方のとき)。
+- **`sleep` の寝過ごしを学習します**。実際に何マイクロ秒遅れて起きたかの移動平均を取り、次の `sleep` をその分だけ短くします (残りは spin で詰めます)。
+- **クロックに TSC を使います** (`--clock auto`、既定)。x86_64 で TSC が invariant (CPUID、または Linux の `constant_tsc` と `nonstop_tsc`) なら `rdtsc` を直接読み、起動時に一度だけ `Instant` と突き合わせて周波数を求めます。1 回の読み取りが数 ns で済むので、spin の 1 周が短くなり、期限からの遅れが半分程度になります。`--clock monotonic` で従来の `Instant` に戻せます。TSC が使えない環境では自動で monotonic になります。
+
+`lo` のコンテナでの計測結果 (前後比較を含む) は `docs/perf.md` の「レート制御の精度」にあります。要点: 1 kpps の `hybrid` で平均の遅れが 74.5 から 10–15 マイクロ秒、`sleep` では 62–121 から 2–44 マイクロ秒に減りました。中央値の遅れは spin 系で 0.1 マイクロ秒前後 (TSC で 0.03–0.06)。最大値 (数ミリ秒) は共有ホストの vCPU が奪われることによるもので、待ち方では消せません。精度が必要なら `--pin-core` / `--auto-pin` と `isolcpus` を併用してください。
+
+フレーム間隔が待ちの分解能より短い場合、制御は複数フレームをまとめて許可する (`--burst`) ので、*平均* レートは目標に沿いますが個々の間隔は揃いません。`ifg=<時間>` はバースト 1 を強制します。達成レートが指定より低い場合は経路側が限界で、停止後の追い付きバーストは 10 ms 分に制限されるため、詰まりのあとに一気に送り出すことはありません。`wpg send` の最終レポートに達成率と遅れ (最大、平均) が、`--json` には p50 / p99 (`p50_jitter`、`p99_jitter`) と TSC を使ったか (`tsc`) が含まれます。
+
+## マルチキュー・マルチコア送出 (`--workers`)
+
+`--workers N` は N 個の送出ワーカーを起動します。ワーカーごとにスレッド、バックエンドのインスタンス (afpacket はソケットと TX リング、afxdp はソケットと UMEM) を持ち、ストリームとレートを N 等分します (`--rate 1Mpps --workers 4` なら 1 ワーカー 250 kpps)。カウンタは合算され、最終レポートにワーカーごとの内訳が出ます。`pcap` と `pcapfile` は 1 ワーカーのみです。
+
+キューへの割り当て:
+
+- **afxdp**: ワーカー `i` は NIC のキュー `--queue` + `i` に bind します。キュー数は `ethtool -L <if> combined N` で用意します ([DPDK / AF_XDP](dpdk-afxdp.md))。
+- **afpacket**: キューを直接は選べません。カーネルが送出 CPU からキューを決めます。XPS (`/sys/class/net/<if>/queues/tx-<n>/xps_cpus`) が設定されていればその対応表に従い、なければ `--qdisc-bypass` 時は「CPU 番号 mod キュー数」になります。ワーカーを別々のコアに固定すれば、別々のキューに分散します。
+
+```sh
+# 4 キューの NIC に 4 ワーカー、NIC と同じ NUMA ノードのコアに自動で固定
+wpg bench --backend afxdp -i ens3 --workers 4 --auto-pin
+wpg send tpl.wpg.yaml -i ens3 --backend afpacket --qdisc-bypass --workers 4 --pin-cores 2,3,4,5
+```
+
+## NUMA 配慮 (`--auto-pin`)
+
+- `--auto-pin` はワーカーを NIC の NUMA ノード (`/sys/class/net/<if>/device/numa_node`) のコアに順に固定します。プロセスに許可されたコア (`taskset` / cgroup の cpuset) だけを使い、コア 0 (割り込みや雑務が集まりがち) は最後に回します。NUMA 情報がない環境 (仮想 NIC、1 ノードのマシン) では許可されたコアを順に使います。`--pin-cores` を指定した場合はそちらが優先です。
+- ワーカーは固定したあとで自分のフレームバッファを確保するので、Linux の first-touch によりメモリはそのコアのノードに置かれます。
+- afxdp の UMEM は NIC のノードに割り当てます (`mbind(MPOL_PREFERRED)`)。backend の表示に `NUMA node N` と出ます。
+- 割り込み (TX 完了) も同じノードのコアに寄せてください (下の「IRQ アフィニティ」)。
 
 ## IRQ アフィニティと CPU governor
 
 - NIC の割り込みを分散または固定します: `cat /proc/interrupts | grep <if>`、`echo <mask> | sudo tee /proc/irq/<n>/smp_affinity`。手動で固定する場合は `irqbalance` を止めます。送出スレッドと TX 完了割り込みは同じ NUMA ノードに置きます (同じコアである必要はありません)。
 - governor は `performance` にします: `sudo cpupower frequency-set -g performance`。VM では governor はホストが制御するため、CML2 ホストの管理者に確認してください。
 - レイテンシのスパイクが出る場合は深い C-state を無効にし、pin したコアの SMT 兄弟には負荷を載せません。
-
-## 複数キュー
-
-複数キューでの送出 (`--workers`) は計画中です。現在のフラグは `wpg bench --help` と `wpg send --help` で確認してください。それまでは、キューごとにインスタンスを起動し、それぞれ別のコアに pin します。

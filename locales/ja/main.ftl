@@ -197,6 +197,7 @@ summary-worker = ワーカー { $index }  { $packets } パケット  { $bytes } 
 summary-worker-core = 、コア { $core }
 summary-warning = 警告         { $error }
 bench-iface = インタフェース { $iface }
+bench-worker = ワーカー { $index }  { $detail }
 bench-frame = フレーム     { $len } B (+4 FCS)  バッチ { $batch }
 bench-template = テンプレート { $value } (オンザフライ、{ $mode })
 bench-mode-patch = インプレース書き換え
