@@ -12,6 +12,10 @@ Before falling back to an approximation (opaque octets or a Manual value), check
 |---|---|---|
 | Element count field | `auto = count(list_field)` (also inside list elements and TLV values) | IGMPv3 `num_group_records`, VRRP `count_ip_addrs` |
 | Checksum that skips a field | `auto = checksum(kind, coverage, exclude = [field])` | OSPFv2 `authentication`, LSA `ls_age` |
+| Octet size of a later variable field | `auto = size(field)` (also inside list elements and TLV values) | IS-IS sub-TLV lengths |
+| Prefix of `ceil(bits / 8)` octets | `bytes(from = len, adjust = 7, div = 8)` (`Length::FromField { div }`) | IS-IS extended IP / IPv6 reachability |
+| List of N variable-size elements | `Length::Count { field }` | IS-IS optional sub-TLV block (S bit) |
+| Pad to a requested PDU size with filler TLVs | `TlvDef::fill` (`TlvFill { variant, until }`) | IS-IS Hello Padding TLVs |
 | NUL-terminated string | `cstring` type | TFTP `filename` / `mode` |
 | OSI address with length indicator | `nsap` type (length octet is automatic) | CLNP / ES-IS / IS-IS NSAP / NET |
 | Demux on the source port too | `Binding::alt_field` | UDP / TCP `src_port` |

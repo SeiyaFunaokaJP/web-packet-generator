@@ -45,9 +45,11 @@ pub enum Length {
         octets: u32,
     },
     /// Length derived from an earlier integer field of the same protocol:
-    /// `octets = value * unit + adjust` (negative results clamp to 0).
+    /// `octets = (value * unit + adjust) / div` (floor division; negative results
+    /// clamp to 0).
     ///
-    /// Example: IPv4 options are `ihl * 4 - 20` octets.
+    /// Example: IPv4 options are `ihl * 4 - 20` octets; an address prefix of
+    /// `prefix_length` bits is `(prefix_length + 7) / 8` octets.
     FromField {
         /// Name of the (earlier) field holding the length.
         field: String,
@@ -57,6 +59,16 @@ pub enum Length {
         /// Octets added after multiplying.
         #[serde(default, skip_serializing_if = "is_zero")]
         adjust: i64,
+        /// Divisor applied last (`1` = none).
+        #[serde(default = "one_u32", skip_serializing_if = "is_one")]
+        div: u32,
+    },
+    /// `list` fields only: exactly as many elements as an earlier integer field of
+    /// the same group says, whatever their size (elements of variable size, e.g.
+    /// an optional sub-TLV block present when a flag bit is set).
+    Count {
+        /// Name of the (earlier) field holding the element count.
+        field: String,
     },
     /// Consumes the rest of the enclosing PDU.
     ToEnd,
@@ -336,6 +348,25 @@ pub struct TlvDef {
     pub unknown_as_raw: bool,
     /// Size of the whole TLV region.
     pub length: Length,
+    /// Automatic padding items (IS-IS Hello padding), see [`TlvFill`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fill: Option<TlvFill>,
+}
+
+/// Pads a TLV region with filler items up to a requested PDU size.
+///
+/// When the header field `until` (which has an auto [`AutoCompute::Length`] rule
+/// of `header` or `total`) is given a Manual value, the builder appends items of
+/// the variant `variant` (zero-filled values, as large as the length field allows)
+/// after the items of the TLV field so that the measured span equals that value.
+/// IS-IS Hellos are padded this way to the interface MTU (ISO 10589 §8.2.3).
+/// Only a header TLV field that is the last field of its protocol can fill.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TlvFill {
+    /// Name of the filler variant (its type is used; the value is zeros).
+    pub variant: String,
+    /// Header field whose Manual value is the requested size.
+    pub until: String,
 }
 
 impl TlvDef {
@@ -469,6 +500,13 @@ pub enum AutoCompute {
     /// as verbatim octets the count is unknown and the default value is used.
     Count {
         /// The counted `list` / `tlv` field.
+        field: String,
+    },
+    /// Encoded size in octets of a later variable-size field of the same field
+    /// group (a sub-TLV length inside a TLV value). Like [`AutoCompute::Count`] it
+    /// is also allowed inside list elements and TLV values.
+    Size {
+        /// The measured field.
         field: String,
     },
     /// Per-stream counter (sequence numbers etc.). Not computed by the builder yet:
@@ -869,29 +907,57 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
                     ));
                 }
             }
+            Some(AutoCompute::Size { field: target }) => {
+                let measured = fields[i + 1..].iter().any(|f| {
+                    &f.name == target && f.ty.fixed_bits().is_none() && f.ty.int_bits().is_none()
+                });
+                if !measured || !field.ty.is_unsigned_int() {
+                    return Err(def_err(
+                        proto,
+                        format!(
+                            "size field `{}` must be unsigned and measure a later variable-size field `{target}` of the same group",
+                            field.name
+                        ),
+                    ));
+                }
+            }
             Some(_) if !top => {
                 return Err(def_err(
                     proto,
                     format!(
-                        "field `{}`: auto rules other than count are only supported on header fields",
+                        "field `{}`: auto rules other than count / size are only supported on header fields",
                         field.name
                     ),
                 ));
             }
             _ => {}
         }
-        let from_field = match &field.ty {
-            FieldType::Bytes {
-                len: Length::FromField { field: src, .. },
+        let region = match &field.ty {
+            FieldType::Bytes { len } | FieldType::List { length: len, .. } => Some(len),
+            FieldType::Tlv(t) => Some(&t.length),
+            _ => None,
+        };
+        let from_field = match region {
+            Some(Length::FromField {
+                field: src, div, ..
+            }) => {
+                if *div == 0 {
+                    return Err(def_err(
+                        proto,
+                        format!("length of `{}` divides by zero", field.name),
+                    ));
+                }
+                Some(src)
             }
-            | FieldType::List {
-                length: Length::FromField { field: src, .. },
-                ..
-            } => Some(src),
-            FieldType::Tlv(t) => match &t.length {
-                Length::FromField { field: src, .. } => Some(src),
-                _ => None,
-            },
+            Some(Length::Count { field: src }) => {
+                if !matches!(field.ty, FieldType::List { .. }) {
+                    return Err(def_err(
+                        proto,
+                        format!("`{}`: only list fields can have a count length", field.name),
+                    ));
+                }
+                Some(src)
+            }
             _ => None,
         };
         if let Some(src) = from_field {
@@ -1025,6 +1091,7 @@ impl ProtocolDef {
         if !bit_pos.is_multiple_of(8) {
             return Err(def_err(&self.id, "header is not a whole number of octets"));
         }
+        self.validate_fill()?;
         if let Some(b) = &self.next {
             for name in std::iter::once(&b.field).chain(&b.alt_field) {
                 match self.field(name) {
@@ -1071,6 +1138,47 @@ impl ProtocolDef {
                     ));
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// [`TlvFill`] rules: only on the last header field, naming a known variant and
+    /// a header field with an auto header / total length rule.
+    fn validate_fill(&self) -> Result<()> {
+        let fills = self
+            .fields
+            .iter()
+            .enumerate()
+            .filter_map(|(k, f)| match &f.ty {
+                FieldType::Tlv(TlvDef {
+                    fill: Some(fill), ..
+                }) => Some((k, f, fill)),
+                _ => None,
+            });
+        for (k, f, fill) in fills {
+            let FieldType::Tlv(t) = &f.ty else {
+                continue;
+            };
+            let until_ok = matches!(
+                self.field(&fill.until).and_then(|u| u.auto.as_ref()),
+                Some(AutoCompute::Length {
+                    of: LengthOf::Header | LengthOf::Total,
+                    ..
+                })
+            );
+            let reason = if k + 1 != self.fields.len() {
+                "must be the last header field"
+            } else if t.variant_by_name(&fill.variant).is_none_or(|v| v.type_only) {
+                "names an unknown or type-only filler variant"
+            } else if !until_ok {
+                "needs a header field with an auto header / total length rule"
+            } else {
+                continue;
+            };
+            return Err(def_err(
+                &self.id,
+                format!("filled tlv field `{}` {reason}", f.name),
+            ));
         }
         Ok(())
     }
@@ -1247,6 +1355,7 @@ mod tests {
                     field: "nope".into(),
                     unit: 1,
                     adjust: 0,
+                    div: 1,
                 },
             },
         ));

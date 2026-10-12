@@ -62,6 +62,7 @@ pub fn lldp_tlvs() -> FieldType {
                             field: "length".into(),
                             unit: 1,
                             adjust: 0,
+                            div: 1,
                         },
                     },
                 ),
@@ -134,6 +135,7 @@ pub fn cdp_tlvs() -> FieldType {
         ],
         unknown_as_raw: true,
         length: Length::ToEnd,
+        fill: None,
     })
 }
 
@@ -376,7 +378,9 @@ pub fn pppoe_tags() -> FieldType {
             field: "length".into(),
             unit: 1,
             adjust: 0,
+            div: 1,
         },
+        fill: None,
     })
 }
 
@@ -489,7 +493,9 @@ fn lcp_options() -> FieldType {
             field: "length".into(),
             unit: 1,
             adjust: -4,
+            div: 1,
         },
+        fill: None,
     })
 }
 
@@ -523,7 +529,9 @@ fn ipcp_options() -> FieldType {
             field: "length".into(),
             unit: 1,
             adjust: -4,
+            div: 1,
         },
+        fill: None,
     })
 }
 

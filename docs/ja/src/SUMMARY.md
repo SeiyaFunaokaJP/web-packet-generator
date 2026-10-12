@@ -29,6 +29,7 @@
   - [マルチキャスト制御](protocols/multicast.md)
   - [アプリケーションプロトコル](protocols/app.md)
   - [OSI カプセル化 (P2)](protocols/osi.md)
+  - [IS-IS (P2)](protocols/isis.md)
 - [テンプレートスキーマ](reference/template-schema.md)
 - [API リファレンス](reference/api.md)
 - [CLI リファレンス](reference/cli.md)

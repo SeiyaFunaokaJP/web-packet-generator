@@ -26,6 +26,7 @@ diag-length-too-short = `{ $span }` is { $len } bytes long, at least { $min } re
 diag-length-too-long = `{ $span }` is { $len } bytes long, at most { $max } allowed.
 diag-length-mismatch = Length field `{ $field }` = { $value } differs from the computed length { $expected }.
 diag-count-mismatch = Count field `{ $field }` = { $value } differs from the actual number of elements { $expected }.
+diag-fill-inexact = `{ $field }` cannot be reached exactly with filler items: { $len } octet(s) are missing.
 diag-checksum-mismatch = Checksum field `{ $field }` = { $value } differs from the computed checksum { $expected }.
 diag-next-protocol-mismatch = Field `{ $field }` = { $value } does not announce the next layer `{ $next }` (expected { $expected }).
 diag-auto-overflow = Automatic value { $value } of `{ $field }` does not fit in { $bits } bits.
@@ -924,3 +925,30 @@ eigrp-tlvs = EIGRP TLVs (16-bit type, 16-bit length including the header).
 # --- P2 OSI encapsulation field descriptions ---
 osi-nlpid = Network layer protocol identifier (ISO/IEC TR 9577): 0x81 CLNP, 0x82 ES-IS, 0x83 IS-IS.
 osi-data = Rest of the OSI PDU after the NLPID (opaque octets).
+isis-irpd = Intradomain routing protocol discriminator (0x83 = IS-IS).
+isis-header-length = Length of the fixed header in octets (constant for each PDU type: LAN Hello / LSP 27, P2P Hello 20, CSNP 33, PSNP 17).
+isis-version-ext = Version / protocol ID extension (1).
+isis-id-length = System ID length (0 = 6 octets).
+isis-pdu-type = PDU type (15/16 LAN Hello L1/L2, 17 P2P Hello, 18/20 LSP L1/L2, 24/25 CSNP, 26/27 PSNP).
+isis-version = Version (1).
+isis-max-area-addresses = Maximum number of area addresses (0 = 3).
+isis-pdu-length = Length of the whole PDU (Auto). On a Hello, a Manual value pads the PDU to that length with Padding TLVs (e.g. 1497 for an MTU of 1500).
+isis-tlvs = TLVs (8-bit code / 8-bit length) and their sub-TLVs.
+isis-source-id = System ID of the sender.
+isis-holding-time = Holding time in seconds.
+isis-priority = Priority for designated IS election (0–127).
+isis-lan-id = LAN ID: system ID of the designated IS and pseudonode ID.
+isis-circuit-type = Circuit type: 1 = L1, 2 = L2, 3 = L1/L2.
+isis-local-circuit-id = Local circuit ID.
+isis-remaining-lifetime = Remaining lifetime of the LSP in seconds (not covered by the checksum).
+isis-lsp-id = LSP ID: system ID, pseudonode ID and fragment number.
+isis-sequence-number = LSP sequence number.
+isis-lsp-checksum = Fletcher checksum from the LSP ID to the end of the PDU (Auto).
+isis-partition-repair = P bit: partition repair supported.
+isis-attached = ATT bits: attached to another area (default / delay / expense / error metric).
+isis-overload = OL bit: LSP database overload.
+isis-is-type = IS type: 1 = L1, 3 = L1/L2.
+isis-snp-source-id = System ID of the sender and circuit ID (0).
+isis-start-lsp-id = First LSP ID covered by the CSNP.
+isis-end-lsp-id = Last LSP ID covered by the CSNP.
+isis-data = Rest of the PDU after the common header (opaque octets).

@@ -46,7 +46,9 @@ pub fn tcp_options() -> FieldType {
             field: "data_offset".into(),
             unit: 4,
             adjust: -20,
+            div: 1,
         },
+        fill: None,
     })
 }
 

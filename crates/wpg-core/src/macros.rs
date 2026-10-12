@@ -40,7 +40,7 @@
 ///
 /// * types: `uint(N)`, `int(N)`, `enum(N) { v => name, .. }`,
 ///   `flags(N) { bit => name, .. }`, `mac`, `ipv4`, `ipv6`, `nsap`, `cstring`, `raw`,
-///   `bytes(N)`, `bytes(to_end)`, `bytes(from = field[, unit = U][, adjust = A])`,
+///   `bytes(N)`, `bytes(to_end)`, `bytes(from = field[, unit = U][, adjust = A][, div = D])`,
 ///   `padding(ALIGN)`, and `ty(expr)` for any [`FieldType`](crate::FieldType)
 ///   expression (TLV / list fields, whose defaults are `FieldValue::from(..)`)
 /// * defaults are typed by the field: integers for `uint`/`enum`/`flags`/`int`,
@@ -51,7 +51,7 @@
 ///   length conditions, a source-port style `alt_field` and payload peeks are
 ///   added to `def.next` afterwards ([`BindingEntry::range`](crate::BindingEntry::range),
 ///   [`Peek`](crate::Peek))
-/// * auto rules: `next_protocol`, `counter`, `count(list_field)`,
+/// * auto rules: `next_protocol`, `counter`, `count(list_field)`, `size(field)`,
 ///   `length(header|payload|total[, unit = bytes|words16|words32|words64][, adjust = A])`,
 ///   `checksum(internet|internet_pseudo|fletcher|crc32c|crc32, header|header_payload[, nonzero])`,
 ///   `checksum(kind, coverage, exclude = [field, ..])`
@@ -163,12 +163,13 @@ macro_rules! __wpg_field_type {
             len: $crate::Length::ToEnd,
         }
     };
-    (bytes (from = $f:ident $(, unit = $u:expr)? $(, adjust = $a:expr)?)) => {
+    (bytes (from = $f:ident $(, unit = $u:expr)? $(, adjust = $a:expr)? $(, div = $d:expr)?)) => {
         $crate::FieldType::Bytes {
             len: $crate::Length::FromField {
                 field: ::std::string::String::from(stringify!($f)),
                 unit: $crate::__wpg_or!($($u)?; 1),
                 adjust: $crate::__wpg_or!($($a)?; 0),
+                div: $crate::__wpg_or!($($d)?; 1),
             },
         }
     };
@@ -263,6 +264,11 @@ macro_rules! __wpg_auto {
     };
     (count ($f:ident)) => {
         $crate::AutoCompute::Count {
+            field: ::std::string::String::from(stringify!($f)),
+        }
+    };
+    (size ($f:ident)) => {
+        $crate::AutoCompute::Size {
             field: ::std::string::String::from(stringify!($f)),
         }
     };
@@ -447,7 +453,8 @@ mod tests {
                 len: Length::FromField {
                     field: "len".into(),
                     unit: 8,
-                    adjust: 0
+                    adjust: 0,
+                    div: 1
                 }
             }
         );

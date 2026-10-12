@@ -19,6 +19,7 @@ pub mod encap;
 pub mod fhrp;
 pub mod icmp;
 pub mod ipv6;
+pub mod isis;
 pub mod l2;
 pub mod l2control;
 pub mod l3;
@@ -206,8 +207,18 @@ pub fn builtin() -> Vec<ProtocolDef> {
         app::tftp_ack(),
         app::tftp_error(),
         app::tftp_oack(),
-        // P2 OSI encapsulation.
+        // P2 OSI encapsulation and IS-IS.
         osi::osi(),
+        isis::isis(),
+        isis::isis_l1_lan_hello(),
+        isis::isis_l2_lan_hello(),
+        isis::isis_p2p_hello(),
+        isis::isis_l1_lsp(),
+        isis::isis_l2_lsp(),
+        isis::isis_l1_csnp(),
+        isis::isis_l2_csnp(),
+        isis::isis_l1_psnp(),
+        isis::isis_l2_psnp(),
         payload::payload(),
         payload::raw(),
     ]

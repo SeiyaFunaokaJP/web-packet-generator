@@ -20,6 +20,7 @@ Per-field descriptions (ja/en) come with the GUI field editor and `GET /api/prot
 | [Multicast control](multicast.md) | IGMPv1, v2, v3 / MLDv1 and v2 / PIM-SM v2 |
 | [Application protocols](app.md) | DHCPv4 and v6 / DNS / NTP / SNMP / Syslog / RADIUS / TFTP |
 | [OSI encapsulation (P2)](osi.md) | OSI PDUs over 802.2 LLC `0xfe` / PPP `0x0023`, the NSAP type |
+| [IS-IS (P2)](isis.md) | LAN / P2P Hellos, LSPs, CSNP / PSNP, main TLVs and sub-TLVs |
 
 ## Common patterns
 

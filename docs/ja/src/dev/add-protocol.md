@@ -12,6 +12,10 @@ Status: draft
 |---|---|---|
 | 要素数フィールド | `auto = count(list_field)` (リスト要素・TLV 値の中でも可) | IGMPv3 `num_group_records`、VRRP `count_ip_addrs` |
 | 一部を除いたチェックサム | `auto = checksum(kind, coverage, exclude = [field])` | OSPFv2 `authentication`、LSA `ls_age` |
+| 後続の可変長フィールドのオクテット数 | `auto = size(field)` (リスト要素・TLV 値の中でも可) | IS-IS のサブ TLV 長 |
+| `ceil(ビット数 / 8)` オクテットのプレフィックス | `bytes(from = len, adjust = 7, div = 8)` (`Length::FromField { div }`) | IS-IS 拡張 IP / IPv6 到達性 |
+| 可変長要素 N 個のリスト | `Length::Count { field }` | IS-IS の省略可能なサブ TLV ブロック (S ビット) |
+| 指定 PDU 長まで埋め草 TLV で埋める | `TlvDef::fill` (`TlvFill { variant, until }`) | IS-IS Hello の Padding TLV |
 | NUL 終端文字列 | `cstring` 型 | TFTP `filename` / `mode` |
 | 長さ指示子付き OSI アドレス | `nsap` 型 (長さオクテットは自動) | CLNP / ES-IS / IS-IS の NSAP・NET |
 | 送信元ポートでも demux | `Binding::alt_field` | UDP / TCP の `src_port` |

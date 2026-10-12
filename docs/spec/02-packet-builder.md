@@ -17,7 +17,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 | `cstring` | NUL 終端文字列 (値は終端なし、合成時に `0x00` を付加。TFTP のファイル名など) |
 | `enum` | 名前付き値 |
 | `flags(bit set)` | ビット集合 |
-| `tlv` / `list<T>` | 反復・入れ子構造 |
+| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) |
 | `padding` / `raw` | 詰め物 / 生バイト |
 
 ### 自動計算フィールド (GUI で Auto / Manual トグル)
@@ -25,7 +25,9 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 - 長さ系: IPv4 total length, UDP length, IS-IS PDU length, TLV length など
 - チェックサム系: IPv4 header, TCP/UDP (v4/v6 疑似ヘッダ), ICMP, OSPF, IS-IS (Fletcher), SCTP CRC32c, GRE など
 - 次ヘッダ / EtherType / Protocol 番号: 下位レイヤの選択から自動決定し、上書き可
-- 件数系 (`count(list)`): 同じフィールド群の `list` / `tlv` の要素数 (IGMPv3 の `num_group_records`、グループレコード内の `num_sources` など)。リスト要素・TLV 値の中でも使える唯一の Auto 規則
+- 件数系 (`count(list)`): 同じフィールド群の `list` / `tlv` の要素数 (IGMPv3 の `num_group_records`、グループレコード内の `num_sources` など)。リスト要素・TLV 値の中でも使える
+- サイズ系 (`size(field)`): 同じフィールド群の後続の可変長フィールドのオクテット数 (IS-IS 拡張到達性エントリ内のサブ TLV 長など)。`count` と同じくリスト要素・TLV 値の中でも使える
+- TLV の埋め草 (`TlvFill`): 長さフィールドを Manual にすると、その長さになるまで埋め草 TLV を自動で追加 (IS-IS Hello の Padding TLV で MTU まで埋める)
 - チェックサムの除外指定 (`exclude = [field, ..]`): 指定フィールドを 0 とみなして計算 (OSPFv2 の認証フィールド、LSA の LS age)
 - ストリーム内カウンタ: シーケンス番号など
 

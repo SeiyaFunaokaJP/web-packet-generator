@@ -26,7 +26,9 @@ pub fn ipv4_options() -> FieldType {
             field: "ihl".into(),
             unit: 4,
             adjust: -20,
+            div: 1,
         },
+        fill: None,
     })
 }
 

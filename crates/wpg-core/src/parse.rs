@@ -115,13 +115,17 @@ fn region_len(
             }
         }
         Length::ToEnd => Ok(remaining),
+        // Count lists are bounded by their elements (see `decode_counted`).
+        Length::Count { .. } => Ok(remaining),
         Length::FromField {
             field,
             unit,
             adjust,
+            div,
         } => {
             let v = fields.get(field).and_then(FieldValue::as_u64).unwrap_or(0);
-            let want = i128::from(v) * i128::from(*unit) + i128::from(*adjust);
+            let want = (i128::from(v) * i128::from(*unit) + i128::from(*adjust))
+                / i128::from((*div).max(1));
             let want = usize::try_from(want.max(0)).unwrap_or(usize::MAX);
             if want > remaining {
                 diags.push(
@@ -257,6 +261,22 @@ fn decode_fields(
                     FieldValue::Bytes(region.to_vec())
                 }
             }
+            FieldType::List {
+                item,
+                length: Length::Count { field },
+            } => {
+                let want = fields.get(field).and_then(FieldValue::as_u64).unwrap_or(0);
+                let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                let (elems, n) =
+                    decode_counted(who, fd, item, rest, at, want).ok_or_else(|| short(who, at))?;
+                bit += n * 8;
+                let v = FieldValue::List(elems);
+                if reproduces(fd, &v, &rest[..n]) {
+                    v
+                } else {
+                    FieldValue::Bytes(rest[..n].to_vec())
+                }
+            }
             FieldType::List { item, length } => {
                 let n = region_len(length, fd, &fields, remaining, who, at, diags)?;
                 let region = take(data, bit, n).ok_or_else(|| short(who, at))?;
@@ -285,6 +305,49 @@ fn decode_fields(
     })
 }
 
+/// Decodes exactly `count` list elements from the start of `data`; returns them and
+/// the octets they span, `None` if one does not decode.
+fn decode_counted(
+    who: Who<'_>,
+    fd: &FieldDef,
+    item: &ItemDef,
+    data: &[u8],
+    base: usize,
+    count: u64,
+) -> Option<(Vec<FieldValue>, usize)> {
+    let mut out = Vec::new();
+    let mut pos = 0;
+    for _ in 0..count {
+        let (elem, n) = decode_element(who, fd, item, data.get(pos..)?, base + pos)?;
+        out.push(elem);
+        pos += n;
+    }
+    Some((out, pos))
+}
+
+/// Decodes one list element from the start of `data`: the value and its size.
+fn decode_element(
+    who: Who<'_>,
+    fd: &FieldDef,
+    item: &ItemDef,
+    data: &[u8],
+    base: usize,
+) -> Option<(FieldValue, usize)> {
+    let scratch = &mut Vec::new();
+    match item {
+        ItemDef::Field { ty } => {
+            let efd = [FieldDef::new(fd.name.clone(), (**ty).clone())];
+            let n = ty.fixed_bits()? as usize / 8;
+            let h = decode_fields(who, &efd, data.get(..n)?, base, scratch).ok()?;
+            Some((h.fields.into_values().next()?, h.len))
+        }
+        ItemDef::Struct { fields } => {
+            let h = decode_fields(who, fields, data, base, scratch).ok()?;
+            Some((FieldValue::Struct(h.fields), h.len))
+        }
+    }
+}
+
 /// Decodes list elements until `region` is used up; `None` if an element does not
 /// decode completely.
 fn decode_list(
@@ -296,27 +359,13 @@ fn decode_list(
 ) -> Option<Vec<FieldValue>> {
     let mut out = Vec::new();
     let mut pos = 0;
-    let scratch = &mut Vec::new();
     while pos < region.len() {
-        let hdr = match item {
-            ItemDef::Field { ty } => {
-                let efd = [FieldDef::new(fd.name.clone(), (**ty).clone())];
-                let n = ty.fixed_bits()? as usize / 8;
-                let h = decode_fields(who, &efd, region.get(pos..pos + n)?, base + pos, scratch)
-                    .ok()?;
-                out.push(h.fields.into_values().next()?);
-                h.len
-            }
-            ItemDef::Struct { fields } => {
-                let h = decode_fields(who, fields, &region[pos..], base + pos, scratch).ok()?;
-                out.push(FieldValue::Struct(h.fields));
-                h.len
-            }
-        };
-        if hdr == 0 {
+        let (elem, n) = decode_element(who, fd, item, &region[pos..], base + pos)?;
+        if n == 0 {
             return None;
         }
-        pos += hdr;
+        out.push(elem);
+        pos += n;
     }
     Some(out)
 }
@@ -797,6 +846,7 @@ mod tests {
                         field: "hl".into(),
                         unit: 4,
                         adjust: -4,
+                        div: 1,
                     },
                 },
             ),
@@ -891,6 +941,7 @@ mod tests {
             )],
             unknown_as_raw: true,
             length: Length::ToEnd,
+            fill: None,
         };
         let outer = TlvDef {
             type_bits: 8,
@@ -926,7 +977,9 @@ mod tests {
                 field: "len".into(),
                 unit: 1,
                 adjust: 0,
+                div: 1,
             },
+            fill: None,
         };
         let mut p = ProtocolDef::new("tlvs", "TLVs", ProtocolLayer::L7);
         p.fields = vec![

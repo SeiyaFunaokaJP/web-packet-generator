@@ -1,0 +1,61 @@
+# IS-IS (RFC 5305 / 5308 / 8667): a Level 2 LSP with wide metrics, TE and Segment Routing (SIDs, SRGB)
+schema: 1
+
+meta:
+  name: isis-l2-lsp
+  descriptions:
+    ja: "IS-IS (RFC 5305 / 5308 / 8667): ワイドメトリック・TE・Segment Routing (SID, SRGB) 付きのレベル 2 LSP"
+    en: "IS-IS (RFC 5305 / 5308 / 8667): a Level 2 LSP with wide metrics, TE and Segment Routing (SIDs, SRGB)"
+  tags: ["protocol:dot3", "protocol:llc", "protocol:isis_l2_lsp", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "01:80:c2:00:00:15"
+      src: "02:00:00:00:00:01"
+      length: auto
+  - protocol: llc
+  - protocol: isis_l2_lsp
+    fields:
+      lsp_id: "0000 0000 0001 00 00"
+      sequence_number: 0x10
+      tlvs:
+        - { area_addresses: [{ address: "49.0001" }] }
+        - { protocols_supported: [ipv4, ipv6] }
+        - { dynamic_hostname: "\"core-1\"" }
+        - { te_router_id: 192.0.2.1 }
+        - router_capability:
+            router_id: 192.0.2.1
+            sub_tlvs:
+              # SRGB 16000-23999: flags I|V, range 8000, SID/label sub-TLV 16000
+              - { sr_capabilities: { flags: 0xc0, ranges: "001f40 0103 003e80" } }
+              - { sr_algorithms: [0] }
+        - { ip_interface_addresses: [10.0.0.1] }
+        - extended_is_reachability:
+            neighbors:
+              - neighbor_id: "0000 0000 0002 00"
+                metric: 10
+                # sub_tlvs_length: Auto
+                sub_tlvs:
+                  - { ipv4_interface_address: 10.0.0.1 }
+                  - { ipv4_neighbor_address: 10.0.0.2 }
+                  - { te_default_metric: 10 }
+                  - { adj_sid: { flags: 0x30, sid: "003a98" } } # label 15000
+        - extended_ip_reachability:
+            prefixes:
+              # 192.0.2.1/32 with prefix SID index 1 (sub_tlvs_present: Auto)
+              - metric: 0
+                prefix_length: 32
+                prefix: "c0000201"
+                sub_tlv_block:
+                  - sub_tlvs:
+                      - { prefix_sid: { flags: 0x40, algorithm: 0, sid: "00000001" } }
+              - { metric: 10, prefix_length: 30, prefix: "0a000000" }
+        - ipv6_reachability:
+            prefixes:
+              - { metric: 10, prefix_length: 64, prefix: "20010db800000000" }
+
+tx:
+  count: 1

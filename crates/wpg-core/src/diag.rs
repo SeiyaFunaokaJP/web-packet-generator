@@ -48,6 +48,8 @@ pub mod keys {
     pub const LENGTH_MISMATCH: &str = "diag-length-mismatch";
     /// Manual element count differs from the actual one. Args: `field`, `value`, `expected`.
     pub const COUNT_MISMATCH: &str = "diag-count-mismatch";
+    /// A TLV fill could not reach the requested size exactly. Args: `field`, `len`.
+    pub const FILL_INEXACT: &str = "diag-fill-inexact";
     /// Manual checksum differs from the computed one. Args: `field`, `value`, `expected`.
     pub const CHECKSUM_MISMATCH: &str = "diag-checksum-mismatch";
     /// Manual next-protocol value does not announce the next layer.

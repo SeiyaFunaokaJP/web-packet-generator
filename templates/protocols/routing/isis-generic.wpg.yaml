@@ -1,0 +1,30 @@
+# IS-IS: a hand-written PDU in the generic layout (common header + opaque octets), here an L1 LAN Hello
+schema: 1
+
+meta:
+  name: isis-generic
+  descriptions:
+    ja: "IS-IS: 汎用レイアウト (共通ヘッダ + 不透明なオクテット列) で手書きした PDU (ここではレベル 1 LAN Hello)"
+    en: "IS-IS: a hand-written PDU in the generic layout (common header + opaque octets), here a Level 1 LAN Hello"
+  # The parser re-decodes the generic layer by its PDU type.
+  tags: ["protocol:dot3", "protocol:llc", "protocol:isis", "parse-as:isis=isis_l1_lan_hello", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "01:80:c2:00:00:14"
+      src: "02:00:00:00:00:01"
+      length: auto
+  - protocol: llc
+  - protocol: isis
+    fields:
+      header_length: 27
+      pdu_type: l1_lan_hello
+      # circuit type 3, source ID, holding time 30, PDU length 42, priority 64, LAN ID,
+      # then TLVs: protocols supported (IPv4), area 49.0001, interface 192.0.2.1
+      data: "03 000000000001 001e 002a 40 00000000000101 8101cc 010403490001 8404c0000201"
+
+tx:
+  count: 1
