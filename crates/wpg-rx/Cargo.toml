@@ -1,6 +1,6 @@
 [package]
 name = "wpg-rx"
-description = "Receive-side counters and simple verification for wpg (v1: minimal)"
+description = "Receive-side counters, capture filters and signature verification for wpg"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,7 +9,25 @@ repository.workspace = true
 authors.workspace = true
 publish.workspace = true
 
+[features]
+# libpcap / Npcap receive backend. Needs libpcap-dev (Linux), built in on macOS,
+# the Npcap SDK on Windows.
+pcap = ["dep:pcap"]
+
 [dependencies]
+wpg-core.workspace = true
+# pcap / pcapng reader (`pcapfile` backend) and writer (saving captures).
+wpg-template.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+pcap = { version = "2", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2.186"
+
+[dev-dependencies]
+wpg-tx.workspace = true
+wpg-protocols.workspace = true
 
 [lints]
 workspace = true

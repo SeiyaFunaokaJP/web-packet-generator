@@ -23,6 +23,7 @@ mod macros;
 pub mod notation;
 pub mod packet;
 pub mod parse;
+pub mod signature;
 pub mod stream;
 pub mod synth;
 

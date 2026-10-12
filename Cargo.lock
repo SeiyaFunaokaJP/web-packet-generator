@@ -4772,6 +4772,16 @@ dependencies = [
 [[package]]
 name = "wpg-rx"
 version = "0.1.0"
+dependencies = [
+ "libc",
+ "pcap",
+ "serde",
+ "thiserror 2.0.21",
+ "wpg-core",
+ "wpg-protocols",
+ "wpg-template",
+ "wpg-tx",
+]
 
 [[package]]
 name = "wpg-server"
