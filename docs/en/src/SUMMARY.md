@@ -45,6 +45,7 @@
 - [CML2 notes](operations/cml2.md)
 - [Performance tuning](operations/tuning.md)
 - [Authentication and TLS](operations/security.md)
+- [Receive and verification](operations/rx-verify.md)
 
 # Developer Guide
 
