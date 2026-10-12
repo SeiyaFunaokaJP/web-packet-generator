@@ -2,13 +2,13 @@
 
 # プロトコルリファレンス
 
-本章は `wpg-protocols` のプロトコル定義 IR (`GET /api/protocols` で返すカタログ) から自動生成しているため、常にコードと一致します。対象は 133 プロトコルです。各ページには、ワイヤ順のフィールド (型、既定値、Auto の規則、説明)、そのプロトコルに至る下位レイヤ、次レイヤの対応表、組み立て後に検査する制約、同梱のサンプルテンプレートを載せています。到達経路、手で設定するフィールド、残っている近似は手書きの[プロトコル補足](../protocols/README.md)を参照してください。定義を変更したら `just docs-gen` で再生成します。
+本章は `wpg-protocols` のプロトコル定義 IR (`GET /api/protocols` で返すカタログ) から自動生成しているため、常にコードと一致します。対象は 134 プロトコルです。各ページには、ワイヤ順のフィールド (型、既定値、Auto の規則、説明)、そのプロトコルに至る下位レイヤ、次レイヤの対応表、組み立て後に検査する制約、同梱のサンプルテンプレートを載せています。到達経路、手で設定するフィールド、残っている近似は手書きの[プロトコル補足](../protocols/README.md)を参照してください。定義を変更したら `just docs-gen` で再生成します。
 
 ## L2 (データリンク)
 
 | ID | 名前 | フィールド数 | 次レイヤの判別 | 補足 |
 |---|---|---|---|---|
-| [`ethernet2`](protocols/ethernet2.md) | Ethernet II | 3 | `ethertype` | [カプセル化・トンネル](../protocols/encap.md), [L2 制御プロトコル](../protocols/l2-control.md) |
+| [`ethernet2`](protocols/ethernet2.md) | Ethernet II | 3 | `ethertype` | [カプセル化・トンネル](../protocols/encap.md), [L2 制御プロトコル](../protocols/l2-control.md), [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`dot1q`](protocols/dot1q.md) | 802.1Q VLAN | 4 | `ethertype` |   |
 | [`dot1ad`](protocols/dot1ad.md) | 802.1ad S-VLAN | 4 | `ethertype` |   |
 | [`dot3`](protocols/dot3.md) | IEEE 802.3 | 3 | `length` | [L2 制御プロトコル](../protocols/l2-control.md) |
@@ -27,7 +27,7 @@
 | [`ppp_lcp`](protocols/ppp_lcp.md) | PPP LCP | 4 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
 | [`ppp_ipcp`](protocols/ppp_ipcp.md) | PPP IPCP | 4 |   | [L2 制御プロトコル](../protocols/l2-control.md) |
 | [`vxlan`](protocols/vxlan.md) | VXLAN | 4 | `flags` | [カプセル化・トンネル](../protocols/encap.md) |
-| [`mpls`](protocols/mpls.md) | MPLS | 4 | `s` | [カプセル化・トンネル](../protocols/encap.md) |
+| [`mpls`](protocols/mpls.md) | MPLS | 4 | `s` | [カプセル化・トンネル](../protocols/encap.md), [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`geneve`](protocols/geneve.md) | Geneve | 9 | `protocol_type` | [カプセル化・トンネル](../protocols/encap.md) |
 
 ## L3 (ネットワーク)
@@ -37,7 +37,8 @@
 | [`ipv4`](protocols/ipv4.md) | IPv4 | 15 | `protocol` | [カプセル化・トンネル](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md), [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md), [マルチキャスト制御プロトコル](../protocols/multicast.md) |
 | [`ipv6`](protocols/ipv6.md) | IPv6 | 9 | `next_header` | [カプセル化・トンネル](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md) |
 | [`ipv6_hopopts`](protocols/ipv6_hopopts.md) | IPv6 Hop-by-Hop Options | 4 | `next_header` | [マルチキャスト制御プロトコル](../protocols/multicast.md) |
-| [`ipv6_route`](protocols/ipv6_route.md) | IPv6 Routing | 6 | `next_header` |   |
+| [`ipv6_route`](protocols/ipv6_route.md) | IPv6 Routing | 6 | `next_header` | [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
+| [`ipv6_srh`](protocols/ipv6_srh.md) | IPv6 Segment Routing Header | 10 | `next_header` | [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`ipv6_frag`](protocols/ipv6_frag.md) | IPv6 Fragment | 6 | `next_header` |   |
 | [`ipv6_dstopts`](protocols/ipv6_dstopts.md) | IPv6 Destination Options | 4 | `next_header` |   |
 | [`icmpv4`](protocols/icmpv4.md) | ICMPv4 | 4 |   |   |

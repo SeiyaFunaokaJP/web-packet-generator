@@ -4,7 +4,7 @@
 
 - **Layer**: L2 (data link)
 - **Header**: 4 octets (fixed)
-- **Notes**: [Encapsulation and tunnels](../../protocols/encap.md)
+- **Notes**: [Encapsulation and tunnels](../../protocols/encap.md), [SRv6 SRH / SR-MPLS (P2)](../../protocols/srv6.md)
 
 ## Reached from
 
@@ -20,10 +20,23 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `label` | `uint(20)` | `16` |   | 20-bit MPLS label value. |
+| `label` | `enum(20)` | `16` |   | 20-bit MPLS label value. 0-15 are reserved (0 / 2 explicit null, 1 router alert, 3 implicit null, 7 entropy label indicator, 13 GAL, 14 OAM alert, 15 extension); SR-MPLS SIDs are SRGB base + SID index. |
 | `tc` | `uint(3)` | `0` |   | 3-bit traffic class (QoS / ECN). |
 | `s` | `uint(1)` | `1` | Protocol number of the next layer (see Next layer) | Bottom-of-stack bit (1 = last label; Auto from the next layer). |
 | `ttl` | `uint(8)` | `64` |   | MPLS time to live. |
+
+### `label`
+
+| Value | Name |
+|---|---|
+| 0 (0x00000) | `ipv4_explicit_null` |
+| 1 (0x00001) | `router_alert` |
+| 2 (0x00002) | `ipv6_explicit_null` |
+| 3 (0x00003) | `implicit_null` |
+| 7 (0x00007) | `entropy_label_indicator` |
+| 13 (0x0000d) | `gal` |
+| 14 (0x0000e) | `oam_alert` |
+| 15 (0x0000f) | `extension` |
 
 ## Next layer
 
@@ -44,3 +57,5 @@ First 4 bits of the payload when `s` = 1
 
 - [mpls-in-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/encap/mpls-in-udp.wpg.yaml) — `templates/protocols/encap/mpls-in-udp.wpg.yaml`
 - [mpls-ipv4](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/encap/mpls-ipv4.wpg.yaml) — `templates/protocols/encap/mpls-ipv4.wpg.yaml`
+- [sr-mpls-entropy](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/sr-mpls-entropy.wpg.yaml) — `templates/protocols/mpls/sr-mpls-entropy.wpg.yaml`
+- [sr-mpls-prefix-sid-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/sr-mpls-prefix-sid-sweep.wpg.yaml) — `templates/scenarios/sr-mpls-prefix-sid-sweep.wpg.yaml`

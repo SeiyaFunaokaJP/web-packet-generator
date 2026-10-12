@@ -2,13 +2,13 @@
 
 # Protocol reference
 
-This chapter is generated from the protocol definition IR of `wpg-protocols` (the catalog served at `GET /api/protocols`), so it always matches the code: 133 protocols. Each page lists the fields in wire order with their type, default, Auto rule and description, the lower layers that lead to the protocol, the next-layer table, the constraints checked after building and the bundled sample templates. The hand-written [protocol notes](../protocols/README.md) explain how the protocols are reached, which fields you set by hand and the approximations that remain. After changing a definition, regenerate with `just docs-gen`.
+This chapter is generated from the protocol definition IR of `wpg-protocols` (the catalog served at `GET /api/protocols`), so it always matches the code: 134 protocols. Each page lists the fields in wire order with their type, default, Auto rule and description, the lower layers that lead to the protocol, the next-layer table, the constraints checked after building and the bundled sample templates. The hand-written [protocol notes](../protocols/README.md) explain how the protocols are reached, which fields you set by hand and the approximations that remain. After changing a definition, regenerate with `just docs-gen`.
 
 ## L2 (data link)
 
 | ID | Name | Fields | Next layer by | Notes |
 |---|---|---|---|---|
-| [`ethernet2`](protocols/ethernet2.md) | Ethernet II | 3 | `ethertype` | [Encapsulation and tunnels](../protocols/encap.md), [L2 control protocols](../protocols/l2-control.md) |
+| [`ethernet2`](protocols/ethernet2.md) | Ethernet II | 3 | `ethertype` | [Encapsulation and tunnels](../protocols/encap.md), [L2 control protocols](../protocols/l2-control.md), [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`dot1q`](protocols/dot1q.md) | 802.1Q VLAN | 4 | `ethertype` |   |
 | [`dot1ad`](protocols/dot1ad.md) | 802.1ad S-VLAN | 4 | `ethertype` |   |
 | [`dot3`](protocols/dot3.md) | IEEE 802.3 | 3 | `length` | [L2 control protocols](../protocols/l2-control.md) |
@@ -27,7 +27,7 @@ This chapter is generated from the protocol definition IR of `wpg-protocols` (th
 | [`ppp_lcp`](protocols/ppp_lcp.md) | PPP LCP | 4 |   | [L2 control protocols](../protocols/l2-control.md) |
 | [`ppp_ipcp`](protocols/ppp_ipcp.md) | PPP IPCP | 4 |   | [L2 control protocols](../protocols/l2-control.md) |
 | [`vxlan`](protocols/vxlan.md) | VXLAN | 4 | `flags` | [Encapsulation and tunnels](../protocols/encap.md) |
-| [`mpls`](protocols/mpls.md) | MPLS | 4 | `s` | [Encapsulation and tunnels](../protocols/encap.md) |
+| [`mpls`](protocols/mpls.md) | MPLS | 4 | `s` | [Encapsulation and tunnels](../protocols/encap.md), [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`geneve`](protocols/geneve.md) | Geneve | 9 | `protocol_type` | [Encapsulation and tunnels](../protocols/encap.md) |
 
 ## L3 (network)
@@ -37,7 +37,8 @@ This chapter is generated from the protocol definition IR of `wpg-protocols` (th
 | [`ipv4`](protocols/ipv4.md) | IPv4 | 15 | `protocol` | [Encapsulation and tunnels](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md), [LDP / RSVP-TE / BFD (P2)](../protocols/mpls-bfd.md), [Multicast control protocols](../protocols/multicast.md) |
 | [`ipv6`](protocols/ipv6.md) | IPv6 | 9 | `next_header` | [Encapsulation and tunnels](../protocols/encap.md), [IS-IS (P2)](../protocols/isis.md) |
 | [`ipv6_hopopts`](protocols/ipv6_hopopts.md) | IPv6 Hop-by-Hop Options | 4 | `next_header` | [Multicast control protocols](../protocols/multicast.md) |
-| [`ipv6_route`](protocols/ipv6_route.md) | IPv6 Routing | 6 | `next_header` |   |
+| [`ipv6_route`](protocols/ipv6_route.md) | IPv6 Routing | 6 | `next_header` | [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
+| [`ipv6_srh`](protocols/ipv6_srh.md) | IPv6 Segment Routing Header | 10 | `next_header` | [SRv6 SRH / SR-MPLS (P2)](../protocols/srv6.md) |
 | [`ipv6_frag`](protocols/ipv6_frag.md) | IPv6 Fragment | 6 | `next_header` |   |
 | [`ipv6_dstopts`](protocols/ipv6_dstopts.md) | IPv6 Destination Options | 4 | `next_header` |   |
 | [`icmpv4`](protocols/icmpv4.md) | ICMPv4 | 4 |   |   |

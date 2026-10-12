@@ -71,5 +71,6 @@
 - [arp-gratuitous](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/arp-gratuitous.wpg.yaml) — `templates/protocols/l2/arp-gratuitous.wpg.yaml`
 - [arp-reply](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/arp-reply.wpg.yaml) — `templates/protocols/l2/arp-reply.wpg.yaml`
 - [arp-request](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l2/arp-request.wpg.yaml) — `templates/protocols/l2/arp-request.wpg.yaml`
+- [srv6-end-dx2-hmac](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml) — `templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml`
 - [scenario-arp-sweep-slash22](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/arp-sweep-slash22.wpg.yaml) — `templates/scenarios/arp-sweep-slash22.wpg.yaml`
 - [scenario-vlan-arp-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/vlan-arp-sweep.wpg.yaml) — `templates/scenarios/vlan-arp-sweep.wpg.yaml`

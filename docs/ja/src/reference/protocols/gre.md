@@ -14,6 +14,7 @@
 | [`ipv6`](ipv6.md) | `next_header` | 47 (0x2f) |
 | [`ipv6_hopopts`](ipv6_hopopts.md) | `next_header` | 47 (0x2f) |
 | [`ipv6_route`](ipv6_route.md) | `next_header` | 47 (0x2f) |
+| [`ipv6_srh`](ipv6_srh.md) | `next_header` | 47 (0x2f) |
 | [`ipv6_frag`](ipv6_frag.md) | `next_header` | 47 (0x2f) |
 | [`ipv6_dstopts`](ipv6_dstopts.md) | `next_header` | 47 (0x2f) |
 

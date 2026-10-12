@@ -12,6 +12,7 @@
 | [`ipv6`](ipv6.md) | `next_header` | 60 (0x3c) |
 | [`ipv6_hopopts`](ipv6_hopopts.md) | `next_header` | 60 (0x3c) |
 | [`ipv6_route`](ipv6_route.md) | `next_header` | 60 (0x3c) |
+| [`ipv6_srh`](ipv6_srh.md) | `next_header` | 60 (0x3c) |
 | [`ipv6_frag`](ipv6_frag.md) | `next_header` | 60 (0x3c) |
 | [`ipv6_dstopts`](ipv6_dstopts.md) | `next_header` | 60 (0x3c) |
 
@@ -46,6 +47,14 @@
 | 112 (0x70) | [`vrrpv3_ipv6`](vrrpv3_ipv6.md) |   |
 | 115 (0x73) | [`l2tpv3`](l2tpv3.md) |   |
 | 132 (0x84) | [`sctp`](sctp.md) |   |
+| 143 (0x8f) | [`ethernet2`](ethernet2.md) |   |
+
+`next_header` = 43 (0x2b) のときのペイロードの 16 ビット目から 8 ビット
+
+| 値 | プロトコル |
+|---|---|
+| 4 (0x04) | [`ipv6_srh`](ipv6_srh.md) |
+| (その他の値) | [`ipv6_route`](ipv6_route.md) |
 
 ## サンプルテンプレート
 

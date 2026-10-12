@@ -68,6 +68,7 @@ fn prefix_def() -> ProtocolDef {
             uint("metric", 8),
             uint("s", 1).with_auto(AutoCompute::Count {
                 field: "block".into(),
+                adjust: 0,
             }),
             uint("plen", 7),
             FieldDef::new(
@@ -344,7 +345,7 @@ fn until_def() -> ProtocolDef {
             address: nsap = vec![0x49, 0, 1];
             options: ty(FieldType::Tlv(tlv(
                 vec![TlvVariant::new(0xcd, "priority", vec![uint("value", 8)])],
-                Length::UntilOffset { field: "li".into(), unit: 1 },
+                Length::UntilOffset { field: "li".into(), unit: 1, adjust: 0 },
             ))) = Vec::<TlvItem>::new();
         },
     };
@@ -405,6 +406,7 @@ fn regions_end_at_the_header_length() {
         t.length = Length::UntilOffset {
             field: "nope".into(),
             unit: 1,
+            adjust: 0,
         };
     }
     assert!(d.validate().is_err(), "until an unknown field");

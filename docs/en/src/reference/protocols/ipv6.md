@@ -19,6 +19,7 @@
 | [`ipv6`](ipv6.md) | `next_header` | 41 (0x29) |
 | [`ipv6_hopopts`](ipv6_hopopts.md) | `next_header` | 41 (0x29) |
 | [`ipv6_route`](ipv6_route.md) | `next_header` | 41 (0x29) |
+| [`ipv6_srh`](ipv6_srh.md) | `next_header` | 41 (0x29) |
 | [`ipv6_frag`](ipv6_frag.md) | `next_header` | 41 (0x29) |
 | [`ipv6_dstopts`](ipv6_dstopts.md) | `next_header` | 41 (0x29) |
 | [`ppp`](ppp.md) | `protocol` | 87 (0x0057) |
@@ -63,6 +64,7 @@
 | 89 (0x59) | `ospf` |
 | 112 (0x70) | `vrrp` |
 | 132 (0x84) | `sctp` |
+| 143 (0x8f) | `ethernet` |
 | 253 (0xfd) | `experimental` |
 
 ## Next layer
@@ -87,6 +89,14 @@ The next layer is selected by `next_header`; when the field is Auto the builder 
 | 112 (0x70) | [`vrrpv3_ipv6`](vrrpv3_ipv6.md) |   |
 | 115 (0x73) | [`l2tpv3`](l2tpv3.md) |   |
 | 132 (0x84) | [`sctp`](sctp.md) |   |
+| 143 (0x8f) | [`ethernet2`](ethernet2.md) |   |
+
+8 bits of the payload after its first 16 bits when `next_header` = 43 (0x2b)
+
+| Value | Protocol |
+|---|---|
+| 4 (0x04) | [`ipv6_srh`](ipv6_srh.md) |
+| (any other value) | [`ipv6_route`](ipv6_route.md) |
 
 ## Constraints
 
@@ -115,5 +125,8 @@ The next layer is selected by `next_header`; when the field is Auto the builder 
 - [sctp-shutdown](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/sctp-shutdown.wpg.yaml) — `templates/protocols/l4/sctp-shutdown.wpg.yaml`
 - [udp-over-ipv6](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/udp-ipv6.wpg.yaml) — `templates/protocols/l4/udp-ipv6.wpg.yaml`
 - [bfd-multihop-ipv6](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml) — `templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml`
+- [srv6-end-dx2-hmac](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml) — `templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml`
+- [srv6-h-encaps-ipv4](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml) — `templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml`
+- [srv6-srh-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-srh-udp.wpg.yaml) — `templates/protocols/srv6/srv6-srh-udp.wpg.yaml`
 - [scenario-ndp-ns-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/ndp-ns-sweep.wpg.yaml) — `templates/scenarios/ndp-ns-sweep.wpg.yaml`
 - [scenario-ipv6-ra-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/ra-flood.wpg.yaml) — `templates/scenarios/ra-flood.wpg.yaml`

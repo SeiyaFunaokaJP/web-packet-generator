@@ -13,6 +13,7 @@
 | [`ipv6`](ipv6.md) | `next_header` | 17 (0x11) |
 | [`ipv6_hopopts`](ipv6_hopopts.md) | `next_header` | 17 (0x11) |
 | [`ipv6_route`](ipv6_route.md) | `next_header` | 17 (0x11) |
+| [`ipv6_srh`](ipv6_srh.md) | `next_header` | 17 (0x11) |
 | [`ipv6_frag`](ipv6_frag.md) | `next_header` | 17 (0x11) |
 | [`ipv6_dstopts`](ipv6_dstopts.md) | `next_header` | 17 (0x11) |
 
@@ -97,15 +98,19 @@ The next layer is selected by `dst_port`; when the field is Auto the builder wri
 - [udp-datagram](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/l4/udp.wpg.yaml) — `templates/protocols/l4/udp.wpg.yaml`
 - [ldp-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-hello.wpg.yaml) — `templates/protocols/mpls/ldp-hello.wpg.yaml`
 - [ldp-targeted-hello](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/ldp-targeted-hello.wpg.yaml) — `templates/protocols/mpls/ldp-targeted-hello.wpg.yaml`
+- [sr-mpls-entropy](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/sr-mpls-entropy.wpg.yaml) — `templates/protocols/mpls/sr-mpls-entropy.wpg.yaml`
 - [bfd-auth](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-auth.wpg.yaml) — `templates/protocols/oam/bfd-auth.wpg.yaml`
 - [bfd-multihop-ipv6](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml) — `templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml`
 - [bfd-single-hop](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-single-hop.wpg.yaml) — `templates/protocols/oam/bfd-single-hop.wpg.yaml`
 - [micro-bfd](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/micro-bfd.wpg.yaml) — `templates/protocols/oam/micro-bfd.wpg.yaml`
 - [ripng-response](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/ripng-response.wpg.yaml) — `templates/protocols/routing/ripng-response.wpg.yaml`
 - [ripv2-response](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/routing/ripv2-response.wpg.yaml) — `templates/protocols/routing/ripv2-response.wpg.yaml`
+- [srv6-h-encaps-ipv4](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml) — `templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml`
+- [srv6-srh-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-srh-udp.wpg.yaml) — `templates/protocols/srv6/srv6-srh-udp.wpg.yaml`
 - [scenario-frame-size-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/frame-size-sweep.wpg.yaml) — `templates/scenarios/frame-size-sweep.wpg.yaml`
 - [scenario-jumbo-udp-mtu-probe](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml) — `templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml`
 - [scenario-mac-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/mac-flood.wpg.yaml) — `templates/scenarios/mac-flood.wpg.yaml`
 - [scenario-qinq-service-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/qinq-service-sweep.wpg.yaml) — `templates/scenarios/qinq-service-sweep.wpg.yaml`
+- [sr-mpls-prefix-sid-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/sr-mpls-prefix-sid-sweep.wpg.yaml) — `templates/scenarios/sr-mpls-prefix-sid-sweep.wpg.yaml`
 - [scenario-udp-qos-matrix](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/udp-qos-matrix.wpg.yaml) — `templates/scenarios/udp-qos-matrix.wpg.yaml`
 - [scenario-vlan-id-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/vlan-id-sweep.wpg.yaml) — `templates/scenarios/vlan-id-sweep.wpg.yaml`

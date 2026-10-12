@@ -5,12 +5,18 @@
 - **Layer**: L2 (data link)
 - **Header**: 14 octets (fixed)
 - **Minimum frame**: 60 octets
-- **Notes**: [Encapsulation and tunnels](../../protocols/encap.md), [L2 control protocols](../../protocols/l2-control.md)
+- **Notes**: [Encapsulation and tunnels](../../protocols/encap.md), [L2 control protocols](../../protocols/l2-control.md), [SRv6 SRH / SR-MPLS (P2)](../../protocols/srv6.md)
 
 ## Reached from
 
 | Lower layer | Selector | Value |
 |---|---|---|
+| [`ipv6`](ipv6.md) | `next_header` | 143 (0x8f) |
+| [`ipv6_hopopts`](ipv6_hopopts.md) | `next_header` | 143 (0x8f) |
+| [`ipv6_route`](ipv6_route.md) | `next_header` | 143 (0x8f) |
+| [`ipv6_srh`](ipv6_srh.md) | `next_header` | 143 (0x8f) |
+| [`ipv6_frag`](ipv6_frag.md) | `next_header` | 143 (0x8f) |
+| [`ipv6_dstopts`](ipv6_dstopts.md) | `next_header` | 143 (0x8f) |
 | [`vxlan`](vxlan.md) | `flags` | (any other value) |
 | [`gre`](gre.md) | `protocol_type` | 25944 (0x6558) |
 | [`nvgre`](nvgre.md) | `protocol_type` | 25944 (0x6558) |
@@ -125,10 +131,14 @@ The next layer is selected by `ethertype`; when the field is Auto the builder wr
 - [rsvp-path-tear](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/rsvp-path-tear.wpg.yaml) — `templates/protocols/mpls/rsvp-path-tear.wpg.yaml`
 - [rsvp-te-path](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/rsvp-te-path.wpg.yaml) — `templates/protocols/mpls/rsvp-te-path.wpg.yaml`
 - [rsvp-te-resv](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/rsvp-te-resv.wpg.yaml) — `templates/protocols/mpls/rsvp-te-resv.wpg.yaml`
+- [sr-mpls-entropy](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/mpls/sr-mpls-entropy.wpg.yaml) — `templates/protocols/mpls/sr-mpls-entropy.wpg.yaml`
 - [bfd-auth](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-auth.wpg.yaml) — `templates/protocols/oam/bfd-auth.wpg.yaml`
 - [bfd-multihop-ipv6](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml) — `templates/protocols/oam/bfd-multihop-ipv6.wpg.yaml`
 - [bfd-single-hop](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/bfd-single-hop.wpg.yaml) — `templates/protocols/oam/bfd-single-hop.wpg.yaml`
 - [micro-bfd](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/oam/micro-bfd.wpg.yaml) — `templates/protocols/oam/micro-bfd.wpg.yaml`
+- [srv6-end-dx2-hmac](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml) — `templates/protocols/srv6/srv6-end-dx2-hmac.wpg.yaml`
+- [srv6-h-encaps-ipv4](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml) — `templates/protocols/srv6/srv6-h-encaps-ipv4.wpg.yaml`
+- [srv6-srh-udp](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/protocols/srv6/srv6-srh-udp.wpg.yaml) — `templates/protocols/srv6/srv6-srh-udp.wpg.yaml`
 - [scenario-arp-sweep-slash22](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/arp-sweep-slash22.wpg.yaml) — `templates/scenarios/arp-sweep-slash22.wpg.yaml`
 - [scenario-frame-size-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/frame-size-sweep.wpg.yaml) — `templates/scenarios/frame-size-sweep.wpg.yaml`
 - [scenario-jumbo-udp-mtu-probe](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml) — `templates/scenarios/jumbo-udp-mtu-probe.wpg.yaml`
@@ -137,6 +147,7 @@ The next layer is selected by `ethertype`; when the field is Auto the builder wr
 - [scenario-ping-sweep-pattern](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/ping-sweep-pattern.wpg.yaml) — `templates/scenarios/ping-sweep-pattern.wpg.yaml`
 - [scenario-qinq-service-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/qinq-service-sweep.wpg.yaml) — `templates/scenarios/qinq-service-sweep.wpg.yaml`
 - [scenario-ipv6-ra-flood](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/ra-flood.wpg.yaml) — `templates/scenarios/ra-flood.wpg.yaml`
+- [sr-mpls-prefix-sid-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/sr-mpls-prefix-sid-sweep.wpg.yaml) — `templates/scenarios/sr-mpls-prefix-sid-sweep.wpg.yaml`
 - [scenario-tcp-syn-port-scan](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/tcp-syn-port-scan.wpg.yaml) — `templates/scenarios/tcp-syn-port-scan.wpg.yaml`
 - [scenario-ttl-sweep](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/ttl-sweep.wpg.yaml) — `templates/scenarios/ttl-sweep.wpg.yaml`
 - [scenario-udp-qos-matrix](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/templates/scenarios/udp-qos-matrix.wpg.yaml) — `templates/scenarios/udp-qos-matrix.wpg.yaml`

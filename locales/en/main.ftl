@@ -60,6 +60,12 @@ ipv6-options = Raw TLV options, padded to a multiple of 8 bytes.
 ipv6-routing-data = Type-specific routing data.
 ipv6-routing-type = Routing header type (e.g. 2 = Mobile IPv6, 4 = SRH).
 ipv6-segments-left = Number of route segments remaining.
+srh-segments-left = Segments Left: index (in the segment list) of the next segment to visit; 0 at the last one.
+srh-last-entry = Last Entry: index of the last element of the segment list, i.e. number of segments - 1 (Auto).
+srh-flags = Flags (no flag defined by RFC 8754; 0).
+srh-tag = Tag: marks packets as part of a class or group (0 = unused).
+srh-segment-list = Segment list (SIDs) in reverse path order: element 0 is the last segment, the last element the first. While Segments Left is non-zero, upper-layer checksums use element 0 as the destination.
+srh-tlvs = Optional TLVs (8-bit type, 8-bit length): Pad1, PadN, HMAC (the HMAC value is Manual). The header is then padded with Pad1 octets to a multiple of 8 (Auto).
 ndp-destination = Destination address of a redirect.
 ndp-managed = Managed address configuration flag (M).
 ndp-options = Raw NDP options (TLV).
@@ -610,7 +616,7 @@ gre-flags = GRE flags and version (checksum / key / sequence present bits).
 gre-protocol-type = EtherType of the encapsulated payload.
 nvgre-vsid = 24-bit NVGRE Virtual Subnet ID.
 nvgre-flowid = NVGRE FlowID (entropy for load balancing).
-mpls-label = 20-bit MPLS label value.
+mpls-label = 20-bit MPLS label value. 0-15 are reserved (0 / 2 explicit null, 1 router alert, 3 implicit null, 7 entropy label indicator, 13 GAL, 14 OAM alert, 15 extension); SR-MPLS SIDs are SRGB base + SID index.
 mpls-tc = 3-bit traffic class (QoS / ECN).
 mpls-s = Bottom-of-stack bit (1 = last label; Auto from the next layer).
 mpls-ttl = MPLS time to live.
@@ -1083,6 +1089,8 @@ docgen-proto-synth-payload = built-in payload generator (the fields below are pa
 docgen-proto-pseudo = Pseudo header
 docgen-proto-pseudo-fields = supplies { $src } / { $dst } to upper-layer checksums
 docgen-proto-notes = Notes
+docgen-proto-final-dst = Final destination
+docgen-proto-final-dst-text = while { $when } is not 0, element 0 of { $list } replaces the destination address of the lower pseudo header (RFC 8200 §8.1)
 docgen-proto-inbound = Reached from
 docgen-proto-inbound-none = No protocol of the catalog leads here: use it as the first layer or stack it explicitly.
 docgen-proto-fields = Fields
@@ -1099,6 +1107,7 @@ docgen-bind-default = (any other value)
 docgen-bind-min-len = at least { $octets } octets remaining
 docgen-bind-reparse = re-decodes this layer
 docgen-bind-peek = First { $bits } bits of the payload when { $field } = { $value }
+docgen-bind-peek-skip = { $bits } bits of the payload after its first { $skip } bits when { $field } = { $value }
 docgen-level-error = error
 docgen-level-warning = warning
 docgen-level-info = info

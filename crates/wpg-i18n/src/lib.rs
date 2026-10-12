@@ -349,6 +349,8 @@ mod tests {
                     "written",
                     "removed",
                     "n",
+                    "skip",
+                    "when",
                 ] {
                     args.set(name, "1");
                 }

@@ -10,7 +10,7 @@ use wpg_core::constraint::ConstraintRule;
 use wpg_core::notation::format_value;
 use wpg_core::{
     AutoCompute, BindingEntry, ChecksumCoverage, ChecksumKind, DiagLevel, FieldDef, FieldType,
-    FieldValue, ItemDef, Length, LengthOf, LengthUnit, ProtocolDef, ProtocolLayer, TlvDef,
+    FieldValue, ItemDef, Length, LengthOf, LengthUnit, Peek, ProtocolDef, ProtocolLayer, TlvDef,
 };
 use wpg_i18n::{try_t, Locale};
 use wpg_protocols::catalog;
@@ -191,6 +191,21 @@ fn entry_notes(locale: Locale, e: &BindingEntry) -> String {
     notes.join("; ")
 }
 
+/// "First 4 bits of the payload when `s` = 1" (after `skip` bits when set).
+fn peek_text(locale: Locale, p: &Peek, field: &str, bits: Option<u8>) -> String {
+    let mut args = vec![
+        ("bits", p.bits.to_string()),
+        ("field", code(field)),
+        ("value", num(p.on, bits)),
+    ];
+    if p.skip == 0 {
+        txa(locale, "docgen-bind-peek", &args)
+    } else {
+        args.push(("skip", p.skip.to_string()));
+        txa(locale, "docgen-bind-peek-skip", &args)
+    }
+}
+
 /// Every (lower layer → protocol) edge of the catalog, keyed by the upper id.
 fn inbound(locale: Locale) -> BTreeMap<String, Vec<Inbound<'static>>> {
     let mut map: BTreeMap<String, Vec<Inbound<'static>>> = BTreeMap::new();
@@ -221,15 +236,7 @@ fn inbound(locale: Locale) -> BTreeMap<String, Vec<Inbound<'static>>> {
             });
         }
         if let Some(p) = &b.peek {
-            let selector = txa(
-                locale,
-                "docgen-bind-peek",
-                &[
-                    ("bits", p.bits.to_string()),
-                    ("field", code(&b.field)),
-                    ("value", num(p.on, bits)),
-                ],
-            );
+            let selector = peek_text(locale, p, &b.field, bits);
             for e in &p.table {
                 map.entry(e.protocol.clone()).or_default().push(Inbound {
                     from: def,
@@ -419,6 +426,17 @@ fn protocol_page(
             )
         ));
     }
+    if let Some(fd) = &def.final_destination {
+        facts.push(format!(
+            "**{}**: {}",
+            tx(locale, "docgen-proto-final-dst"),
+            txa(
+                locale,
+                "docgen-proto-final-dst-text",
+                &[("when", code(&fd.when)), ("list", code(&fd.list))]
+            )
+        ));
+    }
     let pages: Vec<String> = notes
         .iter()
         .filter(|n| n.ids.contains(&def.id))
@@ -523,18 +541,7 @@ fn protocol_page(
             );
         }
         if let Some(p) = &b.peek {
-            para(
-                &mut s,
-                &txa(
-                    locale,
-                    "docgen-bind-peek",
-                    &[
-                        ("bits", p.bits.to_string()),
-                        ("field", code(&b.field)),
-                        ("value", num(p.on, bits)),
-                    ],
-                ),
-            );
+            para(&mut s, &peek_text(locale, p, &b.field, bits));
             let mut rows: Vec<Vec<String>> = p
                 .table
                 .iter()
@@ -707,10 +714,14 @@ fn length_text(locale: Locale, len: &Length) -> String {
             &[("expr", code(&length_expr(field, *unit, *adjust, *div)))],
         ),
         Length::Count { field } => txa(locale, "docgen-len-count", &[("field", code(field))]),
-        Length::UntilOffset { field, unit } => txa(
+        Length::UntilOffset {
+            field,
+            unit,
+            adjust,
+        } => txa(
             locale,
             "docgen-len-until",
-            &[("expr", code(&length_expr(field, *unit, 0, 1)))],
+            &[("expr", code(&length_expr(field, *unit, *adjust, 1)))],
         ),
         Length::ToEnd => tx(locale, "docgen-len-to-end"),
     }
@@ -837,7 +848,13 @@ fn auto_text(locale: Locale, auto: &AutoCompute) -> String {
             s
         }
         AutoCompute::NextProtocol => tx(locale, "docgen-auto-next"),
-        AutoCompute::Count { field } => txa(locale, "docgen-auto-count", &[("field", code(field))]),
+        AutoCompute::Count { field, adjust } => {
+            let mut s = txa(locale, "docgen-auto-count", &[("field", code(field))]);
+            if *adjust != 0 {
+                let _ = write!(s, " ({})", code(&format!("{adjust:+}")));
+            }
+            s
+        }
         AutoCompute::Size { field } => txa(locale, "docgen-auto-size", &[("field", code(field))]),
         AutoCompute::Counter => tx(locale, "docgen-auto-counter"),
     }
