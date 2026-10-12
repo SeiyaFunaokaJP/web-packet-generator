@@ -1,0 +1,28 @@
+# ITU-T Y.1731: synthetic loss measurement (SLM) from MEP 1
+schema: 1
+
+meta:
+  name: y1731-slm
+  descriptions:
+    ja: "ITU-T Y.1731: 合成フレームによるロス測定 (SLM、送信元 MEP 1、テスト ID 7、TxFCf を加算)"
+    en: "ITU-T Y.1731: synthetic loss measurement (SLM from MEP 1, test ID 7, incrementing TxFCf)"
+  tags: ["protocol:ethernet2", "protocol:cfm_slm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_slm
+    fields:
+      md_level: 5
+      source_mep_id: 1
+      test_id: 7
+    generators:
+      tx_fcf: 1-1000
+
+tx:
+  count: 10
+  rate: 10pps

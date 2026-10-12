@@ -1,0 +1,24 @@
+# ITU-T Y.1731: single-ended loss measurement (LMM) with the transmit frame counter
+schema: 1
+
+meta:
+  name: y1731-lmm
+  descriptions:
+    ja: "ITU-T Y.1731: 片端ロス測定 (LMM、MEG レベル 5、送信フレームカウンタ TxFCf 付き)"
+    en: "ITU-T Y.1731: single-ended loss measurement (LMM, MEG level 5, with the TxFCf transmit frame counter)"
+  tags: ["protocol:ethernet2", "protocol:cfm_lmm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_lmm
+    fields:
+      md_level: 5
+      tx_fcf: 1000
+
+tx:
+  count: 1

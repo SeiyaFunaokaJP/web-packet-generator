@@ -1,0 +1,29 @@
+# Ethernet CFM: Loopback Message (CFM ping) to a remote MEP, with a Data TLV
+schema: 1
+
+meta:
+  name: cfm-lbm
+  descriptions:
+    ja: "Ethernet CFM: リモート MEP へのループバックメッセージ (CFM ping、Data TLV 付き、トランザクション ID を加算)"
+    en: "Ethernet CFM: Loopback Message (CFM ping) to a remote MEP, with a Data TLV and an incrementing transaction ID"
+  tags: ["protocol:ethernet2", "protocol:cfm_lbm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02" # the remote MEP
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_lbm
+    fields:
+      md_level: 5
+      tlvs:
+        - data_tlv: { value: "0001020304050607" }
+        - end
+    generators:
+      transaction_id: 1-1000
+
+tx:
+  count: 5
+  rate: 1pps

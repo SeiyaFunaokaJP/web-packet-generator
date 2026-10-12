@@ -1,0 +1,27 @@
+# PTP: a hand-written message in the generic layout (common header + opaque octets), here a Sync
+schema: 1
+
+meta:
+  name: ptp-generic
+  descriptions:
+    ja: "PTP: 汎用レイアウト (共通ヘッダ + 不透明なオクテット列) で手書きしたメッセージ (ここでは Sync。messageLength は自動)"
+    en: "PTP: a hand-written message in the generic layout (common header + opaque octets), here a Sync (messageLength Auto)"
+  tags: ["protocol:ethernet2", "protocol:ptp", "parse-as:ptp=ptp_sync", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:1b:19:00:00:00"
+      src: "02:00:00:00:00:01"
+  - protocol: ptp
+    fields:
+      message_type: sync
+      control_field: sync
+      sequence_id: 1
+      # origin timestamp: 48-bit seconds, 32-bit nanoseconds
+      data: "00006553f100 00000000"
+
+tx:
+  count: 1

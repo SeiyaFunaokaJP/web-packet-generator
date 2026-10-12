@@ -1,0 +1,27 @@
+# PTP (IEEE 1588-2008 / IEEE 802.1AS): Pdelay_Req to the peer delay multicast 01:80:c2:00:00:0e
+schema: 1
+
+meta:
+  name: ptp-pdelay-req-l2
+  descriptions:
+    ja: "PTP (IEEE 1588-2008 / IEEE 802.1AS): ピア遅延用マルチキャスト 01:80:c2:00:00:0e への Pdelay_Req (majorSdoId 1 = gPTP)"
+    en: "PTP (IEEE 1588-2008 / IEEE 802.1AS): Pdelay_Req to the peer delay multicast 01:80:c2:00:00:0e (majorSdoId 1 = gPTP)"
+  tags: ["protocol:ethernet2", "protocol:ptp_pdelay_req", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:0e" # not forwarded by bridges
+      src: "02:00:00:00:00:01"
+  - protocol: ptp_pdelay_req
+    fields:
+      major_sdo_id: 1 # transportSpecific 1: IEEE 802.1AS
+      log_message_interval: 0
+    generators:
+      sequence_id: 0-65535
+
+tx:
+  count: 4
+  rate: 1pps

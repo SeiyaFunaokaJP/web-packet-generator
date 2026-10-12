@@ -1,0 +1,29 @@
+# PTP (IEEE 802.1AS): Pdelay_Resp_Follow_Up with the response origin timestamp
+schema: 1
+
+meta:
+  name: ptp-pdelay-resp-follow-up-l2
+  descriptions:
+    ja: "PTP (IEEE 802.1AS): 応答送信時刻を運ぶ Pdelay_Resp_Follow_Up"
+    en: "PTP (IEEE 802.1AS): Pdelay_Resp_Follow_Up carrying the response origin timestamp"
+  tags: ["protocol:ethernet2", "protocol:ptp_pdelay_resp_follow_up", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:0e"
+      src: "02:00:00:00:00:02"
+  - protocol: ptp_pdelay_resp_follow_up
+    fields:
+      major_sdo_id: 1
+      clock_identity: 0x020000fffe000002
+      sequence_id: 1
+      response_origin_timestamp_seconds: 1700000000
+      response_origin_timestamp_nanoseconds: 2500
+      requesting_port_clock_identity: 0x020000fffe000001
+      requesting_port_port_number: 1
+
+tx:
+  count: 1

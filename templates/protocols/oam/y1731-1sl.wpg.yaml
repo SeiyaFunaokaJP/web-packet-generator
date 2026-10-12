@@ -1,0 +1,28 @@
+# ITU-T Y.1731: one-way synthetic loss measurement (1SL) from MEP 1
+schema: 1
+
+meta:
+  name: y1731-1sl
+  descriptions:
+    ja: "ITU-T Y.1731: MEP 1 からの片方向合成ロス測定 (1SL、TxFCf を加算)"
+    en: "ITU-T Y.1731: one-way synthetic loss measurement (1SL) from MEP 1 (incrementing TxFCf)"
+  tags: ["protocol:ethernet2", "protocol:cfm_1sl", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_1sl
+    fields:
+      md_level: 5
+      source_mep_id: 1
+      test_id: 7
+    generators:
+      tx_fcf: 1-1000
+
+tx:
+  count: 10
+  rate: 10pps

@@ -1,0 +1,27 @@
+# PTP (IEEE 1588-2008): Follow_Up carrying the precise origin timestamp of a two-step Sync
+schema: 1
+
+meta:
+  name: ptp-follow-up-l2
+  descriptions:
+    ja: "PTP (IEEE 1588-2008): 2 ステップ Sync の正確な送信時刻を運ぶ Follow_Up (Ethernet、correctionField 付き)"
+    en: "PTP (IEEE 1588-2008): Follow_Up carrying the precise origin timestamp of a two-step Sync (Ethernet, with a correctionField)"
+  tags: ["protocol:ethernet2", "protocol:ptp_follow_up", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:1b:19:00:00:00"
+      src: "02:00:00:00:00:01"
+  - protocol: ptp_follow_up
+    fields:
+      sequence_id: 0 # same as the Sync it follows
+      correction_field: 1310720 # 20 ns, in units of 2^-16 ns
+      log_message_interval: -3
+      precise_origin_timestamp_seconds: 1700000000
+      precise_origin_timestamp_nanoseconds: 125000000
+
+tx:
+  count: 1
