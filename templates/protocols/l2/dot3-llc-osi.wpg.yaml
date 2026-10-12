@@ -1,0 +1,28 @@
+# OSI encapsulation: a generic OSI network PDU over 802.3 + LLC (SAP 0xfe), selected by its NLPID
+schema: 1
+
+meta:
+  name: dot3-llc-osi
+  descriptions:
+    ja: "OSI カプセル化: 802.3 + LLC (SAP 0xfe) 上の汎用 OSI ネットワーク PDU (NLPID で判別)"
+    en: "OSI encapsulation: a generic OSI network PDU over 802.3 + LLC (SAP 0xfe), told apart by its NLPID"
+  tags: ["protocol:dot3", "protocol:llc", "protocol:osi", "layer:l3", sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "09:00:2b:00:00:05" # AllIntermediateSystems
+      src: "02:00:00:00:00:01"
+      length: auto
+  - protocol: llc # dsap / ssap become 0xfe automatically
+  - protocol: osi
+    fields:
+      nlpid: esis
+      # ES-IS ISH after the NLPID (opaque until ES-IS lands): length indicator 20,
+      # version 1, type ISH, holding time 30 s, checksum 0, NET 49.0001.1921.6800.1001.00
+      data: "14 01 00 04 00 1e 00 00 0a 49 00 01 19 21 68 00 10 01 00"
+
+tx:
+  count: 1

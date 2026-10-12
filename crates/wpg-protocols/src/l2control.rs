@@ -435,16 +435,18 @@ pub fn pppoe_session() -> ProtocolDef {
 // --------------------------------------------------------------------------
 
 /// PPP protocol frame (RFC 1661): a 16-bit `protocol` selector (LCP / IPCP / IP /
-/// IPv6 / ...) chosen from the next layer.
+/// IPv6 / OSI / ...) chosen from the next layer. OSI PDUs (`0x0023`, RFC 1377) are
+/// selected by their NLPID octet ([`crate::osi::osi_peek`]).
 #[must_use]
 pub fn ppp() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "ppp",
         name: "PPP",
         layer: L2,
         fields: {
             protocol: enum(16) {
                 0x0021 => ipv4,
+                0x0023 => osi,
                 0x0057 => ipv6,
                 0x8021 => ipcp,
                 0x8057 => ipv6cp,
@@ -459,7 +461,11 @@ pub fn ppp() -> ProtocolDef {
             0x0021 => "ipv4",
             0x0057 => "ipv6",
         },
+    };
+    if let Some(b) = d.next.as_mut() {
+        b.peek = Some(crate::osi::osi_peek(0x0023));
     }
+    d
 }
 
 /// LCP option TLVs (RFC 1661): 8-bit type / length (length includes the header).

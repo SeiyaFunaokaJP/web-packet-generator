@@ -339,6 +339,36 @@ pub fn format_nsap(b: &[u8]) -> String {
     out
 }
 
+/// An NSAP split the way IS-IS reads a NET: AFI, area (the rest of the area
+/// address), 6-octet system ID and NSEL. See [`nsap_parts`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NsapParts<'a> {
+    /// Authority and format identifier (first octet, e.g. `0x49` private).
+    pub afi: u8,
+    /// Area octets after the AFI (may be empty).
+    pub area: &'a [u8],
+    /// System ID (6 octets).
+    pub system_id: &'a [u8],
+    /// NSAP selector (last octet, `0x00` for a NET).
+    pub nsel: u8,
+}
+
+/// Splits an NSAP into AFI / area / system ID / NSEL; `None` when it is shorter
+/// than the 8 octets those need.
+#[must_use]
+pub fn nsap_parts(b: &[u8]) -> Option<NsapParts<'_>> {
+    let (&afi, rest) = b.split_first()?;
+    let (&nsel, rest) = rest.split_last()?;
+    let split = rest.len().checked_sub(6)?;
+    let (area, system_id) = rest.split_at(split);
+    Some(NsapParts {
+        afi,
+        area,
+        system_id,
+        nsel,
+    })
+}
+
 /// `de ad be ef`.
 #[must_use]
 pub fn format_bytes(b: &[u8]) -> String {
@@ -531,6 +561,20 @@ mod tests {
 
     fn u(bits: u8) -> FieldType {
         FieldType::UInt { bits }
+    }
+
+    #[test]
+    fn nsap_parts_split() {
+        let b = parse_nsap("49.0001.1921.6800.1001.00").unwrap();
+        let p = nsap_parts(&b).unwrap();
+        assert_eq!(p.afi, 0x49);
+        assert_eq!(p.area, &[0, 1]);
+        assert_eq!(p.system_id, &[0x19, 0x21, 0x68, 0, 0x10, 1]);
+        assert_eq!(p.nsel, 0);
+        let p = nsap_parts(&b[2..]).unwrap();
+        assert!(p.area.is_empty());
+        assert_eq!(nsap_parts(&b[3..]), None);
+        assert_eq!(nsap_parts(&[]), None);
     }
 
     #[test]

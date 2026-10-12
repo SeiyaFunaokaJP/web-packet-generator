@@ -13,7 +13,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 | `uint(bits)` / `int` | ビット幅指定の整数 (ビットフィールド含む) |
 | `bytes(len\|var)` | 固定長または可変長バイト列 |
 | `mac` / `ipv4` / `ipv6` | アドレス型 |
-| `nsap` | 可変長 OSI アドレス (AFI/IDI/HO-DSP/SystemID/SEL に分解表示) |
+| `nsap` | 可変長 OSI アドレス (1..=20 オクテット)。ワイヤ上は 1 オクテットの長さ指示子 + アドレス (合成時に自動付加)。エディタで AFI / エリア / SystemID / NSEL に分解表示 |
 | `cstring` | NUL 終端文字列 (値は終端なし、合成時に `0x00` を付加。TFTP のファイル名など) |
 | `enum` | 名前付き値 |
 | `flags(bit set)` | ビット集合 |

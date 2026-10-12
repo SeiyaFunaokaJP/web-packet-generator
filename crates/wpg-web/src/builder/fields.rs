@@ -6,7 +6,7 @@
 //! into a send time at the template's `tx.rate`.
 
 use leptos::prelude::*;
-use wpg_core::notation::{format_value, parse_generator};
+use wpg_core::notation::{format_value, nsap_parts, parse_generator, parse_nsap};
 use wpg_core::{FieldDef, FieldType, Generator};
 use wpg_template::{parse_text, FieldInput, GeneratorSpec};
 
@@ -407,6 +407,7 @@ fn manual_editor(builder: Builder, layer: usize, fd: &FieldDef) -> AnyView {
         }
     });
     let placeholder = placeholder_for(&ty);
+    let hint = matches!(ty, FieldType::Nsap).then(|| nsap_hint(value));
     let n_set = name.clone();
     let datalist_id = format!("dl-{layer}-{name}");
     view! {
@@ -424,9 +425,41 @@ fn manual_editor(builder: Builder, layer: usize, fd: &FieldDef) -> AnyView {
                 }
             />
             {enum_datalist(&ty, datalist_id)}
+            {hint}
             {move || err.get().map(|e| view! { <p class="mt-0.5 text-[11px] text-rose-600" role="alert">{e}</p> })}
         </div>
     }.into_any()
+}
+
+/// NSAP structure under the input: AFI / area / system ID / NSEL of the typed
+/// address (nothing while it does not parse or is too short to split).
+fn nsap_hint(value: Memo<String>) -> impl IntoView {
+    let i18n = use_i18n();
+    move || {
+        let b = parse_nsap(&value.get()).ok()?;
+        let p = nsap_parts(&b)?;
+        let text = i18n.ta(
+            "ui-bld-nsap-parts",
+            &[
+                ("afi", format!("{:02x}", p.afi)),
+                ("area", hex_groups(p.area)),
+                ("sys", hex_groups(p.system_id)),
+                ("nsel", format!("{:02x}", p.nsel)),
+            ],
+        );
+        Some(view! { <p class="mt-0.5 font-mono text-[11px] text-slate-500">{text}</p> })
+    }
+}
+
+/// Octets as hex in dot-separated 2-octet groups (`1921.6800.1001`); `-` if empty.
+fn hex_groups(b: &[u8]) -> String {
+    if b.is_empty() {
+        return "-".into();
+    }
+    b.chunks(2)
+        .map(|c| c.iter().map(|x| format!("{x:02x}")).collect::<String>())
+        .collect::<Vec<_>>()
+        .join(".")
 }
 
 /// A `<datalist>` of enum variant names (empty for other types).

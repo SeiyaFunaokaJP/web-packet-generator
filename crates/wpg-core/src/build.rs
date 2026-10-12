@@ -376,8 +376,13 @@ pub(crate) fn encode_value(
         (
             FieldType::Raw | FieldType::Padding { .. } | FieldType::Tlv(_) | FieldType::List { .. },
             FieldValue::Bytes(b),
-        )
-        | (FieldType::Nsap, FieldValue::Nsap(b) | FieldValue::Bytes(b)) => w.push_bytes(b),
+        ) => w.push_bytes(b),
+        (FieldType::Nsap, FieldValue::Nsap(b) | FieldValue::Bytes(b)) => {
+            let n = u8::try_from(b.len())
+                .map_err(|_| invalid(fd, "an NSAP is at most 255 octets long"))?;
+            w.push_bytes(&[n]);
+            w.push_bytes(b);
+        }
         (FieldType::CString, FieldValue::Bytes(b)) => {
             if b.contains(&0) {
                 return Err(invalid(

@@ -13,8 +13,9 @@ Before falling back to an approximation (opaque octets or a Manual value), check
 | Element count field | `auto = count(list_field)` (also inside list elements and TLV values) | IGMPv3 `num_group_records`, VRRP `count_ip_addrs` |
 | Checksum that skips a field | `auto = checksum(kind, coverage, exclude = [field])` | OSPFv2 `authentication`, LSA `ls_age` |
 | NUL-terminated string | `cstring` type | TFTP `filename` / `mode` |
+| OSI address with length indicator | `nsap` type (length octet is automatic) | CLNP / ES-IS / IS-IS NSAP / NET |
 | Demux on the source port too | `Binding::alt_field` | UDP / TCP `src_port` |
-| Demux on the first payload bits | `Binding::peek` (`Peek { on, bits, table }`) | MPLS, GTP-U |
+| Demux on the first payload bits | `Binding::peek` (`Peek { on, bits, table }`) | MPLS, GTP-U, OSI (NLPID) |
 | Messages that differ only in length | `BindingEntry::with_min_len` | IGMPv3 / MLDv2 queries |
 | Same number, different layout | `BindingEntry::reparsing` | VRRPv2/v3, HSRPv1/v2, TFTP |
 

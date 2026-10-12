@@ -323,7 +323,10 @@ fn bytes_to_input(ty: &FieldType, b: &[u8]) -> Option<FieldInput> {
             o.copy_from_slice(b);
             Some(text(&FieldValue::Ipv6(Ipv6Addr::from(o))))
         }
-        FieldType::Nsap => Some(FieldInput::Str(format_nsap(b))),
+        // Leading length indicator, then the address.
+        FieldType::Nsap => b
+            .split_first()
+            .map(|(_, addr)| FieldInput::Str(format_nsap(addr))),
         FieldType::CString => Some(text(&FieldValue::Bytes(
             b.strip_suffix(&[0]).unwrap_or(b).to_vec(),
         ))),

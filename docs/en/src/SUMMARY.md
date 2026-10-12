@@ -28,6 +28,7 @@
   - [Redundancy (FHRP)](protocols/fhrp.md)
   - [Multicast control](protocols/multicast.md)
   - [Application protocols](protocols/app.md)
+  - [OSI encapsulation (P2)](protocols/osi.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)

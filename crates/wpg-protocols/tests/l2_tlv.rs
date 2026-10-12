@@ -302,7 +302,7 @@ fn dot3_llc_snap_golden_and_reparse() {
     assert!(parsed.packet.pad_to_min);
     assert_eq!(parsed.packet.build(catalog()).unwrap().bytes, built.bytes);
 
-    // LLC for OSI: DSAP/SSAP 0xfe announce the (planned) CLNP layer.
+    // LLC for OSI: DSAP/SSAP 0xfe, the PDU is selected by its NLPID octet.
     let p = Packet::from_layers(vec![
         Layer::new("dot3"),
         Layer::new("llc").with("dsap", 0xfeu8).with("ssap", 0xfeu8),
@@ -311,7 +311,7 @@ fn dot3_llc_snap_golden_and_reparse() {
     let bytes = p.build(catalog()).unwrap().bytes;
     assert_eq!(&bytes[12..17], &[0, 5, 0xfe, 0xfe, 0x03]);
     let parsed = parse(&bytes, "ethernet2", catalog()).unwrap();
-    assert_eq!(protos(&parsed.packet), ["dot3", "llc", "raw"]);
+    assert_eq!(protos(&parsed.packet), ["dot3", "llc", "osi"]);
     assert_eq!(parsed.packet.build(catalog()).unwrap().bytes, bytes);
 }
 

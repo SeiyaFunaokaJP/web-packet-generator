@@ -28,6 +28,7 @@
   - [冗長化 (FHRP)](protocols/fhrp.md)
   - [マルチキャスト制御](protocols/multicast.md)
   - [アプリケーションプロトコル](protocols/app.md)
+  - [OSI カプセル化 (P2)](protocols/osi.md)
 - [テンプレートスキーマ](reference/template-schema.md)
 - [API リファレンス](reference/api.md)
 - [CLI リファレンス](reference/cli.md)

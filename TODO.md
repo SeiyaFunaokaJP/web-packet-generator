@@ -362,7 +362,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] wpg-core 拡張で上記の近似を解消: 先頭ニブル/残長による demux、リスト件数の Auto、NUL 終端文字列型、チェックサム範囲の除外指定、送信元ポートでの demux（`Peek` / `min_len` / `count` / `cstring` / `exclude` / `alt_field`。MPLS・GTP-U・PIM Register の IP 判別、IGMPv3/MLDv2 クエリ、VRRPv2・HSRPv2 の読み直し、OSPF/LSA チェックサム、TFTP 文字列、応答方向の UDP/TCP が正確に。残る近似は各モジュール doc 参照）
 
 ### M7: P2 OSI / マニアック領域（4–6 週）
-- [ ] 802.2 LLC (0xFE) / SNAP 上の OSI カプセル化基盤、NSAP 型とエディタ
+- [x] 802.2 LLC (0xFE) / SNAP 上の OSI カプセル化基盤、NSAP 型とエディタ（LLC `0xfe` / PPP `0x0023` で NLPID を peek、未対応 NLPID は汎用 `osi` PDU。`nsap` は長さ指示子付きで合成・解析、ビルダーで AFI / エリア / System ID / NSEL を分解表示。SNAP 上の OSI は一般的でないため対象外）
 - [ ] IS-IS: IIH (LAN L1/L2, P2P) / LSP / CSNP / PSNP、主要 TLV / sub-TLV、Fletcher checksum、Padding 自動
 - [ ] CLNP / ES-IS
 - [ ] SCTP (CRC32c)
