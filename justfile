@@ -38,6 +38,13 @@ run:
 test:
     cargo test --workspace
 
+# Browser end-to-end tests of the web UI (requires: trunk, Node.js 20+; see e2e/README.md).
+e2e:
+    cd crates/wpg-web && trunk build --release
+    touch crates/wpg-server/src/lib.rs
+    cargo build -p wpg-cli
+    cd e2e && npm ci && npx playwright install chromium && npx playwright test
+
 # Regenerate tests/golden/*.hex and *.pcap (review the diff before committing).
 golden-update:
     WPG_UPDATE_GOLDEN=1 cargo test -p wpg-golden-tests --test golden

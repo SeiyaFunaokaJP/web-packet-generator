@@ -659,6 +659,11 @@ ui-bld-gen = Gen
 ui-bld-computed = computed on build
 ui-bld-estimate = Packets in the stream and their total size
 ui-bld-expands = expands to { $count } (~{ $bytes })
+ui-bld-rate = Rate
+ui-bld-rate-hint = Transmit rate saved with the template (1000pps, 1.5Mpps, 10Gbps, ifg=10us)
+ui-bld-duration = ~{ $time } to send
+ui-bld-duration-unknown = send time: set a rate
+ui-bld-duration-hint = Packets to send (tx.count, else the stream length) at this rate, capped by tx.duration_secs
 ui-bld-gen-kind = Kind
 ui-bld-gen-count = count:
 ui-bld-gen-shorthand = Range / list / CIDR

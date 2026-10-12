@@ -335,20 +335,20 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] ビルダー: プロトコルパレット / レイヤスタック D&D / フィールドエディタ (型別 UI) / Auto-Manual トグル
 - [x] Hex ダンプ + ツリーの双方向ハイライト、Hex 直接編集
 - [x] ブラウザ内 WASM プレビュー (`wpg-core`)、サーバ結果との一致テスト（実行時に `POST /api/render` と突合しバッジ表示）
-- [ ] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示（UI・展開件数・サイズ見積は実装済み。所要時間見積は未実装）
+- [x] ジェネレータ設定 UI (range / list / random …) と展開件数・所要時間の見積表示（所要時間はビルダーのレート欄 = `tx.rate` から算出。`%` / unlimited はリンク速度不明のため非表示）
 - [x] ジョブ画面: ストリーム混合、レート設定、開始/停止、リアルタイム統計グラフ
 - [x] テンプレート画面: 一覧 / 検索 / タグ / import / export / 複製
 - [x] 設定画面
 - [x] Undo/Redo、ショートカット、自動保存 (draft)
 - [x] キーボードのみで D&D 相当操作、aria
-- [ ] E2E テスト (Playwright)
+- [x] E2E テスト (Playwright)（`e2e/`、CI job `e2e`。Chromium のみ）
 
 ### M5: テンプレート形式 & 共有（1–2 週）
 - [x] YAML/JSON スキーマ (`schema: 1`)、JSON Schema 公開、`wpg template lint`
 - [x] テンプレ引数化 (変数)、実行時オーバーライド
 - [x] `.wpgbundle` エクスポート/インポート (zip)
 - [x] ライブラリパス複数指定 (Git 管理ディレクトリ読込)、ホットリロード
-- [ ] 同梱サンプルテンプレ (P0 プロトコル + 代表シナリオ 5 本)
+- [x] 同梱サンプルテンプレ (P0 プロトコル + 代表シナリオ 5 本)（`templates/protocols` / `templates/scenarios`、`wpg-template/tests/samples.rs` で lint + render を検査）
 - [x] pcap/pcapng import → テンプレ化、Hex 貼付け import
 
 ### M6: P1 プロトコル群（4–6 週、並行可）

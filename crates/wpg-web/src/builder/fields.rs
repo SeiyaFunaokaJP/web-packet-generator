@@ -2,7 +2,8 @@
 //! toggle and a generator editor. Manual values are parsed live through
 //! `wpg_core::notation` (out-of-spec values are accepted so malformed packets can be
 //! built, with the constraint diagnostics shown inline). Generators show a live
-//! "expands to N" estimate from the stream cardinality.
+//! "expands to N" estimate from the stream cardinality; [`SendEstimate`] turns it
+//! into a send time at the template's `tx.rate`.
 
 use leptos::prelude::*;
 use wpg_core::notation::{format_value, parse_generator};
@@ -11,6 +12,7 @@ use wpg_template::{parse_text, FieldInput, GeneratorSpec};
 
 use super::preview::{format_count, format_size, gen_cardinality, PreviewCtx};
 use super::proto;
+use super::rate::{estimate_secs, format_secs, EstRate};
 use super::state::{edit, Builder};
 use crate::components::{INPUT, INPUT_INVALID, LABEL};
 use crate::i18n::{tr, use_i18n};
@@ -113,6 +115,62 @@ fn StreamEstimate() -> impl IntoView {
     }
 }
 
+/// Transmit-rate input (`tx.rate`) with the estimated time to send the stream.
+#[component]
+pub(crate) fn SendEstimate() -> impl IntoView {
+    let i18n = use_i18n();
+    let builder = Builder::use_ctx();
+    let pv = PreviewCtx::use_ctx();
+    let rate = Memo::new(move |_| {
+        builder
+            .template
+            .with(|t| t.tx.rate.clone().unwrap_or_default())
+    });
+    let invalid = move || {
+        let r = rate.get();
+        !r.trim().is_empty() && EstRate::parse(&r).is_none()
+    };
+    let set_rate = move |ev: leptos::ev::Event| {
+        let v = event_target_value(&ev);
+        builder.edit(true, move |t| {
+            t.tx.rate = (!v.trim().is_empty()).then_some(v);
+        });
+    };
+    let estimate = move || {
+        let secs = builder.template.with(|t| {
+            pv.preview
+                .with(|p| {
+                    (!p.bytes.is_empty())
+                        .then(|| estimate_secs(&t.tx, p.cardinality, p.bytes.len()))
+                })
+                .flatten()
+        });
+        match secs {
+            Some(s) => i18n.ta("ui-bld-duration", &[("time", format_secs(s))]),
+            None => i18n.t("ui-bld-duration-unknown"),
+        }
+    };
+    view! {
+        <div class="mt-2 flex items-center gap-2 border-t border-slate-200 pt-2 dark:border-slate-800">
+            <label for="bld-tx-rate" class="shrink-0 text-xs text-slate-500">{tr("ui-bld-rate")}</label>
+            <input
+                id="bld-tx-rate"
+                type="text"
+                class=move || if invalid() { INPUT_INVALID } else { INPUT }
+                style="max-width:8rem"
+                placeholder="1000pps"
+                title=i18n.t("ui-bld-rate-hint")
+                aria-invalid=move || invalid().to_string()
+                prop:value=move || rate.get()
+                on:input=set_rate
+            />
+            <span class="truncate text-[11px] text-slate-500" aria-live="polite" title=i18n.t("ui-bld-duration-hint")>
+                {estimate}
+            </span>
+        </div>
+    }
+}
+
 /// One field row (mode toggle + editor).
 fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
     let name = fd.name.clone();
@@ -198,12 +256,13 @@ fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
     let idle =
         "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300";
     let name_h = name.clone();
+    let name_group = name.clone();
     let fd_manual = fd.clone();
     let fd_gen = fd.clone();
     let name_auto = name.clone();
 
     view! {
-        <div class="rounded-md border border-slate-200 p-2 dark:border-slate-800" on:click=select_field>
+        <div class="rounded-md border border-slate-200 p-2 dark:border-slate-800" role="group" aria-label=name_group on:click=select_field>
             <div class="flex items-center gap-2">
                 <span class="min-w-0 flex-1 truncate text-sm font-medium">{name_h}</span>
                 <code class="shrink-0 rounded bg-slate-100 px-1 font-mono text-[10px] text-slate-500 dark:bg-slate-800">{tybadge}</code>

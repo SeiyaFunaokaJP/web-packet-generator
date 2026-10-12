@@ -659,6 +659,11 @@ ui-bld-gen = 生成
 ui-bld-computed = ビルド時に計算
 ui-bld-estimate = ストリームのパケット数と合計サイズ
 ui-bld-expands = { $count } 個（約 { $bytes }）
+ui-bld-rate = レート
+ui-bld-rate-hint = テンプレートに保存する送出レート (1000pps, 1.5Mpps, 10Gbps, ifg=10us)
+ui-bld-duration = 送出 約 { $time }
+ui-bld-duration-unknown = 所要時間: レートを指定してください
+ui-bld-duration-hint = 送出パケット数 (tx.count、なければストリーム長) をこのレートで送る時間。tx.duration_secs で上限
 ui-bld-gen-kind = 種類
 ui-bld-gen-count = 個数:
 ui-bld-gen-shorthand = 範囲 / リスト / CIDR

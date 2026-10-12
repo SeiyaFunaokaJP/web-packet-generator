@@ -53,17 +53,22 @@ pub(crate) fn phase_of(status: Option<&AuthStatus>) -> AuthPhase {
     }
 }
 
-/// Where the guard sends a user on `path` in `phase` (`None` = stay).
-pub(crate) fn redirect_for(phase: &AuthPhase, path: &str) -> Option<String> {
+/// Where the guard sends a user on `path` (with the query string `search`, with or
+/// without its `?`) in `phase` (`None` = stay). The login redirect keeps the query
+/// in `?next=` so deep links such as `/jobs?new=<template>` survive the login.
+pub(crate) fn redirect_for(phase: &AuthPhase, path: &str, search: &str) -> Option<String> {
     let on_auth_page = path == "/login" || path == "/setup";
     match phase {
         AuthPhase::Loading | AuthPhase::Unreachable(_) => None,
         AuthPhase::NeedsSetup => (path != "/setup").then(|| "/setup".to_owned()),
         AuthPhase::NeedsLogin => (!on_auth_page || path == "/setup").then(|| {
-            if on_auth_page || path == "/" {
+            let search = search.trim_start_matches('?');
+            if on_auth_page || (path == "/" && search.is_empty()) {
                 "/login".to_owned()
-            } else {
+            } else if search.is_empty() {
                 format!("/login?next={}", api::enc(path))
+            } else {
+                format!("/login?next={}", api::enc(&format!("{path}?{search}")))
             }
         }),
         AuthPhase::Disabled | AuthPhase::Authenticated { .. } => {
@@ -171,27 +176,48 @@ mod tests {
     fn redirects() {
         let login = AuthPhase::NeedsLogin;
         assert_eq!(
-            redirect_for(&login, "/jobs").as_deref(),
+            redirect_for(&login, "/jobs", "").as_deref(),
             Some("/login?next=%2Fjobs")
         );
-        assert_eq!(redirect_for(&login, "/").as_deref(), Some("/login"));
-        assert_eq!(redirect_for(&login, "/login"), None);
-        assert_eq!(redirect_for(&login, "/setup").as_deref(), Some("/login"));
+        assert_eq!(redirect_for(&login, "/", "").as_deref(), Some("/login"));
+        // The query string is kept (encoded) in `next`.
         assert_eq!(
-            redirect_for(&AuthPhase::NeedsSetup, "/jobs").as_deref(),
+            redirect_for(&login, "/jobs", "new=protocols-l4-udp").as_deref(),
+            Some("/login?next=%2Fjobs%3Fnew%3Dprotocols-l4-udp")
+        );
+        assert_eq!(
+            redirect_for(&login, "/builder", "?template=a&x=1").as_deref(),
+            Some("/login?next=%2Fbuilder%3Ftemplate%3Da%26x%3D1")
+        );
+        assert_eq!(
+            redirect_for(&login, "/", "job=7").as_deref(),
+            Some("/login?next=%2F%3Fjob%3D7")
+        );
+        assert_eq!(redirect_for(&login, "/login", "next=%2Fjobs"), None);
+        assert_eq!(redirect_for(&login, "/login", ""), None);
+        assert_eq!(
+            redirect_for(&login, "/setup", "").as_deref(),
+            Some("/login")
+        );
+        assert_eq!(
+            redirect_for(&AuthPhase::NeedsSetup, "/jobs", "").as_deref(),
             Some("/setup")
         );
-        assert_eq!(redirect_for(&AuthPhase::NeedsSetup, "/setup"), None);
+        assert_eq!(redirect_for(&AuthPhase::NeedsSetup, "/setup", ""), None);
         let ok = AuthPhase::Authenticated { user: None };
-        assert_eq!(redirect_for(&ok, "/login").as_deref(), Some("/"));
-        assert_eq!(redirect_for(&ok, "/jobs"), None);
-        assert_eq!(redirect_for(&AuthPhase::Loading, "/jobs"), None);
+        assert_eq!(redirect_for(&ok, "/login", "").as_deref(), Some("/"));
+        assert_eq!(redirect_for(&ok, "/jobs", ""), None);
+        assert_eq!(redirect_for(&AuthPhase::Loading, "/jobs", ""), None);
         assert!(ok.allows_app() && AuthPhase::Disabled.allows_app() && !login.allows_app());
     }
 
     #[test]
     fn next_targets() {
         assert_eq!(safe_next(Some("/jobs")), "/jobs");
+        assert_eq!(
+            safe_next(Some("/jobs?new=protocols-l4-udp")),
+            "/jobs?new=protocols-l4-udp"
+        );
         assert_eq!(safe_next(Some("//evil.example")), "/");
         assert_eq!(safe_next(Some("https://evil.example")), "/");
         assert_eq!(safe_next(Some("/\\evil")), "/");

@@ -41,6 +41,9 @@ cargo test -p wpg-web
 cargo clippy -p wpg-web --target wasm32-unknown-unknown -- -D warnings
 ```
 
+Browser end-to-end tests (Playwright, against a real `wpg serve`) live in
+[`e2e/`](../../e2e/README.md): `just e2e`.
+
 `i18n::tests::ui_keys_exist` scans the sources for `"ui-…"` keys and fails when
 one is missing from `locales/{en,ja}/main.ftl` (and `wpg-i18n` checks that both
 locales have the same keys).

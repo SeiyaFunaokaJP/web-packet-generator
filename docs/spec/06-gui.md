@@ -41,5 +41,5 @@ aria 対応、コントラスト、キーボードのみで D&D 相当の操作�
 - Hex 直接編集の逆反映で、Auto フィールドを Manual に変える規則。
 - Undo/Redo の粒度と、自動保存 draft の保存先 (localStorage / サーバ)。
 - 統計グラフのライブラリ (自作 canvas か既存 crate か)。
-- E2E (Playwright) の対象ブラウザ範囲と最小サポートブラウザ。
+- E2E (Playwright) の対象ブラウザ範囲と最小サポートブラウザ (現状の `e2e/` は Chromium のみ)。
 - SSR/ハイドレーション移行を見据えた状態管理・ルーティング構成。

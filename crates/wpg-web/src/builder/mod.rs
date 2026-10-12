@@ -20,6 +20,7 @@ mod hex;
 mod palette;
 mod preview;
 mod proto;
+mod rate;
 mod stack;
 mod state;
 mod tree;
@@ -33,7 +34,7 @@ use leptos_router::NavigateOptions;
 use crate::components::{use_toasts, Icon, IconName, Modal, BTN, BTN_GHOST, BTN_PRIMARY, INPUT};
 use crate::i18n::{tr, use_i18n};
 use dnd::{DndAnnounce, DragCtx};
-use fields::FieldEditor;
+use fields::{FieldEditor, SendEstimate};
 use hex::HexView;
 use palette::Palette;
 use preview::{build_preview, PreviewCtx};
@@ -151,8 +152,11 @@ pub(crate) fn BuilderPage() -> impl IntoView {
                 <div class="min-h-0 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                     <Stack />
                 </div>
-                <div class="min-h-0 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <FieldEditor />
+                <div class="flex min-h-0 flex-col rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div class="min-h-0 flex-1">
+                        <FieldEditor />
+                    </div>
+                    <SendEstimate />
                 </div>
             </div>
             <div class="grid min-h-0 gap-3 lg:grid-cols-2" style="min-height:22rem">

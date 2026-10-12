@@ -17,7 +17,7 @@
 ## よく使うレシピ
 
 `just --list` で一覧を確認できます。`just build` / `release`（ビルド）、`run`（ホットリロード開発起動）、
-`test`、`fmt`、`lint`（clippy `-D warnings`）、`check-wasm`、`audit`、`deny`、`docs`、`clean`。
+`test`、`e2e`（Web UI の Playwright テスト、[e2e/README.md](e2e/README.md)）、`fmt`、`lint`（clippy `-D warnings`）、`check-wasm`、`audit`、`deny`、`docs`、`clean`。
 PR 前に `just fmt lint test check-wasm` を実行してください。CI でも同じチェックが走ります。
 
 ## コミット / PR 規約

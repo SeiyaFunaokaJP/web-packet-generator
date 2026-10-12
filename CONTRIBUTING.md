@@ -21,6 +21,7 @@ specification are in [TODO.md](TODO.md).
 | `just build` / `just release` | Build the frontend (trunk), then the backend |
 | `just run` | Dev server with hot reload (`trunk serve` + `cargo watch`) |
 | `just test` | `cargo test --workspace` |
+| `just e2e` | Playwright tests of the web UI against a real `wpg serve` ([e2e/README.md](e2e/README.md)) |
 | `just fmt` / `just fmt-check` | Format / check formatting |
 | `just lint` | `cargo clippy ... -D warnings` |
 | `just check-wasm` | Ensure `wpg-core` and `wpg-i18n` build for `wasm32-unknown-unknown` |

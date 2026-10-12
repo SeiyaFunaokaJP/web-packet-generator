@@ -114,7 +114,8 @@ fn Guard() -> impl IntoView {
     Effect::new(move |_| {
         let phase = auth.phase.get();
         let path = location.pathname.get();
-        if let Some(to) = redirect_for(&phase, &path) {
+        let search = location.search.get();
+        if let Some(to) = redirect_for(&phase, &path, &search) {
             navigate(
                 &to,
                 NavigateOptions {
