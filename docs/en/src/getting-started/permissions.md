@@ -1,7 +1,5 @@
 # Permissions
 
-Status: draft
-
 Sending raw frames is a privileged operation and the requirement differs per OS. At startup and on demand (`wpg doctor`) wpg runs a self-diagnosis and shows OS-specific guidance. Administrators can also restrict allowed interfaces and the maximum rate.
 
 ## Linux

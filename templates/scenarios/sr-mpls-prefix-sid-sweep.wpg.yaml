@@ -1,0 +1,56 @@
+# SR-MPLS: sweep the prefix SID index (SRGB base + index) to reach many egress nodes
+schema: 1
+
+meta:
+  name: sr-mpls-prefix-sid-sweep
+  descriptions:
+    ja: "SR-MPLS: プレフィックス SID のインデックスを 1〜100 で変化させ (ラベル = SRGB ベース + インデックス)、エントロピーラベルもパケットごとに変える"
+    en: "SR-MPLS: sweep the prefix SID index over 1-100 (label = SRGB base + index), with a per-packet entropy label"
+  tags: ["protocol:ethernet2", "protocol:mpls", "protocol:ipv4", "protocol:udp", "layer:l2", mpls, sr-mpls, scenario]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: srgb_base
+    default: 16000
+    description: First label of the SRGB (must match the routers)
+  - name: first_index
+    default: 1
+    description: First prefix SID index
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: mpls
+    generators:
+      label: { kind: expr, expr: "${srgb_base} + ${first_index} + idx" }
+  - protocol: mpls
+    fields:
+      label: entropy_label_indicator
+  - protocol: mpls
+    fields:
+      ttl: 0
+    generators:
+      label: { kind: expr, expr: "16 + hash(idx) % 1048560" } # entropy label outside the reserved range
+  - protocol: ipv4
+    fields:
+      src: 10.0.0.1
+      dst: 10.0.0.2
+  - protocol: udp
+    fields:
+      src_port: 1024
+      dst_port: 4000
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 18
+
+stream:
+  mode: zip
+
+tx:
+  count: 100
+  rate: 1000pps

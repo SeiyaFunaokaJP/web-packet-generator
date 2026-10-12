@@ -1,0 +1,42 @@
+# SRv6 H.Encaps (RFC 8986): an IPv4 packet in outer IPv6 + SRH toward an End.DT4 SID
+schema: 1
+
+meta:
+  name: srv6-h-encaps-ipv4
+  descriptions:
+    ja: "SRv6 H.Encaps (RFC 8986): IPv4/UDP を外側 IPv6 + SRH (End → End.DT4 の 2 セグメント) でカプセル化 (L3VPN)"
+    en: "SRv6 H.Encaps (RFC 8986): IPv4/UDP encapsulated in outer IPv6 + SRH (End then End.DT4, two segments) for an L3VPN"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:ipv6_srh", "protocol:ipv4", "protocol:udp", "layer:l3", srv6, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: "2001:db8::1"
+      dst: "fc00:0:2:e000::" # End of node 2
+  - protocol: ipv6_srh
+    fields:
+      segments_left: 1
+      segment_list: ["fc00:0:3:e046::", "fc00:0:2:e000::"] # End.DT4 of node 3, End of node 2
+      # next_header: Auto (4 = IPv4)
+  - protocol: ipv4
+    fields:
+      src: 10.1.0.1
+      dst: 10.2.0.1
+  - protocol: udp
+    fields:
+      src_port: 1024
+      dst_port: 4000
+  - protocol: payload
+    fields:
+      mode: pattern
+      data: "00 01 02 03"
+      length: 32
+
+tx:
+  count: 1

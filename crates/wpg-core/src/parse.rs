@@ -129,8 +129,8 @@ fn region_len(
                     (i128::from(v) * i128::from(*unit) + i128::from(*adjust))
                         / i128::from((*div).max(1))
                 }
-                Length::UntilOffset { unit, .. } => {
-                    i128::from(v) * i128::from(*unit) - offset as i128
+                Length::UntilOffset { unit, adjust, .. } => {
+                    i128::from(v) * i128::from(*unit) + i128::from(*adjust) - offset as i128
                 }
                 _ => 0,
             };
