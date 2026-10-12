@@ -12,6 +12,7 @@ use crate::config::Config;
 use crate::db::{Db, DbError};
 use crate::events::{bus, EventBus, ServerEvent};
 use crate::jobs::JobManager;
+use crate::rx::RxManager;
 use crate::store::{StoreError, TemplateStore};
 
 /// How long the interface list is cached.
@@ -66,6 +67,8 @@ pub struct AppState {
     pub templates: TemplateStore,
     /// Job manager.
     pub jobs: JobManager,
+    /// Capture manager.
+    pub rx: RxManager,
     /// The `SQLite` database.
     pub db: Db,
     /// Authentication.
@@ -131,12 +134,14 @@ impl AppState {
             events.clone(),
             db.clone(),
         );
+        let rx = RxManager::new(Arc::clone(&config), events.clone());
         let (shutdown_tx, shutdown) = watch::channel(false);
         Ok(Self {
             config,
             catalog,
             templates,
             jobs,
+            rx,
             db,
             auth,
             started_at: Instant::now(),

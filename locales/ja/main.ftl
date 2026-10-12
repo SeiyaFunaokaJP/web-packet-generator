@@ -196,6 +196,25 @@ summary-stream = ストリーム { $index }  { $packets } パケット  { $bytes
 summary-worker = ワーカー { $index }  { $packets } パケット  { $bytes } バイト{ $core }
 summary-worker-core = 、コア { $core }
 summary-warning = 警告         { $error }
+summary-unsigned = 未署名       { $value } (シグネチャを入れる余地なし)
+
+## wpg capture (受信・検証)
+rx-progress = [{ $t } 秒] { $packets } パケット  { $pps }pps  { $bps }bps  一致 { $matched } ({ $mpps }pps)  ドロップ { $dropped }
+capture-starting = { $iface } で { $backend } により受信します。フィルタ { $filter } (Ctrl-C で停止)
+capture-filter-all = (全フレーム)
+capture-iface-required-pcapfile = pcapfile バックエンドには --iface <キャプチャファイル> が必要です。
+capture-bad-filter = --filter が不正です: { $error }
+capture-running = 受信中
+capture-reason-end-of-input = 入力の終わり
+capture-packet = #{ $index }  { $time }  { $len } B  { $layers }{ $signature }
+capture-packet-signature = { "  " }[wpg ストリーム { $stream } 連番 { $seq }]
+capture-summary-matched = 一致         { $packets } パケット  { $bytes } バイト
+capture-summary-average = 平均         { $pps }pps  { $bps }bps  一致 { $mpps }pps  { $mbps }bps
+capture-summary-saved = 保存         { $count } パケットを { $path } へ
+capture-summary-signed = シグネチャ   あり { $signed }、なし { $unsigned }
+capture-summary-stream = ストリーム { $stream } 受信 { $received }  連番 { $first }-{ $last }  ロス { $lost } ({ $ratio }%)  順序逆転 { $reordered }  重複 { $duplicates }
+capture-summary-latency = { "             " }遅延 最小 { $min }  平均 { $avg }  最大 { $max }  ジッタ { $jitter }
+
 bench-iface = インタフェース { $iface }
 bench-frame = フレーム     { $len } B (+4 FCS)  バッチ { $batch }
 bench-template = テンプレート { $value } (オンザフライ、{ $mode })
@@ -240,6 +259,10 @@ api-error-policy-unlimited = サーバのポリシーにより無制限レート
 api-error-invalid-state = ジョブ { $id } は { $state } 状態のため { $action } できません。
 api-error-job-spec = ジョブ指定が不正です: { $error }
 api-error-backend = 送出バックエンドのエラー: { $error }
+api-error-capture-spec = 受信設定が不正です: { $error }
+api-error-capture-filter = 受信フィルタが不正です: { $error }
+api-error-capture-backend = 受信バックエンドのエラー: { $error }
+api-error-capture-state = 受信 { $id } は { $state } のため { $action } できません。
 api-error-internal = サーバ内部エラー: { $error }
 auth-error-unauthorized = ログインしてください。
 auth-error-bad-credentials = ユーザ名またはパスワードが違います。

@@ -15,15 +15,16 @@ name = "wpg"
 path = "src/main.rs"
 
 [features]
-# Enables the libpcap / Npcap transmit backend (`--backend pcap`). Off by default because it
+# Enables the libpcap / Npcap transmit and receive backends (`--backend pcap`). Off by default because it
 # needs libpcap-dev (Linux) or the Npcap SDK (Windows) at build time.
-pcap = ["wpg-tx/pcap"]
+pcap = ["wpg-tx/pcap", "wpg-rx/pcap"]
 
 [dependencies]
 wpg-i18n.workspace = true
 wpg-server.workspace = true
 wpg-sys.workspace = true
 wpg-tx.workspace = true
+wpg-rx.workspace = true
 wpg-core.workspace = true
 wpg-protocols.workspace = true
 wpg-template.workspace = true

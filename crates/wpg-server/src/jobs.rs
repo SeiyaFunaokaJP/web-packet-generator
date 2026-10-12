@@ -27,7 +27,9 @@ use wpg_core::stream::{Expansion, Plan, PlanConfig, PlanHint};
 use wpg_protocols::Catalog;
 use wpg_template::{apply_overrides, compile, Compiled, Template};
 use wpg_tx::backend;
-use wpg_tx::job::{FinishReason, JobConfig, JobHandle, JobReport, JobState, StatsSnapshot, TxJob};
+use wpg_tx::job::{
+    FinishReason, JobConfig, JobHandle, JobReport, JobState, SignatureConfig, StatsSnapshot, TxJob,
+};
 use wpg_tx::rate::{link_speed_bps, parse_duration, parse_start_time, Rate};
 use wpg_tx::source::{FrameSource, MixMode, Mixer, PreRendered, Rendered};
 use wpg_tx::TxOptions;
@@ -141,6 +143,15 @@ pub struct JobSpec {
     /// Frames per `send_batch` call.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub batch: Option<usize>,
+    /// Stamp every frame with a receive-verification signature (magic + stream
+    /// id + sequence number + TX time over the last 24 payload octets; see
+    /// `/api/captures` with `verify`).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub signature: bool,
+    /// Signature stream id of the first stream (stream `i` gets `stream_id + i`;
+    /// default 0).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stream_id: Option<u32>,
 }
 
 /// Job lifecycle state: `{ "state": "running" }`, `{ "state": "finished",
@@ -355,13 +366,13 @@ pub fn store_error(e: StoreError) -> ApiError {
     }
 }
 
-/// Resolves a dry-run file name under `dir`; rejects absolute paths and `..`.
-fn capture_path(dir: &Path, name: &str) -> Result<PathBuf, ApiError> {
+/// Resolves a dry-run / capture file name under `dir`; rejects absolute paths and `..`.
+pub(crate) fn capture_path(dir: &Path, name: &str) -> Result<PathBuf, ApiError> {
     let p = Path::new(name);
     let ok = !name.is_empty() && p.components().all(|c| matches!(c, Component::Normal(_)));
     if !ok {
         return Err(spec_error(format!(
-            "dry_run must be a relative file name without `..` (got `{name}`)"
+            "file names must be relative, without `..` (got `{name}`)"
         )));
     }
     let mut path = dir.join(p);
@@ -607,6 +618,9 @@ impl Inner {
             ramp_up,
             start_at,
             snapshot_interval: self.interval,
+            signature: spec.signature.then(|| SignatureConfig {
+                stream_id_base: spec.stream_id.unwrap_or(0),
+            }),
             ..JobConfig::default()
         };
         let info = JobInfo {

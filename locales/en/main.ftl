@@ -196,6 +196,25 @@ summary-stream = stream { $index }   { $packets } pkts  { $bytes } bytes
 summary-worker = worker { $index }   { $packets } pkts  { $bytes } bytes{ $core }
 summary-worker-core = , core { $core }
 summary-warning = warning    { $error }
+summary-unsigned = unsigned   { $value } (no room for a signature)
+
+## wpg capture (receive / verification)
+rx-progress = [{ $t } s] { $packets } pkts  { $pps }pps  { $bps }bps  matched { $matched } ({ $mpps }pps)  dropped { $dropped }
+capture-starting = Capturing on { $iface } via { $backend }, filter { $filter } (Ctrl-C stops)
+capture-filter-all = (all frames)
+capture-iface-required-pcapfile = --iface <capture file> is required for the pcapfile backend.
+capture-bad-filter = Invalid --filter: { $error }
+capture-running = running
+capture-reason-end-of-input = end of input
+capture-packet = #{ $index }  { $time }  { $len } B  { $layers }{ $signature }
+capture-packet-signature = { "  " }[wpg stream { $stream } seq { $seq }]
+capture-summary-matched = matched    { $packets } pkts  { $bytes } bytes
+capture-summary-average = average    { $pps }pps  { $bps }bps  matched { $mpps }pps  { $mbps }bps
+capture-summary-saved = saved      { $count } pkts to { $path }
+capture-summary-signed = signed     { $signed } with a signature, { $unsigned } without
+capture-summary-stream = stream { $stream } received { $received }  seq { $first }-{ $last }  lost { $lost } ({ $ratio }%)  reordered { $reordered }  duplicates { $duplicates }
+capture-summary-latency = { "             " }latency min { $min }  avg { $avg }  max { $max }  jitter { $jitter }
+
 bench-iface = iface      { $iface }
 bench-frame = frame      { $len } B (+4 FCS)  batch { $batch }
 bench-template = template   { $value } (on the fly, { $mode })
@@ -240,6 +259,10 @@ api-error-policy-unlimited = An unlimited rate is not allowed by the server poli
 api-error-invalid-state = Job { $id } is { $state }; cannot { $action } it.
 api-error-job-spec = Invalid job: { $error }
 api-error-backend = Transmit backend error: { $error }
+api-error-capture-spec = Invalid capture: { $error }
+api-error-capture-filter = Invalid capture filter: { $error }
+api-error-capture-backend = Receive backend error: { $error }
+api-error-capture-state = Capture { $id } is { $state }; cannot { $action } it.
 api-error-internal = Internal server error: { $error }
 auth-error-unauthorized = Please log in.
 auth-error-bad-credentials = Wrong user name or password.
