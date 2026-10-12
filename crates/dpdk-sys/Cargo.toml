@@ -1,0 +1,30 @@
+[package]
+name = "dpdk-sys"
+description = "Raw FFI bindings to DPDK (bindgen + a C shim for the inline fast-path API), DPDK 24.11 / 23.11 LTS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+links = "dpdk"
+
+[lib]
+# The generated bindings carry DPDK's Doxygen comments, whose code samples are C.
+doctest = false
+
+[features]
+# Without `link` the crate is empty and needs nothing: it stays a workspace member, so
+# `cargo build/test --workspace` keeps working on hosts without DPDK (and on macOS /
+# Windows). `link` finds DPDK with pkg-config, runs bindgen (needs libclang) and
+# compiles csrc/shim.c; wpg-tx enables it through its `dpdk` feature. See ADR-0004.
+link = ["dep:bindgen", "dep:cc", "dep:pkg-config"]
+
+[build-dependencies]
+bindgen = { version = "0.72", optional = true }
+cc = { version = "1.2", optional = true }
+pkg-config = { version = "0.3.32", optional = true }
+
+[lints]
+workspace = true

@@ -82,7 +82,7 @@ Verified (2026-10, Linux 6.18 container, root): copy-mode transmission on `lo` a
 
 Requirements (from the design decision in ADR 0004):
 
-- DPDK **24.11 LTS** (23.11 LTS is also checked in CI). Build wpg with `--features dpdk`; the DPDK development packages must be installed.
+- DPDK **24.11 LTS** (23.11 LTS is also checked in CI). The DPDK development package and libclang must be installed at build time (see [Building the bindings](#building-the-bindings-dpdk-sys)).
 - Hugepages (`wpg doctor` check `hugepages`, warning when none):
 
 ```sh
@@ -102,3 +102,23 @@ sudo dpdk-devbind.py --bind=vfio-pci 0000:00:04.0
 - **CML2**: the Ubuntu node exposes virtio-net devices, which DPDK drives with the virtio PMD. Without an IOMMU in the guest use `uio_pci_generic` or vfio in no-IOMMU mode (`enable_unsafe_noiommu_mode`). Performance is bounded by the host-side vhost path, not by DPDK.
 
 Expected performance (TODO section 2.2, not measured): AF_XDP about several Mpps per core, DPDK 10 Mpps or more per core on a physical NIC. AF_XDP copy-mode figures measured on `lo` / `veth` are in `docs/perf.md`.
+
+### Building the bindings (`dpdk-sys`)
+
+The bindings live in the `dpdk-sys` crate (ADR-0004). With its `link` feature (turned on by `wpg-tx`'s `dpdk` feature) the build script finds DPDK with pkg-config (`libdpdk`, 23.11 or newer; other versions than 24.11 / 23.11 build with a warning), generates the bindings with bindgen (EAL, ethdev, mempool / mbuf, lcore, the `RTE_*` constants) and compiles a small C shim with DPDK's own cflags for the parts of the fast path that are `static inline` in the headers (`wpg_rte_eth_tx_burst`, `wpg_rte_pktmbuf_alloc`, `wpg_rte_errno`, ...). Without the feature the crate is empty, so ordinary builds need no DPDK.
+
+```sh
+# Debian 13 (DPDK 24.11) / Ubuntu 24.04 (DPDK 23.11)
+sudo apt install dpdk-dev libclang-dev pkg-config
+cargo test -p dpdk-sys --features link     # bindings + EAL smoke test on a net_ring port
+cargo build -p wpg-tx --features dpdk      # wpg-tx with the bindings linked
+```
+
+For DPDK built from source (meson / ninja), point pkg-config at it and make the shared libraries findable:
+
+```sh
+export PKG_CONFIG_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu/pkgconfig
+export LD_LIBRARY_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu
+```
+
+DPDK 24.11 refuses to load PMD plugins from a directory with a world-writable parent (such as `/tmp`), so install it under `/opt` or `/usr/local`. The smoke test runs EAL with `--no-huge --no-pci` on a `net_ring` virtual port, so it needs neither hugepages, a NIC nor root; CI runs it against both LTS releases (job `dpdk`). Only DPDK's shared libraries are supported (PMDs are loaded as plugins). The `dpdk` transmit backend itself is still to come: `wpg` does not have a `dpdk` build feature yet.

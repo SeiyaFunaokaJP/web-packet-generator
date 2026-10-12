@@ -82,7 +82,7 @@ AF_XDP の copy モードは、どのネットワークデバイスでも動き�
 
 要件 (ADR 0004 の決定に基づく):
 
-- DPDK **24.11 LTS** (23.11 LTS も CI で確認)。`--features dpdk` でビルドし、DPDK の開発パッケージが必要です。
+- DPDK **24.11 LTS** (23.11 LTS も CI で確認)。ビルド時に DPDK の開発パッケージと libclang が必要です ([バインディングのビルド](#バインディングのビルド-dpdk-sys)を参照)。
 - Hugepages (`wpg doctor` のチェック `hugepages`。未設定なら警告):
 
 ```sh
@@ -102,3 +102,23 @@ sudo dpdk-devbind.py --bind=vfio-pci 0000:00:04.0
 - **CML2**: Ubuntu ノードには virtio-net デバイスが見え、DPDK は virtio PMD で扱います。ゲストに IOMMU がない場合は `uio_pci_generic`、または vfio の no-IOMMU モード (`enable_unsafe_noiommu_mode`) を使います。性能は DPDK ではなくホスト側の vhost 経路で頭打ちになります。
 
 期待性能 (TODO §2.2、未計測): 物理 NIC で AF_XDP は 1 コアあたり数 Mpps、DPDK は 1 コアあたり 10 Mpps 以上。AF_XDP の copy モードを `lo` / `veth` で測った値は `docs/perf.md` にあります。
+
+### バインディングのビルド (`dpdk-sys`)
+
+バインディングは `dpdk-sys` crate にあります (ADR-0004)。`link` feature (`wpg-tx` の `dpdk` feature が有効にします) を付けると、ビルドスクリプトが pkg-config で DPDK (`libdpdk`、23.11 以降。24.11 / 23.11 以外は警告付きでビルド) を探し、bindgen でバインディング (EAL、ethdev、mempool / mbuf、lcore、`RTE_*` 定数) を生成します。ヘッダ内で `static inline` になっている高速パスは、DPDK 自身の cflags でコンパイルした小さな C の shim で包みます (`wpg_rte_eth_tx_burst`、`wpg_rte_pktmbuf_alloc`、`wpg_rte_errno` など)。feature を付けなければ crate は空なので、通常のビルドに DPDK は要りません。
+
+```sh
+# Debian 13 (DPDK 24.11) / Ubuntu 24.04 (DPDK 23.11)
+sudo apt install dpdk-dev libclang-dev pkg-config
+cargo test -p dpdk-sys --features link     # バインディング + net_ring ポートでの EAL スモークテスト
+cargo build -p wpg-tx --features dpdk      # バインディングをリンクした wpg-tx
+```
+
+ソースからビルドした DPDK (meson / ninja) を使う場合は、pkg-config と共有ライブラリの場所を指定します。
+
+```sh
+export PKG_CONFIG_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu/pkgconfig
+export LD_LIBRARY_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu
+```
+
+DPDK 24.11 は、親ディレクトリが world-writable (`/tmp` など) な場所から PMD プラグインを読み込むことを拒否します。`/opt` や `/usr/local` にインストールしてください。スモークテストは EAL を `--no-huge --no-pci` で起動し、`net_ring` の仮想ポートを使うため、hugepages・NIC・root のいずれも不要です。CI (ジョブ `dpdk`) が両方の LTS で実行します。DPDK は共有ライブラリ版のみ対応です (PMD はプラグインとして読み込まれます)。`dpdk` 送出バックエンド自体はまだで、`wpg` には `dpdk` のビルド feature がありません。

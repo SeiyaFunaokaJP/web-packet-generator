@@ -17,6 +17,7 @@ The repository is a Cargo workspace under `crates/`. User-facing strings live in
 | `wpg-server` | axum HTTP / WebSocket server with the web UI embedded | |
 | `wpg-cli` | The command line itself (`serve`, `send`, `render`, `import`, `template`, `doctor`, …); builds the `wpg` binary | |
 | `wpg-web` | Leptos (CSR) web UI, compiled to WASM with Trunk | ✓ |
+| `dpdk-sys` | Raw FFI to DPDK (24.11 / 23.11 LTS), generated with bindgen; the inline fast path (`rte_eth_tx_burst`, `rte_pktmbuf_alloc`, ...) and `rte_errno` are wrapped by a C shim (`wpg_` prefix). Empty unless the `link` feature is on (enabled by `wpg-tx`'s `dpdk`). ADR-0004 | |
 | `wpg-testutil` | Test helpers: pcap / pcapng reader and writer, hex helpers, golden-file assertions (not published) | |
 
 A further `wpg-golden-tests` crate holds the golden-pcap byte checks and the tshark cross-check (`cargo test -p wpg-golden-tests`).

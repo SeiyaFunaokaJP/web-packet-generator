@@ -69,6 +69,11 @@ lint:
 check-wasm:
     cargo check -p wpg-core -p wpg-protocols -p wpg-i18n --target wasm32-unknown-unknown
 
+# DPDK bindings + EAL smoke test (requires: dpdk-dev, libclang-dev; see docs operations/dpdk-afxdp).
+check-dpdk:
+    cargo clippy -p dpdk-sys -p wpg-tx --all-targets --features dpdk-sys/link,wpg-tx/dpdk -- -D warnings
+    cargo test -p dpdk-sys --features link
+
 # Security advisories (requires: cargo install cargo-audit --locked).
 audit:
     cargo audit
