@@ -30,7 +30,7 @@ layers:
       num_lsas: 1
   - protocol: ospfv2_lsa
     fields:
-      ls_age: 0 # the Auto LSA checksum is exact for LS age 0
+      ls_age: 0 # the Auto LSA checksum leaves LS age out, so any age works
       link_state_id: 192.0.2.1
       advertising_router: 192.0.2.1
       ls_sequence: 0x80000001

@@ -288,8 +288,9 @@ pub fn ospfv2_lsack() -> ProtocolDef {
 }
 
 /// OSPFv2 LSA header (RFC 2328 A.4.1) as a layer inside an LSU: `ls_type` (Auto,
-/// from the body layer), Fletcher `ls_checksum` (Auto; exact for `ls_age` 0, see
-/// the module docs) and `length` (Auto, header + body).
+/// from the body layer), Fletcher `ls_checksum` (Auto; `ls_age` is left out, so
+/// it is exact for any age, see the module docs) and `length` (Auto, header +
+/// body).
 #[must_use]
 pub fn ospfv2_lsa() -> ProtocolDef {
     protocol! {
@@ -616,7 +617,8 @@ pub fn ospfv3_lsack() -> ProtocolDef {
 
 /// OSPFv3 LSA header (RFC 5340 A.4.2) as a layer inside an LSU: 16-bit `ls_type`
 /// (U / S bits + function code; Auto from the body layer), Fletcher
-/// `ls_checksum` (Auto; exact for `ls_age` 0) and `length` (Auto).
+/// `ls_checksum` (Auto; `ls_age` is left out, so it is exact for any age) and
+/// `length` (Auto).
 #[must_use]
 pub fn ospfv3_lsa() -> ProtocolDef {
     protocol! {

@@ -21,6 +21,13 @@
 # リファレンス
 
 - [プロトコルリファレンス](reference/protocols.md)
+  - [P1 プロトコル補足](reference/p1/README.md)
+    - [L2 制御](reference/p1/l2-control.md)
+    - [トンネル / カプセル化](reference/p1/tunnels.md)
+    - [ルーティング](reference/p1/routing.md)
+    - [FHRP](reference/p1/fhrp.md)
+    - [マルチキャスト](reference/p1/multicast.md)
+    - [アプリケーション](reference/p1/application.md)
 - [テンプレートスキーマ](reference/template-schema.md)
 - [API リファレンス](reference/api.md)
 - [CLI リファレンス](reference/cli.md)
