@@ -1,0 +1,43 @@
+# Interop: VRRPv3 Advertisements with a higher priority; the peer gives up Master
+schema: 1
+
+meta:
+  name: interop-vrrpv3-preempt
+  descriptions:
+    ja: "相互接続確認: 相手より高い優先度 (200) の VRRPv3 広告を 1 秒間隔で送り、相手が Master から Backup に移ることを確認 (送出を止めると 3 秒強で Master に戻る)"
+    en: "Interop check: VRRPv3 Advertisements every 1 s with a higher priority (200); the peer moves from Master to Backup (and back to Master a little over 3 s after wpg stops)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:vrrpv3", "layer:l3", interop, vrrp]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: vrid
+    default: 5
+    description: Virtual router ID (must match the peer)
+  - name: src_ip
+    default: 10.99.0.1
+    description: Primary address of wpg on the link
+  - name: virtual_ip
+    default: 10.99.0.254
+    description: Virtual address (must match the peer)
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:12" # 224.0.0.18
+      src: "00:00:5e:00:01:05" # virtual router MAC 00:00:5e:00:01:<vrid> (update together with vrid)
+  - protocol: ipv4
+    fields:
+      src: ${src_ip}
+      dst: 224.0.0.18
+      ttl: 255 # RFC 5798: receivers drop other TTLs
+  - protocol: vrrpv3
+    fields:
+      vrid: ${vrid}
+      priority: 200
+      max_adver_int: 100 # centiseconds (1 s), must match
+      ip_addresses: ["${virtual_ip}"]
+
+tx:
+  count: 60
+  rate: 1pps

@@ -1,0 +1,52 @@
+# Interop: OSPFv2 Hello that lists the peer, so the peer moves the neighbor to 2-Way
+schema: 1
+
+meta:
+  name: interop-ospfv2-hello-2way
+  descriptions:
+    ja: "相互接続確認: 相手のルータ ID を載せた OSPFv2 Hello を 10 秒間隔で送り、相手側でネイバーが 2-Way (DROther) になることを確認"
+    en: "Interop check: OSPFv2 Hellos every 10 s that list the peer's router ID, so the peer shows the neighbor in 2-Way (DROther)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:ospfv2", "protocol:ospfv2_hello", "layer:l3", interop, ospf]
+  author: wpg
+  created: 2026-10-12
+
+variables:
+  - name: router_id
+    default: 10.99.0.1
+    description: Router ID and source address of wpg
+  - name: peer_router_id
+    default: 10.99.0.2
+    description: Router ID of the device under test
+  - name: src_mac
+    default: "02:00:00:00:00:01"
+    description: Source MAC of wpg (any unicast address)
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:05" # AllSPFRouters 224.0.0.5
+      src: ${src_mac}
+  - protocol: ipv4
+    fields:
+      src: ${router_id}
+      dst: 224.0.0.5
+      ttl: 1
+      dscp: 48
+  - protocol: ospfv2
+    fields:
+      router_id: ${router_id}
+      area_id: 0.0.0.0
+  - protocol: ospfv2_hello
+    fields:
+      network_mask: 255.255.255.0 # must match the peer's interface
+      hello_interval: 10 # must match
+      router_dead_interval: 40 # must match
+      options: e
+      router_priority: 0 # never DR / BDR: wpg does not run the database exchange
+      designated_router: 0.0.0.0
+      backup_designated_router: 0.0.0.0
+      neighbors: ["${peer_router_id}"]
+
+tx:
+  count: 12 # two minutes of Hellos
+  rate: ifg=10s
