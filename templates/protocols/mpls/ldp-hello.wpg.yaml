@@ -1,0 +1,40 @@
+# LDP (RFC 5036): a link Hello for basic discovery, to 224.0.0.2 on UDP 646
+schema: 1
+
+meta:
+  name: ldp-hello
+  descriptions:
+    ja: "LDP (RFC 5036): 基本ディスカバリのリンク Hello (224.0.0.2、UDP 646、ホールドタイム 15 秒、IPv4 トランスポートアドレス付き)"
+    en: "LDP (RFC 5036): a link Hello for basic discovery (224.0.0.2, UDP 646, 15 s hold time, with an IPv4 transport address)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:ldp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.12.1
+      dst: 224.0.0.2 # all routers on this subnet
+      ttl: 1
+  - protocol: udp
+    fields:
+      src_port: 646
+      dst_port: 646
+  - protocol: ldp
+    fields:
+      lsr_id: 192.0.2.1
+      label_space: 0
+      # pdu_length and every message / TLV length: Auto
+      messages:
+        - hello:
+            message_id: 1
+            tlvs:
+              - common_hello_parameters: { hold_time: 15, t: 0, r: 0, g: 1 } # GTSM (RFC 6720)
+              - ipv4_transport_address: 192.0.2.1
+
+tx:
+  count: 1

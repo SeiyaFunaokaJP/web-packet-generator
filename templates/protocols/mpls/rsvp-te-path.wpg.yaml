@@ -1,0 +1,56 @@
+# RSVP-TE (RFC 3209): a Path message for an LSP tunnel with Router Alert, explicit route and record route
+schema: 1
+
+meta:
+  name: rsvp-te-path
+  descriptions:
+    ja: "RSVP-TE (RFC 3209): Router Alert 付き IPv4 で送る LSP トンネルの Path (SESSION、RSVP_HOP、TIME_VALUES、厳密 / 緩い EXPLICIT_ROUTE、LABEL_REQUEST、SESSION_ATTRIBUTE、SENDER_TEMPLATE、SENDER_TSPEC、RECORD_ROUTE)"
+    en: "RSVP-TE (RFC 3209): a Path message for an LSP tunnel over IPv4 with Router Alert (SESSION, RSVP_HOP, TIME_VALUES, strict / loose EXPLICIT_ROUTE, LABEL_REQUEST, SESSION_ATTRIBUTE, SENDER_TEMPLATE, SENDER_TSPEC, RECORD_ROUTE)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:rsvp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4 # protocol 46 is Auto
+    fields:
+      src: 192.0.2.1 # head end
+      dst: 192.0.2.4 # tail end: Path is addressed to the tunnel end point
+      dscp: 48
+      ttl: 255
+      options:
+        - router_alert: 0
+  - protocol: rsvp
+    fields:
+      msg_type: path
+      send_ttl: 255
+      # checksum, length and every object length: Auto
+      objects:
+        - session_lsp_tunnel_ipv4: { tunnel_endpoint: 192.0.2.4, tunnel_id: 100, extended_tunnel_id: 192.0.2.1 }
+        - rsvp_hop_ipv4: { address: 10.0.12.1, logical_interface_handle: 0 }
+        - time_values: 30000 # refresh period in ms
+        - explicit_route:
+            subobjects:
+              - ipv4_prefix: { address: 10.0.12.2, prefix_length: 32 } # strict hop
+              - ipv4_prefix_loose: { address: 192.0.2.4, prefix_length: 32 } # loose hop (L bit)
+        - label_request: { l3pid: 0x0800 }
+        - session_attribute:
+            setup_priority: 7
+            holding_priority: 7
+            flags: local_protection_desired|label_recording_desired|se_style_desired
+            name: '"PE1->PE4"' # name_length and padding: Auto
+        - sender_template_lsp_tunnel_ipv4: { sender_address: 192.0.2.1, lsp_id: 1 }
+        - sender_tspec:
+            token_bucket_rate: 0x49742400 # 1e6 octets/s (8 Mbit/s), IEEE 754
+            token_bucket_size: 0x447a0000 # 1000 octets
+            peak_data_rate: 0x7f800000 # infinity
+            maximum_packet_size: 1500
+        - record_route:
+            subobjects:
+              - ipv4_address: { address: 10.0.12.1, prefix_length: 32, flags: 0 }
+
+tx:
+  count: 1

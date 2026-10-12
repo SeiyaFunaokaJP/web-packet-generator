@@ -1,0 +1,33 @@
+# Micro-BFD (RFC 7130): a control packet on one LAG member link, UDP 6784 to 01-00-5e-90-00-01
+schema: 1
+
+meta:
+  name: micro-bfd
+  descriptions:
+    ja: "Micro-BFD (RFC 7130): LAG のメンバーリンクごとの制御パケット (UDP 6784、宛先 MAC 01-00-5e-90-00-01、状態 Down)"
+    en: "Micro-BFD (RFC 7130): a control packet on one LAG member link (UDP 6784, destination MAC 01-00-5e-90-00-01, state Down)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:bfd", "layer:l4", oam, lag, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:90:00:01" # dedicated MAC (RFC 7130 §2.3)
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.12.1
+      dst: 10.0.12.2
+      ttl: 255
+  - protocol: udp
+    fields:
+      src_port: 49152
+      dst_port: 6784
+  - protocol: bfd
+    fields:
+      state: down
+      my_discriminator: 0x00010001
+
+tx:
+  count: 1

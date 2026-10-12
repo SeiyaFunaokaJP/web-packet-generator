@@ -272,6 +272,18 @@ impl FieldType {
                 };
                 octets(t.type_bits, "type")?;
                 octets(t.len_bits, "length")?;
+                if t.len_first
+                    && (t.head_octets > 0
+                        || t.long_length.is_some()
+                        || t.variants.iter().any(|v| v.type_only))
+                {
+                    return Err(CoreError::InvalidDefinition {
+                        protocol: field.to_owned(),
+                        reason: "a tlv with the length first has no head octets, long length \
+                                 or type-only items"
+                            .into(),
+                    });
+                }
                 match &t.long_length {
                     Some(l)
                         if l.flag == 0 || l.flag > crate::bits::mask(u32::from(t.type_bits)) =>
@@ -447,6 +459,11 @@ pub struct TlvDef {
     /// [`TlvLongLength`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub long_length: Option<TlvLongLength>,
+    /// The length field comes before the type (RSVP objects: 16-bit length, then
+    /// the 8-bit Class-Num and C-Type read as one 16-bit type). Not combinable with
+    /// `head_octets`, `long_length` or type-only variants.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub len_first: bool,
 }
 
 /// A flag bit in the type field selecting a wider length field.

@@ -991,3 +991,35 @@ sctp-dst-port = 宛先ポート。
 sctp-verification-tag = 検証タグ: 相手の Initiate Tag（INIT を含むパケットでは 0）。
 sctp-checksum = このフィールドを 0 とした SCTP パケット全体の CRC32c（Auto）。下位オクテットから送出。
 sctp-chunks = チャンク（8 ビット型、8 ビットフラグ、4 オクテットのヘッダを含む 16 ビット長、4 オクテット境界までゼロ詰め）: DATA、INIT、INIT ACK、SACK、HEARTBEAT、ABORT、SHUTDOWN、ERROR、COOKIE ECHO / ACK、AUTH、I-DATA、ASCONF、RE-CONFIG、FORWARD TSN、PAD。長さ・詰め物・SACK の件数は Auto。
+
+# --- P2 LDP / RSVP-TE / BFD field descriptions ---
+ldp-version = LDP バージョン（1）。
+ldp-pdu-length = バージョンと PDU 長を除く PDU の長さ（Auto）。
+ldp-lsr-id = LSR ID: LDP 識別子の先頭 4 オクテット。
+ldp-label-space = ラベル空間 ID: LDP 識別子の末尾 2 オクテット（0 = プラットフォーム共通）。
+ldp-messages = メッセージ（U ビットを含む 16 ビット型、値の 16 ビット長、メッセージ ID、TLV）: Notification、Hello、Initialization、KeepAlive、Address / Address Withdraw、Label Mapping / Request / Withdraw / Release / Abort Request。TLV: FEC、Address List、Hop Count、Path Vector、Generic Label、Status、Common Hello / Session Parameters、トランスポートアドレス、Configuration Sequence Number。長さは Auto。
+rsvp-version = RSVP バージョン（1）。
+rsvp-flags = フラグ（ビット 0: リフレッシュ削減対応、RFC 2961）。
+rsvp-msg-type = メッセージ種別（1 Path、2 Resv、3 PathErr、4 ResvErr、5 PathTear、6 ResvTear、7 ResvConf、12 Bundle、13 Ack、15 Srefresh、20 Hello）。
+rsvp-checksum = このフィールドを 0 としたメッセージ全体のインターネットチェックサム（Auto）。
+rsvp-send-ttl = メッセージ送出時の IP TTL。
+rsvp-reserved = 予約（0）。
+rsvp-length = 共通ヘッダを含むメッセージ全体のオクテット長（Auto）。
+rsvp-objects = オブジェクト（4 オクテットのヘッダを含む 16 ビット長、Class-Num、C-Type）: SESSION、RSVP_HOP、TIME_VALUES、ERROR_SPEC、SCOPE、STYLE、FLOWSPEC、FILTER_SPEC、SENDER_TEMPLATE、SENDER_TSPEC、RESV_CONFIRM、LABEL、LABEL_REQUEST、EXPLICIT_ROUTE、RECORD_ROUTE、HELLO、MESSAGE_ID、SESSION_ATTRIBUTE。長さ・セッション名の長さと詰め物は Auto。
+bfd-version = BFD バージョン（1）。
+bfd-diag = 診断コード: ローカルセッションが最後に状態を変えた理由。
+bfd-state = セッション状態: 0 AdminDown、1 Down、2 Init、3 Up。
+bfd-p = P ビット: Poll（パラメータ変更。相手は F で応答）。
+bfd-f = F ビット: Final（Poll への応答）。
+bfd-c = C ビット: コントロールプレーン非依存。
+bfd-a = A ビット: 認証あり（Auto: 認証セクションがあれば 1）。
+bfd-d = D ビット: デマンドモード。
+bfd-m = M ビット: マルチポイント（0）。
+bfd-detect-mult = 検出時間の乗数。
+bfd-length = 認証セクションを含む制御パケットのオクテット長（Auto）。
+bfd-my-discriminator = My Discriminator: 送信側でセッションを一意に表す 0 以外の値。
+bfd-your-discriminator = Your Discriminator: 相手の Discriminator（不明な間は 0）。
+bfd-desired-min-tx = 希望する最小送信間隔（マイクロ秒）。
+bfd-required-min-rx = 要求する最小受信間隔（マイクロ秒）。
+bfd-required-min-echo-rx = 要求する最小エコー受信間隔（マイクロ秒、0 = エコーなし）。
+bfd-authentication = 認証セクション（8 ビット型、ヘッダを含む 8 ビット長）: 簡易パスワード、Keyed MD5 / SHA1 とその Meticulous 版。ダイジェスト / ハッシュは手動。

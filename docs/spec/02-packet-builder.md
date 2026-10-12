@@ -17,13 +17,13 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 | `cstring` | NUL 終端文字列 (値は終端なし、合成時に `0x00` を付加。TFTP のファイル名など) |
 | `enum` | 名前付き値 |
 | `flags(bit set)` | ビット集合 |
-| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) / 前のフィールドが示すグループ先頭からのオフセットまで (`値 × unit`、CLNP / ES-IS の長さ指示子で終わるオプション)。TLV は型と長さの間に値の先頭オクテットを置ける (`head_octets`、SCTP チャンクのフラグ) ほか、各項目を N オクテット境界までゼロ詰めできる (`align`、詰め物は長さに含めない。`unpadded_last` で最後の項目は詰めず外側に任せる: SCTP パラメータ)。同じタイプのバリアントを値の先頭オクテット (`value_prefix`、BGP の AFI / SAFI) や値の長さ (`value_len`、OSPF SR の 3 / 4 オクテットの SID) で選び分けられ、タイプのフラグビットで長さフィールドを広げられる (`long_length`、BGP の Extended Length。値が長すぎると合成時に自動で付く) |
+| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) / 前のフィールドが示すグループ先頭からのオフセットまで (`値 × unit`、CLNP / ES-IS の長さ指示子で終わるオプション)。TLV は型と長さの間に値の先頭オクテットを置ける (`head_octets`、SCTP チャンクのフラグ) ほか、各項目を N オクテット境界までゼロ詰めできる (`align`、詰め物は長さに含めない。`unpadded_last` で最後の項目は詰めず外側に任せる: SCTP パラメータ)。同じタイプのバリアントを値の先頭オクテット (`value_prefix`、BGP の AFI / SAFI) や値の長さ (`value_len`、OSPF SR の 3 / 4 オクテットの SID) で選び分けられ、タイプのフラグビットで長さフィールドを広げられる (`long_length`、BGP の Extended Length。値が長すぎると合成時に自動で付く)。長さを型より前に置ける (`len_first`、RSVP オブジェクト) |
 | `padding` / `raw` | 詰め物 / 生バイト |
 
 ### 自動計算フィールド (GUI で Auto / Manual トグル)
 
 - 長さ系: IPv4 total length, UDP length, IS-IS PDU length, TLV length など
-- チェックサム系: IPv4 header, TCP/UDP (v4/v6 疑似ヘッダ), ICMP, OSPF, IS-IS (Fletcher), SCTP CRC32c, GRE など
+- チェックサム系: IPv4 header, TCP/UDP (v4/v6 疑似ヘッダ), ICMP, OSPF, IS-IS (Fletcher), SCTP CRC32c, RSVP, GRE など
 - 次ヘッダ / EtherType / Protocol 番号: 下位レイヤの選択から自動決定し、上書き可
 - 件数系 (`count(list)`): 同じフィールド群の `list` / `tlv` の要素数 (IGMPv3 の `num_group_records`、グループレコード内の `num_sources` など)。リスト要素・TLV 値の中でも使える
 - サイズ系 (`size(field)`): 同じフィールド群の後続の可変長フィールドのオクテット数 (IS-IS 拡張到達性エントリ内のサブ TLV 長など)。`count` と同じくリスト要素・TLV 値の中でも使える
@@ -77,8 +77,8 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 - 802.2 LLC (DSAP/SSAP 0xFE) 上の OSI カプセル化、SNAP
 - SCTP (RFC 9260: DATA/INIT/INIT-ACK/SACK/HEARTBEAT/ABORT/SHUTDOWN/ERROR/COOKIE、AUTH/I-DATA/ASCONF/RE-CONFIG/FORWARD-TSN/PAD、パラメータ・エラー原因、CRC32c)
 - OSPF 拡張 (Opaque LSA タイプ 9/10/11: TE / Router Information / Extended Prefix / Extended Link、SR の SR-Algorithm・SID/Label Range・SRLB・Prefix-SID・Adj-SID)、BGP 拡張 (MP_REACH / MP_UNREACH の IPv4・IPv6 ユニキャスト / VPN-IPv4・VPN-IPv6 / EVPN ルートタイプ 1〜5、PMSI Tunnel、Extended Length)
-- MPLS 制御: LDP (Hello/Init/Address/Label Mapping), RSVP-TE (Path/Resv 基本)
-- BFD (制御パケット), Micro-BFD
+- MPLS 制御: LDP (RFC 5036: Notification/Hello/Initialization/KeepAlive/Address/Label Mapping・Request・Withdraw・Release・Abort、FEC・Generic Label・Status・Hello / Session パラメータ等の TLV)、RSVP-TE (RFC 2205 / 3209: Path/Resv/PathErr/ResvErr/PathTear/ResvTear/ResvConf/Hello 等、SESSION・HOP・ERO/RRO・LABEL・SESSION_ATTRIBUTE・IntServ TSPEC/FLOWSPEC 等のオブジェクト、チェックサム)
+- BFD (RFC 5880 制御パケット、認証セクション、シングルホップ / マルチホップ)、Micro-BFD (RFC 7130)
 - Segment Routing: SRv6 (SRH), MPLS-SR ラベルスタック生成補助
 - 802.11 (Radiotap + 管理フレーム、モニタモード対応 NIC 限定) — P3 相当、要望次第
 - PTP (IEEE 1588 v2), SyncE ESMC, ERPS (G.8032 R-APS), Y.1731 CFM/OAM (CCM/LBM/LTM), EtherOAM (802.3ah)

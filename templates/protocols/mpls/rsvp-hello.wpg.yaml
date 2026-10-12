@@ -1,0 +1,32 @@
+# RSVP-TE (RFC 3209 §5): a Hello with a HELLO REQUEST object between neighbours
+schema: 1
+
+meta:
+  name: rsvp-hello
+  descriptions:
+    ja: "RSVP-TE (RFC 3209 §5): 隣接ノード間の Hello (HELLO REQUEST オブジェクト、送信元インスタンス付き、TTL 1)"
+    en: "RSVP-TE (RFC 3209 §5): a Hello between neighbours (HELLO REQUEST object with the source instance, TTL 1)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:rsvp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 10.0.12.1
+      dst: 10.0.12.2
+      dscp: 48
+      ttl: 1
+  - protocol: rsvp
+    fields:
+      msg_type: hello
+      send_ttl: 1
+      objects:
+        - hello_request: { source_instance: 0x5a5a0001, destination_instance: 0 }
+
+tx:
+  count: 1

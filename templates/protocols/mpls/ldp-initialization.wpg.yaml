@@ -1,0 +1,51 @@
+# LDP (RFC 5036): an Initialization and a KeepAlive in one PDU on the TCP session
+schema: 1
+
+meta:
+  name: ldp-initialization
+  descriptions:
+    ja: "LDP (RFC 5036): TCP セッション上の 1 PDU に Initialization (Common Session Parameters、KeepAlive 180 秒) と KeepAlive を格納"
+    en: "LDP (RFC 5036): an Initialization (Common Session Parameters, 180 s KeepAlive time) and a KeepAlive in one PDU on the TCP session"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "protocol:ldp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      dscp: 48
+      ttl: 255 # GTSM (RFC 6720)
+  - protocol: tcp
+    fields:
+      src_port: 646 # the active LSR (higher transport address) connects to 646
+      dst_port: 49152
+      seq: 1001
+      ack: 5001
+      flags: psh|ack
+  - protocol: ldp
+    fields:
+      lsr_id: 192.0.2.1
+      messages:
+        - initialization:
+            message_id: 1
+            tlvs:
+              - common_session_parameters:
+                  protocol_version: 1
+                  keepalive_time: 180
+                  a: 0 # downstream unsolicited
+                  d: 0 # loop detection disabled
+                  pv_lim: 0
+                  max_pdu_length: 0 # 0 = 4096
+                  receiver_lsr_id: 192.0.2.2
+                  receiver_label_space: 0
+        - keepalive:
+            message_id: 2
+
+tx:
+  count: 1

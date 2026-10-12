@@ -248,6 +248,7 @@ pub fn hsrpv2_tlvs() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 
@@ -311,6 +312,7 @@ pub fn glbp_tlvs() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 

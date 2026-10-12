@@ -1,0 +1,36 @@
+# RSVP (RFC 2205 / RFC 3209): a PathTear removing the path state of an LSP tunnel
+schema: 1
+
+meta:
+  name: rsvp-path-tear
+  descriptions:
+    ja: "RSVP (RFC 2205 / RFC 3209): LSP トンネルのパス状態を削除する PathTear (Router Alert 付き)"
+    en: "RSVP (RFC 2205 / RFC 3209): a PathTear removing the path state of an LSP tunnel (with Router Alert)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:rsvp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.4
+      dscp: 48
+      ttl: 255
+      options:
+        - router_alert: 0
+  - protocol: rsvp
+    fields:
+      msg_type: path_tear
+      send_ttl: 255
+      objects:
+        - session_lsp_tunnel_ipv4: { tunnel_endpoint: 192.0.2.4, tunnel_id: 100, extended_tunnel_id: 192.0.2.1 }
+        - rsvp_hop_ipv4: { address: 10.0.12.1, logical_interface_handle: 0 }
+        - sender_template_lsp_tunnel_ipv4: { sender_address: 192.0.2.1, lsp_id: 1 }
+
+tx:
+  count: 1

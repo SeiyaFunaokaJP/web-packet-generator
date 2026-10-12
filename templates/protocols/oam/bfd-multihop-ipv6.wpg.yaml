@@ -1,0 +1,37 @@
+# BFD (RFC 5883): multihop control packets over IPv6 to UDP 4784, session coming up (Init)
+schema: 1
+
+meta:
+  name: bfd-multihop-ipv6
+  descriptions:
+    ja: "BFD (RFC 5883): IPv6 で UDP 4784 に送るマルチホップの制御パケット (状態 Init、相手の Discriminator 学習済み)"
+    en: "BFD (RFC 5883): multihop control packets over IPv6 to UDP 4784 (state Init, peer discriminator learnt)"
+  tags: ["protocol:ethernet2", "protocol:ipv6", "protocol:udp", "protocol:bfd", "layer:l4", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: "2001:db8::1"
+      dst: "2001:db8:ffff::4"
+      dscp: 48
+      hop_limit: 64
+  - protocol: udp
+    fields:
+      src_port: 49200
+      dst_port: 4784
+  - protocol: bfd
+    fields:
+      state: init
+      my_discriminator: 7
+      your_discriminator: 9
+      desired_min_tx_interval: 1000000
+      required_min_rx_interval: 1000000
+
+tx:
+  count: 1

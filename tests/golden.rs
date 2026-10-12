@@ -274,6 +274,109 @@ fn case_eth_ipv4_sctp_data_sack() -> Packet {
     ])
 }
 
+/// LDP link Hello to 224.0.0.2 (UDP 646) with an IPv4 transport address.
+fn case_eth_ipv4_udp_ldp_hello() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x000d, [10, 0, 12, 1], [224, 0, 0, 2]).with("ttl", 1u8),
+        Layer::new("udp")
+            .with("src_port", 646u16)
+            .with("dst_port", 646u16),
+        Layer::new("ldp").with(
+            "messages",
+            vec![TlvItem::named("hello").with(
+                "tlvs",
+                vec![
+                    TlvItem::named("common_hello_parameters"),
+                    TlvItem::named("ipv4_transport_address")
+                        .with("address", Ipv4Addr::new(192, 0, 2, 1)),
+                ],
+            )],
+        ),
+    ])
+}
+
+/// LDP Label Mapping (prefix FEC 198.51.100.0/24, label 299776) on the TCP session.
+fn case_eth_ipv4_tcp_ldp_label_mapping() -> Packet {
+    let element = FieldValue::Struct(
+        [
+            ("prefix_length".to_owned(), FieldValue::UInt(24)),
+            ("prefix".to_owned(), FieldValue::Bytes(vec![198, 51, 100])),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x000e, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("tcp")
+            .with("src_port", 646u16)
+            .with("dst_port", 49152u16)
+            .with("seq", 1u32)
+            .with("ack", 1u32)
+            .with("flags", 0x18u8),
+        Layer::new("ldp").with(
+            "messages",
+            vec![TlvItem::named("label_mapping").with(
+                "tlvs",
+                vec![
+                    TlvItem::named("fec").with("elements", FieldValue::List(vec![element])),
+                    TlvItem::named("generic_label").with("label", 299_776u32),
+                ],
+            )],
+        ),
+    ])
+}
+
+/// RSVP-TE Path (the default objects plus an explicit route) with Router Alert.
+fn case_eth_ipv4_rsvp_path() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x000f, [192, 0, 2, 1], [192, 0, 2, 2]).with(
+            "options",
+            vec![TlvItem::named("router_alert").with("value", 0u16)],
+        ),
+        Layer::new("rsvp").with(
+            "objects",
+            vec![
+                TlvItem::named("session_lsp_tunnel_ipv4"),
+                TlvItem::named("rsvp_hop_ipv4"),
+                TlvItem::named("time_values"),
+                TlvItem::named("explicit_route").with(
+                    "subobjects",
+                    vec![TlvItem::named("ipv4_prefix")
+                        .with("address", Ipv4Addr::new(192, 0, 2, 2))],
+                ),
+                TlvItem::named("label_request"),
+                TlvItem::named("session_attribute"),
+                TlvItem::named("sender_template_lsp_tunnel_ipv4"),
+                TlvItem::named("sender_tspec"),
+            ],
+        ),
+    ])
+}
+
+/// BFD control packet, state Up, with simple password authentication.
+fn case_eth_ipv4_udp_bfd() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0010, [10, 0, 12, 1], [10, 0, 12, 2]).with("ttl", 255u8),
+        Layer::new("udp")
+            .with("src_port", 49152u16)
+            .with("dst_port", 3784u16),
+        Layer::new("bfd")
+            .with("state", 3u8)
+            .with("my_discriminator", 0x101u32)
+            .with("your_discriminator", 0x201u32)
+            .with("desired_min_tx_interval", 300_000u32)
+            .with("required_min_rx_interval", 300_000u32)
+            .with(
+                "authentication",
+                vec![TlvItem::named("simple_password").with("password", b"secret".to_vec())],
+            ),
+    ])
+}
+
 /// OSPFv2 LSU with an area-scope Router Information opaque LSA: SR algorithms,
 /// SRGB and SRLB (3-octet SID/Label sub-TLVs padded to 4 octets).
 fn case_eth_ipv4_ospfv2_opaque_ri() -> Packet {
@@ -399,6 +502,13 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ),
         ("eth_ipv4_tcp_bgp_vpnv4", case_eth_ipv4_tcp_bgp_vpnv4()),
         ("eth_ipv4_tcp_bgp_evpn", case_eth_ipv4_tcp_bgp_evpn()),
+        ("eth_ipv4_udp_ldp_hello", case_eth_ipv4_udp_ldp_hello()),
+        (
+            "eth_ipv4_tcp_ldp_label_mapping",
+            case_eth_ipv4_tcp_ldp_label_mapping(),
+        ),
+        ("eth_ipv4_rsvp_path", case_eth_ipv4_rsvp_path()),
+        ("eth_ipv4_udp_bfd", case_eth_ipv4_udp_bfd()),
     ]
 }
 

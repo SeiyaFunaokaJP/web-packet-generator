@@ -1,0 +1,42 @@
+# RSVP-TE (RFC 3209): a Resv message with the Shared Explicit style, a label and record route
+schema: 1
+
+meta:
+  name: rsvp-te-resv
+  descriptions:
+    ja: "RSVP-TE (RFC 3209): Shared Explicit スタイルの Resv (SESSION、RSVP_HOP、TIME_VALUES、STYLE、FLOWSPEC、FILTER_SPEC、LABEL、ラベルを記録した RECORD_ROUTE)"
+    en: "RSVP-TE (RFC 3209): a Resv with the Shared Explicit style (SESSION, RSVP_HOP, TIME_VALUES, STYLE, FLOWSPEC, FILTER_SPEC, LABEL, RECORD_ROUTE with a label)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:rsvp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 10.0.12.2 # Resv goes hop by hop, upstream
+      dst: 10.0.12.1
+      dscp: 48
+      ttl: 255
+  - protocol: rsvp
+    fields:
+      msg_type: resv
+      send_ttl: 255
+      objects:
+        - session_lsp_tunnel_ipv4: { tunnel_endpoint: 192.0.2.4, tunnel_id: 100, extended_tunnel_id: 192.0.2.1 }
+        - rsvp_hop_ipv4: { address: 10.0.12.2, logical_interface_handle: 0 }
+        - time_values: 30000
+        - style: { sharing: shared, sender_selection: explicit } # SE
+        - flowspec: { service_number: 5, token_bucket_rate: 0x49742400 } # controlled load
+        - filter_spec_lsp_tunnel_ipv4: { sender_address: 192.0.2.1, lsp_id: 1 }
+        - label: 299776
+        - record_route:
+            subobjects:
+              - ipv4_address: { address: 10.0.12.2, prefix_length: 32, flags: 0 }
+              - label: { flags: 1, c_type: 1, label: 299776 } # global label
+
+tx:
+  count: 1

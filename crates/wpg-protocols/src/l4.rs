@@ -53,6 +53,7 @@ pub fn tcp_options() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 
@@ -66,7 +67,8 @@ pub fn tcp_options() -> FieldType {
 /// redundancy ports (HSRP 1985, `HSRPv2` over IPv6 2029, GLBP 3222; UDP 1985
 /// decodes as `HSRPv1`) and the P1 application protocols (DNS 53, `DHCPv4` 67/68,
 /// TFTP 69, NTP 123, SNMP 161/162, Syslog 514, `DHCPv6` 546/547, RADIUS
-/// 1812/1813); unknown ports have no default, so an ordinary UDP payload still
+/// 1812/1813), LDP discovery (646) and BFD (3784 single hop, 4784 multihop,
+/// 6784 Micro-BFD); unknown ports have no default, so an ordinary UDP payload still
 /// parses as `raw`. Building announces through the destination port only.
 #[must_use]
 pub fn udp() -> ProtocolDef {
@@ -93,6 +95,11 @@ pub fn udp() -> ProtocolDef {
             6081 => "geneve",
             6635 => "mpls",
             9899 => "sctp",
+            // P2 MPLS control and BFD.
+            646 => "ldp",
+            3784 => "bfd",
+            4784 => "bfd",
+            6784 => "bfd",
             // P1 application protocols.
             53 => "dns",
             67 => "dhcpv4",
@@ -121,7 +128,8 @@ pub fn udp() -> ProtocolDef {
 /// options and automatic zero padding to 32 bits) and `checksum` (with pseudo
 /// header) are Auto.
 ///
-/// The `next` binding demultiplexes BGP on port 179 (destination, else source);
+/// The `next` binding demultiplexes BGP on port 179 and LDP sessions on port 646
+/// (destination, else source);
 /// other payloads parse as `raw`.
 #[must_use]
 pub fn tcp() -> ProtocolDef {
@@ -152,7 +160,7 @@ pub fn tcp() -> ProtocolDef {
             options: ty(tcp_options());
             padding: padding(4);
         },
-        next: dst_port { 179 => "bgp" },
+        next: dst_port { 179 => "bgp", 646 => "ldp" },
         constraints: {
             error: in_range(data_offset, 5, 15);
         },

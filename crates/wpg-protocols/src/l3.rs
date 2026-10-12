@@ -33,6 +33,7 @@ pub fn ipv4_options() -> FieldType {
         align: 0,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 
@@ -65,6 +66,7 @@ pub fn ipv4() -> ProtocolDef {
                 6 => tcp,
                 17 => udp,
                 41 => ipv6,
+                46 => rsvp,
                 47 => gre,
                 50 => esp,
                 51 => ah,
@@ -90,6 +92,7 @@ pub fn ipv4() -> ProtocolDef {
             6 => "tcp",
             17 => "udp",
             41 => "ipv6",
+            46 => "rsvp",
             47 => "gre",
             88 => "eigrp",
             89 => "ospfv2",

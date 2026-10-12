@@ -1,0 +1,44 @@
+# LDP (RFC 5036): a Label Withdraw with the wildcard FEC and a Notification (Status: Shutdown)
+schema: 1
+
+meta:
+  name: ldp-label-withdraw
+  descriptions:
+    ja: "LDP (RFC 5036): ワイルドカード FEC の Label Withdraw と Notification (Status: Shutdown、E ビット) を 1 PDU に格納"
+    en: "LDP (RFC 5036): a Label Withdraw with the wildcard FEC and a Notification (Status: Shutdown, E bit) in one PDU"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "protocol:ldp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      dscp: 48
+  - protocol: tcp
+    fields:
+      src_port: 646
+      dst_port: 49152
+      seq: 3001
+      ack: 7001
+      flags: psh|ack
+  - protocol: ldp
+    fields:
+      lsr_id: 192.0.2.1
+      messages:
+        - label_withdraw:
+            message_id: 20
+            tlvs:
+              - fec_wildcard # element type 1: every FEC
+        - notification:
+            message_id: 21
+            tlvs:
+              - status: { e: 1, f: 0, status_code: shutdown, message_id: 0, message_type: 0 }
+
+tx:
+  count: 1

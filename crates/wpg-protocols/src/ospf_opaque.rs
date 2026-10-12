@@ -108,6 +108,7 @@ fn tlvs(variants: Vec<TlvVariant>) -> FieldType {
         align: 4,
         unpadded_last: false,
         long_length: None,
+        len_first: false,
     })
 }
 

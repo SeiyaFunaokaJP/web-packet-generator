@@ -991,3 +991,35 @@ sctp-dst-port = Destination port.
 sctp-verification-tag = Verification tag: the peer's initiate tag (0 in a packet carrying INIT).
 sctp-checksum = CRC32c of the whole SCTP packet with this field zeroed (Auto), sent least significant octet first.
 sctp-chunks = Chunks (8-bit type, 8-bit flags, 16-bit length including the 4-octet header, zero padding to 4 octets): DATA, INIT, INIT ACK, SACK, HEARTBEAT, ABORT, SHUTDOWN, ERROR, COOKIE ECHO / ACK, AUTH, I-DATA, ASCONF, RE-CONFIG, FORWARD TSN, PAD. Lengths, padding and SACK counts are Auto.
+
+# --- P2 LDP / RSVP-TE / BFD field descriptions ---
+ldp-version = LDP version (1).
+ldp-pdu-length = Length of the PDU after the version and PDU length fields (Auto).
+ldp-lsr-id = LSR ID: the first four octets of the LDP identifier.
+ldp-label-space = Label space ID: the last two octets of the LDP identifier (0 = platform-wide).
+ldp-messages = Messages (16-bit type with the U bit, 16-bit length of the value, message ID, TLVs): Notification, Hello, Initialization, KeepAlive, Address / Address Withdraw, Label Mapping / Request / Withdraw / Release / Abort Request. TLVs: FEC, Address List, Hop Count, Path Vector, Generic Label, Status, Common Hello / Session Parameters, transport addresses, Configuration Sequence Number. Lengths are Auto.
+rsvp-version = RSVP version (1).
+rsvp-flags = Flags (bit 0: refresh reduction capable, RFC 2961).
+rsvp-msg-type = Message type (1 Path, 2 Resv, 3 PathErr, 4 ResvErr, 5 PathTear, 6 ResvTear, 7 ResvConf, 12 Bundle, 13 Ack, 15 Srefresh, 20 Hello).
+rsvp-checksum = Internet checksum of the whole message with this field zeroed (Auto).
+rsvp-send-ttl = IP TTL the message was sent with.
+rsvp-reserved = Reserved (0).
+rsvp-length = Length of the whole message in octets, including the common header (Auto).
+rsvp-objects = Objects (16-bit length including the 4-octet header, Class-Num, C-Type): SESSION, RSVP_HOP, TIME_VALUES, ERROR_SPEC, SCOPE, STYLE, FLOWSPEC, FILTER_SPEC, SENDER_TEMPLATE, SENDER_TSPEC, RESV_CONFIRM, LABEL, LABEL_REQUEST, EXPLICIT_ROUTE, RECORD_ROUTE, HELLO, MESSAGE_ID, SESSION_ATTRIBUTE. Lengths, the session name length and padding are Auto.
+bfd-version = BFD version (1).
+bfd-diag = Diagnostic code: the reason of the last state change of the local session.
+bfd-state = Session state: 0 AdminDown, 1 Down, 2 Init, 3 Up.
+bfd-p = P bit: Poll (a parameter change, the peer answers with F).
+bfd-f = F bit: Final (answer to a Poll).
+bfd-c = C bit: Control Plane Independent.
+bfd-a = A bit: authentication present (Auto: set when there is an authentication section).
+bfd-d = D bit: Demand mode.
+bfd-m = M bit: Multipoint (0).
+bfd-detect-mult = Detect time multiplier.
+bfd-length = Length of the control packet in octets, including the authentication section (Auto).
+bfd-my-discriminator = My discriminator: a non-zero value unique to the session on the sender.
+bfd-your-discriminator = Your discriminator: the peer's discriminator (0 while unknown).
+bfd-desired-min-tx = Desired minimum TX interval in microseconds.
+bfd-required-min-rx = Required minimum RX interval in microseconds.
+bfd-required-min-echo-rx = Required minimum echo RX interval in microseconds (0 = no echo).
+bfd-authentication = Authentication section (8-bit type, 8-bit length including the header): simple password, keyed MD5 / SHA1 and their meticulous variants. The digest / hash is Manual.

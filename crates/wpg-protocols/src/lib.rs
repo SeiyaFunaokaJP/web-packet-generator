@@ -15,6 +15,7 @@ use wpg_core::{ProtocolDef, Resolve};
 
 pub mod app;
 pub mod arp;
+pub mod bfd;
 pub mod bgp_mp;
 pub mod clnp;
 pub mod encap;
@@ -26,11 +27,13 @@ pub mod l2;
 pub mod l2control;
 pub mod l3;
 pub mod l4;
+pub mod ldp;
 pub mod mcast;
 pub mod osi;
 pub mod ospf_opaque;
 pub mod payload;
 pub mod routing;
+pub mod rsvp;
 pub mod sctp;
 
 /// Registry of protocol definitions, in palette order.
@@ -235,6 +238,10 @@ pub fn builtin() -> Vec<ProtocolDef> {
         isis::isis_l2_psnp(),
         // P2 transport.
         sctp::sctp(),
+        // P2 MPLS control and BFD.
+        ldp::ldp(),
+        rsvp::rsvp(),
+        bfd::bfd(),
         payload::payload(),
         payload::raw(),
     ]

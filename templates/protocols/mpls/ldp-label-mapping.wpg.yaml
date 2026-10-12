@@ -1,0 +1,53 @@
+# LDP (RFC 5036): Address and Label Mapping messages (prefix FEC, generic label) in one PDU
+schema: 1
+
+meta:
+  name: ldp-label-mapping
+  descriptions:
+    ja: "LDP (RFC 5036): 1 PDU に Address (インタフェースアドレス一覧) と Label Mapping (プレフィックス FEC 192.0.2.1/32 と 198.51.100.0/24、汎用ラベル) を格納"
+    en: "LDP (RFC 5036): an Address message (interface addresses) and Label Mapping messages (prefix FECs 192.0.2.1/32 and 198.51.100.0/24, generic labels) in one PDU"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:tcp", "protocol:ldp", "layer:l4", mpls, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      dscp: 48
+  - protocol: tcp
+    fields:
+      src_port: 646
+      dst_port: 49152
+      seq: 2001
+      ack: 6001
+      flags: psh|ack
+  - protocol: ldp
+    fields:
+      lsr_id: 192.0.2.1
+      messages:
+        - address:
+            message_id: 10
+            tlvs:
+              - address_list: { address_family: 1, addresses: [192.0.2.1, 10.0.12.1] }
+        - label_mapping:
+            message_id: 11
+            tlvs:
+              - fec:
+                  # prefix element: type 2, family 1 (defaults); ceil(length / 8) octets
+                  elements: [{ prefix_length: 32, prefix: "c0 00 02 01" }]
+              - generic_label: { label: 3 } # implicit null: penultimate hop popping
+        - label_mapping:
+            message_id: 12
+            tlvs:
+              - fec:
+                  elements: [{ prefix_length: 24, prefix: "c6 33 64" }]
+              - generic_label: { label: 299776 }
+
+tx:
+  count: 1
