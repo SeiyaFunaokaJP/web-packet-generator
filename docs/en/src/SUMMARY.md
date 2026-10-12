@@ -185,6 +185,7 @@
 
 - [DPDK and AF_XDP setup](operations/dpdk-afxdp.md)
 - [CML2 notes](operations/cml2.md)
+- [Interop checks](operations/interop.md)
 - [Performance tuning](operations/tuning.md)
 - [Authentication and TLS](operations/security.md)
 

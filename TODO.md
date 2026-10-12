@@ -371,7 +371,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] SRv6 SRH / SR-MPLS 補助（`ipv6_srh`: ルーティングタイプ 4 を IPv6 next header 43 のルーティングタイプ peek で判別、セグメントリスト（IPv6 アドレスのリスト）と Pad1 / PadN / HMAC TLV。`hdr_ext_len`・`last_entry`・Pad1 詰め物は Auto、`segments_left` が 0 でない間は UDP / TCP / ICMPv6 の疑似ヘッダ宛先を最終宛先（セグメントリスト要素 0）に置き換え（高速パッチ経路も追従）。IPv6 next header 143 → Ethernet（End.DX2）。SR-MPLS は `mpls.label` の予約ラベル名（ELI 7、GAL 13 など）と SRGB + インデックスを `expr` で書くサンプル / シナリオ、エントロピーラベル。wpg-core に `Peek::skip`・`count(field, adjust)`・`Length::UntilOffset { adjust }`・`ProtocolDef::final_destination` を追加。HMAC の計算、`ipv6.dst` のアクティブセグメントへの自動設定、`segments_left <= last_entry` の検査、uSID / CSID の専用表現、SRGB の範囲検査は対象外）
 - [ ] PTP / ESMC / ERPS / Y.1731 CFM / 802.3ah OAM
 - [ ] MACsec (構造のみ) / GTP-C / Diameter / SIP / RTP
-- [ ] 実機 (or CML2 上 IOS-XR / Junos / FRR) との相互接続確認シナリオをドキュメント化
+- [x] 実機 (or CML2 上 IOS-XR / Junos / FRR) との相互接続確認シナリオをドキュメント化（`templates/interop/` に 7 シナリオ（OSPFv2 2-Way、RIPv2 経路導入、IS-IS L2 隣接 Up、VRRPv3 プリエンプト、PIM ネイバー、LDP ディスカバリ、BFD セッション Up）と `scripts/interop/frr-netns.sh`（名前空間 + veth で FRR 8.4.4 に対して一括確認、全 PASS）。手順・確認コマンドは `docs/{ja,en}/src/operations/interop.md`。IOS-XR / Junos の設定例と確認コマンドは記載のみで実機・CML2 では未確認。IPv6 シナリオ・TCP を要する BGP / LDP セッションは対象外）
 
 ### M8: 高速バックエンド（3–5 週）
 - [ ] AF_XDP バックエンド (`xsk-rs`、copy / zero-copy 自動、kernel 5.10+)、対応 NIC 一覧
