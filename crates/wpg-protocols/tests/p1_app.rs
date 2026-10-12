@@ -310,9 +310,11 @@ fn dns_response_golden() {
         3600,
         &"2001:db8::80".parse::<Ipv6Addr>().unwrap().octets(),
     ));
+    // From the server's port 53 to the client's ephemeral port: UDP decodes it
+    // through the source port.
     let b = build_v4(
         53,
-        53,
+        53000,
         vec![Layer::new("dns")
             .with("id", 7u16)
             .with("qr", 1u8)
@@ -530,9 +532,26 @@ fn radius_accounting_request_golden() {
 // TFTP
 // --------------------------------------------------------------------------
 
+/// One TFTP option name / value pair.
+fn tftp_option(name: &str, value: &str) -> FieldValue {
+    FieldValue::Struct(
+        [
+            (
+                "name".to_owned(),
+                FieldValue::Bytes(name.as_bytes().to_vec()),
+            ),
+            (
+                "value".to_owned(),
+                FieldValue::Bytes(value.as_bytes().to_vec()),
+            ),
+        ]
+        .into(),
+    )
+}
+
 #[test]
 fn tftp_golden() {
-    let cases: [(Layer, &str, &str); 4] = [
+    let cases: [(Layer, &str, &str); 6] = [
         (
             Layer::new("tftp"),
             "0001 626f6f742e62696e00 6f6374657400",
@@ -555,9 +574,25 @@ fn tftp_golden() {
             "0005 0001 46696c65206e6f7420666f756e6400",
             "tftp_error",
         ),
+        (
+            Layer::new("tftp")
+                .with("filename", b"pxelinux.0".to_vec())
+                .with(
+                    "options",
+                    vec![tftp_option("blksize", "1428"), tftp_option("tsize", "0")],
+                ),
+            "0001 7078656c696e75782e3000 6f6374657400 \
+             626c6b73697a6500 3134323800 7473697a6500 3000",
+            "tftp",
+        ),
+        (
+            Layer::new("tftp_oack"),
+            "0006 626c6b73697a6500 3134323800",
+            "tftp_oack",
+        ),
     ];
     for (layer, want, id) in cases {
-        // Port 69 announces `tftp`; DATA / ACK / ERROR re-decode by opcode.
+        // Port 69 announces `tftp`; DATA / ACK / ERROR / OACK re-decode by opcode.
         let b = build_v4(50000, 69, vec![layer]);
         assert_eq!(&b[APP..], hex(want).as_slice(), "{id}");
         assert_eq!(roundtrip(&b, "ipv4"), ["ipv4", "udp", id]);

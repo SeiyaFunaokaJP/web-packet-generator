@@ -6,9 +6,8 @@ meta:
   descriptions:
     ja: "DNS (RFC 1035): 圧縮ポインタで名前を参照する example.com の権威 A 応答"
     en: "DNS (RFC 1035): an authoritative A response for example.com with a compressed owner name"
-  # UDP is demultiplexed on the destination port only, so a reply from port 53
-  # does not decode back past UDP.
-  tags: ["protocol:dns", "layer:l4", app, sample, response, "opaque-inner:udp"]
+  # UDP falls back to the source port, so the reply from port 53 decodes as DNS.
+  tags: ["protocol:dns", "layer:l4", app, sample, response]
   author: wpg
   created: 2026-10-11
 

@@ -115,6 +115,11 @@ pub enum FieldType {
     Ipv6,
     /// Variable-length OSI NSAP address (1..=20 octets).
     Nsap,
+    /// NUL-terminated octet string (TFTP file names, C strings). The value is the
+    /// octets *without* the terminator, which the builder appends; the parser reads
+    /// up to and including the first zero octet.
+    #[serde(rename = "cstring")]
+    CString,
     /// Unsigned integer with named values.
     Enum {
         /// Width in bits.
@@ -165,6 +170,7 @@ impl FieldType {
             } => Some(octets * 8),
             FieldType::Bytes { .. }
             | FieldType::Nsap
+            | FieldType::CString
             | FieldType::Tlv { .. }
             | FieldType::List { .. }
             | FieldType::Padding { .. }
@@ -447,9 +453,21 @@ pub enum AutoCompute {
         /// Transmit a computed `0` as all-ones (UDP, RFC 768).
         #[serde(default, skip_serializing_if = "is_false")]
         nonzero: bool,
+        /// Header fields of this layer left out of the sum (read as zero), e.g. the
+        /// OSPFv2 authentication field.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        exclude: Vec<String>,
     },
     /// Identifier of the next (upper) layer, taken from this protocol's [`Binding`].
     NextProtocol,
+    /// Number of elements of a `list` / `tlv` field of the same field group
+    /// (`num_sources`, `count_ip_addrs`, ...). Unlike the other rules it is also
+    /// allowed inside list elements and TLV values. When the counted field is given
+    /// as verbatim octets the count is unknown and the default value is used.
+    Count {
+        /// The counted `list` / `tlv` field.
+        field: String,
+    },
     /// Per-stream counter (sequence numbers etc.). Not computed by the builder yet:
     /// the default value is used.
     Counter,
@@ -540,6 +558,11 @@ pub struct BindingEntry {
     /// IEEE 802.3 header, `dot3`). Never used by the builder.
     #[serde(default, skip_serializing_if = "is_false")]
     pub reparse: bool,
+    /// Parse only: the entry applies only when at least this many octets follow
+    /// the header of this layer (an `IGMPv3` query is a longer type 0x11 message
+    /// than an `IGMPv2` one). Entries without it match any length.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_len: Option<u32>,
 }
 
 impl BindingEntry {
@@ -551,6 +574,7 @@ impl BindingEntry {
             max: None,
             protocol: protocol.into(),
             reparse: false,
+            min_len: None,
         }
     }
 
@@ -571,6 +595,14 @@ impl BindingEntry {
         self
     }
 
+    /// Builder: the entry needs at least `octets` after this layer's header (see
+    /// [`BindingEntry::min_len`]).
+    #[must_use]
+    pub fn with_min_len(mut self, octets: u32) -> Self {
+        self.min_len = Some(octets);
+        self
+    }
+
     /// Whether `v` selects this entry.
     #[must_use]
     pub fn matches(&self, v: u64) -> bool {
@@ -579,6 +611,49 @@ impl BindingEntry {
             Some(hi) => (self.value..=hi).contains(&v),
         }
     }
+
+    fn fits(&self, remaining: usize) -> bool {
+        self.min_len
+            .is_none_or(|n| remaining >= usize::try_from(n).unwrap_or(usize::MAX))
+    }
+}
+
+/// Selects the next protocol from the leading bits of the payload instead of a
+/// header field (MPLS bottom of stack and GTP-U G-PDU: first nibble 4 → IPv4,
+/// 6 → IPv6). See [`Binding::peek`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Peek {
+    /// Selector value of [`Binding::field`] under which the payload is peeked; the
+    /// builder writes it when the next layer is one of the peeked protocols.
+    pub on: u64,
+    /// Number of leading payload bits read (1..=64, MSB first).
+    pub bits: u8,
+    /// Peeked value → protocol (exact entries first, then ranges).
+    pub table: Vec<BindingEntry>,
+    /// Protocol decoded when no entry matches.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+}
+
+impl Peek {
+    /// Peek of the first `bits` payload bits when the selector is `on`.
+    #[must_use]
+    pub fn new(on: u64, bits: u8, table: Vec<BindingEntry>) -> Self {
+        Self {
+            on,
+            bits,
+            table,
+            default: None,
+        }
+    }
+}
+
+/// Exact entries matching `v` (and the remaining length) first, then ranges.
+fn pick(table: &[BindingEntry], v: u64, remaining: usize) -> Option<&BindingEntry> {
+    table
+        .iter()
+        .find(|e| e.max.is_none() && e.value == v && e.fits(remaining))
+        .or_else(|| table.iter().find(|e| e.matches(v) && e.fits(remaining)))
 }
 
 /// "Which protocol comes next": a selector field plus a value → protocol table.
@@ -595,6 +670,14 @@ pub struct Binding {
     /// Protocol decoded when no entry matches (e.g. 802.3 → LLC).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<String>,
+    /// Parse only: a second selector field looked up in `table` when `field`
+    /// matches no entry (UDP / TCP: the source port, so that replies from a
+    /// well-known port decode too). The builder only ever writes `field`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alt_field: Option<String>,
+    /// Payload peek used when `field` has the value [`Peek::on`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub peek: Option<Peek>,
 }
 
 impl Binding {
@@ -605,6 +688,8 @@ impl Binding {
             field: field.into(),
             table,
             default: None,
+            alt_field: None,
+            peek: None,
         }
     }
 
@@ -625,13 +710,52 @@ impl Binding {
             .or(self.default.as_deref())
     }
 
-    /// Selector value announcing `protocol` (re-parse entries are ignored).
+    /// Selector value announcing `protocol` (re-parse entries are ignored; a
+    /// protocol reached through the [`Peek`] yields [`Peek::on`]).
     #[must_use]
     pub fn value_for(&self, protocol: &str) -> Option<u64> {
         self.table
             .iter()
             .find(|e| e.protocol == protocol && !e.reparse)
             .map(|e| e.value)
+            .or_else(|| {
+                let p = self.peek.as_ref()?;
+                let known = p.table.iter().any(|e| e.protocol == protocol && !e.reparse)
+                    || p.default.as_deref() == Some(protocol);
+                known.then_some(p.on)
+            })
+    }
+
+    /// The protocol a parser decodes next and whether it re-decodes the current
+    /// layer. `field` reads a header field of the current layer; `payload` is
+    /// what follows the header (bounded by the enclosing PDU).
+    ///
+    /// Order: the [`Peek`] when the selector equals [`Peek::on`]; the table entry
+    /// for the selector; the table entry for [`Binding::alt_field`]; the default.
+    #[must_use]
+    pub fn select<'a>(
+        &'a self,
+        field: impl Fn(&str) -> Option<u64>,
+        payload: &[u8],
+    ) -> Option<(&'a str, bool)> {
+        let v = field(&self.field)?;
+        let n = payload.len();
+        if let Some(p) = self.peek.as_ref().filter(|p| p.on == v) {
+            let bits = u32::from(p.bits);
+            return match crate::bits::get_bits(payload, 0, bits) {
+                Some(x) => pick(&p.table, x, n)
+                    .map(|e| (e.protocol.as_str(), e.reparse))
+                    .or_else(|| p.default.as_deref().map(|d| (d, false))),
+                None => None,
+            };
+        }
+        pick(&self.table, v, n)
+            .or_else(|| {
+                let alt = field(self.alt_field.as_deref()?)?;
+                pick(&self.table, alt, n)
+            })
+            .map(|e| (e.protocol.as_str(), e.reparse))
+            .or_else(|| self.default.as_deref().map(|d| (d, false)))
     }
 }
 
@@ -727,14 +851,31 @@ fn validate_fields(proto: &str, fields: &[FieldDef], top: bool) -> Result<u64> {
                 format!("field `{}` must start on an octet boundary", field.name),
             ));
         }
-        if !top && field.auto.is_some() {
-            return Err(def_err(
-                proto,
-                format!(
-                    "field `{}`: auto rules are only supported on header fields",
-                    field.name
-                ),
-            ));
+        match &field.auto {
+            Some(AutoCompute::Count { field: target }) => {
+                let counted = fields.iter().any(|f| {
+                    &f.name == target && matches!(f.ty, FieldType::List { .. } | FieldType::Tlv(_))
+                });
+                if !counted || !field.ty.is_unsigned_int() {
+                    return Err(def_err(
+                        proto,
+                        format!(
+                            "count field `{}` must be unsigned and count a list / tlv field `{target}` of the same group",
+                            field.name
+                        ),
+                    ));
+                }
+            }
+            Some(_) if !top => {
+                return Err(def_err(
+                    proto,
+                    format!(
+                        "field `{}`: auto rules other than count are only supported on header fields",
+                        field.name
+                    ),
+                ));
+            }
+            _ => {}
         }
         let from_field = match &field.ty {
             FieldType::Bytes {
@@ -882,14 +1023,19 @@ impl ProtocolDef {
             return Err(def_err(&self.id, "header is not a whole number of octets"));
         }
         if let Some(b) = &self.next {
-            match self.field(&b.field) {
-                Some(f) if f.ty.is_unsigned_int() => {}
-                _ => {
-                    return Err(def_err(
-                        &self.id,
-                        format!("binding field `{}` must be an unsigned field", b.field),
-                    ))
+            for name in std::iter::once(&b.field).chain(&b.alt_field) {
+                match self.field(name) {
+                    Some(f) if f.ty.is_unsigned_int() => {}
+                    _ => {
+                        return Err(def_err(
+                            &self.id,
+                            format!("binding field `{name}` must be an unsigned field"),
+                        ))
+                    }
                 }
+            }
+            if b.peek.as_ref().is_some_and(|p| !(1..=64).contains(&p.bits)) {
+                return Err(def_err(&self.id, "binding peek width must be 1..=64 bits"));
             }
         }
         if let Some(ph) = &self.pseudo_header {
@@ -956,6 +1102,17 @@ impl ProtocolDef {
                     &self.id,
                     format!(
                         "next-protocol field `{}` needs a binding whose selector has the same width",
+                        field.name
+                    ),
+                ))
+            }
+            AutoCompute::Checksum { exclude, .. }
+                if exclude.iter().any(|n| self.field(n).is_none()) =>
+            {
+                Err(def_err(
+                    &self.id,
+                    format!(
+                        "checksum field `{}` excludes a field that does not exist",
                         field.name
                     ),
                 ))

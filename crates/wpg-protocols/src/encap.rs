@@ -11,24 +11,22 @@
 //!   (NVGRE) has its own [`nvgre`] definition. A `present_if` predicate on
 //!   [`wpg_core::FieldDef`] driven by a flag bit would remove the need.
 //! * **MPLS** repeats a 4-octet label entry until the S (bottom-of-stack) bit is
-//!   set, and the payload after the bottom label is demultiplexed by the first
-//!   nibble (4 → IPv4, 6 → IPv6, else Ethernet). The engine's [`wpg_core::Binding`]
-//!   can only select on a whole field, not a peeked nibble, and its `List` has no
-//!   stop-on-bit, so [`mpls`] is a single label entry chained through its `s`
-//!   binding (`s = 0` → another MPLS label) with **no** bottom-of-stack binding
-//!   (the payload parses as `raw`). A binding "peek first nibble" selector, plus a
-//!   `List` stop condition, would fix both.
+//!   set. [`mpls`] is a single label entry chained through its `s` binding
+//!   (`s = 0` → another MPLS label); below the bottom label the payload is
+//!   demultiplexed by peeking its first nibble ([`wpg_core::Peek`]: 4 → IPv4,
+//!   6 → IPv6). Pseudowire payloads (control word / Ethernet) have no reliable
+//!   marker and parse as `raw`; stack `ethernet2` explicitly when building. `s` is
+//!   Auto from the next layer.
 //! * **GTP-U** optional sequence / N-PDU / next-extension fields (present per the
-//!   E/S/PN flags) and the first-nibble payload demux have the same limitations;
-//!   [`gtpu`] models the mandatory 8-octet header and defaults its payload binding
-//!   to IPv4.
+//!   E/S/PN flags) are not modelled: [`gtpu`] is the mandatory 8-octet header.
+//!   A G-PDU's payload is demultiplexed by its first nibble like MPLS.
 //! * **Geneve** options have a 3-bit-flags + 5-bit-length sub-octet header, so they
 //!   are modelled as an opaque `options` region sized by `opt_len` rather than a
 //!   typed TLV.
 //! * **`L2TPv2` / v3** header fields are heavily presence-conditional (per the flag
 //!   bits and control/data type); the bodies are modelled as opaque octets.
 
-use wpg_core::{protocol, ProtocolDef};
+use wpg_core::{protocol, BindingEntry, Peek, ProtocolDef};
 
 // --------------------------------------------------------------------------
 // VXLAN (RFC 7348), UDP 4789
@@ -119,23 +117,38 @@ pub fn nvgre() -> ProtocolDef {
 // --------------------------------------------------------------------------
 
 /// One MPLS label entry (RFC 3032): 20-bit label, 3-bit traffic class, 1-bit
-/// bottom-of-stack `s` and 8-bit TTL. When `s = 0` the next layer is another MPLS
-/// label; the bottom-of-stack payload has no binding (see the module docs) and
-/// parses as `raw` — stack the intended inner protocol explicitly when building.
+/// bottom-of-stack `s` (Auto: 0 when another label follows) and 8-bit TTL. Below
+/// the bottom label the payload's first nibble selects IPv4 (4) or IPv6 (6);
+/// other payloads (pseudowires) parse as `raw`.
 #[must_use]
 pub fn mpls() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "mpls",
         name: "MPLS",
         layer: L2,
         fields: {
             label: uint(20) = 16, desc = "mpls-label";
             tc: uint(3) = 0, desc = "mpls-tc";
-            s: uint(1) = 1, desc = "mpls-s";
+            s: uint(1) = 1, auto = next_protocol, desc = "mpls-s";
             ttl: uint(8) = 64, desc = "mpls-ttl";
         },
         next: s { 0 => "mpls" },
+    };
+    if let Some(b) = d.next.as_mut() {
+        b.peek = Some(ip_version_peek(1));
     }
+    d
+}
+
+/// Payload demux on the IP version nibble (4 → IPv4, 6 → IPv6) when the binding
+/// selector is `on`.
+#[must_use]
+pub fn ip_version_peek(on: u64) -> Peek {
+    Peek::new(
+        on,
+        4,
+        vec![BindingEntry::new(4, "ipv4"), BindingEntry::new(6, "ipv6")],
+    )
 }
 
 // --------------------------------------------------------------------------
@@ -144,8 +157,8 @@ pub fn mpls() -> ProtocolDef {
 
 /// GTP-U (3GPP TS 29.281, UDP 2152): the mandatory 8-octet header (version, flags,
 /// message type, `length` (Auto over the payload) and TEID). Optional sequence /
-/// N-PDU / next-extension fields are not modelled (see the module docs). For a
-/// G-PDU the payload defaults to IPv4.
+/// N-PDU / next-extension fields are not modelled (see the module docs). A G-PDU
+/// (type 255) carries IPv4 or IPv6, told apart by the first payload nibble.
 #[must_use]
 pub fn gtpu() -> ProtocolDef {
     let mut d = protocol! {
@@ -173,7 +186,7 @@ pub fn gtpu() -> ProtocolDef {
         next: message_type {},
     };
     if let Some(b) = d.next.as_mut() {
-        b.default = Some("ipv4".into());
+        b.peek = Some(ip_version_peek(255));
     }
     d
 }

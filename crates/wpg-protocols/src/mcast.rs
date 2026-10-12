@@ -10,21 +10,21 @@
 //! ## Engine limitations exercised here
 //!
 //! * A v2 and a v3 **query** (IGMP type 0x11, MLD type 130) differ only in length.
-//!   A [`wpg_core::Binding`] cannot select on the remaining length, so type
-//!   0x11 / 130 decodes as the short v1/v2 body (`igmpv2` / `mld`) and a v3 query
-//!   leaves its extension as a trailing `raw` layer; the v3 body is listed second
-//!   in the binding so that building `igmp` / `igmpv3_query` still fills the type.
+//!   The binding entries for the v3 bodies carry a minimum remaining length
+//!   ([`wpg_core::BindingEntry::min_len`]: 8 octets for `IGMPv3`, 24 for `MLDv2`),
+//!   so a long query decodes as `igmpv3_query` / `mldv2_query` and a short one as
+//!   `igmpv2` / `mld`.
 //! * Record / source **counts** (`num_group_records`, `num_sources` inside a group
-//!   record, PIM `num_groups` / `num_joined` / `num_pruned`, `MLDv2` query
-//!   `num_sources`) are Manual: auto rules are header-only and measure octets in
-//!   1/2/4/8-octet units, so they cannot count list elements (only the `IGMPv3`
-//!   query source count, 4 octets per IPv4 address, is Auto).
+//!   record, PIM `num_groups` / `num_joined` / `num_pruned`, the query
+//!   `num_sources`) are Auto ([`wpg_core::AutoCompute::Count`]), also inside list
+//!   elements.
 //! * **PIM Register**'s checksum covers only the first 8 octets (PIM header +
 //!   Register flags), not the encapsulated packet. A checksum coverage of "the
 //!   next layer's header too" does not exist, so [`pim_register`] is a standalone
 //!   definition that repeats the PIM header; its `checksum(internet, header)` then
 //!   covers exactly those 8 octets. IP protocol 103 decodes as `pim` (the Register
-//!   body then parses as `raw`); `pim_register` is listed second for building.
+//!   body then parses as `raw`); `pim_register` is listed second for building. The
+//!   encapsulated packet is IPv4 or IPv6 by its first nibble.
 //! * **PIM over IPv6** needs the IPv6 pseudo header in its checksum, PIM over IPv4
 //!   does not. A checksum kind cannot depend on the lower layer, so `pim` uses the
 //!   plain Internet checksum and is bound from IPv4 only.
@@ -33,12 +33,17 @@
 use std::collections::BTreeMap;
 
 use wpg_core::{
-    protocol, FieldDef, FieldType, FieldValue, FlagBit, ItemDef, Length, LengthUnit, ProtocolDef,
-    TlvDef, TlvItem, TlvVariant,
+    protocol, AutoCompute, FieldDef, FieldType, FieldValue, FlagBit, ItemDef, Length, LengthUnit,
+    ProtocolDef, TlvDef, TlvItem, TlvVariant,
 };
 
 fn u(name: &str, bits: u8, default: u64) -> FieldDef {
     FieldDef::new(name, FieldType::UInt { bits }).with_default(FieldValue::UInt(default))
+}
+
+/// An Auto element count of the `list` field `of` (same field group).
+fn count(name: &str, bits: u8, of: &str) -> FieldDef {
+    FieldDef::new(name, FieldType::UInt { bits }).with_auto(AutoCompute::Count { field: of.into() })
 }
 
 fn from_field(field: &str, unit: u32) -> Length {
@@ -95,7 +100,7 @@ fn group_records(addr: &FieldType, addr_octets: u32) -> FieldType {
             fields: vec![
                 record_type(),
                 u("aux_data_len", 8, 0),
-                u("num_sources", 16, 0),
+                count("num_sources", 16, "sources"),
                 FieldDef::new("multicast_address", addr.clone()).with_default(mcast),
                 FieldDef::new(
                     "sources",
@@ -120,7 +125,6 @@ fn join_record(addr: FieldValue) -> FieldValue {
     FieldValue::Struct(BTreeMap::from([
         ("record_type".to_owned(), FieldValue::UInt(4)),
         ("aux_data_len".to_owned(), FieldValue::UInt(0)),
-        ("num_sources".to_owned(), FieldValue::UInt(0)),
         ("multicast_address".to_owned(), addr),
         ("sources".to_owned(), FieldValue::List(Vec::new())),
         ("aux_data".to_owned(), FieldValue::Bytes(Vec::new())),
@@ -134,10 +138,10 @@ fn join_record(addr: FieldValue) -> FieldValue {
 /// IGMP common header: `type` (Auto from the body protocol), `max_resp_code`
 /// (1/10 s; reserved in v1 and v3 reports) and the Internet `checksum` (Auto, over
 /// the whole message). The body follows as `igmpv2`, `igmpv3_query` or
-/// `igmpv3_report`.
+/// `igmpv3_report`; a type 0x11 query of 12 octets or more decodes as `IGMPv3`.
 #[must_use]
 pub fn igmp() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "igmp",
         name: "IGMP",
         layer: L3,
@@ -160,6 +164,20 @@ pub fn igmp() -> ProtocolDef {
             0x11 => "igmpv3_query",
             0x22 => "igmpv3_report",
         },
+    };
+    v3_by_length(&mut d, "igmpv3_query", 8);
+    d
+}
+
+/// Makes the binding entry for the v3 query body apply only to messages with at
+/// least `min` octets after the common header, and moves it in front of the
+/// v1/v2 entry for the same type.
+pub(crate) fn v3_by_length(d: &mut ProtocolDef, v3: &str, min: u32) {
+    if let Some(b) = d.next.as_mut() {
+        if let Some(k) = b.table.iter().position(|e| e.protocol == v3) {
+            let e = b.table.remove(k).with_min_len(min);
+            b.table.insert(0, e);
+        }
     }
 }
 
@@ -192,14 +210,14 @@ pub fn igmpv3_query() -> ProtocolDef {
             s: uint(1) = 0, desc = "igmp-s-flag";
             qrv: uint(3) = 2, desc = "igmp-qrv";
             qqic: uint(8) = 125, desc = "igmp-qqic";
-            num_sources: uint(16), auto = length(header, unit = words32, adjust = -2), desc = "igmp-num-sources";
+            num_sources: uint(16), auto = count(sources), desc = "igmp-num-sources";
             sources: ty(addr_list(FieldType::Ipv4, "num_sources", 4)) = Vec::<FieldValue>::new(), desc = "igmp-sources";
         },
     }
 }
 
 /// `IGMPv3` Membership Report body (RFC 3376 §4.2, type 0x22): reserved,
-/// `num_group_records` (Manual) and the group records. Defaults to one
+/// `num_group_records` (Auto) and the group records. Defaults to one
 /// Change-To-Exclude record for 239.1.1.1 (a join).
 #[must_use]
 pub fn igmpv3_report() -> ProtocolDef {
@@ -209,7 +227,7 @@ pub fn igmpv3_report() -> ProtocolDef {
         layer: L3,
         fields: {
             reserved: uint(16) = 0;
-            num_group_records: uint(16) = 1, desc = "igmp-num-records";
+            num_group_records: uint(16), auto = count(group_records), desc = "igmp-num-records";
             group_records: ty(group_records(&FieldType::Ipv4, 4)) = vec![join_record(FieldValue::Ipv4([239, 1, 1, 1].into()))], desc = "igmp-records";
         },
     }
@@ -238,7 +256,7 @@ pub fn mld() -> ProtocolDef {
 }
 
 /// `MLDv2` Query body (RFC 3810 §5.1, ICMPv6 type 130): maximum response code,
-/// multicast address, S flag, QRV, QQIC, `num_sources` (Manual) and the source
+/// multicast address, S flag, QRV, QQIC, `num_sources` (Auto) and the source
 /// addresses.
 #[must_use]
 pub fn mldv2_query() -> ProtocolDef {
@@ -254,14 +272,14 @@ pub fn mldv2_query() -> ProtocolDef {
             s: uint(1) = 0, desc = "igmp-s-flag";
             qrv: uint(3) = 2, desc = "igmp-qrv";
             qqic: uint(8) = 125, desc = "igmp-qqic";
-            num_sources: uint(16) = 0, desc = "igmp-num-sources";
+            num_sources: uint(16), auto = count(sources), desc = "igmp-num-sources";
             sources: ty(addr_list(FieldType::Ipv6, "num_sources", 16)) = Vec::<FieldValue>::new(), desc = "igmp-sources";
         },
     }
 }
 
 /// `MLDv2` Report body (RFC 3810 §5.2, ICMPv6 type 143): reserved,
-/// `num_records` (Manual) and the multicast address records. Defaults to one
+/// `num_records` (Auto) and the multicast address records. Defaults to one
 /// Change-To-Exclude record for `ff05::1` (a join).
 #[must_use]
 pub fn mldv2_report() -> ProtocolDef {
@@ -271,7 +289,7 @@ pub fn mldv2_report() -> ProtocolDef {
         layer: L3,
         fields: {
             reserved: uint(16) = 0;
-            num_records: uint(16) = 1, desc = "igmp-num-records";
+            num_records: uint(16), auto = count(records), desc = "igmp-num-records";
             records: ty(group_records(&FieldType::Ipv6, 16)) = vec![join_record(FieldValue::Ipv6([0xff05u16, 0, 0, 0, 0, 0, 0, 1].into()))], desc = "igmp-records";
         },
     }
@@ -428,8 +446,8 @@ fn join_prune_groups() -> FieldType {
                 u("mask_len", 8, 32),
                 FieldDef::new("group_address", FieldType::Ipv4)
                     .with_default(FieldValue::Ipv4([239, 1, 1, 1].into())),
-                u("num_joined", 16, 1),
-                u("num_pruned", 16, 0),
+                count("num_joined", 16, "joined"),
+                count("num_pruned", 16, "pruned"),
                 FieldDef::new("joined", encoded_sources("num_joined"))
                     .with_default(FieldValue::List(Vec::new())),
                 FieldDef::new("pruned", encoded_sources("num_pruned"))
@@ -461,15 +479,13 @@ fn default_group_set() -> FieldValue {
             "group_address".to_owned(),
             FieldValue::Ipv4([239, 1, 1, 1].into()),
         ),
-        ("num_joined".to_owned(), FieldValue::UInt(1)),
-        ("num_pruned".to_owned(), FieldValue::UInt(0)),
         ("joined".to_owned(), FieldValue::List(vec![source])),
         ("pruned".to_owned(), FieldValue::List(Vec::new())),
     ]))
 }
 
 /// PIM Join/Prune body (type 3): Encoded-Unicast upstream neighbor (IPv4),
-/// `num_groups` (Manual), holdtime (s) and the group sets.
+/// `num_groups` (Auto), holdtime (s) and the group sets.
 #[must_use]
 pub fn pim_join_prune() -> ProtocolDef {
     protocol! {
@@ -481,7 +497,7 @@ pub fn pim_join_prune() -> ProtocolDef {
             upstream_encoding: uint(8) = 0;
             upstream_neighbor: ipv4 = [192, 0, 2, 1], desc = "pim-upstream-neighbor";
             reserved: uint(8) = 0;
-            num_groups: uint(8) = 1, desc = "pim-num-groups";
+            num_groups: uint(8), auto = count(groups), desc = "pim-num-groups";
             holdtime: uint(16) = 210, desc = "pim-holdtime";
             groups: ty(join_prune_groups()) = vec![default_group_set()], desc = "pim-groups";
         },
@@ -490,8 +506,8 @@ pub fn pim_join_prune() -> ProtocolDef {
 
 /// PIM Register (type 1) as one standalone 8-octet header: the PIM header,
 /// `checksum` (Auto over these 8 octets only) and the Border / Null-Register bits.
-/// The encapsulated multicast packet follows (default IPv4). See the module docs
-/// for why it does not stack on [`pim`].
+/// The encapsulated multicast packet follows (IPv4 or IPv6 by its first nibble).
+/// See the module docs for why it does not stack on [`pim`].
 #[must_use]
 pub fn pim_register() -> ProtocolDef {
     let mut d = protocol! {
@@ -513,7 +529,7 @@ pub fn pim_register() -> ProtocolDef {
         },
     };
     if let Some(b) = d.next.as_mut() {
-        b.default = Some("ipv4".into());
+        b.peek = Some(crate::encap::ip_version_peek(1));
     }
     d
 }

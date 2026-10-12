@@ -24,12 +24,9 @@ layers:
   - protocol: pim_join_prune
     fields:
       upstream_neighbor: 192.0.2.1
-      num_groups: 1 # manual: must match `groups`
       holdtime: 210
       groups:
         - group_address: 239.1.1.1
-          num_joined: 1 # manual: must match `joined`
-          num_pruned: 1 # manual: must match `pruned`
           joined:
             - { flags: 0x04, address: 192.0.2.10 } # S bit
           pruned:

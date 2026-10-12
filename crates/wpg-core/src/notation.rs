@@ -262,6 +262,13 @@ pub fn parse_value(s: &str, ty: &FieldType) -> Result<FieldValue, NotationError>
             Ok(FieldValue::Bytes(b))
         }
         FieldType::Raw => parse_bytes(s).map(FieldValue::Bytes),
+        FieldType::CString => {
+            let b = parse_bytes(s)?;
+            if b.contains(&0) {
+                return Err(invalid("string without NUL octets", s));
+            }
+            Ok(FieldValue::Bytes(b))
+        }
         FieldType::Tlv { .. } | FieldType::List { .. } | FieldType::Padding { .. } => {
             Err(NotationError::Unsupported("composite field"))
         }
@@ -302,6 +309,7 @@ pub fn format_value(v: &FieldValue, ty: &FieldType) -> String {
         FieldValue::Ipv6(a) => a.to_string(),
         FieldValue::Mac(m) => format_mac(m),
         FieldValue::Nsap(b) => format_nsap(b),
+        FieldValue::Bytes(b) if matches!(ty, FieldType::CString) => format_text(b),
         FieldValue::Bytes(b) => format_bytes(b),
         // Composite values have no human notation yet (the GUI edits them as trees).
         FieldValue::List(_) | FieldValue::Struct(_) | FieldValue::Tlv(_) => format!("{v:?}"),
@@ -341,6 +349,33 @@ pub fn format_bytes(b: &[u8]) -> String {
         }
         let _ = write!(out, "{x:02x}");
     }
+    out
+}
+
+/// `"text"` (with `\\`, `\"`, `\n`, `\r`, `\t` escapes) when every octet is
+/// printable ASCII or one of those controls, else [`format_bytes`]. The inverse of
+/// the quoted form of [`parse_bytes`].
+#[must_use]
+pub fn format_text(b: &[u8]) -> String {
+    if !b
+        .iter()
+        .all(|x| (0x20..0x7f).contains(x) || matches!(x, b'\n' | b'\r' | b'\t'))
+    {
+        return format_bytes(b);
+    }
+    let mut out = String::with_capacity(b.len() + 2);
+    out.push('"');
+    for x in b {
+        match x {
+            b'\n' => out.push_str("\\n"),
+            b'\r' => out.push_str("\\r"),
+            b'\t' => out.push_str("\\t"),
+            b'"' => out.push_str("\\\""),
+            b'\\' => out.push_str("\\\\"),
+            _ => out.push(char::from(*x)),
+        }
+    }
+    out.push('"');
     out
 }
 

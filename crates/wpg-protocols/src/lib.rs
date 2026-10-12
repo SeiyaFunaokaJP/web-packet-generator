@@ -204,6 +204,7 @@ pub fn builtin() -> Vec<ProtocolDef> {
         app::tftp_data(),
         app::tftp_ack(),
         app::tftp_error(),
+        app::tftp_oack(),
         payload::payload(),
         payload::raw(),
     ]

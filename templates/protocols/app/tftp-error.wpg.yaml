@@ -27,7 +27,7 @@ layers:
   - protocol: tftp_error
     fields:
       error_code: file_not_found
-      message: '"File not found\0"'
+      message: '"File not found"' # NUL terminator added automatically
 
 tx:
   count: 1

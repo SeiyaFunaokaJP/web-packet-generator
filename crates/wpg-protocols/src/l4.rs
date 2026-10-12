@@ -53,17 +53,18 @@ pub fn tcp_options() -> FieldType {
 /// UDP (RFC 768): `length` and `checksum` (with IPv4/IPv6 pseudo header) are Auto.
 /// A computed checksum of zero is sent as `0xffff`.
 ///
-/// The `next` binding demultiplexes well-known tunnelling ports on the
-/// **destination** port (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
+/// The `next` binding demultiplexes on the **destination** port, falling back to
+/// the **source** port when the destination is not a known one (so replies from
+/// a well-known port decode too): tunnelling ports (VXLAN 4789, L2TP 1701, GTP-U 2152, MPLS-over-UDP 6635,
 /// Geneve 6081), routing protocols (RIP 520, `RIPng` 521), the first-hop
 /// redundancy ports (HSRP 1985, `HSRPv2` over IPv6 2029, GLBP 3222; UDP 1985
 /// decodes as `HSRPv1`) and the P1 application protocols (DNS 53, `DHCPv4` 67/68,
 /// TFTP 69, NTP 123, SNMP 161/162, Syslog 514, `DHCPv6` 546/547, RADIUS
 /// 1812/1813); unknown ports have no default, so an ordinary UDP payload still
-/// parses as `raw`.
+/// parses as `raw`. Building announces through the destination port only.
 #[must_use]
 pub fn udp() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "udp",
         name: "UDP",
         layer: L4,
@@ -102,18 +103,22 @@ pub fn udp() -> ProtocolDef {
         constraints: {
             warning: min_length(total, 8);
         },
+    };
+    if let Some(b) = d.next.as_mut() {
+        b.alt_field = Some("src_port".into());
     }
+    d
 }
 
 /// TCP (RFC 9293) with typed options ([`tcp_options`]). `data_offset` (including
 /// options and automatic zero padding to 32 bits) and `checksum` (with pseudo
 /// header) are Auto.
 ///
-/// The `next` binding demultiplexes BGP on **destination** port 179; other
-/// payloads parse as `raw`.
+/// The `next` binding demultiplexes BGP on port 179 (destination, else source);
+/// other payloads parse as `raw`.
 #[must_use]
 pub fn tcp() -> ProtocolDef {
-    protocol! {
+    let mut d = protocol! {
         id: "tcp",
         name: "TCP",
         layer: L4,
@@ -144,7 +149,11 @@ pub fn tcp() -> ProtocolDef {
         constraints: {
             error: in_range(data_offset, 5, 15);
         },
+    };
+    if let Some(b) = d.next.as_mut() {
+        b.alt_field = Some("src_port".into());
     }
+    d
 }
 
 #[cfg(test)]

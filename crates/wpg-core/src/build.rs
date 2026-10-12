@@ -222,12 +222,89 @@ pub(crate) fn zero_value(ty: &FieldType) -> FieldValue {
         FieldType::Ipv4 => FieldValue::Ipv4(Ipv4Addr::UNSPECIFIED),
         FieldType::Ipv6 => FieldValue::Ipv6(Ipv6Addr::UNSPECIFIED),
         FieldType::Nsap => FieldValue::Nsap(Vec::new()),
+        FieldType::CString => FieldValue::Bytes(Vec::new()),
         FieldType::Tlv(_) => FieldValue::Tlv(Vec::new()),
         FieldType::List { .. } => FieldValue::List(Vec::new()),
         FieldType::Bytes { .. } | FieldType::Padding { .. } | FieldType::Raw => {
             FieldValue::Bytes(Vec::new())
         }
     }
+}
+
+/// Number of elements of `value` for an [`AutoCompute::Count`] rule; `None` when
+/// the counted field holds verbatim octets that are not whole fixed-size elements.
+pub(crate) fn element_count(ty: &FieldType, value: &FieldValue) -> Option<u64> {
+    let n = match value {
+        FieldValue::List(v) => v.len(),
+        FieldValue::Tlv(v) => v.len(),
+        FieldValue::Bytes(b) => match ty {
+            FieldType::List {
+                item: ItemDef::Field { ty },
+                ..
+            } => {
+                let size = usize::try_from(ty.fixed_bits()? / 8).ok()?;
+                if size == 0 || !b.len().is_multiple_of(size) {
+                    return None;
+                }
+                b.len() / size
+            }
+            _ => return None,
+        },
+        _ => return None,
+    };
+    u64::try_from(n).ok()
+}
+
+/// Value of a [`AutoCompute::Count`] field of a group whose (Manual or default)
+/// values `get` returns; `None` when the count cannot be known.
+fn count_for<'v>(
+    fields: &'v [FieldDef],
+    target: &str,
+    get: impl Fn(&'v FieldDef) -> Option<&'v FieldValue>,
+) -> Option<u64> {
+    let fd = fields.iter().find(|f| f.name == target)?;
+    let zero;
+    let value = match get(fd) {
+        Some(v) => v,
+        None => {
+            zero = zero_value(&fd.ty);
+            &zero
+        }
+    };
+    element_count(&fd.ty, value)
+}
+
+/// Clamps a computed count to the field width (error diagnostic on overflow).
+fn fit_count(fd: &FieldDef, count: u64, diags: &mut Vec<Diagnostic>) -> u64 {
+    let bits = u32::from(fd.ty.int_bits().unwrap_or(64));
+    if count > mask(bits) {
+        diags.push(
+            Diagnostic::new(
+                DiagLevel::Error,
+                keys::AUTO_OVERFLOW,
+                format!(
+                    "computed value {count} does not fit in `{}` ({bits} bits)",
+                    fd.name
+                ),
+            )
+            .on_field(fd.name.clone())
+            .arg("value", count)
+            .arg("bits", bits),
+        );
+    }
+    count & mask(bits)
+}
+
+/// Warning for a Manual count that differs from the number of elements.
+fn count_mismatch(name: &str, actual: u64, expected: u64) -> Diagnostic {
+    Diagnostic::new(
+        DiagLevel::Warning,
+        keys::COUNT_MISMATCH,
+        format!("`{name}` is {actual} but the list has {expected} elements"),
+    )
+    .on_field(name.to_owned())
+    .arg("value", actual)
+    .arg("expected", expected)
 }
 
 fn type_name(v: &FieldValue) -> &'static str {
@@ -301,6 +378,16 @@ pub(crate) fn encode_value(
             FieldValue::Bytes(b),
         )
         | (FieldType::Nsap, FieldValue::Nsap(b) | FieldValue::Bytes(b)) => w.push_bytes(b),
+        (FieldType::CString, FieldValue::Bytes(b)) => {
+            if b.contains(&0) {
+                return Err(invalid(
+                    fd,
+                    "a NUL-terminated string cannot contain a zero octet",
+                ));
+            }
+            w.push_bytes(b);
+            w.push_bytes(&[0]);
+        }
         (FieldType::Mac, FieldValue::Mac(m)) => w.push_bytes(m),
         (FieldType::Ipv4, FieldValue::Ipv4(a)) => w.push_bytes(&a.octets()),
         (FieldType::Ipv6, FieldValue::Ipv6(a)) => w.push_bytes(&a.octets()),
@@ -363,8 +450,23 @@ fn encode_group(
     let start = w.bits;
     let mut out = Vec::with_capacity(fields.len());
     for fd in fields {
+        let count = match &fd.auto {
+            Some(AutoCompute::Count { field }) => count_for(fields, field, |f| {
+                values.get(&f.name).or(f.default.as_ref())
+            }),
+            _ => None,
+        };
+        if let (Some(v), Some(n)) = (values.get(&fd.name).and_then(FieldValue::as_u64), count) {
+            if v != n {
+                diags.push(count_mismatch(&format!("{owner}.{}", fd.name), v, n));
+            }
+        }
         let (value, computed) = match (values.get(&fd.name), &fd.ty) {
             (Some(v), _) => (v.clone(), false),
+            (None, _) if count.is_some() => (
+                FieldValue::UInt(fit_count(fd, count.unwrap_or(0), diags)),
+                true,
+            ),
             (None, FieldType::Padding { align }) => {
                 let align = *align as usize;
                 let used = (w.bits - start) / 8;
@@ -569,8 +671,18 @@ fn encode_layer<'a>(
             _ => None,
         };
         let mut computed = false;
+        let count = match &pending {
+            Some(AutoCompute::Count { field }) => count_for(&def.fields, field, |f| {
+                layer.fields.get(&f.name).or(f.default.as_ref())
+            }),
+            _ => None,
+        };
         let value = match (manual, &pending, &fd.ty) {
             (Some(v), _, _) => v.clone(),
+            (None, Some(AutoCompute::Count { .. }), _) if count.is_some() => {
+                computed = true;
+                FieldValue::UInt(fit_count(fd, count.unwrap_or(0), diags))
+            }
             (None, Some(AutoCompute::Length { .. } | AutoCompute::Checksum { .. }), _) => {
                 FieldValue::UInt(0)
             }
@@ -750,6 +862,7 @@ impl Ctx<'_> {
             algorithm: kind,
             covers,
             nonzero,
+            exclude,
         } = auto
         else {
             return (0, None);
@@ -761,12 +874,13 @@ impl Ctx<'_> {
         };
         let mut data = self.bytes[e.offset..end].to_vec();
         let slot = &e.slots[s];
-        put_bits(
-            &mut data,
-            slot.bit_off,
-            u32::try_from(slot.bits).unwrap_or(64),
-            0,
-        );
+        let excluded = e
+            .slots
+            .iter()
+            .filter(|x| exclude.contains(&e.def.fields[x.def].name));
+        for z in std::iter::once(slot).chain(excluded) {
+            zero_bits(&mut data, z.bit_off, z.bits);
+        }
         match kind {
             ChecksumKind::Internet | ChecksumKind::InternetPseudoHeader => {}
             ChecksumKind::Fletcher => {
@@ -927,6 +1041,17 @@ impl Ctx<'_> {
                         None => continue,
                     },
                     AutoCompute::Counter => continue,
+                    AutoCompute::Count { field } => {
+                        let e = &self.encs[i];
+                        let target = e.def.fields.iter().position(|f| &f.name == field);
+                        let n = target
+                            .and_then(|k| e.slots.iter().find(|x| x.def == k))
+                            .and_then(|x| element_count(&e.def.fields[x.def].ty, &x.value));
+                        match n {
+                            Some(n) => (keys::COUNT_MISMATCH, i128::from(n), "count"),
+                            None => continue,
+                        }
+                    }
                 };
                 if i128::from(actual) == expected {
                     continue;
@@ -1084,6 +1209,16 @@ fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
     })
 }
 
+/// Zeroes `bits` bits at `bit_off` (any width; octets beyond `buf` are ignored).
+pub(crate) fn zero_bits(buf: &mut [u8], mut bit_off: usize, mut bits: usize) {
+    while bits > 0 {
+        let w = bits.min(64);
+        put_bits(buf, bit_off, u32::try_from(w).unwrap_or(64), 0);
+        bit_off += w;
+        bits -= w;
+    }
+}
+
 /// Drops layouts that do not fit completely before bit `end`.
 fn clip(v: Vec<FieldLayout>, end: usize) -> Vec<FieldLayout> {
     v.into_iter()
@@ -1125,6 +1260,7 @@ mod tests {
                 algorithm: ChecksumKind::Internet,
                 covers: ChecksumCoverage::Header,
                 nonzero: false,
+                exclude: Vec::new(),
             }),
             FieldDef::new("src", FieldType::Ipv4),
             FieldDef::new("dst", FieldType::Ipv4),
@@ -1153,6 +1289,7 @@ mod tests {
                 algorithm: ChecksumKind::InternetPseudoHeader,
                 covers: ChecksumCoverage::HeaderAndPayload,
                 nonzero: true,
+                exclude: Vec::new(),
             }),
         ];
         for d in [&outer, &inner] {
@@ -1276,6 +1413,7 @@ mod tests {
                 algorithm: ChecksumKind::Fletcher,
                 covers: ChecksumCoverage::Header,
                 nonzero: false,
+                exclude: Vec::new(),
             }),
             FieldDef::new("b", FieldType::UInt { bits: 32 })
                 .with_default(FieldValue::UInt(0x1234_5678)),
@@ -1283,6 +1421,7 @@ mod tests {
                 algorithm: ChecksumKind::Crc32c,
                 covers: ChecksumCoverage::HeaderAndPayload,
                 nonzero: false,
+                exclude: Vec::new(),
             }),
         ];
         p.validate().unwrap();

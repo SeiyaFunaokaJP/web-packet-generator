@@ -6,7 +6,7 @@ meta:
   descriptions:
     ja: "VRRPv2 (RFC 3768): マスタから 224.0.0.18 への Advertisement (IP プロトコル 112、TTL 255)"
     en: "VRRPv2 (RFC 3768): a master Advertisement to 224.0.0.18 (IP protocol 112, TTL 255)"
-  tags: ["protocol:vrrpv2", "layer:l3", fhrp, sample, "parse-as:vrrpv2=vrrpv3"]
+  tags: ["protocol:vrrpv2", "layer:l3", fhrp, sample]
   author: wpg
   created: 2026-10-11
 
@@ -25,7 +25,7 @@ layers:
       src: 192.0.2.1
       dst: 224.0.0.18
       ttl: 255 # VRRP packets must be sent with TTL 255
-  - protocol: vrrpv2 # shares protocol 112 with VRRPv3, which decodes it
+  - protocol: vrrpv2 # shares protocol 112 with VRRPv3; told apart by the version
     fields:
       vrid: ${vrid}
       priority: 200

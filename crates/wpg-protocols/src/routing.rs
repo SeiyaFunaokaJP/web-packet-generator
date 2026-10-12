@@ -4,8 +4,8 @@
 //! (basic TLVs).
 //!
 //! Demultiplexing: IPv4 protocol 89 → [`ospfv2`], IPv6 next header 89 →
-//! [`ospfv3`], IP protocol 88 → [`eigrp`] (both families), TCP destination port
-//! 179 → [`bgp`], UDP destination port 520 → [`rip`] and 521 → [`ripng`].
+//! [`ospfv3`], IP protocol 88 → [`eigrp`] (both families), TCP port 179 →
+//! [`bgp`], UDP port 520 → [`rip`] and 521 → [`ripng`].
 //!
 //! Each OSPF / BGP message is a common header layer whose `type` selects the body
 //! layer (`ospfv2` → `ospfv2_hello`, `bgp` → `bgp_open`, ...). The header's
@@ -16,18 +16,15 @@
 //! ## Engine limitations exercised here
 //!
 //! * **OSPFv2 checksum** is the Internet checksum of the whole packet *excluding*
-//!   the 64-bit authentication field. The engine has no "skip a field" coverage,
-//!   so [`ospfv2`] sums header + body including `authentication`: exact for null
-//!   authentication (all-zero field, the default), wrong for simple-password
-//!   authentication, and irrelevant for cryptographic authentication (checksum
-//!   not computed, set it to 0 manually). The cryptographic-auth trailer after the
+//!   the 64-bit authentication field, which [`ospfv2`]'s checksum rule leaves out
+//!   (`exclude = [authentication]`): exact for null and simple-password
+//!   authentication. With cryptographic authentication the checksum is not
+//!   computed (set it to 0 manually); the cryptographic-auth trailer after the
 //!   packet is not modelled. **OSPFv3** uses the IPv6 pseudo header and is exact.
 //! * **LSA checksum** (RFC 2328 §12.1.7) is the ISO Fletcher checksum of the LSA
-//!   *without* its 2-octet LS age. The engine's Fletcher rule covers the whole
-//!   LSA, which yields the identical value when `ls_age` is 0 (leading zero
-//!   octets do not change either Fletcher sum) — the default here; with a
-//!   non-zero age the Auto value is not the OSPF one. LSA headers inside DBD /
-//!   `LSAck` carry Manual checksums.
+//!   *without* its 2-octet LS age; the rule excludes `ls_age` (a leading zero
+//!   field does not change either Fletcher sum), so it is exact for any age. LSA
+//!   headers inside DBD / `LSAck` carry Manual checksums.
 //! * **LSU** carries a single typed LSA: [`ospfv2_lsu`] / [`ospfv3_lsu`] bind to
 //!   an LSA header layer ([`ospfv2_lsa`] / [`ospfv3_lsa`]) whose `ls_type`
 //!   selects the body layer. There is no repeated-layer construct, so further
@@ -51,9 +48,9 @@
 //!   verbatim `raw` items and do not parse back. `AS_PATH` / `AGGREGATOR` use
 //!   4-octet AS numbers (RFC 6793, the four-octet AS capability negotiated).
 //!   Extended optional parameters (RFC 9072) are not modelled.
-//! * **BGP** is bound on the TCP **destination** port only (like the UDP tunnel
-//!   ports), so segments from port 179 to an ephemeral port parse as raw TCP
-//!   payload; only one BGP message per segment is decoded.
+//! * **BGP** is bound on TCP port 179 (destination, else source, so both
+//!   directions of a session decode); only one BGP message per segment is
+//!   decoded.
 //! * **EIGRP** route TLVs end with a variable-length destination
 //!   (`ceil(prefix_length / 8)` octets), modelled as `destination` octets running
 //!   to the end of the TLV value; multi-destination TLVs therefore stay in that
@@ -139,9 +136,8 @@ pub fn ospfv2_lsa_headers() -> FieldType {
 
 /// OSPFv2 common header (RFC 2328 A.3.1, IPv4 protocol 89): version, `type`
 /// (Auto, from the body layer), `packet_length` (Auto, header + body), router /
-/// area ids, Internet `checksum` (Auto; see the module docs for the
-/// authentication-field caveat), authentication type and the 8-octet
-/// authentication field.
+/// area ids, Internet `checksum` (Auto, without the authentication field),
+/// authentication type and the 8-octet authentication field.
 #[must_use]
 pub fn ospfv2() -> ProtocolDef {
     protocol! {
@@ -160,7 +156,7 @@ pub fn ospfv2() -> ProtocolDef {
             packet_length: uint(16), auto = length(total), desc = "ospf-packet-length";
             router_id: ipv4 = [192, 0, 2, 1], desc = "ospf-router-id";
             area_id: ipv4 = [0, 0, 0, 0], desc = "ospf-area-id";
-            checksum: uint(16), auto = checksum(internet, header_payload), desc = "ospf-checksum";
+            checksum: uint(16), auto = checksum(internet, header_payload, exclude = [authentication]), desc = "ospf-checksum";
             au_type: enum(16) {
                 0 => null,
                 1 => simple_password,
@@ -323,7 +319,7 @@ pub fn ospfv2_lsa() -> ProtocolDef {
             link_state_id: ipv4 = [192, 0, 2, 1], desc = "ospf-link-state-id";
             advertising_router: ipv4 = [192, 0, 2, 1], desc = "ospf-advertising-router";
             ls_sequence: uint(32) = 0x8000_0001, desc = "ospf-ls-sequence";
-            ls_checksum: uint(16), auto = checksum(fletcher, header_payload), desc = "ospf-ls-checksum";
+            ls_checksum: uint(16), auto = checksum(fletcher, header_payload, exclude = [ls_age]), desc = "ospf-ls-checksum";
             length: uint(16), auto = length(total), desc = "ospf-lsa-length";
         },
         next: ls_type {
@@ -337,7 +333,7 @@ pub fn ospfv2_lsa() -> ProtocolDef {
     }
 }
 
-/// OSPFv2 Router-LSA body (LS type 1): V / E / B flags, link count (Manual) and
+/// OSPFv2 Router-LSA body (LS type 1): V / E / B flags, link count (Auto) and
 /// the links (`num_tos` must be 0, see the module docs). Default: one stub link
 /// to 192.0.2.0/24, metric 10.
 #[must_use]
@@ -383,7 +379,7 @@ pub fn ospfv2_router_lsa() -> ProtocolDef {
         fields: {
             flags: flags(8) { 2 => v, 1 => e, 0 => b } = 0, desc = "ospf-router-lsa-flags";
             reserved: uint(8) = 0;
-            num_links: uint(16) = 1, desc = "ospf-num-links";
+            num_links: uint(16), auto = count(links), desc = "ospf-num-links";
             links: ty(list_to_end(item)) = vec![link], desc = "ospf-router-links";
         },
     }
@@ -642,7 +638,7 @@ pub fn ospfv3_lsa() -> ProtocolDef {
             link_state_id: uint(32) = 0, desc = "ospf-link-state-id";
             advertising_router: ipv4 = [192, 0, 2, 1], desc = "ospf-advertising-router";
             ls_sequence: uint(32) = 0x8000_0001, desc = "ospf-ls-sequence";
-            ls_checksum: uint(16), auto = checksum(fletcher, header_payload), desc = "ospf-ls-checksum";
+            ls_checksum: uint(16), auto = checksum(fletcher, header_payload, exclude = [ls_age]), desc = "ospf-ls-checksum";
             length: uint(16), auto = length(total), desc = "ospf-lsa-length";
         },
         next: ls_type {

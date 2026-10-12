@@ -1,0 +1,36 @@
+# TFTP OACK (RFC 2347 / 2348): the server accepts the blksize and tsize options from its transfer port (TID)
+schema: 1
+
+meta:
+  name: tftp-oack
+  descriptions:
+    ja: "TFTP OACK (RFC 2347 / 2348): サーバが転送用ポート (TID) から blksize と tsize オプションを承認"
+    en: "TFTP OACK (RFC 2347 / 2348): the server accepts the blksize and tsize options from its transfer port (TID)"
+  # The reply comes from a new server port (TID), so nothing after UDP decodes back.
+  tags: ["protocol:tftp_oack", "layer:l4", app, sample, "opaque-inner:udp"]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.69
+      dst: 192.0.2.1
+  - protocol: udp
+    fields:
+      src_port: 51000 # server TID
+      dst_port: 50069 # client TID
+  - protocol: tftp_oack
+    fields:
+      options:
+        - name: '"blksize"'
+          value: '"1428"'
+        - name: '"tsize"'
+          value: '"1048576"'
+
+tx:
+  count: 1

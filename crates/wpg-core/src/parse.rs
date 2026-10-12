@@ -217,6 +217,15 @@ fn decode_fields(
                 bit += n * 8;
                 FieldValue::Bytes(b.to_vec())
             }
+            FieldType::CString => {
+                let rest = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
+                let n = rest
+                    .iter()
+                    .position(|b| *b == 0)
+                    .ok_or_else(|| short(who, at))?;
+                bit += (n + 1) * 8;
+                FieldValue::Bytes(rest[..n].to_vec())
+            }
             FieldType::Raw => {
                 let b = take(data, bit, remaining).ok_or_else(|| short(who, at))?;
                 bit += remaining * 8;
@@ -507,6 +516,24 @@ fn announced_end(
     })
 }
 
+/// The re-parse protocol selected by the fields up to `def`'s binding selector,
+/// for a header that does not decode completely.
+fn reparse_target<'a>(def: &'a ProtocolDef, data: &[u8]) -> Option<&'a str> {
+    let b = def.next.as_ref()?;
+    let k = def.field_index(&b.field)?;
+    let who = Who {
+        name: &def.name,
+        id: &def.id,
+        layer: 0,
+    };
+    let h = decode_fields(who, &def.fields[..=k], data, 0, &mut Vec::new()).ok()?;
+    let rest = data.get(h.len..).unwrap_or_default();
+    match b.select(|f| h.fields.get(f).and_then(FieldValue::as_u64), rest)? {
+        (id, true) => Some(id),
+        _ => None,
+    }
+}
+
 /// Upper bound on decoded layers (defends against self-referencing bindings).
 const MAX_LAYERS: usize = 64;
 /// Upper bound on re-parse bindings followed for one layer.
@@ -551,6 +578,17 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
         let hdr = match decode_header(def, &bytes[pos..limit], pos, idx, &mut layer_diags) {
             Ok(h) => h,
             Err(d) => {
+                // The header does not fit this layout, but its selector may already
+                // say that another one applies (TFTP DATA under the request layout).
+                let again = (reparses < MAX_REPARSE)
+                    .then(|| reparse_target(def, &bytes[pos..limit]))
+                    .flatten()
+                    .and_then(|id| resolve(catalog, &raw, id));
+                if let Some(again) = again {
+                    reparses += 1;
+                    next = Some(again);
+                    continue;
+                }
                 diags.extend(layer_diags);
                 diags.push(d);
                 if pos < limit {
@@ -560,12 +598,20 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
                 break;
             }
         };
+        let announced = announced_end(def, &hdr, pos, pos + hdr.len);
         let selected = def.next.as_ref().and_then(|b| {
-            let v = hdr.fields.get(&b.field)?.as_u64()?;
-            let (proto, reparse) = match b.entry_for(v) {
-                Some(e) => (e.protocol.as_str(), e.reparse),
-                None => (b.default.as_deref()?, false),
+            // The payload as the next layer will see it: bounded by this layer's
+            // own length field when that is consistent.
+            let from = pos + hdr.len;
+            let to = match &announced {
+                Some((_, end)) if *end >= from as i128 && *end <= limit as i128 => {
+                    usize::try_from(*end).unwrap_or(limit)
+                }
+                _ => limit,
             };
+            let payload = bytes.get(from..to).unwrap_or_default();
+            let (proto, reparse) =
+                b.select(|f| hdr.fields.get(f).and_then(FieldValue::as_u64), payload)?;
             Some((resolve(catalog, &raw, proto)?, reparse))
         });
         if let Some((again, true)) = selected {
@@ -583,7 +629,7 @@ pub fn parse(bytes: &[u8], first_protocol: &str, catalog: &dyn Resolve) -> Resul
         }
         let start = pos;
         pos += hdr.len;
-        if let Some((field, end)) = announced_end(def, &hdr, start, pos) {
+        if let Some((field, end)) = announced {
             if end < pos as i128 || end > limit as i128 {
                 diags.push(
                     Diagnostic::new(

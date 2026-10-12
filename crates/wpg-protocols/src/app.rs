@@ -2,12 +2,11 @@
 //! information), `DHCPv6` (incl. Relay-Forward / Relay-Reply), DNS, NTP, SNMP v1 /
 //! v2c (`GetRequest` family and Trap), Syslog, RADIUS and TFTP.
 //!
-//! All of them are reached through the UDP **destination** port binding in
-//! [`crate::l4::udp`] (67/68, 546/547, 53, 123, 161/162, 514, 1812/1813, 69).
-//! A [`wpg_core::Binding`] selects on one field, so replies sent *from* a
-//! well-known port to an ephemeral one (DNS / SNMP / RADIUS responses, TFTP
-//! transfers between TIDs) build fine but parse back as `raw` after UDP; a
-//! "source or destination port" selector would close the gap.
+//! All of them are reached through the UDP port binding in [`crate::l4::udp`]
+//! (67/68, 546/547, 53, 123, 161/162, 514, 1812/1813, 69): the destination port,
+//! else the source port, so replies sent *from* a well-known port to an
+//! ephemeral one (DNS / SNMP / RADIUS responses) decode too. TFTP transfers
+//! between two ephemeral TIDs still parse as `raw` after UDP.
 //!
 //! ## Engine limitations exercised here
 //!
@@ -36,11 +35,11 @@
 //!   client / server messages on the same port, so [`dhcpv6`] re-decodes itself as
 //!   [`dhcpv6_relay`] for message types 12 / 13 (a re-parse binding entry). The
 //!   Relay Message option types its inner message one level deep only.
-//! * **TFTP** request / error strings are NUL-terminated; the engine has no
-//!   C-string type, so the RRQ / WRQ / OACK body and the error message are opaque
-//!   octets (write them as `"file.bin\0octet\0"`). DATA / ACK / ERROR are split
-//!   into [`tftp_data`] / [`tftp_ack`] / [`tftp_error`] via re-parse entries on
-//!   the opcode.
+//! * **TFTP** request / error strings are NUL-terminated ([`wpg_core::FieldType::CString`]):
+//!   the RRQ / WRQ file name, mode and option pairs and the error message are
+//!   typed. DATA / ACK / ERROR / OACK are split into [`tftp_data`] /
+//!   [`tftp_ack`] / [`tftp_error`] / [`tftp_oack`] via re-parse entries on the
+//!   opcode.
 //! * **RADIUS** Response Authenticator and Message-Authenticator are MD5 /
 //!   HMAC-MD5 over the packet plus the shared secret; the engine has no keyed
 //!   digest auto rule, so `authenticator` is Manual.
@@ -904,10 +903,26 @@ fn tftp_opcode() -> FieldType {
     }
 }
 
-/// TFTP request (RFC 1350 / 2347, UDP 69): `opcode` (RRQ / WRQ / OACK) and the
-/// NUL-terminated filename, mode and option strings as opaque `body` octets (see
-/// the module docs). DATA / ACK / ERROR re-decode as [`tftp_data`] /
-/// [`tftp_ack`] / [`tftp_error`]. Default: an octet-mode read request.
+/// TFTP options (RFC 2347): NUL-terminated name / value string pairs (`blksize`
+/// / `1428`, ...) up to the end of the message.
+fn tftp_options() -> FieldType {
+    FieldType::List {
+        item: ItemDef::Struct {
+            fields: vec![
+                FieldDef::new("name", FieldType::CString)
+                    .with_default(FieldValue::Bytes(b"blksize".to_vec())),
+                FieldDef::new("value", FieldType::CString)
+                    .with_default(FieldValue::Bytes(b"1428".to_vec())),
+            ],
+        },
+        length: Length::ToEnd,
+    }
+}
+
+/// TFTP request (RFC 1350 / 2347, UDP 69): `opcode` (RRQ / WRQ), the
+/// NUL-terminated `filename` and `mode` and the option name / value pairs.
+/// DATA / ACK / ERROR / OACK re-decode as [`tftp_data`] / [`tftp_ack`] /
+/// [`tftp_error`] / [`tftp_oack`]. Default: an octet-mode read request.
 #[must_use]
 pub fn tftp() -> ProtocolDef {
     let mut d = protocol! {
@@ -916,15 +931,40 @@ pub fn tftp() -> ProtocolDef {
         layer: L7,
         fields: {
             opcode: ty(tftp_opcode()) = 1u16, desc = "tftp-opcode";
-            body: bytes(to_end) = *b"boot.bin\0octet\0", desc = "tftp-body";
+            filename: cstring = *b"boot.bin", desc = "tftp-filename";
+            mode: cstring = *b"octet", desc = "tftp-mode";
+            options: ty(tftp_options()) = Vec::<FieldValue>::new(), desc = "tftp-options";
         },
     };
     reparse(
         &mut d,
         "opcode",
-        &[(3, "tftp_data"), (4, "tftp_ack"), (5, "tftp_error")],
+        &[
+            (3, "tftp_data"),
+            (4, "tftp_ack"),
+            (5, "tftp_error"),
+            (6, "tftp_oack"),
+        ],
     );
     d
+}
+
+/// TFTP Option Acknowledgment (RFC 2347, opcode 6): the accepted option name /
+/// value pairs.
+#[must_use]
+pub fn tftp_oack() -> ProtocolDef {
+    protocol! {
+        id: "tftp_oack",
+        name: "TFTP OACK",
+        layer: L7,
+        fields: {
+            opcode: ty(tftp_opcode()) = 6u16, desc = "tftp-opcode";
+            options: ty(tftp_options()) = vec![FieldValue::Struct(Default::default())], desc = "tftp-options";
+        },
+        constraints: {
+            warning: equals(opcode, 6);
+        },
+    }
 }
 
 /// TFTP DATA (opcode 3): 16-bit block number and up to 512 data octets.
@@ -962,7 +1002,7 @@ pub fn tftp_ack() -> ProtocolDef {
     }
 }
 
-/// TFTP ERROR (opcode 5): error code and the NUL-terminated message (opaque).
+/// TFTP ERROR (opcode 5): error code and the NUL-terminated message.
 #[must_use]
 pub fn tftp_error() -> ProtocolDef {
     protocol! {
@@ -982,7 +1022,7 @@ pub fn tftp_error() -> ProtocolDef {
                 7 => no_such_user,
                 8 => option_negotiation,
             } = 1, desc = "tftp-error-code";
-            message: bytes(to_end) = *b"File not found\0", desc = "tftp-error-message";
+            message: cstring = *b"File not found", desc = "tftp-error-message";
         },
         constraints: {
             warning: equals(opcode, 5);

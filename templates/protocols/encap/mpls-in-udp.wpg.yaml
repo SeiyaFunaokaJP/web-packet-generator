@@ -6,7 +6,7 @@ meta:
   descriptions:
     ja: "MPLS-in-UDP (RFC 7510): UDP 6635 で MPLS ラベル 1 つと IPv4/UDP を転送"
     en: "MPLS-in-UDP (RFC 7510): one MPLS label in UDP port 6635 carrying IPv4/UDP"
-  tags: ["protocol:mpls", "protocol:udp", "layer:l4", encap, sample, "opaque-inner:mpls"]
+  tags: ["protocol:mpls", "protocol:udp", "layer:l4", encap, sample]
   author: wpg
   created: 2026-10-11
 

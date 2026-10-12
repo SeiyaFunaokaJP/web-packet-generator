@@ -25,6 +25,7 @@ diag-field-forbidden-value = フィールド `{ $field }` の値 { $value } は�
 diag-length-too-short = `{ $span }` は { $len } バイトで、最低 { $min } バイト必要です。
 diag-length-too-long = `{ $span }` は { $len } バイトで、最大 { $max } バイトまでです。
 diag-length-mismatch = 長さフィールド `{ $field }` = { $value } は計算値 { $expected } と異なります。
+diag-count-mismatch = 件数フィールド `{ $field }` = { $value } は実際の要素数 { $expected } と異なります。
 diag-checksum-mismatch = チェックサム `{ $field }` = { $value } は計算値 { $expected } と異なります。
 diag-next-protocol-mismatch = フィールド `{ $field }` = { $value } は次の層 `{ $next }` を示していません (期待値 { $expected })。
 diag-auto-overflow = `{ $field }` の自動値 { $value } は { $bits } ビットに収まりません。
@@ -610,7 +611,7 @@ nvgre-vsid = 24 ビット NVGRE 仮想サブネット ID。
 nvgre-flowid = NVGRE FlowID (負荷分散用エントロピー)。
 mpls-label = 20 ビット MPLS ラベル値。
 mpls-tc = 3 ビットトラフィッククラス (QoS / ECN)。
-mpls-s = スタック最下位ビット (1 = 最後のラベル)。
+mpls-s = スタック最下位ビット (1 = 最後のラベル。次レイヤから自動)。
 mpls-ttl = MPLS TTL。
 gtpu-version = GTP バージョン (1)。
 gtpu-pt = プロトコルタイプ (1 = GTP、0 = GTP')。
@@ -707,7 +708,7 @@ vrrp-version = VRRP バージョン (2 = RFC 3768、3 = RFC 5798)。
 vrrp-type = VRRP パケットタイプ (1 = Advertisement)。
 vrrp-vrid = 仮想ルータ識別子 (VRID)。
 vrrp-priority = 送信ルータの優先度 (255 = アドレス所有者、0 = 離脱)。
-vrrp-count = 広告に含まれる仮想アドレス数 (IPv4 では Auto)。
+vrrp-count = 広告に含まれる仮想アドレス数 (Auto)。
 vrrp-auth-type = VRRPv2 認証タイプ (0 = なし、1 = 平文、2 = IP AH)。
 vrrp-adver-int = VRRPv2 広告間隔 (秒)。
 vrrp-max-adver-int = VRRPv3 最大広告間隔 (センチ秒)。
@@ -823,11 +824,13 @@ radius-length = RADIUS パケット全体の長さ (オクテット、自動)。
 radius-authenticator = 16 オクテットの Request / Response Authenticator (手動)。
 radius-attributes = RADIUS 属性 (8 ビット型、ヘッダを含む 8 ビット長)。
 tftp-opcode = TFTP オペコード (1 = RRQ、2 = WRQ、3 = DATA、4 = ACK、5 = ERROR、6 = OACK)。
-tftp-body = NUL 終端のファイル名、モード、オプション文字列。不透明なオクテット列。
+tftp-filename = ファイル名 (NUL 終端)。
+tftp-mode = 転送モード: netascii、octet、mail (NUL 終端)。
+tftp-options = オプション名 / 値の文字列ペア (RFC 2347): blksize、timeout、tsize、windowsize など。
 tftp-block = ブロック番号 (1 から開始)。
 tftp-data = データオクテット (ブロックあたり 512。短いブロックで転送終了)。
 tftp-error-code = TFTP エラーコード (1 = ファイルなし、2 = アクセス違反 など)。
-tftp-error-message = NUL 終端のエラーメッセージ。不透明なオクテット列。
+tftp-error-message = エラーメッセージ (NUL 終端)。
 
 # --- P1 ルーティングプロトコルのフィールド説明 ---
 ospf-version = OSPF バージョン (2 = OSPFv2、3 = OSPFv3)。
@@ -835,7 +838,7 @@ ospf-type = OSPF パケットタイプ (Hello / DB Description / LS Request / LS
 ospf-packet-length = ヘッダを含む OSPF パケット長 (オクテット、自動)。
 ospf-router-id = 送信ルータのルータ ID。
 ospf-area-id = パケットが属するエリア (0.0.0.0 = バックボーン)。
-ospf-checksum = OSPF パケットのインターネットチェックサム (自動。認証フィールドが 0 のとき正確)。
+ospf-checksum = 認証フィールドを除いた OSPF パケットのインターネットチェックサム (自動)。
 ospf-au-type = 認証タイプ (0 = なし、1 = 平文パスワード、2 = 暗号認証)。
 ospf-authentication = 64 ビットの認証フィールド (パスワード、または暗号認証のキー ID / シーケンス)。
 ospf-network-mask = インタフェースまたは広告ネットワークのネットマスク。
@@ -857,7 +860,7 @@ ospf-ls-type = LSA タイプ (LSA 本体レイヤから自動)。
 ospf-link-state-id = 記述対象を識別するリンクステート ID。
 ospf-advertising-router = LSA を生成したルータのルータ ID。
 ospf-ls-sequence = LSA シーケンス番号 (0x80000001 = 初期値)。
-ospf-ls-checksum = LSA の Fletcher チェックサム (自動。LS age が 0 のとき正確)。
+ospf-ls-checksum = LS age を除いた LSA の Fletcher チェックサム (自動)。
 ospf-lsa-length = ヘッダを含む LSA 長 (オクテット、自動)。
 ospf-router-lsa-flags = Router-LSA フラグ (V = 仮想リンク端点、E = ASBR、B = ABR)。
 ospf-num-links = 記述するルータリンクの数。

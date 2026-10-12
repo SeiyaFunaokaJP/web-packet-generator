@@ -6,7 +6,7 @@ meta:
   descriptions:
     ja: "IGMPv3 (RFC 3376): 送信元 1 つのグループ・送信元指定クエリ"
     en: "IGMPv3 (RFC 3376): a Group-and-Source-Specific Query with one source"
-  tags: ["protocol:igmp", "protocol:igmpv3_query", "layer:l3", multicast, sample, "parse-as:igmpv3_query=igmpv2"]
+  tags: ["protocol:igmp", "protocol:igmpv3_query", "layer:l3", multicast, sample]
   author: wpg
   created: 2026-10-11
 
@@ -22,7 +22,7 @@ layers:
       ttl: 1
       options:
         - router_alert: 0 # RFC 2113; ihl / padding stay automatic
-  - protocol: igmp # type 0x11 is shared with v1/v2 queries, which decode it
+  - protocol: igmp # type 0x11 is shared with v1/v2 queries; v3 is the longer one
     fields:
       max_resp_code: 10
   - protocol: igmpv3_query

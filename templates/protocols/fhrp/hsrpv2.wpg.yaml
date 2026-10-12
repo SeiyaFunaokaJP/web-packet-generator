@@ -6,7 +6,7 @@ meta:
   descriptions:
     ja: "HSRPv2: Group State TLV とテキスト認証 TLV 付きの Hello (224.0.0.102、UDP 1985)"
     en: "HSRPv2: a Hello with Group State and Text Authentication TLVs to 224.0.0.102 (UDP 1985)"
-  tags: ["protocol:hsrpv2", "layer:l4", fhrp, sample, "parse-as:hsrpv2=hsrp", "opaque-inner:hsrpv2"]
+  tags: ["protocol:hsrpv2", "layer:l4", fhrp, sample]
   author: wpg
   created: 2026-10-11
 
@@ -23,7 +23,7 @@ layers:
   - protocol: udp
     fields:
       src_port: 1985
-      dst_port: 1985 # shared with HSRPv1, which decodes it (v2 has its own port only over IPv6)
+      dst_port: 1985 # shared with HSRPv1; told apart by the first octet
   - protocol: hsrpv2
     fields:
       tlvs:

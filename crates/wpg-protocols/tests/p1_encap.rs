@@ -169,11 +169,28 @@ fn mpls_two_labels_golden() {
     assert_eq!(entry(18), (200, 0, 1, 64));
     assert!(verifies(&built.bytes[22..42]), "inner IPv4 checksum");
 
-    // The bottom-of-stack payload has no first-nibble binding, so it parses as raw.
+    // The bottom-of-stack payload is demultiplexed by its first nibble (4 = IPv4).
     assert_eq!(
         roundtrip(&built.bytes, "ethernet2"),
-        ["ethernet2", "mpls", "mpls", "raw"]
+        ["ethernet2", "mpls", "mpls", "ipv4", "udp", "raw"]
     );
+    // `s` is Auto: the same octets without setting it.
+    let auto = Packet::from_layers(vec![
+        Layer::new("ethernet2")
+            .with("dst", FieldValue::Mac([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]))
+            .with("src", FieldValue::Mac([0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb])),
+        Layer::new("mpls").with("label", 100u32),
+        Layer::new("mpls").with("label", 200u32),
+        ipv4([10, 0, 0, 1], [10, 0, 0, 2], 3),
+        Layer::new("udp")
+            .with("src_port", 1111u16)
+            .with("dst_port", 2222u16),
+        Layer::new("raw").with("data", b"mpls".to_vec()),
+    ])
+    .unpadded()
+    .build(catalog())
+    .unwrap();
+    assert_eq!(auto.bytes, built.bytes, "s and the EtherType are Auto");
 
     assert_dissects(&built.bytes, None, "mpls");
 }
@@ -291,6 +308,42 @@ fn gtpu_golden() {
     );
 
     assert_dissects(&built.bytes, Some(0x0800), "gtp");
+}
+
+#[test]
+fn gtpu_payload_is_demultiplexed_by_ip_version() {
+    let bytes = Packet::from_layers(vec![
+        ipv4([10, 0, 0, 1], [10, 0, 0, 2], 4),
+        Layer::new("udp")
+            .with("src_port", 2152u16)
+            .with("dst_port", 2152u16),
+        Layer::new("gtpu"),
+        Layer::new("ipv6"),
+        Layer::new("raw").with("data", b"gtp".to_vec()),
+    ])
+    .unpadded()
+    .build(catalog())
+    .unwrap()
+    .bytes;
+    assert_eq!(bytes[29], 0xff, "G-PDU");
+    assert_eq!(
+        roundtrip(&bytes, "ipv4"),
+        ["ipv4", "udp", "gtpu", "ipv6", "raw"]
+    );
+    // An Echo Request (type 1) carries no T-PDU: nothing is peeked.
+    let echo = Packet::from_layers(vec![
+        ipv4([10, 0, 0, 1], [10, 0, 0, 2], 4),
+        Layer::new("udp")
+            .with("src_port", 2152u16)
+            .with("dst_port", 2152u16),
+        Layer::new("gtpu").with("message_type", 1u8),
+        Layer::new("raw").with("data", vec![0x45, 0, 0, 0]),
+    ])
+    .unpadded()
+    .build(catalog())
+    .unwrap()
+    .bytes;
+    assert_eq!(roundtrip(&echo, "ipv4"), ["ipv4", "udp", "gtpu", "raw"]);
 }
 
 // --------------------------------------------------------------------------

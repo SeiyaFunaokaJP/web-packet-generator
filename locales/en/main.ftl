@@ -25,6 +25,7 @@ diag-field-forbidden-value = Field `{ $field }` has a discouraged value: { $valu
 diag-length-too-short = `{ $span }` is { $len } bytes long, at least { $min } required.
 diag-length-too-long = `{ $span }` is { $len } bytes long, at most { $max } allowed.
 diag-length-mismatch = Length field `{ $field }` = { $value } differs from the computed length { $expected }.
+diag-count-mismatch = Count field `{ $field }` = { $value } differs from the actual number of elements { $expected }.
 diag-checksum-mismatch = Checksum field `{ $field }` = { $value } differs from the computed checksum { $expected }.
 diag-next-protocol-mismatch = Field `{ $field }` = { $value } does not announce the next layer `{ $next }` (expected { $expected }).
 diag-auto-overflow = Automatic value { $value } of `{ $field }` does not fit in { $bits } bits.
@@ -610,7 +611,7 @@ nvgre-vsid = 24-bit NVGRE Virtual Subnet ID.
 nvgre-flowid = NVGRE FlowID (entropy for load balancing).
 mpls-label = 20-bit MPLS label value.
 mpls-tc = 3-bit traffic class (QoS / ECN).
-mpls-s = Bottom-of-stack bit (1 = last label).
+mpls-s = Bottom-of-stack bit (1 = last label; Auto from the next layer).
 mpls-ttl = MPLS time to live.
 gtpu-version = GTP version (1).
 gtpu-pt = Protocol type (1 = GTP, 0 = GTP').
@@ -707,7 +708,7 @@ vrrp-version = VRRP version (2 = RFC 3768, 3 = RFC 5798).
 vrrp-type = VRRP packet type (1 = Advertisement).
 vrrp-vrid = Virtual Router Identifier.
 vrrp-priority = Sending router priority (255 = address owner, 0 = stop participating).
-vrrp-count = Number of virtual addresses in the advertisement (Auto for IPv4).
+vrrp-count = Number of virtual addresses in the advertisement (Auto).
 vrrp-auth-type = VRRPv2 authentication type (0 = none, 1 = simple text, 2 = IP AH).
 vrrp-adver-int = VRRPv2 advertisement interval, in seconds.
 vrrp-max-adver-int = VRRPv3 maximum advertisement interval, in centiseconds.
@@ -823,11 +824,13 @@ radius-length = Length of the whole RADIUS packet, in octets (Auto).
 radius-authenticator = 16-octet Request / Response Authenticator (Manual).
 radius-attributes = RADIUS attributes (8-bit type, 8-bit length including the header).
 tftp-opcode = TFTP opcode (1 = RRQ, 2 = WRQ, 3 = DATA, 4 = ACK, 5 = ERROR, 6 = OACK).
-tftp-body = NUL-terminated filename, mode and option strings; opaque octets.
+tftp-filename = File name (NUL-terminated).
+tftp-mode = Transfer mode: netascii, octet or mail (NUL-terminated).
+tftp-options = Option name / value string pairs (RFC 2347): blksize, timeout, tsize, windowsize, ...
 tftp-block = Block number (starting at 1).
 tftp-data = Data octets (512 per block; a shorter block ends the transfer).
 tftp-error-code = TFTP error code (1 = file not found, 2 = access violation, ...).
-tftp-error-message = NUL-terminated error message; opaque octets.
+tftp-error-message = Error message (NUL-terminated).
 
 # --- P1 routing protocol field descriptions ---
 ospf-version = OSPF version (2 = OSPFv2, 3 = OSPFv3).
@@ -835,7 +838,7 @@ ospf-type = OSPF packet type (Hello / DB Description / LS Request / LS Update / 
 ospf-packet-length = Length of the OSPF packet including the header, in octets (Auto).
 ospf-router-id = Router ID of the sending router.
 ospf-area-id = Area the packet belongs to (0.0.0.0 = backbone).
-ospf-checksum = Internet checksum over the OSPF packet (Auto; exact when the authentication field is zero).
+ospf-checksum = Internet checksum over the OSPF packet without the authentication field (Auto).
 ospf-au-type = Authentication type (0 = null, 1 = simple password, 2 = cryptographic).
 ospf-authentication = 64-bit authentication field (password, or key id / sequence for cryptographic auth).
 ospf-network-mask = Network mask of the interface or advertised network.
@@ -857,7 +860,7 @@ ospf-ls-type = LSA type (Auto from the LSA body layer).
 ospf-link-state-id = Link State ID identifying the described part of the network.
 ospf-advertising-router = Router ID of the router that originated the LSA.
 ospf-ls-sequence = LSA sequence number (0x80000001 = initial).
-ospf-ls-checksum = Fletcher checksum of the LSA (Auto; exact when LS age is 0).
+ospf-ls-checksum = Fletcher checksum of the LSA without LS age (Auto).
 ospf-lsa-length = Length of the LSA including its header, in octets (Auto).
 ospf-router-lsa-flags = Router-LSA flags (V = virtual link endpoint, E = ASBR, B = ABR).
 ospf-num-links = Number of router links described.
