@@ -1023,3 +1023,86 @@ bfd-desired-min-tx = 希望する最小送信間隔（マイクロ秒）。
 bfd-required-min-rx = 要求する最小受信間隔（マイクロ秒）。
 bfd-required-min-echo-rx = 要求する最小エコー受信間隔（マイクロ秒、0 = エコーなし）。
 bfd-authentication = 認証セクション（8 ビット型、ヘッダを含む 8 ビット長）: 簡易パスワード、Keyed MD5 / SHA1 とその Meticulous 版。ダイジェスト / ハッシュは手動。
+
+# --- P2 PTP / ESMC / CFM / R-APS / 802.3ah OAM field descriptions ---
+ptp-major-sdo-id = majorSdoId（IEEE 1588-2008 の transportSpecific）。既定プロファイルは 0、IEEE 802.1AS（gPTP）は 1。
+ptp-message-type = メッセージタイプ: 0 Sync、1 Delay_Req、2 Pdelay_Req、3 Pdelay_Resp、8 Follow_Up、9 Delay_Resp、10 Pdelay_Resp_Follow_Up、11 Announce、12 Signaling、13 Management。
+ptp-minor-version = minorVersionPTP（IEEE 1588-2008 では 0、IEEE 1588-2019 では 1）。
+ptp-version = versionPTP（2）。
+ptp-message-length = TLV を含むメッセージ全体のオクテット長（自動）。
+ptp-domain-number = ドメイン番号。
+ptp-minor-sdo-id = minorSdoId（IEEE 1588-2008 では予約、0）。
+ptp-flags = フラグ: 1 オクテット目に alternateMaster、twoStep、unicast、プロファイル固有ビット、セキュリティビット、2 オクテット目に leap61、leap59、currentUtcOffsetValid、ptpTimescale、timeTraceable、frequencyTraceable、synchronizationUncertain。
+ptp-correction-field = 補正値（ナノ秒 × 2^16、符号付き）。
+ptp-message-type-specific = メッセージタイプ固有フィールド（IEEE 1588-2008 では予約、0）。
+ptp-clock-identity = 送信元ポートのクロック ID（EUI-64。MAC アドレスの中央に ff:fe を挟んだ値など）。
+ptp-port-number = 送信元ポートのポート番号。
+ptp-sequence-id = シーケンス ID。Follow_Up / Delay_Resp / Pdelay_Resp は応答先メッセージの値をコピーする。
+ptp-control-field = 制御フィールド（IEEE 1588 バージョン 1 互換）: 0 Sync、1 Delay_Req、2 Follow_Up、3 Delay_Resp、4 Management、5 その他。
+ptp-log-message-interval = メッセージ間隔（秒）の log2（符号付き。該当しない場合は 0x7f）。
+ptp-timestamp-seconds = タイムスタンプ: 秒（48 ビット）。
+ptp-timestamp-nanoseconds = タイムスタンプ: ナノ秒（32 ビット）。
+ptp-port-identity-clock = ポート ID: クロック ID（全ビット 1 = すべてのクロック）。
+ptp-port-identity-port = ポート ID: ポート番号（0xffff = すべてのポート）。
+ptp-current-utc-offset = 現在の UTC オフセット（秒、TAI - UTC）。
+ptp-grandmaster-priority = グランドマスタの優先度（BMCA、小さいほど優先）。
+ptp-grandmaster-clock-class = グランドマスタのクロッククラス（6 = 一次基準に同期、248 = 既定、255 = スレーブ専用）。
+ptp-grandmaster-clock-accuracy = グランドマスタのクロック精度（0x20 = 25 ns 以内 … 0xfe = 不明）。
+ptp-grandmaster-variance = グランドマスタの offsetScaledLogVariance。
+ptp-grandmaster-identity = グランドマスタのクロック ID。
+ptp-steps-removed = グランドマスタと送信元の間のバウンダリクロック数。
+ptp-time-source = グランドマスタの時刻源: 原子時計、GPS、地上波、PTP、NTP、手動設定、その他、内部発振器。
+ptp-starting-boundary-hops = Management メッセージの開始時バウンダリホップ数。
+ptp-boundary-hops = 残りのバウンダリホップ数。
+ptp-action = Management の動作: GET、SET、RESPONSE、COMMAND、ACKNOWLEDGE。
+ptp-tlvs = TLV（16 ビット型、値の 16 ビット長、自動）: Management、Management Error Status、Organization Extension、ユニキャストネゴシエーション（Request / Grant / Cancel / Acknowledge Cancel）、Path Trace、Alternate Time Offset Indicator。メッセージ長で終わる。
+ptp-data = 共通ヘッダ以降のメッセージ（メッセージ長まで）をオクテット列で。
+esmc-subtype = Slow Protocols サブタイプ（0x0a = 組織固有）。
+esmc-itu-oui = ITU-T の OUI（00-19-a7）。
+esmc-itu-subtype = ITU-T サブタイプ（1 = ESMC）。
+esmc-version = ESMC バージョン（1）。
+esmc-event-flag = イベントフラグ: QL 変化時に即座に送るイベント PDU は 1、毎秒の情報 PDU は 0。
+esmc-tlvs = TLV（8 ビット型、3 オクテットのヘッダを含む 16 ビット長、自動）: SSM コードの QL TLV、拡張 SSM コード・SyncE クロック ID・カスケードクロック数の拡張 QL TLV。後続のオクテット（詰め物）は 1 つの raw 項目として保持。
+cfm-md-level = メンテナンスドメイン / MEG レベル（0〜7）。
+cfm-version = CFM バージョン（0。G.8032v2 の R-APS は 1）。
+cfm-opcode = OpCode: 1 CCM、2 LBR、3 LBM、4 LTR、5 LTM、33 AIS、35 LCK、37 TST、39 Linear APS、40 R-APS、41 MCC、42 LMR、43 LMM、45 1DM、46 DMR、47 DMM、52 CSF、53 1SL、54 SLR、55 SLM など。
+cfm-flags = フラグ（OpCode ごとに異なる）。
+cfm-first-tlv-offset = このフィールドの直後から最初の TLV までのオフセット（OpCode ごとに一定）。
+cfm-rdi = RDI: リモート障害表示。
+cfm-period = 送信周期: 1 = 3.33 ms、2 = 10 ms、3 = 100 ms、4 = 1 秒、5 = 10 秒、6 = 1 分、7 = 10 分。
+cfm-sequence-number = シーケンス番号。
+cfm-mep-id = MEP ID（1〜8191）。
+cfm-maid = MAID / MEG ID（48 オクテット）: MD 名の形式と名前、短縮 MA 名の形式・長さ・名前、ゼロ詰め（Y.1731: MD 名なし、形式 32 ICC ベース、長さ 13）。
+cfm-frame-counter = フレームカウンタ（ロス測定）。
+cfm-transaction-id = ループバック / リンクトレースのトランザクション ID。
+cfm-use-fdb-only = UseFDBonly: 転送データベースだけで出力ポートを決める。
+cfm-fwd-yes = FwdYes: LTM を中継した。
+cfm-terminal-mep = TerminalMEP: 応答は宛先 MEP から。
+cfm-ttl = リンクトレースの TTL。
+cfm-relay-action = 中継動作: 1 RlyHit、2 RlyFDB、3 RlyMPDB。
+cfm-original-mac = リンクトレースを開始した MEP の MAC アドレス。
+cfm-target-mac = リンクトレースの宛先 MAC アドレス。
+cfm-csf-type = クライアント信号障害の種類: 0 LOS、1 FDI / AIS、2 RDI、3 DCI。
+cfm-timestamp = IEEE 1588 形式のタイムスタンプ（32 ビットの秒とナノ秒）。
+cfm-source-mep-id = 送信元 MEP ID。
+cfm-responder-mep-id = 応答側 MEP ID（SLM では 0）。
+cfm-test-id = 合成ロス測定のテスト ID。
+cfm-tlvs = TLV（8 ビット型、値の 16 ビット長、自動）: Sender ID、Port Status、Data、Interface Status、Reply Ingress / Egress、LTM / LTR Egress Identifier、Organization-Specific、Test。End TLV（タイプ 0）で終わる。
+cfm-data = First TLV Offset 以降の PDU（OpCode 固有フィールドと TLV）をオクテット列で。
+raps-request-state = 要求 / 状態: 0000 NR、0111 MS、1011 SF、1101 FS、1110 Event。
+raps-sub-code = サブコード（Event 要求では 0000 = フラッシュ要求）。
+raps-rb = RB: RPL がブロック中。
+raps-dnf = DNF: 転送データベースをフラッシュしない。
+raps-bpr = BPR: ブロック中ポートの参照（0 = リングリンク 0、1 = リングリンク 1）。
+raps-node-id = ノード ID: 送信したリングノードの MAC アドレス。
+efm-oam-subtype = Slow Protocols サブタイプ（3 = OAM）。
+efm-oam-flags = フラグ: リンク障害、Dying Gasp、重大イベント、ローカル / リモートの評価中・安定。
+efm-oam-code = OAMPDU コード: 0x00 Information、0x01 Event Notification、0x02 Variable Request、0x03 Variable Response、0x04 Loopback Control、0xfe Organization Specific。
+efm-oam-information-tlvs = Information TLV（8 ビット型、ヘッダを含む 8 ビット長、自動）: Local / Remote Information、Organization Specific。End TLV（タイプ 0）で終わる。
+efm-oam-sequence-number = イベント通知のシーケンス番号。
+efm-oam-event-tlvs = リンクイベント TLV（8 ビット型、ヘッダを含む 8 ビット長、自動）: Errored Symbol Period、Errored Frame、Errored Frame Period、Errored Frame Seconds Summary、Organization Specific。End TLV（タイプ 0）で終わる。
+efm-oam-variable-descriptors = 変数記述子のオクテット列: それぞれブランチ（1 オクテット）とリーフ（2 オクテット）、0 のブランチで終わる。
+efm-oam-variable-containers = 変数コンテナのオクテット列: それぞれブランチ・リーフ・幅・値、0 のブランチで終わる。
+efm-oam-loopback-command = リモートループバックコマンド: 1 有効化、2 無効化。
+efm-oam-oui = 組織固有識別子（OUI）。
+efm-oam-data = OAMPDU の残りをオクテット列で。

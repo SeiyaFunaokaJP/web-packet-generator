@@ -1,0 +1,25 @@
+# SyncE ESMC (ITU-T G.8264): event PDU announcing QL-DNU (do not use) after a quality change
+schema: 1
+
+meta:
+  name: esmc-event-dnu
+  descriptions:
+    ja: "SyncE ESMC (ITU-T G.8264): 品質低下時に QL-DNU (使用禁止) を通知するイベント PDU"
+    en: "SyncE ESMC (ITU-T G.8264): event PDU announcing QL-DNU (do not use) after a quality change"
+  tags: ["protocol:ethernet2", "protocol:esmc", "layer:l2", timing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: esmc
+    fields:
+      event_flag: 1
+      tlvs:
+        - ql: { ssm_code: dnu }
+
+tx:
+  count: 1

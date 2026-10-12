@@ -1,0 +1,31 @@
+# Ethernet CFM: Linktrace Message (CFM traceroute) towards a target MAC address
+schema: 1
+
+meta:
+  name: cfm-ltm
+  descriptions:
+    ja: "Ethernet CFM: 宛先 MAC アドレスへのリンクトレースメッセージ (CFM traceroute、TTL 64、LTM Egress Identifier TLV 付き)"
+    en: "Ethernet CFM: Linktrace Message (CFM traceroute) towards a target MAC address (TTL 64, with an LTM Egress Identifier TLV)"
+  tags: ["protocol:ethernet2", "protocol:cfm_ltm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:3d" # LTM group address of MD level 5
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_ltm
+    fields:
+      md_level: 5
+      use_fdb_only: 1
+      transaction_id: 1
+      ttl: 64
+      original_mac: "02:00:00:00:00:01"
+      target_mac: "02:00:00:00:00:09"
+      tlvs:
+        - ltm_egress_identifier: { egress_identifier: 0x0000020000000001 }
+        - end
+
+tx:
+  count: 1

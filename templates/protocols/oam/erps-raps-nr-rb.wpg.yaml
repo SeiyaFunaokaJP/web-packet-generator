@@ -1,0 +1,34 @@
+# ERPS (ITU-T G.8032v2): R-APS(NR, RB) of the RPL owner on an idle ring (CFM OpCode 40)
+schema: 1
+
+meta:
+  name: erps-raps-nr-rb
+  descriptions:
+    ja: "ERPS (ITU-T G.8032v2): アイドル状態のリングで RPL オーナーが送る R-APS(NR, RB) (CFM OpCode 40、リング ID 1、MEL 7、5 秒周期)"
+    en: "ERPS (ITU-T G.8032v2): R-APS(NR, RB) of the RPL owner on an idle ring (CFM OpCode 40, ring ID 1, MEL 7, every 5 s)"
+  tags: ["protocol:ethernet2", "protocol:dot1q", "protocol:cfm_raps", "layer:l2", oam, erps, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:19:a7:00:00:01" # R-APS, ring ID 1
+      src: "02:00:00:00:00:01"
+  - protocol: dot1q
+    fields:
+      pcp: 7
+      vid: 4000 # R-APS channel
+  - protocol: cfm_raps
+    fields:
+      md_level: 7
+      version: 1 # G.8032v2
+      request_state: nr
+      rb: 1 # RPL blocked
+      dnf: 0
+      bpr: 0
+      node_id: "02:00:00:00:00:01"
+
+tx:
+  count: 3
+  rate: 1pps

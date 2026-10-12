@@ -25,6 +25,7 @@ Per-field descriptions (ja/en) come with the GUI field editor and `GET /api/prot
 | [SCTP (P2)](sctp.md) | Common header with CRC32c, bundled chunks (DATA, INIT, SACK, HEARTBEAT, ABORT, ASCONF, RE-CONFIG, ...), parameters and error causes |
 | [OSPF Opaque / SR, BGP MP / EVPN (P2)](routing-ext.md) | OSPFv2 TE / Router Information / Extended Prefix / Extended Link LSAs with SR SIDs, BGP NLRI for IPv6, VPN-IPv4 / VPN-IPv6 and EVPN |
 | [LDP / RSVP-TE / BFD (P2)](mpls-bfd.md) | LDP PDUs, messages and TLVs (FEC, labels, Hello / session parameters), RSVP-TE Path / Resv and other messages with their objects (ERO / RRO, SESSION_ATTRIBUTE, IntServ), BFD control packets with authentication (Micro-BFD included) |
+| [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](timing-oam.md) | PTP messages over Ethernet / UDP with their TLVs, SyncE ESMC, Ethernet CFM / Y.1731 (CCM, LB, LT, AIS / LCK, LM / DM / SLM, ...) with ERPS R-APS, 802.3ah OAMPDUs |
 
 ## Common patterns
 

@@ -1,0 +1,25 @@
+# ITU-T Y.1731: client signal fail (CSF) reporting a client loss of signal
+schema: 1
+
+meta:
+  name: y1731-csf
+  descriptions:
+    ja: "ITU-T Y.1731: クライアントの信号断 (LOS) を通知するクライアント信号障害 (CSF、1 秒周期)"
+    en: "ITU-T Y.1731: client signal fail (CSF) reporting a client loss of signal (once a second)"
+  tags: ["protocol:ethernet2", "protocol:cfm_csf", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:35"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm_csf
+    fields:
+      md_level: 5
+      type: los
+      period: s_1
+
+tx:
+  count: 1

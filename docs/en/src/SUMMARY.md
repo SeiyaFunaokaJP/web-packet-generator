@@ -34,6 +34,7 @@
   - [SCTP (P2)](protocols/sctp.md)
   - [OSPF Opaque / SR, BGP MP / EVPN (P2)](protocols/routing-ext.md)
   - [LDP / RSVP-TE / BFD (P2)](protocols/mpls-bfd.md)
+  - [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](protocols/timing-oam.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)

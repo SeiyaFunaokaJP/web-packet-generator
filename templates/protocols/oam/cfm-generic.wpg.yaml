@@ -1,0 +1,27 @@
+# Ethernet CFM: a PDU in the generic layout (common header + opaque octets), here a G.8031 Linear APS
+schema: 1
+
+meta:
+  name: cfm-generic
+  descriptions:
+    ja: "Ethernet CFM: 汎用レイアウト (共通ヘッダ + 不透明なオクテット列) の PDU (ここでは専用定義のない G.8031 Linear APS、OpCode 39)"
+    en: "Ethernet CFM: a PDU in the generic layout (common header + opaque octets), here a G.8031 Linear APS (OpCode 39, no dedicated definition)"
+  tags: ["protocol:ethernet2", "protocol:cfm", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:37"
+      src: "02:00:00:00:00:01"
+  - protocol: cfm
+    fields:
+      md_level: 7
+      opcode: linear_aps
+      first_tlv_offset: 4
+      # request / state NR, protection type A B D R, requested / bridged signal 0, then the End TLV
+      data: "0f 00 00 00 00"
+
+tx:
+  count: 1

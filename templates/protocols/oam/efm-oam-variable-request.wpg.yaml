@@ -1,0 +1,23 @@
+# 802.3ah OAM: Variable Request OAMPDU reading aFramesTransmittedOK and aFramesReceivedOK
+schema: 1
+
+meta:
+  name: efm-oam-variable-request
+  descriptions:
+    ja: "802.3ah OAM: aFramesTransmittedOK と aFramesReceivedOK を読み出す Variable Request OAMPDU (記述子はブランチ + リーフのオクテット列、0 ブランチで終端)"
+    en: "802.3ah OAM: Variable Request OAMPDU reading aFramesTransmittedOK and aFramesReceivedOK (descriptors as branch + leaf octets, closed by a zero branch)"
+  tags: ["protocol:ethernet2", "protocol:efm_oam_variable_request", "layer:l2", oam, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:80:c2:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: efm_oam_variable_request
+    fields:
+      variable_descriptors: "07 0002 07 0005 00" # branch 7 leaf 2, branch 7 leaf 5, end
+
+tx:
+  count: 1

@@ -17,7 +17,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 | `cstring` | NUL 終端文字列 (値は終端なし、合成時に `0x00` を付加。TFTP のファイル名など) |
 | `enum` | 名前付き値 |
 | `flags(bit set)` | ビット集合 |
-| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) / 前のフィールドが示すグループ先頭からのオフセットまで (`値 × unit`、CLNP / ES-IS の長さ指示子で終わるオプション)。TLV は型と長さの間に値の先頭オクテットを置ける (`head_octets`、SCTP チャンクのフラグ) ほか、各項目を N オクテット境界までゼロ詰めできる (`align`、詰め物は長さに含めない。`unpadded_last` で最後の項目は詰めず外側に任せる: SCTP パラメータ)。同じタイプのバリアントを値の先頭オクテット (`value_prefix`、BGP の AFI / SAFI) や値の長さ (`value_len`、OSPF SR の 3 / 4 オクテットの SID) で選び分けられ、タイプのフラグビットで長さフィールドを広げられる (`long_length`、BGP の Extended Length。値が長すぎると合成時に自動で付く)。長さを型より前に置ける (`len_first`、RSVP オブジェクト) |
+| `tlv` / `list<T>` | 反復・入れ子構造。領域の長さは固定 / 末尾まで / 前のフィールド値から (`(値 × unit + adjust) / div`、プレフィックス長 → `ceil(len / 8)` オクテットなど) / 要素数 (`list` のみ、可変長要素も可) / 前のフィールドが示すグループ先頭からのオフセットまで (`値 × unit`、CLNP / ES-IS の長さ指示子で終わるオプション)。TLV は型と長さの間に値の先頭オクテットを置ける (`head_octets`、SCTP チャンクのフラグ) ほか、各項目を N オクテット境界までゼロ詰めできる (`align`、詰め物は長さに含めない。`unpadded_last` で最後の項目は詰めず外側に任せる: SCTP パラメータ)。同じタイプのバリアントを値の先頭オクテット (`value_prefix`、BGP の AFI / SAFI) や値の長さ (`value_len`、OSPF SR の 3 / 4 オクテットの SID) で選び分けられ、タイプのフラグビットで長さフィールドを広げられる (`long_length`、BGP の Extended Length。値が長すぎると合成時に自動で付く)。長さを型より前に置ける (`len_first`、RSVP オブジェクト)。TLV 列を指定タイプの項目 (End TLV) で終わらせ、後続のゼロ詰めを詰め物として残せる (`Length::UntilTlv`、CFM / 802.3ah OAM) |
 | `padding` / `raw` | 詰め物 / 生バイト |
 
 ### 自動計算フィールド (GUI で Auto / Manual トグル)
@@ -81,7 +81,7 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 - BFD (RFC 5880 制御パケット、認証セクション、シングルホップ / マルチホップ)、Micro-BFD (RFC 7130)
 - Segment Routing: SRv6 (SRH), MPLS-SR ラベルスタック生成補助
 - 802.11 (Radiotap + 管理フレーム、モニタモード対応 NIC 限定) — P3 相当、要望次第
-- PTP (IEEE 1588 v2), SyncE ESMC, ERPS (G.8032 R-APS), Y.1731 CFM/OAM (CCM/LBM/LTM), EtherOAM (802.3ah)
+- PTP (IEEE 1588-2008: Sync/Delay_Req/Pdelay 系/Follow_Up/Delay_Resp/Announce/Signaling/Management、TLV、Ethernet 0x88F7 と UDP 319/320), SyncE ESMC (G.8264: QL / 拡張 QL TLV), ERPS (G.8032 R-APS、CFM OpCode 40), Y.1731 / 802.1ag CFM (CCM/LBM/LBR/LTM/LTR/AIS/LCK/TST/LMM/LMR/1DM/DMM/DMR/CSF/SLM/SLR/1SL、TLV), EtherOAM (802.3ah: Information/Event Notification/Variable Request・Response/Loopback Control/Organization Specific、Information / Event TLV)。Slow Protocols はサブタイプで LACP / Marker / OAM / ESMC に振り分け
 - MACsec (フレーム構造のみ、暗号化は固定鍵)
 - GTP-C, Diameter, SIP (基本), RTP
 

@@ -17,8 +17,11 @@ pub mod app;
 pub mod arp;
 pub mod bfd;
 pub mod bgp_mp;
+pub mod cfm;
 pub mod clnp;
+pub mod efm_oam;
 pub mod encap;
+pub mod esmc;
 pub mod fhrp;
 pub mod icmp;
 pub mod ipv6;
@@ -32,6 +35,7 @@ pub mod mcast;
 pub mod osi;
 pub mod ospf_opaque;
 pub mod payload;
+pub mod ptp;
 pub mod routing;
 pub mod rsvp;
 pub mod sctp;
@@ -242,6 +246,45 @@ pub fn builtin() -> Vec<ProtocolDef> {
         ldp::ldp(),
         rsvp::rsvp(),
         bfd::bfd(),
+        // P2 timing and Ethernet OAM.
+        ptp::ptp(),
+        ptp::ptp_sync(),
+        ptp::ptp_delay_req(),
+        ptp::ptp_pdelay_req(),
+        ptp::ptp_pdelay_resp(),
+        ptp::ptp_follow_up(),
+        ptp::ptp_delay_resp(),
+        ptp::ptp_pdelay_resp_follow_up(),
+        ptp::ptp_announce(),
+        ptp::ptp_signaling(),
+        ptp::ptp_management(),
+        esmc::esmc(),
+        cfm::cfm(),
+        cfm::cfm_ccm(),
+        cfm::cfm_lbm(),
+        cfm::cfm_lbr(),
+        cfm::cfm_ltm(),
+        cfm::cfm_ltr(),
+        cfm::cfm_ais(),
+        cfm::cfm_lck(),
+        cfm::cfm_tst(),
+        cfm::cfm_raps(),
+        cfm::cfm_lmm(),
+        cfm::cfm_lmr(),
+        cfm::cfm_1dm(),
+        cfm::cfm_dmm(),
+        cfm::cfm_dmr(),
+        cfm::cfm_csf(),
+        cfm::cfm_slm(),
+        cfm::cfm_slr(),
+        cfm::cfm_1sl(),
+        efm_oam::efm_oam(),
+        efm_oam::efm_oam_information(),
+        efm_oam::efm_oam_event_notification(),
+        efm_oam::efm_oam_variable_request(),
+        efm_oam::efm_oam_variable_response(),
+        efm_oam::efm_oam_loopback_control(),
+        efm_oam::efm_oam_organization_specific(),
         payload::payload(),
         payload::raw(),
     ]
