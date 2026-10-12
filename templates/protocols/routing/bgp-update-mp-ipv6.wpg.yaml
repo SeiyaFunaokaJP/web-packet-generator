@@ -1,0 +1,49 @@
+# BGP-4 multiprotocol (RFC 4760 / RFC 2545): an UPDATE announcing an IPv6 prefix in MP_REACH_NLRI
+schema: 1
+
+meta:
+  name: bgp-update-mp-ipv6
+  descriptions:
+    ja: "BGP マルチプロトコル (RFC 4760 / RFC 2545): グローバル + リンクローカルのネクストホップで 2001:db8:100::/48 を MP_REACH_NLRI で広告し、2001:db8:200::/48 を MP_UNREACH_NLRI で撤回する UPDATE"
+    en: "BGP multiprotocol (RFC 4760 / RFC 2545): an UPDATE announcing 2001:db8:100::/48 in MP_REACH_NLRI with a global + link-local next hop and withdrawing 2001:db8:200::/48 in MP_UNREACH_NLRI"
+  tags: ["protocol:bgp", "protocol:bgp_update", "layer:l4", routing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv6
+    fields:
+      src: "2001:db8::1"
+      dst: "2001:db8::2"
+      hop_limit: 1
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 179
+      seq: 1001
+      ack: 5001
+      flags: psh|ack
+  - protocol: bgp
+  - protocol: bgp_update
+    fields:
+      path_attributes:
+        - { origin: 0 }
+        - as_path:
+            segments:
+              - { segment_type: as_sequence, segment_length: 1, asns: [65001] }
+        - mp_reach_ipv6_unicast:
+            # afi 2 / safi 1 and next_hop_length are the defaults / Auto
+            next_hop: ["2001:db8::1", "fe80::1"]
+            nlri:
+              - { length: 48, prefix: "2001 0db8 0100" }
+        - mp_unreach_ipv6_unicast:
+            withdrawn:
+              - { length: 48, prefix: "2001 0db8 0200" }
+      nlri: [] # IPv6 routes travel in MP_REACH_NLRI only
+
+tx:
+  count: 1

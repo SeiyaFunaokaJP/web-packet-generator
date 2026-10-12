@@ -497,3 +497,27 @@ fn json_schema_accepts_samples_shape() {
     assert!(s["properties"]["layers"].is_object());
     assert!(s["properties"]["stream"].is_object());
 }
+
+/// A list or TLV field also takes verbatim octets as a hex string (what the import
+/// writes for content it cannot decode, and the representation BGP `nlri` had
+/// before it became a prefix list).
+#[test]
+fn composite_fields_accept_hex_strings() {
+    let render_one = |nlri: &str| {
+        let t = yaml(&format!(
+            "schema: 1\nmeta: {{ name: x }}\nlayers:\n  - protocol: ipv4\n  - protocol: tcp\n    fields: {{ dst_port: 179 }}\n  - protocol: bgp\n  - protocol: bgp_update\n    fields:\n      nlri: {nlri}\n"
+        ));
+        let c = compile(&t, &VarOverrides::new(), catalog()).unwrap();
+        let mut out = Vec::new();
+        render_with(&c, catalog(), Some(1), &mut |_, b| {
+            out.push(b.to_vec());
+            Ok(())
+        })
+        .unwrap();
+        out.remove(0)
+    };
+    let typed =
+        render_one("[{ length: 24, prefix: \"c6 33 64\" }, { length: 16, prefix: \"c612\" }]");
+    assert_eq!(render_one("\"18 c63364 10 c612\""), typed);
+    assert_eq!(&typed[typed.len() - 7..], [24, 198, 51, 100, 16, 198, 18]);
+}

@@ -108,6 +108,14 @@ impl FieldInput {
     /// A message describing why the value does not fit the type.
     pub fn to_value(&self, ty: &FieldType) -> Result<FieldValue, String> {
         match ty {
+            // Verbatim octets for a composite field (malformed content on purpose, or
+            // a value the import could not decode).
+            FieldType::Tlv(_) | FieldType::List { .. } if matches!(self, FieldInput::Str(_)) => {
+                let text = self.scalar_text().unwrap_or_default();
+                parse_bytes(&text)
+                    .map(FieldValue::Bytes)
+                    .map_err(|e| e.to_string())
+            }
             FieldType::Tlv(def) => {
                 let FieldInput::List(items) = self else {
                     return Err("expected a list of TLV items".into());

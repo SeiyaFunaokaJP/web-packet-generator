@@ -11,7 +11,7 @@
 use std::net::Ipv4Addr;
 
 use wpg_core::{FieldValue, Layer, Packet, TlvItem};
-use wpg_protocols::catalog;
+use wpg_protocols::{bgp_mp, catalog};
 use wpg_testutil::{assert_golden, read_pcap};
 
 fn eth() -> Layer {
@@ -274,6 +274,106 @@ fn case_eth_ipv4_sctp_data_sack() -> Packet {
     ])
 }
 
+/// OSPFv2 LSU with an area-scope Router Information opaque LSA: SR algorithms,
+/// SRGB and SRLB (3-octet SID/Label sub-TLVs padded to 4 octets).
+fn case_eth_ipv4_ospfv2_opaque_ri() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0009, [192, 0, 2, 1], [224, 0, 0, 5]).with("ttl", 1u8),
+        Layer::new("ospfv2").with("router_id", Ipv4Addr::new(192, 0, 2, 1)),
+        Layer::new("ospfv2_lsu"),
+        Layer::new("ospfv2_opaque_lsa"),
+        Layer::new("ospfv2_ri_lsa"),
+    ])
+}
+
+/// OSPFv2 LSU with an Extended Prefix opaque LSA: 192.0.2.1/32 with a node
+/// Prefix SID (index 1).
+fn case_eth_ipv4_ospfv2_opaque_ext_prefix() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x000a, [192, 0, 2, 1], [224, 0, 0, 5]).with("ttl", 1u8),
+        Layer::new("ospfv2").with("router_id", Ipv4Addr::new(192, 0, 2, 1)),
+        Layer::new("ospfv2_lsu"),
+        Layer::new("ospfv2_opaque_lsa").with("opaque_id", 1u32),
+        Layer::new("ospfv2_ext_prefix_lsa"),
+    ])
+}
+
+/// A BGP UPDATE over TCP 179 with ORIGIN, an empty `AS_PATH` and `mp`.
+fn bgp_mp_update(id: u16, mp: Vec<TlvItem>) -> Packet {
+    let mut attrs = vec![
+        TlvItem::named("origin").with("origin", 0u8),
+        TlvItem::named("as_path").with("segments", Vec::<FieldValue>::new()),
+    ];
+    attrs.extend(mp);
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(id, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("tcp")
+            .with("src_port", 49152u16)
+            .with("dst_port", 179u16)
+            .with("seq", 1u32)
+            .with("ack", 1u32)
+            .with("flags", 0x18u8),
+        Layer::new("bgp"),
+        Layer::new("bgp_update")
+            .with("path_attributes", attrs)
+            .with("nlri", bgp_mp::prefixes(&[])),
+    ])
+}
+
+/// BGP UPDATE announcing the VPN-IPv4 route 65001:100:198.51.100.0/24, label 16.
+fn case_eth_ipv4_tcp_bgp_vpnv4() -> Packet {
+    let next_hop = FieldValue::Struct(
+        [
+            ("rd".to_owned(), FieldValue::Bytes(vec![0; 8])),
+            (
+                "address".to_owned(),
+                FieldValue::Ipv4(Ipv4Addr::new(192, 0, 2, 1)),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    bgp_mp_update(
+        0x000b,
+        vec![TlvItem::named("mp_reach_vpnv4")
+            .with("next_hop", vec![next_hop])
+            .with("nlri", vec![bgp_mp::vpn_prefix(24, 16, &[198, 51, 100])])],
+    )
+}
+
+/// BGP UPDATE with EVPN MAC/IP (VNI 10010) and Inclusive Multicast routes and a
+/// PMSI Tunnel attribute.
+fn case_eth_ipv4_tcp_bgp_evpn() -> Packet {
+    let imet = TlvItem::named("inclusive_multicast")
+        .with("rd", bgp_mp::RD.to_vec())
+        .with("ethernet_tag", 0u32)
+        .with("ip_length", 32u8)
+        .with("originating_ip", vec![192, 0, 2, 1]);
+    // MP_REACH_NLRI last: tshark's JSON repeats the `path_attribute` key and only
+    // the last one survives in `serde_json`.
+    bgp_mp_update(
+        0x000c,
+        vec![
+            TlvItem::named("pmsi_tunnel")
+                .with("tunnel_type", 6u8)
+                .with("mpls_label", 10010u32)
+                .with("tunnel_id", vec![192, 0, 2, 1]),
+            TlvItem::named("mp_reach_evpn")
+                .with("next_hop", vec![192, 0, 2, 1])
+                .with(
+                    "nlri",
+                    vec![
+                        bgp_mp::evpn_mac_ip([0x02, 0, 0, 0, 0, 0x10], &[192, 0, 2, 10], 10010),
+                        imet,
+                    ],
+                ),
+        ],
+    )
+}
+
 /// The golden table: `(file stem, packet)`. One line per case.
 fn cases() -> Vec<(&'static str, Packet)> {
     vec![
@@ -289,6 +389,16 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ("dot3_llc_esis_ish", case_dot3_llc_esis_ish()),
         ("eth_ipv4_sctp_init", case_eth_ipv4_sctp_init()),
         ("eth_ipv4_sctp_data_sack", case_eth_ipv4_sctp_data_sack()),
+        (
+            "eth_ipv4_ospfv2_opaque_ri",
+            case_eth_ipv4_ospfv2_opaque_ri(),
+        ),
+        (
+            "eth_ipv4_ospfv2_opaque_ext_prefix",
+            case_eth_ipv4_ospfv2_opaque_ext_prefix(),
+        ),
+        ("eth_ipv4_tcp_bgp_vpnv4", case_eth_ipv4_tcp_bgp_vpnv4()),
+        ("eth_ipv4_tcp_bgp_evpn", case_eth_ipv4_tcp_bgp_evpn()),
     ]
 }
 

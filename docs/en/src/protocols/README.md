@@ -23,6 +23,7 @@ Per-field descriptions (ja/en) come with the GUI field editor and `GET /api/prot
 | [CLNP / ES-IS (P2)](clnp.md) | CLNP DT / ER / echo with options and segmentation, ES-IS ESH / ISH / Redirect |
 | [IS-IS (P2)](isis.md) | LAN / P2P Hellos, LSPs, CSNP / PSNP, main TLVs and sub-TLVs |
 | [SCTP (P2)](sctp.md) | Common header with CRC32c, bundled chunks (DATA, INIT, SACK, HEARTBEAT, ABORT, ASCONF, RE-CONFIG, ...), parameters and error causes |
+| [OSPF Opaque / SR, BGP MP / EVPN (P2)](routing-ext.md) | OSPFv2 TE / Router Information / Extended Prefix / Extended Link LSAs with SR SIDs, BGP NLRI for IPv6, VPN-IPv4 / VPN-IPv6 and EVPN |
 
 ## Common patterns
 

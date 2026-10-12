@@ -1,0 +1,51 @@
+# OSPFv2 SR (RFC 7770 / RFC 8665): a Router Information LSA with the Segment Routing capabilities
+schema: 1
+
+meta:
+  name: ospfv2-lsu-ri-sr
+  descriptions:
+    ja: "OSPFv2 SR (RFC 7770 / RFC 8665): ホスト名、SR アルゴリズム、SRGB 16000-23999、SRLB 15000-15999 を載せた Router Information LSA"
+    en: "OSPFv2 SR (RFC 7770 / RFC 8665): a Router Information LSA with the hostname, SR algorithms, SRGB 16000-23999 and SRLB 15000-15999"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_lsu", "protocol:ospfv2_opaque_lsa", "protocol:ospfv2_ri_lsa", "layer:l3", routing, segment-routing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:05"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.5
+      ttl: 1
+      dscp: 48
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv2_lsu
+    fields:
+      num_lsas: 1
+  - protocol: ospfv2_opaque_lsa
+    fields:
+      ls_type: area_opaque
+      opaque_id: 0
+      advertising_router: 192.0.2.1
+  - protocol: ospfv2_ri_lsa
+    fields:
+      tlvs:
+        - { informational_capabilities: graceful_restart_helper|stub_router }
+        - { hostname: "\"core-1\"" }
+        - { sr_algorithm: [0, 1] } # SPF, strict SPF
+        - sid_label_range: # SRGB
+            range_size: 8000
+            sub_tlvs:
+              - { sid_label: 16000 } # 3 octets: a label
+        - sr_local_block:
+            range_size: 1000
+            sub_tlvs:
+              - { sid_label: 15000 }
+
+tx:
+  count: 1

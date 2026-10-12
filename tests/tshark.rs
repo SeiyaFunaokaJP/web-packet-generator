@@ -200,6 +200,54 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ("data.data", "68:65:6c:6c:6f"),
             ],
         ),
+        (
+            "eth_ipv4_ospfv2_opaque_ri",
+            vec![
+                ("ospf.lsa", "10"),
+                ("ospf.lsid_opaque_type", "4"),
+                ("ospf.lsa.length", "68"),
+                ("ospf.tlv.range_size", "8000"),
+                ("ospf.tlv.sid_label", "16000"),
+            ],
+        ),
+        (
+            "eth_ipv4_ospfv2_opaque_ext_prefix",
+            vec![
+                ("ospf.lsid_opaque_type", "7"),
+                ("ospf.lsid.opaque_id", "1"),
+                ("ospf.tlv.extpfx.routetype", "1"),
+                ("ospf.tlv.extpfx.flags.n", "1"),
+                ("ospf.v3.address_prefix.ipv4", "192.0.2.1"),
+                ("ospf.tlv.extpfx.subtlv_type", "2"),
+                ("ospf.tlv.sid_label", "1"),
+            ],
+        ),
+        (
+            "eth_ipv4_tcp_bgp_vpnv4",
+            vec![
+                ("bgp.update.path_attribute.mp_reach_nlri.safi", "128"),
+                (
+                    "bgp.update.path_attribute.mp_reach_nlri.next_hop.ipv4",
+                    "192.0.2.1",
+                ),
+                ("bgp.prefix_length", "112"),
+                ("bgp.label_stack", "16 (bottom)"),
+                ("bgp.rd", "65001:100"),
+                ("bgp.mp_reach_nlri_ipv4_prefix", "198.51.100.0"),
+            ],
+        ),
+        (
+            "eth_ipv4_tcp_bgp_evpn",
+            vec![
+                ("bgp.update.path_attribute.mp_reach_nlri.afi", "25"),
+                ("bgp.update.path_attribute.mp_reach_nlri.safi", "70"),
+                // Repeated JSON keys: only the last route (Inclusive Multicast)
+                // is visible here.
+                ("bgp.evpn.nlri.rt", "3"),
+                ("bgp.evpn.nlri.len", "17"),
+                ("bgp.evpn.nlri.ip.addr", "192.0.2.1"),
+            ],
+        ),
     ]
 }
 

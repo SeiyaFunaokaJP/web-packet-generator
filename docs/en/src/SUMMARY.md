@@ -32,6 +32,7 @@
   - [CLNP / ES-IS (P2)](protocols/clnp.md)
   - [IS-IS (P2)](protocols/isis.md)
   - [SCTP (P2)](protocols/sctp.md)
+  - [OSPF Opaque / SR, BGP MP / EVPN (P2)](protocols/routing-ext.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)

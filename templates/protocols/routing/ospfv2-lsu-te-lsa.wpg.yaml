@@ -1,0 +1,53 @@
+# OSPFv2 TE (RFC 3630): a Link State Update carrying an area-scope Traffic Engineering LSA
+schema: 1
+
+meta:
+  name: ospfv2-lsu-te-lsa
+  descriptions:
+    ja: "OSPFv2 TE (RFC 3630): ポイントツーポイントリンクの TE 情報 (TE メトリック、帯域) を載せたエリアスコープの Opaque LSA を運ぶ Link State Update"
+    en: "OSPFv2 TE (RFC 3630): a Link State Update carrying an area-scope opaque LSA with the TE attributes (TE metric, bandwidths) of a point-to-point link"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_lsu", "protocol:ospfv2_opaque_lsa", "protocol:ospfv2_te_lsa", "layer:l3", routing, mpls-te, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:05" # AllSPFRouters 224.0.0.5
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.5
+      ttl: 1
+      dscp: 48
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv2_lsu
+    fields:
+      num_lsas: 1
+  - protocol: ospfv2_opaque_lsa
+    fields:
+      ls_type: area_opaque
+      # opaque_type: Auto (1, traffic_engineering)
+      opaque_id: 1 # instance 0 carries the Router Address TLV
+      advertising_router: 192.0.2.1
+  - protocol: ospfv2_te_lsa
+    fields:
+      tlvs:
+        - link:
+            sub_tlvs:
+              - { link_type: point_to_point }
+              - { link_id: 192.0.2.2 } # router ID of the neighbor
+              - { local_address: [198.51.100.1] }
+              - { remote_address: [198.51.100.2] }
+              - { te_metric: 10 }
+              - { max_bandwidth: 0x4b3ebc20 } # IEEE float 12.5e6 octets/s = 100 Mbit/s
+              - { max_reservable_bandwidth: 0x4b3ebc20 }
+              - unreserved_bandwidth:
+                  [0x4b3ebc20, 0x4b3ebc20, 0x4b3ebc20, 0x4b3ebc20, 0x4b3ebc20, 0x4b3ebc20, 0x4b3ebc20, 0x4b3ebc20]
+              - { admin_group: 0x00000001 }
+
+tx:
+  count: 1

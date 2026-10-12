@@ -23,6 +23,7 @@ Status: draft
 | [CLNP / ES-IS (P2)](clnp.md) | オプション・セグメンテーション付きの CLNP DT / ER / エコー、ES-IS ESH / ISH / リダイレクト |
 | [IS-IS (P2)](isis.md) | LAN / P2P Hello、LSP、CSNP / PSNP、主要 TLV とサブ TLV |
 | [SCTP (P2)](sctp.md) | CRC32c 付き共通ヘッダ、バンドルされたチャンク (DATA、INIT、SACK、HEARTBEAT、ABORT、ASCONF、RE-CONFIG など)、パラメータとエラー原因 |
+| [OSPF Opaque / SR、BGP MP / EVPN (P2)](routing-ext.md) | SR の SID 付き OSPFv2 TE / Router Information / Extended Prefix / Extended Link LSA、IPv6・VPN-IPv4 / VPN-IPv6・EVPN の BGP NLRI |
 
 ## 共通の考え方
 

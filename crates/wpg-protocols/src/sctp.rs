@@ -126,6 +126,7 @@ fn tlv(type_bits: u8, head_octets: u8, variants: Vec<TlvVariant>) -> FieldType {
         head_octets,
         align: 4,
         unpadded_last: head_octets == 0,
+        long_length: None,
     })
 }
 

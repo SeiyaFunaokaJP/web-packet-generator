@@ -858,7 +858,7 @@ ospf-lsa-headers = LSA headers (20 octets each; checksums and lengths are Manual
 ospf-lsr-requests = Requested LSAs (LS type, Link State ID, advertising router).
 ospf-num-lsas = Number of LSAs in the update.
 ospf-ls-age = Time since the LSA was originated, in seconds (keep 0 for an exact Auto checksum).
-ospf-ls-type = LSA type (Auto from the LSA body layer).
+ospf-ls-type = LSA type (Auto from the LSA body layer; 9 / 10 / 11 = opaque LSA).
 ospf-link-state-id = Link State ID identifying the described part of the network.
 ospf-advertising-router = Router ID of the router that originated the LSA.
 ospf-ls-sequence = LSA sequence number (0x80000001 = initial).
@@ -872,6 +872,10 @@ ospf-metric = Cost of the route.
 ospf-external-e = External metric type (1 = type 2, 0 = type 1).
 ospf-forwarding-address = Address traffic for the destination is forwarded to (0.0.0.0 = the ASBR).
 ospf-external-route-tag = 32-bit tag carried with the external route.
+ospf-opaque-ls-type = Opaque LSA flooding scope (9 = link-local, 10 = area, 11 = AS).
+ospf-opaque-type = Opaque type (1 = TE, 4 = Router Information, 7 = Extended Prefix, 8 = Extended Link; Auto from the body layer).
+ospf-opaque-id = Opaque ID distinguishing LSAs of the same opaque type (24 bits).
+ospf-opaque-tlvs = TLVs of the opaque LSA (16-bit type and length, values padded to 4 octets; lengths Auto).
 ospfv3-checksum = Internet checksum over the OSPFv3 packet with the IPv6 pseudo header (Auto).
 ospfv3-instance-id = Instance ID (separates OSPFv3 instances on one link).
 ospfv3-interface-id = Interface ID of the sending interface.
@@ -897,11 +901,11 @@ bgp-hold-time = Proposed hold time, in seconds (0 or at least 3).
 bgp-identifier = BGP identifier (router ID) of the sender.
 bgp-opt-params-length = Length of the optional parameters, in octets (Auto).
 bgp-opt-params = Optional parameters (type 2 = capabilities).
-bgp-withdrawn-routes-length = Length of the withdrawn routes, in octets (Manual).
-bgp-withdrawn-routes = Withdrawn routes as (prefix length, prefix) octets.
-bgp-total-path-attribute-length = Length of the path attributes, in octets (Manual).
-bgp-path-attributes = Path attributes (flags + type code, 8-bit length).
-bgp-nlri = Network Layer Reachability Information as (prefix length, prefix) octets.
+bgp-withdrawn-routes-length = Length of the withdrawn routes, in octets (Auto).
+bgp-withdrawn-routes = Withdrawn IPv4 routes (prefix length in bits, prefix).
+bgp-total-path-attribute-length = Length of the path attributes, in octets (Auto).
+bgp-path-attributes = Path attributes (flags + type code; the length is 16 bits with the Extended Length flag, set automatically above 255 octets).
+bgp-nlri = Announced IPv4 routes (prefix length in bits, prefix); other families go in MP_REACH_NLRI.
 bgp-error-code = NOTIFICATION error code.
 bgp-error-subcode = NOTIFICATION error subcode.
 bgp-error-data = Diagnostic data of the NOTIFICATION.

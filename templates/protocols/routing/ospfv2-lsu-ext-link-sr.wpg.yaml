@@ -1,0 +1,47 @@
+# OSPFv2 SR (RFC 7684 / RFC 8665): an Extended Link LSA with an Adj-SID
+schema: 1
+
+meta:
+  name: ospfv2-lsu-ext-link-sr
+  descriptions:
+    ja: "OSPFv2 SR (RFC 7684 / RFC 8665): ポイントツーポイントリンクに Adj-SID (ラベル 24000) を付ける Extended Link LSA"
+    en: "OSPFv2 SR (RFC 7684 / RFC 8665): an Extended Link LSA giving a point-to-point link an Adj-SID (label 24000)"
+  tags: ["protocol:ospfv2", "protocol:ospfv2_lsu", "protocol:ospfv2_opaque_lsa", "protocol:ospfv2_ext_link_lsa", "layer:l3", routing, segment-routing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "01:00:5e:00:00:05"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 224.0.0.5
+      ttl: 1
+      dscp: 48
+  - protocol: ospfv2
+    fields:
+      router_id: 192.0.2.1
+  - protocol: ospfv2_lsu
+    fields:
+      num_lsas: 1
+  - protocol: ospfv2_opaque_lsa
+    fields:
+      ls_type: area_opaque
+      opaque_id: 2
+      advertising_router: 192.0.2.1
+  - protocol: ospfv2_ext_link_lsa
+    fields:
+      tlvs:
+        - extended_link:
+            link_type: point_to_point
+            link_id: 192.0.2.2 # neighbor router ID
+            link_data: 198.51.100.1 # local interface address
+            sub_tlvs:
+              # 3 octets: a local label (V and L flags set)
+              - adj_sid: { flags: v|l, weight: 0, label: 24000 }
+
+tx:
+  count: 1

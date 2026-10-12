@@ -557,12 +557,12 @@ pub(crate) fn encode_tlv_item(
         ),
         None => item.ty.and_then(|ty| t.variant_by_type(ty)),
     };
-    let ty = item
+    let mut ty = item
         .ty
         .or(variant.map(|v| v.type_value))
         .ok_or_else(|| invalid(fd, "a tlv item needs a `type` or a `name`"))?;
     let type_bits = u32::from(t.type_bits);
-    let len_bits = u32::from(t.len_bits);
+    let mut len_bits = u32::from(t.len_bits_for(ty));
     if ty > mask(type_bits) {
         return Err(invalid(
             fd,
@@ -611,7 +611,6 @@ pub(crate) fn encode_tlv_item(
         return Ok(finish(w.buf, children));
     }
     let head = usize::from(t.head_octets);
-    let hdr = ((type_bits + len_bits) / 8) as usize + head;
     let mut vw = BitWriter::default();
     let vchildren = match (&item.data, variant) {
         (Some(d), _) => {
@@ -657,7 +656,27 @@ pub(crate) fn encode_tlv_item(
         value.resize(head, 0);
     }
     let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
-    let counted = if t.len_includes_header { hdr } else { 0 } + value.len() - head;
+    let counted_with = |len_bits: u32| {
+        let hdr = ((type_bits + len_bits) / 8) as usize + head;
+        (if t.len_includes_header { hdr } else { 0 }) + value.len() - head
+    };
+    let mut counted = counted_with(len_bits);
+    // An Auto length too large for the normal width selects the long form, unless
+    // the item fixes its type.
+    let mut widened = false;
+    if let Some(long) = &t.long_length {
+        let long_bits = u32::from(long.len_bits);
+        if item.ty.is_none()
+            && item.length.is_none()
+            && counted.div_ceil(unit) as u64 > mask(len_bits)
+            && counted_with(long_bits).div_ceil(unit) as u64 <= mask(long_bits)
+        {
+            ty |= long.flag;
+            len_bits = long_bits;
+            counted = counted_with(len_bits);
+            widened = true;
+        }
+    }
     let expected = counted.div_ceil(unit);
     let field_name = format!("{}[{index}].length", fd.name);
     let (len, auto) = match item.length {
@@ -705,6 +724,12 @@ pub(crate) fn encode_tlv_item(
     // Value fields in the head sit right after the type, the others after the length.
     let (in_head, after): (Vec<_>, Vec<_>) =
         vchildren.into_iter().partition(|c| c.bit_offset < head * 8);
+    if widened {
+        // Rewrite the type with the long-length flag.
+        w = BitWriter::default();
+        w.push_bits(type_bits, ty);
+        children[0] = FieldLayout::leaf("type", 0, type_bits as usize, FieldValue::UInt(ty));
+    }
     children.extend(shift(in_head, type_bits as usize));
     w.push_bytes(&value[..head]);
     w.push_bits(len_bits, len);
@@ -857,11 +882,12 @@ fn fill_items(
     let Ok(mut left) = usize::try_from(target - have as i128) else {
         return Vec::new(); // already larger: the length mismatch warning says so
     };
-    let hdr = usize::from((t.type_bits + t.len_bits) / 8 + t.head_octets);
+    let len_bits = t.len_bits_for(variant.type_value);
+    let hdr = usize::from((t.type_bits + len_bits) / 8 + t.head_octets);
     let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
     let counted = if t.len_includes_header { hdr } else { 0 };
     // Largest value that the length field can describe, in whole units.
-    let max_len = usize::try_from(mask(u32::from(t.len_bits))).unwrap_or(usize::MAX);
+    let max_len = usize::try_from(mask(u32::from(len_bits))).unwrap_or(usize::MAX);
     let max_value = (max_len * unit).saturating_sub(counted) / unit * unit;
     let mut items = Vec::new();
     while left >= hdr {

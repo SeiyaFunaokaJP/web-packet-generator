@@ -18,6 +18,8 @@ Status: draft
 | 可変長フィールドの後、ヘッダ長フィールドの位置で終わる領域 | `Length::UntilOffset { field, unit }` | 長さ指示子までの CLNP / ES-IS オプション |
 | TLV の型と長さの間にある値オクテット | `TlvDef::head_octets` | SCTP チャンクのフラグ |
 | N オクテット境界まで詰める TLV 項目 (詰め物は長さに含めない) | `TlvDef::align` (`unpadded_last`: 最後の項目は外側の項目が詰める) | SCTP のチャンク・パラメータ・エラー原因 |
+| 同じタイプで値によってレイアウトが変わる TLV 項目 | `TlvVariant::when_value_starts` / `when_value_len` (タイプを共有するバリアント。判別条件のないものが既定) | AFI / SAFI ごとの BGP `MP_REACH_NLRI`、3 / 4 オクテットの OSPF SR の SID、EVPN の IPv4 / IPv6 IP Prefix ルート |
+| TLV の長さを広げるタイプのフラグ | `TlvDef::long_length` (`TlvLongLength { flag, len_bits }`。値が長すぎると自動で付く) | BGP の Extended Length パス属性 |
 | 指定 PDU 長まで埋め草 TLV で埋める | `TlvDef::fill` (`TlvFill { variant, until }`) | IS-IS Hello の Padding TLV |
 | NUL 終端文字列 | `cstring` 型 | TFTP `filename` / `mode` |
 | 長さ指示子付き OSI アドレス | `nsap` 型 (長さオクテットは自動) | CLNP / ES-IS / IS-IS の NSAP・NET |

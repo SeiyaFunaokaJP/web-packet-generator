@@ -1,0 +1,66 @@
+# BGP EVPN (RFC 7432 / RFC 8365): MAC/IP and Inclusive Multicast routes for a VXLAN VNI
+schema: 1
+
+meta:
+  name: bgp-update-evpn
+  descriptions:
+    ja: "BGP EVPN (RFC 7432 / RFC 8365): VXLAN VNI 10010 の MAC/IP Advertisement (タイプ 2) と Inclusive Multicast (タイプ 3) ルートを、ルートターゲットと PMSI Tunnel (ingress replication) 付きで広告する UPDATE"
+    en: "BGP EVPN (RFC 7432 / RFC 8365): an UPDATE announcing a MAC/IP Advertisement (type 2) and an Inclusive Multicast (type 3) route for VXLAN VNI 10010, with a route target and a PMSI Tunnel (ingress replication)"
+  tags: ["protocol:bgp", "protocol:bgp_update", "layer:l4", routing, evpn, vxlan, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+      dscp: 48
+      flags: df
+  - protocol: tcp
+    fields:
+      src_port: 49152
+      dst_port: 179
+      seq: 1001
+      ack: 5001
+      flags: psh|ack
+  - protocol: bgp
+  - protocol: bgp_update
+    fields:
+      path_attributes:
+        - { origin: 0 }
+        - { as_path: { segments: [] } }
+        - mp_reach_evpn:
+            # afi 25 / safi 70: the defaults
+            next_hop: "c0 00 02 01" # VTEP 192.0.2.1
+            nlri:
+              - mac_ip:
+                  rd: "0001 c0000201 0001" # 192.0.2.1:1
+                  esi: "00 00 00 00 00 00 00 00 00 00"
+                  ethernet_tag: 0
+                  mac_length: 48
+                  mac: "02:00:00:00:00:10"
+                  ip_length: 32
+                  ip_address: "c0 00 02 0a" # 192.0.2.10
+                  labels: [10010] # VNI
+              - inclusive_multicast:
+                  rd: "0001 c0000201 0001"
+                  ethernet_tag: 0
+                  ip_length: 32
+                  originating_ip: "c0 00 02 01"
+        - extended_communities:
+            - 0x0002fde90000271a # route target 65001:10010
+            - 0x030c000000000008 # encapsulation: VXLAN (RFC 9012)
+        - pmsi_tunnel:
+            flags: 0
+            tunnel_type: ingress_replication
+            mpls_label: 10010 # VNI
+            tunnel_id: "c0 00 02 01"
+      nlri: []
+
+tx:
+  count: 1

@@ -42,6 +42,7 @@ tx: { ... }                # 任意
 | enum | 数値かバリアント名: `ethertype: arp`、`oper: request`、`type: echo_request` |
 | flags | ビット名を `\|` で連結: `flags: syn\|ack`、`flags: df` |
 | TLV リスト (TCP/IPv4 オプション) | `- mss: 1460`、`- sack_permitted`、`- nop`、`- timestamps: { tsval: 1, tsecr: 0 }`、`- { type: 99, data: "01 02" }` |
+| リスト / TLV リストをそのままのオクテット列で | `nlri: "18 c6 33 64"` (リストの代わりに引用符付きの 16 進文字列。インポートがデコードできない内容をこの形で書く) |
 
 わざと誤った値も受け付けます。Manual の長さやチェックサムは書いたとおりに使われ、`wpg template lint` は不一致を警告 (`diag-*`) として報告します。`templates/malformed/` のサンプルはこの仕組みで作っています。
 
