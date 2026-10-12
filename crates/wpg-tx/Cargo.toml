@@ -20,7 +20,10 @@ afpacket = []
 # libxdp), so it needs no extra build dependencies; off by default while it has
 # only been verified in copy mode (see docs/*/src/operations/dpdk-afxdp.md).
 afxdp = []
-dpdk = []
+# DPDK backend (Linux). Links DPDK 24.11 / 23.11 LTS through `dpdk-sys` (needs the DPDK
+# development package and libclang at build time, see ADR-0004). The backend itself is
+# not implemented yet; for now the feature only builds and links the bindings.
+dpdk = ["dep:dpdk-sys"]
 
 [dependencies]
 wpg-core.workspace = true
@@ -33,6 +36,7 @@ pcap = { version = "2", optional = true }
 [target.'cfg(target_os = "linux")'.dependencies]
 # AF_PACKET / AF_XDP backends, `sched_setaffinity` core pinning, `mbind`.
 libc = "0.2.186"
+dpdk-sys = { workspace = true, features = ["link"], optional = true }
 
 [dev-dependencies]
 wpg-protocols.workspace = true

@@ -17,6 +17,7 @@
 | `wpg-server` | Web UI を組み込んだ axum の HTTP / WebSocket サーバ | |
 | `wpg-cli` | コマンドライン本体 (`serve`、`send`、`render`、`import`、`template`、`doctor` など)。成果物は `wpg` バイナリ | |
 | `wpg-web` | Leptos (CSR) の Web UI。Trunk で WASM にコンパイルする | ○ |
+| `dpdk-sys` | DPDK (24.11 / 23.11 LTS) の生の FFI。bindgen で生成し、インラインの高速パス (`rte_eth_tx_burst`、`rte_pktmbuf_alloc` など) と `rte_errno` は C の shim (`wpg_` 接頭辞) で包む。`link` feature を付けたときだけ中身が入る (`wpg-tx` の `dpdk` から有効化)。ADR-0004 | |
 | `wpg-testutil` | テスト補助: pcap / pcapng の読み書き、16 進ヘルパー、golden ファイルの突合 (非公開) | |
 
 さらに `wpg-golden-tests` が golden pcap のバイト突合と tshark 突合を担います (`cargo test -p wpg-golden-tests`)。
