@@ -11,7 +11,7 @@
 use std::net::Ipv4Addr;
 
 use wpg_core::{FieldValue, Layer, Packet, TlvItem};
-use wpg_protocols::{bgp_mp, catalog};
+use wpg_protocols::{bgp_mp, catalog, gtpv2};
 use wpg_testutil::{assert_golden, read_pcap};
 
 fn eth() -> Layer {
@@ -477,6 +477,205 @@ fn case_eth_ipv4_tcp_bgp_evpn() -> Packet {
     )
 }
 
+/// `MACsec` frame with an explicit SCI (association number 1) around 64 octets of
+/// opaque secure data and an opaque ICV.
+fn case_eth_macsec() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        Layer::new("macsec")
+            .with("an", 1u8)
+            .with("pn", 0x0102_0304u32)
+            .with(
+                "secure_data",
+                (0u8..64).map(|b| b.wrapping_mul(7)).collect::<Vec<_>>(),
+            )
+            .with("icv", vec![0xa5u8; 16]),
+    ])
+}
+
+/// GTPv2-C Create Session Request (TEID 0) with IMSI, MSISDN, Serving Network,
+/// RAT type, F-TEID, APN, PDN type, PAA, AMBR and a Bearer Context.
+fn case_eth_ipv4_udp_gtpv2_create_session() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0011, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("udp")
+            .with("src_port", 2123u16)
+            .with("dst_port", 2123u16),
+        Layer::new("gtpv2")
+            .with("sequence_number", 0x00_1234u32)
+            .with(
+                "ies",
+                vec![
+                    TlvItem::named("imsi").with("digits", gtpv2::DEFAULT_IMSI.to_vec()),
+                    TlvItem::named("msisdn")
+                        .with("digits", vec![0x18, 0x09, 0x21, 0x43, 0x65, 0x87]),
+                    TlvItem::named("serving_network"),
+                    TlvItem::named("rat_type"),
+                    TlvItem::named("fteid").with("teid", 0x0000_1001u32),
+                    TlvItem::named("apn").with("apn", gtpv2::DEFAULT_APN.to_vec()),
+                    TlvItem::named("pdn_type"),
+                    TlvItem::named("paa").with("ipv4", Ipv4Addr::UNSPECIFIED),
+                    TlvItem::named("ambr")
+                        .with("uplink", 50_000u32)
+                        .with("downlink", 100_000u32),
+                    TlvItem::named("bearer_context").with(
+                        "ies",
+                        vec![
+                            TlvItem::named("ebi"),
+                            TlvItem::named("bearer_qos").with("pl", 9u8),
+                        ],
+                    ),
+                ],
+            ),
+    ])
+}
+
+/// Diameter Credit-Control-Request (initial) with a Session-Id, a grouped
+/// Subscription-Id and a vendor-specific (3GPP) AVP with the V flag.
+fn case_eth_ipv4_tcp_diameter_ccr() -> Packet {
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0012, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("tcp")
+            .with("src_port", 49152u16)
+            .with("dst_port", 3868u16)
+            .with("seq", 1u32)
+            .with("ack", 1u32)
+            .with("flags", 0x18u8),
+        Layer::new("diameter")
+            .with("p", 1u8)
+            .with("command_code", 272u32)
+            .with("application_id", 4u32)
+            .with("hop_by_hop", 0x2233_4455u32)
+            .with("end_to_end", 0x6677_8899u32)
+            .with(
+                "avps",
+                vec![
+                    TlvItem::named("session_id").with("value", b"client.example.com;1;1".to_vec()),
+                    TlvItem::named("origin_host").with("value", b"client.example.com".to_vec()),
+                    TlvItem::named("origin_realm").with("value", b"example.com".to_vec()),
+                    TlvItem::named("destination_realm").with("value", b"example.net".to_vec()),
+                    TlvItem::named("auth_application_id").with("value", 4u32),
+                    TlvItem::named("service_context_id").with("value", b"32251@3gpp.org".to_vec()),
+                    TlvItem::named("cc_request_type"),
+                    TlvItem::named("cc_request_number").with("value", 0u32),
+                    TlvItem::named("subscription_id"),
+                    // 3GPP-RAT-Type (vendor 10415), kept as octets: V and M flags,
+                    // the Vendor-ID and the value.
+                    TlvItem {
+                        ty: Some(1032),
+                        data: Some(vec![0xc0, 0x00, 0x00, 0x28, 0xaf, 0x00, 0x00, 0x03, 0xec]),
+                        ..TlvItem::default()
+                    },
+                ],
+            ),
+    ])
+}
+
+/// The SDP offer of the SIP INVITE golden case.
+const SDP_OFFER: &str = "v=0\r\n\
+o=alice 2890844526 2890844526 IN IP4 192.0.2.1\r\n\
+s=-\r\n\
+c=IN IP4 192.0.2.1\r\n\
+t=0 0\r\n\
+m=audio 49170 RTP/AVP 0\r\n\
+a=rtpmap:0 PCMU/8000\r\n";
+
+/// SIP INVITE over UDP with an SDP offer (Content-Length set to the body size).
+fn case_eth_ipv4_udp_sip_invite() -> Packet {
+    let headers: Vec<FieldValue> = [
+        "Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bK74bf9".to_owned(),
+        "Max-Forwards: 70".to_owned(),
+        "To: Bob <sip:bob@example.com>".to_owned(),
+        "From: Alice <sip:alice@example.com>;tag=9fxced76sl".to_owned(),
+        "Call-ID: 3848276298220188511@192.0.2.1".to_owned(),
+        "CSeq: 1 INVITE".to_owned(),
+        "Contact: <sip:alice@192.0.2.1>".to_owned(),
+        "Content-Type: application/sdp".to_owned(),
+        format!("Content-Length: {}", SDP_OFFER.len()),
+    ]
+    .iter()
+    .map(|h| FieldValue::Bytes(h.as_bytes().to_vec()))
+    .collect();
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0013, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("udp")
+            .with("src_port", 5060u16)
+            .with("dst_port", 5060u16),
+        Layer::new("sip")
+            .with("start_line", b"INVITE sip:bob@example.com SIP/2.0".to_vec())
+            .with("headers", FieldValue::List(headers))
+            .with("body", SDP_OFFER.as_bytes().to_vec()),
+    ])
+}
+
+/// RTP (PCMU, marker set) with two CSRCs and a one-byte header extension, then
+/// 160 octets of payload, to the IANA `rtp-avp` port.
+fn case_eth_ipv4_udp_rtp() -> Packet {
+    let extension = FieldValue::Struct(
+        [(
+            "data".to_owned(),
+            FieldValue::List(vec![FieldValue::UInt(0x10ab_0000)]),
+        )]
+        .into_iter()
+        .collect(),
+    );
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0014, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("udp")
+            .with("src_port", 5004u16)
+            .with("dst_port", 5004u16),
+        Layer::new("rtp")
+            .with("marker", 1u8)
+            .with("sequence_number", 1000u16)
+            .with("timestamp", 160_000u32)
+            .with(
+                "csrc",
+                FieldValue::List(vec![
+                    FieldValue::UInt(0x1111_1111),
+                    FieldValue::UInt(0x2222_2222),
+                ]),
+            )
+            .with("header_extension", FieldValue::List(vec![extension])),
+        Layer::new("raw").with("data", vec![0xffu8; 160]),
+    ])
+}
+
+/// Compound RTCP packet: a Receiver Report with one report block, an SDES with a
+/// CNAME and a BYE with a reason, to the IANA `rtcp-avp` port.
+fn case_eth_ipv4_udp_rtcp_compound() -> Packet {
+    let s = |kv: &[(&str, FieldValue)]| {
+        FieldValue::Struct(
+            kv.iter()
+                .map(|(k, v)| ((*k).to_owned(), v.clone()))
+                .collect(),
+        )
+    };
+    let block = s(&[
+        ("ssrc", FieldValue::UInt(0x8765_4321)),
+        ("fraction_lost", FieldValue::UInt(10)),
+        ("cumulative_lost", FieldValue::UInt(25)),
+        ("highest_sequence", FieldValue::UInt(0x0001_03e8)),
+        ("jitter", FieldValue::UInt(42)),
+        ("lsr", FieldValue::UInt(0x1234_5678)),
+        ("dlsr", FieldValue::UInt(0x0001_0000)),
+    ]);
+    let reason = s(&[("text", FieldValue::Bytes(b"session ended".to_vec()))]);
+    Packet::from_layers(vec![
+        eth(),
+        ipv4(0x0015, [192, 0, 2, 1], [192, 0, 2, 2]),
+        Layer::new("udp")
+            .with("src_port", 5005u16)
+            .with("dst_port", 5005u16),
+        Layer::new("rtcp_rr").with("report_blocks", FieldValue::List(vec![block])),
+        Layer::new("rtcp_sdes"),
+        Layer::new("rtcp_bye").with("reason", FieldValue::List(vec![reason])),
+    ])
+}
+
 /// The golden table: `(file stem, packet)`. One line per case.
 fn cases() -> Vec<(&'static str, Packet)> {
     vec![
@@ -509,6 +708,21 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ),
         ("eth_ipv4_rsvp_path", case_eth_ipv4_rsvp_path()),
         ("eth_ipv4_udp_bfd", case_eth_ipv4_udp_bfd()),
+        ("eth_macsec", case_eth_macsec()),
+        (
+            "eth_ipv4_udp_gtpv2_create_session",
+            case_eth_ipv4_udp_gtpv2_create_session(),
+        ),
+        (
+            "eth_ipv4_tcp_diameter_ccr",
+            case_eth_ipv4_tcp_diameter_ccr(),
+        ),
+        ("eth_ipv4_udp_sip_invite", case_eth_ipv4_udp_sip_invite()),
+        ("eth_ipv4_udp_rtp", case_eth_ipv4_udp_rtp()),
+        (
+            "eth_ipv4_udp_rtcp_compound",
+            case_eth_ipv4_udp_rtcp_compound(),
+        ),
     ]
 }
 

@@ -40,6 +40,7 @@ pub fn ethernet2() -> ProtocolDef {
                 0x88a8 => qinq,
                 0x88b5 => local_experimental,
                 0x88cc => lldp,
+                0x88e5 => macsec,
                 0x88f7 => ptp,
             } = 0x88b5, auto = next_protocol;
         },
@@ -56,6 +57,7 @@ pub fn ethernet2() -> ProtocolDef {
             0x8864 => "pppoe_session",
             0x8847 => "mpls",
             0x8848 => "mpls",
+            0x88e5 => "macsec",
         },
     };
     if let Some(b) = d.next.as_mut() {
@@ -220,6 +222,7 @@ pub fn dot1q() -> ProtocolDef {
                 0x8100 => vlan,
                 0x86dd => ipv6,
                 0x88b5 => local_experimental,
+                0x88e5 => macsec,
             } = 0x88b5, auto = next_protocol;
         },
         next: ethertype {
@@ -228,6 +231,7 @@ pub fn dot1q() -> ProtocolDef {
             0x0806 => "arp",
             0x8100 => "dot1q",
             0x88a8 => "dot1ad",
+            0x88e5 => "macsec",
         },
         constraints: {
             warning: not_equals(vid, 4095);

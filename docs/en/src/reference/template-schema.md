@@ -38,7 +38,8 @@ Fields you write are **Manual**; fields you omit (or set to `auto`) keep their d
 |---|---|
 | integer | `64`, `0x0800`, `0b101` |
 | MAC / IPv4 / IPv6 | `02:00:00:00:00:01`, `192.0.2.1`, `2001:db8::1` (quote MACs made only of digits, such as `"00:11:22:33:44:55"`, because YAML can read them as numbers) |
-| bytes | `"00 01 02 03"` (always quoted) |
+| bytes | `"00 01 02 03"` (always quoted); text as `'"text"'` with `\r`, `\n`, `\t` escapes |
+| text line (SIP lines, CRLF-terminated) | `start_line: '"INVITE sip:bob@example.com SIP/2.0"'` (the terminator is added automatically) |
 | enum | a number or a variant name: `ethertype: arp`, `oper: request`, `type: echo_request` |
 | flags | bit names joined by `\|`: `flags: syn\|ack`, `flags: df` |
 | TLV list (TCP/IPv4 options) | `- mss: 1460`, `- sack_permitted`, `- nop`, `- timestamps: { tsval: 1, tsecr: 0 }`, `- { type: 99, data: "01 02" }` |

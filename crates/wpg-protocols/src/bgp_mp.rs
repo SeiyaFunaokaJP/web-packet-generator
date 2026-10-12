@@ -209,6 +209,7 @@ pub fn evpn_routes() -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 

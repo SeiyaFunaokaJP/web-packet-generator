@@ -7,7 +7,7 @@
 
 use leptos::prelude::*;
 use wpg_core::notation::{format_value, nsap_parts, parse_generator, parse_nsap};
-use wpg_core::{FieldDef, FieldType, Generator};
+use wpg_core::{FieldDef, FieldType, Generator, Length};
 use wpg_template::{parse_text, FieldInput, GeneratorSpec};
 
 use super::preview::{format_count, format_size, gen_cardinality, PreviewCtx};
@@ -484,6 +484,9 @@ fn placeholder_for(ty: &FieldType) -> &'static str {
         FieldType::Ipv6 => "2001:db8::1",
         FieldType::Mac => "00:11:22:33:44:55",
         FieldType::Nsap => "49.0001.1921.6800.1001.00",
+        FieldType::Bytes {
+            len: Length::Until { .. },
+        } => "\"text\"",
         FieldType::Bytes { .. } | FieldType::Raw => "de ad be ef",
         FieldType::CString => "\"boot.bin\"",
         FieldType::Enum { .. } => "name or 0x…",

@@ -18,8 +18,10 @@ pub mod arp;
 pub mod bfd;
 pub mod bgp_mp;
 pub mod clnp;
+pub mod diameter;
 pub mod encap;
 pub mod fhrp;
+pub mod gtpv2;
 pub mod icmp;
 pub mod ipv6;
 pub mod isis;
@@ -28,13 +30,16 @@ pub mod l2control;
 pub mod l3;
 pub mod l4;
 pub mod ldp;
+pub mod macsec;
 pub mod mcast;
 pub mod osi;
 pub mod ospf_opaque;
 pub mod payload;
 pub mod routing;
 pub mod rsvp;
+pub mod rtp;
 pub mod sctp;
+pub mod sip;
 
 /// Registry of protocol definitions, in palette order.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -242,6 +247,18 @@ pub fn builtin() -> Vec<ProtocolDef> {
         ldp::ldp(),
         rsvp::rsvp(),
         bfd::bfd(),
+        // P2 MACsec, mobile core signalling and VoIP.
+        macsec::macsec(),
+        gtpv2::gtpv2(),
+        diameter::diameter(),
+        sip::sip(),
+        rtp::rtp(),
+        rtp::rtcp(),
+        rtp::rtcp_sr(),
+        rtp::rtcp_rr(),
+        rtp::rtcp_sdes(),
+        rtp::rtcp_bye(),
+        rtp::rtcp_app(),
         payload::payload(),
         payload::raw(),
     ]

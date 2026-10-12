@@ -1,0 +1,42 @@
+# SIP (RFC 3261): an INVITE over UDP 5060 with an SDP offer (Content-Length matches the body)
+schema: 1
+
+meta:
+  name: sip-invite
+  descriptions:
+    ja: "SIP (RFC 3261): UDP 5060 番ポートでの SDP オファー付き INVITE (各行の CRLF と空行は自動、Content-Length は本文に合わせて手動)"
+    en: "SIP (RFC 3261): an INVITE over UDP 5060 with an SDP offer (line CRLFs and the empty line are Auto, Content-Length is set to the body by hand)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:sip", "layer:l4", voip, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 5060
+      dst_port: 5060
+  - protocol: sip
+    fields:
+      start_line: '"INVITE sip:bob@example.com SIP/2.0"'
+      headers:
+        - '"Via: SIP/2.0/UDP 192.0.2.1:5060;branch=z9hG4bK74bf9"'
+        - '"Max-Forwards: 70"'
+        - '"To: Bob <sip:bob@example.com>"'
+        - '"From: Alice <sip:alice@example.com>;tag=9fxced76sl"'
+        - '"Call-ID: 3848276298220188511@192.0.2.1"'
+        - '"CSeq: 1 INVITE"'
+        - '"Contact: <sip:alice@192.0.2.1>"'
+        - '"Content-Type: application/sdp"'
+        - '"Content-Length: 132"' # the body below is 132 octets
+      body: '"v=0\r\no=alice 2890844526 2890844526 IN IP4 192.0.2.1\r\ns=-\r\nc=IN IP4 192.0.2.1\r\nt=0 0\r\nm=audio 49170 RTP/AVP 0\r\na=rtpmap:0 PCMU/8000\r\n"'
+
+tx:
+  count: 1

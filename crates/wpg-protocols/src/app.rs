@@ -115,6 +115,7 @@ fn dhcpv4_relay_suboptions() -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
@@ -191,6 +192,7 @@ pub fn dhcpv4_options() -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
@@ -253,6 +255,7 @@ fn dhcpv6_tlv(variants: Vec<TlvVariant>) -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
@@ -670,6 +673,7 @@ pub fn ber_tlvs(depth: u8) -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 
@@ -864,6 +868,7 @@ pub fn radius_attributes() -> FieldType {
         unpadded_last: false,
         long_length: None,
         len_first: false,
+        uncounted_octets: 0,
     })
 }
 

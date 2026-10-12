@@ -1,0 +1,45 @@
+# GTPv2-C (3GPP TS 29.274): a Create Session Response accepting the request (cause, F-TEIDs, PAA, bearer context)
+schema: 1
+
+meta:
+  name: gtpv2-create-session-response
+  descriptions:
+    ja: "GTPv2-C (3GPP TS 29.274): 要求を受け付ける Create Session Response (Cause、F-TEID、PAA、APN Restriction、Bearer Context)"
+    en: "GTPv2-C (3GPP TS 29.274): a Create Session Response accepting the request (cause, F-TEIDs, PAA, APN restriction, bearer context)"
+  tags: ["protocol:ethernet2", "protocol:ipv4", "protocol:udp", "protocol:gtpv2", "layer:l4", mobile, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:02"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.2
+      dst: 192.0.2.1
+  - protocol: udp
+    fields:
+      src_port: 2123
+      dst_port: 2123
+  - protocol: gtpv2
+    fields:
+      message_type: create_session_response
+      teid: [0x00001001] # the MME's S11 TEID
+      sequence_number: 0x000101
+      ies:
+        - cause: { cause: request_accepted }
+        - fteid: { interface_type: s11_s4_sgw_gtp_c, teid: 0x00002001, ipv4: 192.0.2.2 }
+        - fteid: { instance: 1, interface_type: s5_s8_pgw_gtp_c, teid: 0x00003001, ipv4: 192.0.2.3 }
+        - paa: { ipv4: 10.45.0.2 }
+        - apn_restriction: {}
+        - bearer_context:
+            ies:
+              - ebi: { ebi: 5 }
+              - cause: { cause: request_accepted }
+              - fteid: { interface_type: s1_u_sgw_gtp_u, teid: 0x00004001, ipv4: 192.0.2.2 }
+              - charging_id: { charging_id: 1 }
+
+tx:
+  count: 1

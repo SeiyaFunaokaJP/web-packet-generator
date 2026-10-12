@@ -34,6 +34,7 @@
   - [SCTP (P2)](protocols/sctp.md)
   - [OSPF Opaque / SR、BGP MP / EVPN (P2)](protocols/routing-ext.md)
   - [LDP / RSVP-TE / BFD (P2)](protocols/mpls-bfd.md)
+  - [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](protocols/mobile-voip.md)
 - [テンプレートスキーマ](reference/template-schema.md)
 - [API リファレンス](reference/api.md)
 - [CLI リファレンス](reference/cli.md)

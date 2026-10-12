@@ -32,6 +32,7 @@ fields:
         - { value: 0x88a8, name: qinq }
         - { value: 0x88b5, name: local_experimental }
         - { value: 0x88cc, name: lldp }
+        - { value: 0x88e5, name: macsec }
         - { value: 0x88f7, name: ptp }
     default: { uint: 0x88b5 }
     auto: { kind: next_protocol }
@@ -50,6 +51,7 @@ next:
     - { value: 0x8864, protocol: pppoe_session }
     - { value: 0x8847, protocol: mpls }
     - { value: 0x8848, protocol: mpls }
+    - { value: 0x88e5, protocol: macsec }
     - { value: 0, max: 0x5ff, protocol: dot3, reparse: true }
 min_frame_len: 60
 ";
