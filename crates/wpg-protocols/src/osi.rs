@@ -9,10 +9,11 @@
 //!
 //! [`osi`] is the generic PDU decoded for NLPIDs without a dedicated definition:
 //! the NLPID followed by the rest of the PDU as opaque octets. Dedicated PDU
-//! definitions are added to the [`osi_peek`] table as they land; their address
-//! fields use the `nsap` field type (length indicator + NSAP octets).
+//! definitions are added to the [`osi_peek`] table as they land (IS-IS:
+//! [`crate::isis`]); their address fields use the `nsap` field type (length
+//! indicator + NSAP octets).
 
-use wpg_core::{protocol, Peek, ProtocolDef};
+use wpg_core::{protocol, BindingEntry, Peek, ProtocolDef};
 
 /// Id of the generic OSI network-layer PDU ([`osi`]).
 pub const OSI: &str = "osi";
@@ -20,9 +21,15 @@ pub const OSI: &str = "osi";
 /// Payload demux on the NLPID octet when the binding selector is `on` (LLC DSAP
 /// `0xfe`, PPP protocol `0x0023`). PDUs without a dedicated definition decode as
 /// [`osi`].
+///
+/// IS-IS (`0x83`) decodes as the generic [`crate::isis::isis`], which re-decodes
+/// itself by PDU type; the dedicated IS-IS PDUs follow it in the table (the first
+/// entry wins when parsing) so that the builder announces them too.
 #[must_use]
 pub fn osi_peek(on: u64) -> Peek {
-    let mut p = Peek::new(on, 8, Vec::new());
+    let isis = std::iter::once(crate::isis::ISIS).chain(crate::isis::PDUS.iter().map(|p| p.1));
+    let table = isis.map(|p| BindingEntry::new(0x83, p)).collect();
+    let mut p = Peek::new(on, 8, table);
     p.default = Some(OSI.into());
     p
 }

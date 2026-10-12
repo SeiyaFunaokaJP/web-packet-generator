@@ -24,6 +24,7 @@ fn ipv4_list(count: &str) -> FieldType {
             field: count.into(),
             unit: 4,
             adjust: 0,
+            div: 1,
         },
     }
 }

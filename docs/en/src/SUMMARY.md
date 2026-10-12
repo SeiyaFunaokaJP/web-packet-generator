@@ -29,6 +29,7 @@
   - [Multicast control](protocols/multicast.md)
   - [Application protocols](protocols/app.md)
   - [OSI encapsulation (P2)](protocols/osi.md)
+  - [IS-IS (P2)](protocols/isis.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)

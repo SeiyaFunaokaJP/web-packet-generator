@@ -20,6 +20,7 @@ Status: draft
 | [マルチキャスト制御](multicast.md) | IGMPv1・v2・v3 / MLDv1・v2 / PIM-SM v2 |
 | [アプリケーションプロトコル](app.md) | DHCPv4・v6 / DNS / NTP / SNMP / Syslog / RADIUS / TFTP |
 | [OSI カプセル化 (P2)](osi.md) | 802.2 LLC `0xfe` / PPP `0x0023` 上の OSI PDU、NSAP 型 |
+| [IS-IS (P2)](isis.md) | LAN / P2P Hello、LSP、CSNP / PSNP、主要 TLV とサブ TLV |
 
 ## 共通の考え方
 

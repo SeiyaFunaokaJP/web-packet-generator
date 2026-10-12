@@ -38,6 +38,7 @@ fn ipv4_list(field: &str, unit: u32) -> FieldType {
             field: field.into(),
             unit,
             adjust: 0,
+            div: 1,
         },
     }
 }
@@ -129,7 +130,7 @@ pub fn vrrpv3_ipv6() -> ProtocolDef {
             checksum: uint(16), auto = checksum(internet_pseudo, header_payload), desc = "vrrp-checksum";
             ip_addresses: ty(FieldType::List {
                 item: ItemDef::Field { ty: Box::new(FieldType::Ipv6) },
-                length: Length::FromField { field: "count_ipvx_addrs".into(), unit: 16, adjust: 0 },
+                length: Length::FromField { field: "count_ipvx_addrs".into(), unit: 16, adjust: 0, div: 1 },
             }) = vec![FieldValue::Ipv6([0xfe80u16, 0, 0, 0, 0, 0, 0, 1].into())], desc = "vrrp-addresses";
         },
         constraints: {
@@ -242,6 +243,7 @@ pub fn hsrpv2_tlvs() -> FieldType {
         ],
         unknown_as_raw: true,
         length: Length::ToEnd,
+        fill: None,
     })
 }
 
@@ -300,6 +302,7 @@ pub fn glbp_tlvs() -> FieldType {
         ],
         unknown_as_raw: true,
         length: Length::ToEnd,
+        fill: None,
     })
 }
 

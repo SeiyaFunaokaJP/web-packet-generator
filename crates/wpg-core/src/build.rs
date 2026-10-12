@@ -26,7 +26,7 @@ use crate::diag::{keys, DiagLevel, Diagnostic};
 use crate::error::{CoreError, Result};
 use crate::ir::{
     raw_protocol, AutoCompute, ChecksumCoverage, ChecksumKind, FieldDef, FieldType, ItemDef,
-    Length, ProtocolDef, Resolve, Synthesizer, TlvDef, RAW_PROTOCOL_ID,
+    Length, LengthOf, ProtocolDef, Resolve, Synthesizer, TlvDef, RAW_PROTOCOL_ID,
 };
 use crate::packet::{FcsMode, FieldValue, Layer, Packet, TlvItem};
 
@@ -274,6 +274,33 @@ fn count_for<'v>(
     element_count(&fd.ty, value)
 }
 
+/// Value of a [`AutoCompute::Size`] field: the encoded size in octets of the
+/// (Manual or default) value of `target`; `None` when it does not encode.
+fn size_for<'v>(
+    fields: &'v [FieldDef],
+    target: &str,
+    get: impl Fn(&'v FieldDef) -> Option<&'v FieldValue>,
+) -> Option<u64> {
+    let fd = fields.iter().find(|f| f.name == target)?;
+    let value = get(fd).cloned().unwrap_or_else(|| zero_value(&fd.ty));
+    let mut w = BitWriter::default();
+    encode_value(&mut w, fd, &value, &mut Vec::new()).ok()?;
+    u64::try_from(w.bits / 8).ok()
+}
+
+/// The Count / Size value an auto rule yields for a field group.
+fn group_auto<'v>(
+    auto: Option<&AutoCompute>,
+    fields: &'v [FieldDef],
+    get: impl Fn(&'v FieldDef) -> Option<&'v FieldValue>,
+) -> Option<u64> {
+    match auto? {
+        AutoCompute::Count { field } => count_for(fields, field, get),
+        AutoCompute::Size { field } => size_for(fields, field, get),
+        _ => None,
+    }
+}
+
 /// Clamps a computed count to the field width (error diagnostic on overflow).
 fn fit_count(fd: &FieldDef, count: u64, diags: &mut Vec<Diagnostic>) -> u64 {
     let bits = u32::from(fd.ty.int_bits().unwrap_or(64));
@@ -301,6 +328,18 @@ fn count_mismatch(name: &str, actual: u64, expected: u64) -> Diagnostic {
         DiagLevel::Warning,
         keys::COUNT_MISMATCH,
         format!("`{name}` is {actual} but the list has {expected} elements"),
+    )
+    .on_field(name.to_owned())
+    .arg("value", actual)
+    .arg("expected", expected)
+}
+
+/// Warning for a Manual size that differs from the measured field.
+fn size_mismatch(name: &str, actual: u64, expected: u64) -> Diagnostic {
+    Diagnostic::new(
+        DiagLevel::Warning,
+        keys::LENGTH_MISMATCH,
+        format!("`{name}` is {actual:#x} but the correct length is {expected:#x}"),
     )
     .on_field(name.to_owned())
     .arg("value", actual)
@@ -455,15 +494,16 @@ fn encode_group(
     let start = w.bits;
     let mut out = Vec::with_capacity(fields.len());
     for fd in fields {
-        let count = match &fd.auto {
-            Some(AutoCompute::Count { field }) => count_for(fields, field, |f| {
-                values.get(&f.name).or(f.default.as_ref())
-            }),
-            _ => None,
-        };
+        let count = group_auto(fd.auto.as_ref(), fields, |f| {
+            values.get(&f.name).or(f.default.as_ref())
+        });
         if let (Some(v), Some(n)) = (values.get(&fd.name).and_then(FieldValue::as_u64), count) {
             if v != n {
-                diags.push(count_mismatch(&format!("{owner}.{}", fd.name), v, n));
+                let name = format!("{owner}.{}", fd.name);
+                diags.push(match fd.auto {
+                    Some(AutoCompute::Size { .. }) => size_mismatch(&name, v, n),
+                    _ => count_mismatch(&name, v, n),
+                });
             }
         }
         let (value, computed) = match (values.get(&fd.name), &fd.ty) {
@@ -652,10 +692,12 @@ pub(crate) fn encode_tlv_item(
     Ok(finish(w.buf, children))
 }
 
-/// Pass 1: serialise one layer header.
+/// Pass 1: serialise one layer header. `payload_len` is the size of the layers
+/// after it (for [`TlvFill`](crate::TlvFill) targets that measure the total).
 fn encode_layer<'a>(
     def: &'a ProtocolDef,
     layer: &Layer,
+    payload_len: usize,
     diags: &mut Vec<Diagnostic>,
 ) -> Result<Enc<'a>> {
     if let Some(name) = layer.fields.keys().find(|k| def.field(k).is_none()) {
@@ -676,15 +718,14 @@ fn encode_layer<'a>(
             _ => None,
         };
         let mut computed = false;
-        let count = match &pending {
-            Some(AutoCompute::Count { field }) => count_for(&def.fields, field, |f| {
-                layer.fields.get(&f.name).or(f.default.as_ref())
-            }),
-            _ => None,
-        };
-        let value = match (manual, &pending, &fd.ty) {
+        let count = group_auto(pending.as_ref(), &def.fields, |f| {
+            layer.fields.get(&f.name).or(f.default.as_ref())
+        });
+        let mut value = match (manual, &pending, &fd.ty) {
             (Some(v), _, _) => v.clone(),
-            (None, Some(AutoCompute::Count { .. }), _) if count.is_some() => {
+            (None, Some(AutoCompute::Count { .. } | AutoCompute::Size { .. }), _)
+                if count.is_some() =>
+            {
                 computed = true;
                 FieldValue::UInt(fit_count(fd, count.unwrap_or(0), diags))
             }
@@ -703,6 +744,23 @@ fn encode_layer<'a>(
             }
             (None, _, ty) => fd.default.clone().unwrap_or_else(|| zero_value(ty)),
         };
+        if let FieldType::Tlv(t @ TlvDef { fill: Some(_), .. }) = &fd.ty {
+            let pads = fill_items(def, layer, t, &value, w.bits / 8, payload_len, diags);
+            if !pads.is_empty() {
+                value = match value {
+                    FieldValue::Tlv(mut items) => {
+                        items.extend(pads);
+                        FieldValue::Tlv(items)
+                    }
+                    // Verbatim octets: kept as one unframed item before the fillers.
+                    FieldValue::Bytes(b) => {
+                        FieldValue::Tlv(std::iter::once(TlvItem::raw(b)).chain(pads).collect())
+                    }
+                    other => other,
+                };
+                computed = true;
+            }
+        }
         let before = w.bits;
         let children = encode_value(&mut w, fd, &value, diags)?;
         slots.push(Slot {
@@ -728,6 +786,83 @@ fn encode_layer<'a>(
         slots,
         offset: 0,
     })
+}
+
+/// Filler items that make the layer as large as the Manual value of the fill's
+/// `until` field asks (none when that field is Auto). `before` is the header size
+/// up to the TLV field, `payload_len` the size of the layers after this one.
+fn fill_items(
+    def: &ProtocolDef,
+    layer: &Layer,
+    t: &TlvDef,
+    value: &FieldValue,
+    before: usize,
+    payload_len: usize,
+    diags: &mut Vec<Diagnostic>,
+) -> Vec<TlvItem> {
+    let Some(fill) = &t.fill else {
+        return Vec::new();
+    };
+    let want = layer.fields.get(&fill.until).and_then(FieldValue::as_u64);
+    let rule = def.field(&fill.until).and_then(|f| f.auto.as_ref());
+    let (Some(want), Some(AutoCompute::Length { of, unit, adjust })) = (want, rule) else {
+        return Vec::new();
+    };
+    let Some(variant) = t.variant_by_name(&fill.variant) else {
+        return Vec::new();
+    };
+    let tlv_fd = FieldDef::new("fill", FieldType::Tlv(t.clone()));
+    let mut w = BitWriter::default();
+    if encode_value(&mut w, &tlv_fd, value, &mut Vec::new()).is_err() {
+        return Vec::new();
+    }
+    let have = before
+        + w.bits / 8
+        + if *of == LengthOf::Total {
+            payload_len
+        } else {
+            0
+        };
+    let target = (i128::from(want) - i128::from(*adjust)) * i128::from(unit.octets());
+    let Ok(mut left) = usize::try_from(target - have as i128) else {
+        return Vec::new(); // already larger: the length mismatch warning says so
+    };
+    let hdr = usize::from((t.type_bits + t.len_bits) / 8);
+    let unit = usize::try_from(t.len_unit.octets()).unwrap_or(1);
+    let counted = if t.len_includes_header { hdr } else { 0 };
+    // Largest value that the length field can describe, in whole units.
+    let max_len = usize::try_from(mask(u32::from(t.len_bits))).unwrap_or(usize::MAX);
+    let max_value = (max_len * unit).saturating_sub(counted) / unit * unit;
+    let mut items = Vec::new();
+    while left >= hdr {
+        let mut v = (left - hdr).min(max_value) / unit * unit;
+        let rest = left - hdr - v;
+        if rest > 0 && rest < hdr {
+            // Leave room for one more filler header.
+            v = v.saturating_sub((hdr - rest).div_ceil(unit) * unit);
+        }
+        items.push(TlvItem {
+            ty: Some(variant.type_value),
+            data: Some(vec![0; v]),
+            ..TlvItem::default()
+        });
+        left -= hdr + v;
+    }
+    if left > 0 {
+        diags.push(
+            Diagnostic::new(
+                DiagLevel::Warning,
+                keys::FILL_INEXACT,
+                format!(
+                    "`{}` cannot be padded by the {left} octet(s) still missing",
+                    fill.until
+                ),
+            )
+            .on_field(fill.until.clone())
+            .arg("len", left),
+        );
+    }
+    items
 }
 
 /// A generator protocol ([`ProtocolDef::synth`]): parameters (Manual or default)
@@ -1046,6 +1181,14 @@ impl Ctx<'_> {
                         None => continue,
                     },
                     AutoCompute::Counter => continue,
+                    AutoCompute::Size { field } => {
+                        let e = &self.encs[i];
+                        let target = e.def.fields.iter().position(|f| &f.name == field);
+                        match target.and_then(|k| e.slots.iter().find(|x| x.def == k)) {
+                            Some(x) => (keys::LENGTH_MISMATCH, (x.bits / 8) as i128, "length"),
+                            None => continue,
+                        }
+                    }
                     AutoCompute::Count { field } => {
                         let e = &self.encs[i];
                         let target = e.def.fields.iter().position(|f| &f.name == field);
@@ -1093,14 +1236,26 @@ impl Ctx<'_> {
 
 fn build(packet: &Packet, catalog: &dyn Resolve) -> Result<Built> {
     let raw = raw_protocol();
+    let mut defs = Vec::with_capacity(packet.layers.len());
+    for layer in &packet.layers {
+        defs.push(
+            resolve(catalog, &raw, &layer.protocol)
+                .ok_or_else(|| CoreError::UnknownProtocol(layer.protocol.clone()))?,
+        );
+    }
+    // Innermost first, so that every layer knows the size of what follows it.
+    let mut encoded = Vec::with_capacity(packet.layers.len());
+    let mut payload_len = 0;
+    for (layer, def) in packet.layers.iter().zip(&defs).rev() {
+        let mut layer_diags = Vec::new();
+        let enc = encode_layer(def, layer, payload_len, &mut layer_diags)?;
+        payload_len += enc.header.len();
+        encoded.push((enc, layer_diags));
+    }
     let mut encs = Vec::with_capacity(packet.layers.len());
     let mut bytes = Vec::new();
     let mut diags = Vec::new();
-    for (i, layer) in packet.layers.iter().enumerate() {
-        let def = resolve(catalog, &raw, &layer.protocol)
-            .ok_or_else(|| CoreError::UnknownProtocol(layer.protocol.clone()))?;
-        let mut layer_diags = Vec::new();
-        let mut enc = encode_layer(def, layer, &mut layer_diags)?;
+    for (i, (mut enc, layer_diags)) in encoded.into_iter().rev().enumerate() {
         diags.extend(layer_diags.into_iter().map(|d| d.at_layer(i)));
         enc.offset = bytes.len();
         bytes.extend_from_slice(&enc.header);

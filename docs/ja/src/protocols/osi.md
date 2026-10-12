@@ -11,9 +11,9 @@ CLNP / ES-IS / IS-IS に共通する OSI ネットワーク層のカプセル化
 | `llc` | DSAP / SSAP `0xfe` | PDU 先頭の NLPID オクテットで判別 |
 | `ppp` | protocol `0x0023` (RFC 1377) | 同上 |
 
-OSI の PDU の前には「次は何か」を示す番号がなく、PDU 自身の先頭オクテット NLPID (ISO/IEC TR 9577) が種類を表します (`0x81` CLNP、`0x82` ES-IS、`0x83` IS-IS)。そのため `llc` と `ppp` はペイロードの先頭 8 ビットを覗いて (`Binding::peek`) 次のレイヤを決めます。専用の定義がまだない NLPID は汎用 PDU `osi` (NLPID + 残りの不透明なバイト列) としてデコードされます。CLNP / ES-IS / IS-IS の定義が追加されると、この peek の表に登録されます。
+OSI の PDU の前には「次は何か」を示す番号がなく、PDU 自身の先頭オクテット NLPID (ISO/IEC TR 9577) が種類を表します (`0x81` CLNP、`0x82` ES-IS、`0x83` IS-IS)。そのため `llc` と `ppp` はペイロードの先頭 8 ビットを覗いて (`Binding::peek`) 次のレイヤを決めます。専用の定義がまだない NLPID は汎用 PDU `osi` (NLPID + 残りの不透明なバイト列) としてデコードされます。専用の定義は追加され次第この peek の表に登録されます。IS-IS (`0x83`) は登録済みです ([IS-IS](isis.md) 参照)。CLNP / ES-IS はこれからです。
 
-ビルド時は `llc` の上に `osi` (将来は `clnp` などの各 PDU) を積むだけで、DSAP / SSAP は Auto で `0xfe` になります。PPP の `protocol` も同様に Auto で `0x0023` になります。
+ビルド時は `llc` の上に `osi` または専用 PDU (`isis_l1_lan_hello` など。将来は `clnp` も) を積むだけで、DSAP / SSAP は Auto で `0xfe` になります。PPP の `protocol` も同様に Auto で `0x0023` になります。
 
 ## NSAP 型
 
@@ -24,4 +24,5 @@ OSI の PDU の前には「次は何か」を示す番号がなく、PDU 自身�
 
 ## 制約
 
-- `osi` の NLPID は Auto ではありません。CLNP / ES-IS / IS-IS の各定義が追加されるまでは、本体を `data` に 16 進で与えてください。
+- `osi` の NLPID は Auto ではありません。CLNP / ES-IS の定義が追加されるまでは、本体を `data` に 16 進で与えてください。
+- NLPID `0x83` の PDU は常に IS-IS としてデコードされるため、`0x83` を載せた汎用 `osi` レイヤは `isis` / IS-IS の各 PDU として読み戻されます。

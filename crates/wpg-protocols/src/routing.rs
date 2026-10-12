@@ -851,6 +851,7 @@ pub fn bgp_capabilities() -> FieldType {
         ],
         unknown_as_raw: true,
         length: Length::ToEnd,
+        fill: None,
     })
 }
 
@@ -873,7 +874,9 @@ pub fn bgp_open_params() -> FieldType {
             field: "opt_params_length".into(),
             unit: 1,
             adjust: 0,
+            div: 1,
         },
+        fill: None,
     })
 }
 
@@ -942,6 +945,7 @@ pub fn bgp_path_attributes() -> FieldType {
                         field: "segment_length".into(),
                         unit: 4,
                         adjust: 0,
+                        div: 1,
                     },
                 },
             ),
@@ -987,6 +991,7 @@ pub fn bgp_path_attributes() -> FieldType {
                                 field: "next_hop_length".into(),
                                 unit: 1,
                                 adjust: 0,
+                                div: 1,
                             },
                         },
                     ),
@@ -1029,7 +1034,9 @@ pub fn bgp_path_attributes() -> FieldType {
             field: "total_path_attribute_length".into(),
             unit: 1,
             adjust: 0,
+            div: 1,
         },
+        fill: None,
     })
 }
 
@@ -1269,6 +1276,7 @@ pub fn eigrp_tlvs() -> FieldType {
         ],
         unknown_as_raw: true,
         length: Length::ToEnd,
+        fill: None,
     })
 }
 

@@ -143,6 +143,18 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ),
             ],
         ),
+        (
+            "dot3_llc_isis_lsp",
+            vec![
+                ("llc.dsap", "0xfe"),
+                ("isis.type", "20"),
+                ("isis.lsp.pdu_length", "57"),
+                ("isis.lsp.sequence_number", "0x00000010"),
+                ("isis.lsp.checksum.status", "1"),
+                ("isis.lsp.hostname", "r1"),
+                ("isis.lsp.ext_ip_reachability.prefix_length", "32"),
+            ],
+        ),
     ]
 }
 

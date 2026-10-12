@@ -478,9 +478,17 @@ impl Prebuilt {
                         | AutoCompute::Checksum { .. }
                         | AutoCompute::NextProtocol
                         | AutoCompute::Count { .. }
+                        | AutoCompute::Size { .. }
                 )
             );
             if auto && !self.base.layers[layer].fields.contains_key(&r.field) {
+                return None;
+            }
+            // A TLV fill target resizes the filler items.
+            let fills = def.fields.iter().any(|f| {
+                matches!(&f.ty, FieldType::Tlv(t) if t.fill.as_ref().is_some_and(|x| x.until == r.field))
+            });
+            if fills {
                 return None;
             }
             let (kind, bits) = kind_of(&fd.ty)?;

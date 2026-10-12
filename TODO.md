@@ -363,7 +363,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 
 ### M7: P2 OSI / マニアック領域（4–6 週）
 - [x] 802.2 LLC (0xFE) / SNAP 上の OSI カプセル化基盤、NSAP 型とエディタ（LLC `0xfe` / PPP `0x0023` で NLPID を peek、未対応 NLPID は汎用 `osi` PDU。`nsap` は長さ指示子付きで合成・解析、ビルダーで AFI / エリア / System ID / NSEL を分解表示。SNAP 上の OSI は一般的でないため対象外）
-- [ ] IS-IS: IIH (LAN L1/L2, P2P) / LSP / CSNP / PSNP、主要 TLV / sub-TLV、Fletcher checksum、Padding 自動
+- [x] IS-IS: IIH (LAN L1/L2, P2P) / LSP / CSNP / PSNP、主要 TLV / sub-TLV、Fletcher checksum、Padding 自動（NLPID `0x83` → 汎用 `isis` → `pdu_type` で各 PDU に読み直し。Padding は Hello の `pdu_length` を Manual にするとその長さまで TLV 8 を自動追加。wpg-core に `size(field)` Auto・`FromField { div }`・`Length::Count`・`TlvFill` を追加。HMAC-MD5 認証値は手動、System ID は 6 オクテット固定）
 - [ ] CLNP / ES-IS
 - [ ] SCTP (CRC32c)
 - [ ] OSPF Opaque/SR、BGP MP/EVPN/VPNv4 NLRI

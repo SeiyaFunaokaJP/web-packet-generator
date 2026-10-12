@@ -144,6 +144,52 @@ fn case_eth_ipv4_udp_pattern() -> Packet {
     ])
 }
 
+/// IS-IS L2 LSP over 802.3 + LLC (SAP 0xfe): Fletcher checksum, a wide-metric
+/// neighbor and a prefix with a Prefix-SID sub-TLV.
+fn case_dot3_llc_isis_lsp() -> Packet {
+    let prefix = FieldValue::Struct(
+        [
+            ("metric".to_owned(), FieldValue::UInt(10)),
+            ("prefix_length".to_owned(), FieldValue::UInt(32)),
+            ("prefix".to_owned(), FieldValue::Bytes(vec![192, 0, 2, 1])),
+            (
+                "sub_tlv_block".to_owned(),
+                FieldValue::List(vec![FieldValue::Struct(
+                    [(
+                        "sub_tlvs".to_owned(),
+                        FieldValue::Tlv(vec![TlvItem::named("prefix_sid")
+                            .with("flags", 0x40u8)
+                            .with("sid", vec![0, 0, 0, 1])]),
+                    )]
+                    .into(),
+                )]),
+            ),
+        ]
+        .into(),
+    );
+    Packet::from_layers(vec![
+        Layer::new("dot3")
+            .with("dst", FieldValue::Mac([0x01, 0x80, 0xc2, 0, 0, 0x15]))
+            .with("src", FieldValue::Mac([0x02, 0, 0, 0, 0, 1])),
+        Layer::new("llc"),
+        Layer::new("isis_l2_lsp")
+            .with("sequence_number", 0x10u32)
+            .with(
+                "tlvs",
+                vec![
+                    TlvItem::named("area_addresses").with(
+                        "addresses",
+                        vec![FieldValue::Struct(
+                            [("address".to_owned(), FieldValue::Nsap(vec![0x49, 0, 1]))].into(),
+                        )],
+                    ),
+                    TlvItem::named("dynamic_hostname").with("hostname", b"r1".to_vec()),
+                    TlvItem::named("extended_ip_reachability").with("prefixes", vec![prefix]),
+                ],
+            ),
+    ])
+}
+
 /// The golden table: `(file stem, packet)`. One line per case.
 fn cases() -> Vec<(&'static str, Packet)> {
     vec![
@@ -154,6 +200,7 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ("dot3_llc_snap_ipv4_udp", case_dot3_llc_snap_ipv4_udp()),
         ("eth_ipv4_ra_udp", case_eth_ipv4_ra_udp()),
         ("eth_ipv4_udp_counter", case_eth_ipv4_udp_pattern()),
+        ("dot3_llc_isis_lsp", case_dot3_llc_isis_lsp()),
     ]
 }
 

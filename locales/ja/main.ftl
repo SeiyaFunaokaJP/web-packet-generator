@@ -26,6 +26,7 @@ diag-length-too-short = `{ $span }` は { $len } バイトで、最低 { $min } 
 diag-length-too-long = `{ $span }` は { $len } バイトで、最大 { $max } バイトまでです。
 diag-length-mismatch = 長さフィールド `{ $field }` = { $value } は計算値 { $expected } と異なります。
 diag-count-mismatch = 件数フィールド `{ $field }` = { $value } は実際の要素数 { $expected } と異なります。
+diag-fill-inexact = `{ $field }` の値まで埋め草アイテムで正確に埋められません（{ $len } オクテット不足）。
 diag-checksum-mismatch = チェックサム `{ $field }` = { $value } は計算値 { $expected } と異なります。
 diag-next-protocol-mismatch = フィールド `{ $field }` = { $value } は次の層 `{ $next }` を示していません (期待値 { $expected })。
 diag-auto-overflow = `{ $field }` の自動値 { $value } は { $bits } ビットに収まりません。
@@ -924,3 +925,30 @@ eigrp-tlvs = EIGRP TLV (16 ビットタイプ、ヘッダを含む 16 ビット�
 # --- P2 OSI カプセル化 フィールド説明 ---
 osi-nlpid = ネットワーク層プロトコル識別子 (ISO/IEC TR 9577): 0x81 CLNP、0x82 ES-IS、0x83 IS-IS。
 osi-data = NLPID 以降の OSI PDU の残り (不透明なオクテット列)。
+isis-irpd = ドメイン内ルーティングプロトコル識別子（0x83 = IS-IS）。
+isis-header-length = 固定ヘッダの長さ（オクテット）。PDU 種別ごとに一定（LAN Hello / LSP 27、P2P Hello 20、CSNP 33、PSNP 17）。
+isis-version-ext = バージョン / プロトコル ID 拡張（1）。
+isis-id-length = System ID の長さ（0 = 6 オクテット）。
+isis-pdu-type = PDU 種別（15/16 LAN Hello L1/L2、17 P2P Hello、18/20 LSP L1/L2、24/25 CSNP、26/27 PSNP）。
+isis-version = バージョン（1）。
+isis-max-area-addresses = エリアアドレスの最大数（0 = 3）。
+isis-pdu-length = PDU 全体の長さ（Auto）。Hello で Manual 値を指定すると Padding TLV でその長さまで埋めます（例: MTU 1500 なら 1497）。
+isis-tlvs = TLV（8 ビットコード / 8 ビット長）とそのサブ TLV。
+isis-source-id = 送信元の System ID。
+isis-holding-time = 保持時間（秒）。
+isis-priority = 代表 IS 選出の優先度（0〜127）。
+isis-lan-id = LAN ID: 代表 IS の System ID と擬似ノード ID。
+isis-circuit-type = 回線種別: 1 = L1、2 = L2、3 = L1/L2。
+isis-local-circuit-id = ローカル回線 ID。
+isis-remaining-lifetime = LSP の残り寿命（秒、チェックサム対象外）。
+isis-lsp-id = LSP ID: System ID、擬似ノード ID、フラグメント番号。
+isis-sequence-number = LSP シーケンス番号。
+isis-lsp-checksum = LSP ID から PDU 末尾までの Fletcher チェックサム（Auto）。
+isis-partition-repair = P ビット: パーティション修復対応。
+isis-attached = ATT ビット: 他エリアへの接続（default / delay / expense / error メトリック）。
+isis-overload = OL ビット: LSP データベース過負荷。
+isis-is-type = IS 種別: 1 = L1、3 = L1/L2。
+isis-snp-source-id = 送信元の System ID と回線 ID（0）。
+isis-start-lsp-id = CSNP が対象とする最初の LSP ID。
+isis-end-lsp-id = CSNP が対象とする最後の LSP ID。
+isis-data = 共通ヘッダ以降の PDU（不透明なオクテット列）。

@@ -51,6 +51,7 @@ fn from_field(field: &str, unit: u32) -> Length {
         field: field.into(),
         unit,
         adjust: 0,
+        div: 1,
     }
 }
 
@@ -359,6 +360,7 @@ pub fn pim_hello_options() -> FieldType {
         ],
         unknown_as_raw: true,
         length: Length::ToEnd,
+        fill: None,
     })
 }
 
