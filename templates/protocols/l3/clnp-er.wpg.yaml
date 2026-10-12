@@ -1,0 +1,36 @@
+# CLNP (ISO 8473-1): an error report (destination address unknown) carrying the header of the discarded PDU
+schema: 1
+
+meta:
+  name: clnp-er
+  descriptions:
+    ja: "CLNP (ISO 8473-1): 破棄した PDU のヘッダを運ぶエラーレポート (宛先アドレス不明)"
+    en: "CLNP (ISO 8473-1): an error report (destination address unknown) carrying the header of the discarded PDU"
+  tags: ["protocol:dot3", "protocol:llc", "protocol:clnp", "protocol:raw", "layer:l3", sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "02:00:00:00:00:01"
+      src: "02:00:00:00:00:03"
+      length: auto
+  - protocol: llc
+  - protocol: clnp
+    fields:
+      er: 0 # never report errors about an error report
+      pdu_type: er
+      destination: "49.0001.0000.0000.0001.00" # back to the source of the discarded PDU
+      source: "49.0001.0000.0000.0003.00"
+      options:
+        - reason_for_discard:
+            reason: destination_unknown
+            pointer: 9 # the destination address length of the discarded header
+  - protocol: raw
+    fields:
+      # header of the discarded DT PDU
+      data: "81 1f 01 20 3c 0023 46ec 0a 49000100000000000200 0a 49000100000000000100"
+
+tx:
+  count: 1

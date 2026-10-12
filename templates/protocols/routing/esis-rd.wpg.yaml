@@ -1,0 +1,28 @@
+# ES-IS (ISO 9542): a redirect telling an end system to reach a destination through a better IS
+schema: 1
+
+meta:
+  name: esis-rd
+  descriptions:
+    ja: "ES-IS (ISO 9542): 宛先へはより良い IS を経由するようエンドシステムへ伝えるリダイレクト"
+    en: "ES-IS (ISO 9542): a redirect telling an end system to reach a destination through a better IS"
+  tags: ["protocol:dot3", "protocol:llc", "protocol:esis_rd", "layer:l3", routing, sample]
+  author: wpg
+  created: 2026-10-12
+
+layers:
+  - protocol: dot3
+    fields:
+      dst: "02:00:00:00:00:0a" # the end system
+      src: "02:00:00:00:00:01"
+      length: auto
+  - protocol: llc
+  - protocol: esis_rd
+    fields:
+      holding_time: 60
+      destination: "49.0002.0000.0000.0009.00"
+      bsnpa: "02 00 00 00 00 02" # MAC address of the better IS; bsnpa_length: Auto
+      net: "49.0001.0000.0000.0002.00" # empty ("") when the next hop is an end system
+
+tx:
+  count: 1

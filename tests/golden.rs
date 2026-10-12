@@ -190,6 +190,41 @@ fn case_dot3_llc_isis_lsp() -> Packet {
     ])
 }
 
+/// CLNP error report over 802.3 + LLC: header Fletcher checksum, a reason for
+/// discard option ending at the length indicator and the discarded header as data.
+fn case_dot3_llc_clnp_er() -> Packet {
+    Packet::from_layers(vec![
+        Layer::new("dot3")
+            .with("dst", FieldValue::Mac([0x02, 0, 0, 0, 0, 1]))
+            .with("src", FieldValue::Mac([0x02, 0, 0, 0, 0, 3])),
+        Layer::new("llc"),
+        Layer::new("clnp")
+            .with("er", 0u8)
+            .with("pdu_type", 0x01u8)
+            .with(
+                "options",
+                vec![TlvItem::named("reason_for_discard")
+                    .with("reason", 0x81u8)
+                    .with("pointer", 9u8)],
+            ),
+        Layer::new("raw").with("data", vec![0x81, 0x1f, 0x01, 0x20, 0x3c, 0x00, 0x23]),
+    ])
+}
+
+/// ES-IS ISH over 802.3 + LLC with a suggested ES configuration timer option.
+fn case_dot3_llc_esis_ish() -> Packet {
+    Packet::from_layers(vec![
+        Layer::new("dot3")
+            .with("dst", FieldValue::Mac([0x09, 0x00, 0x2b, 0, 0, 0x04]))
+            .with("src", FieldValue::Mac([0x02, 0, 0, 0, 0, 1])),
+        Layer::new("llc"),
+        Layer::new("esis_ish").with(
+            "options",
+            vec![TlvItem::named("es_configuration_timer").with("seconds", 600u16)],
+        ),
+    ])
+}
+
 /// The golden table: `(file stem, packet)`. One line per case.
 fn cases() -> Vec<(&'static str, Packet)> {
     vec![
@@ -201,6 +236,8 @@ fn cases() -> Vec<(&'static str, Packet)> {
         ("eth_ipv4_ra_udp", case_eth_ipv4_ra_udp()),
         ("eth_ipv4_udp_counter", case_eth_ipv4_udp_pattern()),
         ("dot3_llc_isis_lsp", case_dot3_llc_isis_lsp()),
+        ("dot3_llc_clnp_er", case_dot3_llc_clnp_er()),
+        ("dot3_llc_esis_ish", case_dot3_llc_esis_ish()),
     ]
 }
 

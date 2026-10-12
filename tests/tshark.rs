@@ -155,6 +155,26 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ("isis.lsp.ext_ip_reachability.prefix_length", "32"),
             ],
         ),
+        (
+            "dot3_llc_clnp_er",
+            vec![
+                ("llc.dsap", "0xfe"),
+                ("clnp.len", "35"),
+                ("clnp.type", "1"),
+                ("clnp.pdu.len", "42"),
+                ("clnp.checksum.status", "1"),
+                ("clnp.dsap", "49:00:01:00:00:00:00:00:02:00"),
+            ],
+        ),
+        (
+            "dot3_llc_esis_ish",
+            vec![
+                ("esis.length", "24"),
+                ("esis.type", "4"),
+                ("esis.chksum.status", "1"),
+                ("esis.net", "49000100.000000000100"),
+            ],
+        ),
     ]
 }
 

@@ -7,11 +7,11 @@
 //! TR 9577), tells CLNP (`0x81`), ES-IS (`0x82`) and IS-IS (`0x83`) apart. The
 //! layers below therefore demultiplex by peeking that octet ([`osi_peek`]).
 //!
-//! [`osi`] is the generic PDU decoded for NLPIDs without a dedicated definition:
-//! the NLPID followed by the rest of the PDU as opaque octets. Dedicated PDU
-//! definitions are added to the [`osi_peek`] table as they land (IS-IS:
-//! [`crate::isis`]); their address fields use the `nsap` field type (length
-//! indicator + NSAP octets).
+//! [`osi`] is the generic PDU decoded for NLPIDs without a dedicated definition
+//! (and for PDUs too short for theirs): the NLPID followed by the rest of the PDU
+//! as opaque octets. The dedicated definitions ([`crate::clnp`] for CLNP and
+//! ES-IS, [`crate::isis`]) are listed in the [`osi_peek`] table; their address
+//! fields use the `nsap` field type (length indicator + NSAP octets).
 
 use wpg_core::{protocol, BindingEntry, Peek, ProtocolDef};
 
@@ -22,13 +22,22 @@ pub const OSI: &str = "osi";
 /// `0xfe`, PPP protocol `0x0023`). PDUs without a dedicated definition decode as
 /// [`osi`].
 ///
-/// IS-IS (`0x83`) decodes as the generic [`crate::isis::isis`], which re-decodes
-/// itself by PDU type; the dedicated IS-IS PDUs follow it in the table (the first
-/// entry wins when parsing) so that the builder announces them too.
+/// CLNP (`0x81`) decodes as [`crate::clnp::clnp`]. ES-IS (`0x82`) and IS-IS
+/// (`0x83`) decode as their generic PDU ([`crate::clnp::esis`],
+/// [`crate::isis::isis`]), which re-decodes itself by PDU type; the dedicated PDUs
+/// follow it in the table (the first entry wins when parsing) so that the builder
+/// announces them too.
 #[must_use]
 pub fn osi_peek(on: u64) -> Peek {
-    let isis = std::iter::once(crate::isis::ISIS).chain(crate::isis::PDUS.iter().map(|p| p.1));
-    let table = isis.map(|p| BindingEntry::new(0x83, p)).collect();
+    use crate::clnp::{CLNP, CLNP_MIN_LEN, ESIS, ESIS_MIN_LEN, ESIS_PDUS};
+    let clnp = std::iter::once(BindingEntry::new(0x81, CLNP).with_min_len(CLNP_MIN_LEN));
+    let esis = std::iter::once(ESIS)
+        .chain(ESIS_PDUS.iter().map(|p| p.1))
+        .map(|p| BindingEntry::new(0x82, p).with_min_len(ESIS_MIN_LEN));
+    let isis = std::iter::once(crate::isis::ISIS)
+        .chain(crate::isis::PDUS.iter().map(|p| p.1))
+        .map(|p| BindingEntry::new(0x83, p));
+    let table = clnp.chain(esis).chain(isis).collect();
     let mut p = Peek::new(on, 8, table);
     p.default = Some(OSI.into());
     p
