@@ -605,6 +605,7 @@ impl Inner {
         let batch = spec.batch.unwrap_or(64).max(1);
         let opts = TxOptions {
             batch_size: batch,
+            eal_args: cfg.tx.dpdk_eal_args.clone(),
             ..TxOptions::default()
         };
         let config = JobConfig {

@@ -21,8 +21,7 @@ afpacket = []
 # only been verified in copy mode (see docs/*/src/operations/dpdk-afxdp.md).
 afxdp = []
 # DPDK backend (Linux). Links DPDK 24.11 / 23.11 LTS through `dpdk-sys` (needs the DPDK
-# development package and libclang at build time, see ADR-0004). The backend itself is
-# not implemented yet; for now the feature only builds and links the bindings.
+# development package and libclang at build time, see ADR-0004); off by default.
 dpdk = ["dep:dpdk-sys"]
 
 [dependencies]

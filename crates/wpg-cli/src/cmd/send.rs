@@ -54,7 +54,7 @@ pub(crate) struct TxTuningArgs {
     /// ignored when --pin-cores is given).
     #[arg(long)]
     pub(crate) auto_pin: bool,
-    /// First hardware queue (`afxdp`; worker i binds queue N+i).
+    /// First hardware queue (`afxdp`, `dpdk`; worker i uses queue N+i).
     #[arg(long, value_name = "N")]
     pub(crate) queue: Option<u32>,
     /// AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy.
@@ -64,6 +64,10 @@ pub(crate) struct TxTuningArgs {
     /// `wpg send` paces with `--wait busy-poll` unless --wait says otherwise.
     #[arg(long)]
     pub(crate) busy_poll: bool,
+    /// DPDK EAL arguments (`dpdk`), e.g. "-a 0000:00:04.0 --file-prefix wpg"
+    /// (split on whitespace; wpg adds `-l <first CPU>` and `--in-memory` unless given).
+    #[arg(long, value_name = "ARGS", allow_hyphen_values = true)]
+    pub(crate) eal_args: Option<String>,
 }
 
 impl TxTuningArgs {
@@ -78,6 +82,11 @@ impl TxTuningArgs {
             queue: self.queue,
             xdp_mode: self.xdp_mode,
             busy_poll: self.busy_poll,
+            eal_args: self
+                .eal_args
+                .as_deref()
+                .map(|a| a.split_whitespace().map(str::to_owned).collect())
+                .unwrap_or_default(),
         }
     }
 

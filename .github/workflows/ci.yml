@@ -70,7 +70,8 @@ jobs:
 
   # dpdk-sys (bindgen + C shim) against both supported DPDK LTS releases (ADR-0004):
   # 23.11 from Ubuntu 24.04, 24.11 from Debian 13. The smoke test runs EAL without
-  # hugepages or PCI on a `net_ring` virtual port, so no NIC or privileges are needed.
+  # hugepages or PCI on virtual ports (net_ring / net_pcap / net_null), so no NIC or
+  # privileges are needed.
   dpdk:
     name: dpdk (${{ matrix.dpdk }})
     runs-on: ubuntu-24.04
@@ -97,8 +98,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: dpdk-${{ matrix.dpdk }}
-      - run: cargo clippy -p dpdk-sys -p wpg-tx --all-targets --features dpdk-sys/link,wpg-tx/dpdk -- -D warnings
+      - run: cargo clippy -p dpdk-sys -p wpg-tx -p wpg-cli --all-targets --features dpdk-sys/link,wpg-tx/dpdk,wpg-cli/dpdk -- -D warnings
       - run: cargo test -p dpdk-sys --features link
+      # The dpdk backend on net_ring / net_pcap / net_null virtual devices (no hugepages).
+      - run: cargo test -p wpg-tx --features dpdk --lib dpdk
 
   wasm-check:
     name: wasm-check

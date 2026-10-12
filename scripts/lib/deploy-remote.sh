@@ -99,7 +99,7 @@ fi
 
 # ---- DPDK host preparation --------------------------------------------------
 if [ "$dpdk" -eq 1 ]; then
-    info "DPDK: preparing hugepages and vfio-pci (the DPDK backend itself is not implemented yet)"
+    info "DPDK: preparing hugepages and vfio-pci (the dpdk backend needs a build with --features dpdk)"
     echo "vm.nr_hugepages = $hugepages" >/etc/sysctl.d/80-wpg-hugepages.conf
     sysctl -q -w "vm.nr_hugepages=$hugepages" || warn "could not reserve $hugepages hugepages now"
     got="$(cat /proc/sys/vm/nr_hugepages 2>/dev/null || echo 0)"

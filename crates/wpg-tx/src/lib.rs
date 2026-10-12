@@ -9,7 +9,8 @@
 //!   pcapng / pcap instead of transmitting), `afpacket` (Linux, feature `afpacket`,
 //!   on by default: TPACKET_V3 TX ring with a `sendmmsg` fallback), `pcap` (feature
 //!   `pcap`), `afxdp` (Linux 5.10+, feature `afxdp`: AF_XDP socket per queue,
-//!   zero-copy / copy chosen automatically, no libbpf); [`backend::open_by_name`] /
+//!   zero-copy / copy chosen automatically, no libbpf), `dpdk` (Linux, feature
+//!   `dpdk`: a DPDK port, one TX queue per worker); [`backend::open_by_name`] /
 //!   [`backend::available`] form the registry;
 //! * [`rate`]: rate strings (`1.5Mpps`, `10Gbps`, `50%`), rate → inter-frame
 //!   interval, and the [`rate::Pacer`] (token bucket + hybrid sleep / spin /
@@ -30,6 +31,8 @@ pub mod afxdp;
 pub mod backend;
 pub mod bench;
 pub mod clock;
+#[cfg(all(feature = "dpdk", target_os = "linux"))]
+pub mod dpdk;
 pub mod job;
 mod null;
 #[cfg(feature = "pcap")]
@@ -136,6 +139,10 @@ pub struct TxOptions {
     /// spins and services the backend instead of sleeping
     /// ([`rate::WaitMode::BusyPoll`]).
     pub busy_poll: bool,
+    /// DPDK EAL arguments (`dpdk`), e.g. `["-a", "0000:00:04.0"]`. Used by the first
+    /// `dpdk` backend of the process, which initialises EAL; later ones must pass
+    /// the same arguments or none.
+    pub eal_args: Vec<String>,
 }
 
 /// How an AF_XDP socket is bound.
@@ -175,6 +182,7 @@ impl Default for TxOptions {
             queue: None,
             xdp_mode: XdpMode::Auto,
             busy_poll: false,
+            eal_args: Vec::new(),
         }
     }
 }

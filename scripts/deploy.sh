@@ -17,9 +17,9 @@
 #   --no-templates          do not copy the sample templates
 #   --no-healthcheck        skip GET /api/health after starting the service
 #   --rollback              restore the binary saved by the previous deploy and restart
-#   --dpdk                  prepare the host for DPDK (hugepages, vfio-pci). The DPDK
-#                           backend itself is NOT implemented yet: this only does the
-#                           host preparation, see docs/*/src/operations/dpdk-afxdp.md
+#   --dpdk                  prepare the host for DPDK (hugepages, vfio-pci). NICs are
+#                           not bound and the binary must be built with --features dpdk,
+#                           see docs/*/src/operations/dpdk-afxdp.md
 #   --hugepages <n>         number of 2 MiB hugepages for --dpdk (default 1024)
 #   --dry-run               print the commands instead of running them
 #   -h, --help              this help

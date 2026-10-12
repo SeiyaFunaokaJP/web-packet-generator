@@ -45,11 +45,12 @@ qdisc 層を通らず、`lo` で約 30% 高速になりますが、そのトラ�
 
 ## マルチキュー・マルチコア送出 (`--workers`)
 
-`--workers N` は N 個の送出ワーカーを起動します。ワーカーごとにスレッド、バックエンドのインスタンス (afpacket はソケットと TX リング、afxdp はソケットと UMEM) を持ち、ストリームとレートを N 等分します (`--rate 1Mpps --workers 4` なら 1 ワーカー 250 kpps)。カウンタは合算され、最終レポートにワーカーごとの内訳が出ます。`pcap` と `pcapfile` は 1 ワーカーのみです。
+`--workers N` は N 個の送出ワーカーを起動します。ワーカーごとにスレッド、バックエンドのインスタンス (afpacket はソケットと TX リング、afxdp はソケットと UMEM、dpdk は共有ポートの TX キュー) を持ち、ストリームとレートを N 等分します (`--rate 1Mpps --workers 4` なら 1 ワーカー 250 kpps)。カウンタは合算され、最終レポートにワーカーごとの内訳が出ます。`pcap` と `pcapfile` は 1 ワーカーのみです。
 
 キューへの割り当て:
 
 - **afxdp**: ワーカー `i` は NIC のキュー `--queue` + `i` に bind します。キュー数は `ethtool -L <if> combined N` で用意します ([DPDK / AF_XDP](dpdk-afxdp.md))。
+- **dpdk**: ポートを `--queue` + N 本の TX キューで設定し、ワーカー `i` は TX キュー `--queue` + `i` で送ります。mbuf プールは NIC の NUMA ソケットに置きます ([DPDK](dpdk-afxdp.md#dpdk))。
 - **afpacket**: キューを直接は選べません。カーネルが送出 CPU からキューを決めます。XPS (`/sys/class/net/<if>/queues/tx-<n>/xps_cpus`) が設定されていればその対応表に従い、なければ `--qdisc-bypass` 時は「CPU 番号 mod キュー数」になります。ワーカーを別々のコアに固定すれば、別々のキューに分散します。
 
 ```sh

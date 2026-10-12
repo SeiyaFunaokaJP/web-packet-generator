@@ -162,6 +162,10 @@ pub struct TxConfig {
     /// Backend used when a job does not name one (`None` = the build's default:
     /// `afpacket` on Linux, else `pcap`, else `null`).
     pub default_backend: Option<String>,
+    /// DPDK EAL arguments for the `dpdk` backend, e.g. `["-a", "0000:00:04.0"]`
+    /// (wpg adds `-l <first CPU>` and `--in-memory` unless given). EAL starts once
+    /// per process, with the first `dpdk` job.
+    pub dpdk_eal_args: Vec<String>,
 }
 
 impl Default for ServerConfig {
@@ -707,6 +711,10 @@ allowed_ifaces = []
 # Backend when a job names none: null, pcapfile, afpacket, pcap, afxdp, dpdk.
 # Default: afpacket on Linux, else pcap, else null.
 # default_backend = "afpacket"
+# DPDK EAL arguments for the dpdk backend (wpg adds "-l <first CPU>" and
+# "--in-memory" unless given). EAL starts with the first dpdk job; changing them
+# needs a restart.
+# dpdk_eal_args = ["-a", "0000:00:04.0"]
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".

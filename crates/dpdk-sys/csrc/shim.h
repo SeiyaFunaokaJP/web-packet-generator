@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 #include <rte_build_config.h>
+#include <rte_dev.h>
 #include <rte_eal.h>
 #include <rte_errno.h>
 #include <rte_ethdev.h>

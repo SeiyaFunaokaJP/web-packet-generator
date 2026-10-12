@@ -67,7 +67,7 @@ Environment variables win over `wpg.toml`, so change the keys in `wpg.env` with 
 
 ## `--dpdk`: host preparation only
 
-> **The DPDK backend is not implemented yet (milestone M8).** `--dpdk` only prepares the host so it is ready when the backend lands. wpg keeps sending with `afpacket`.
+> `--dpdk` only prepares the host. The `dpdk` backend needs a binary built with `--features dpdk` (`scripts/build.sh --dpdk`), a NIC bound to `vfio-pci` and EAL arguments in `tx.dpdk_eal_args`; see [DPDK and AF_XDP setup](dpdk-afxdp.md#dpdk).
 
 With `--dpdk` the script:
 

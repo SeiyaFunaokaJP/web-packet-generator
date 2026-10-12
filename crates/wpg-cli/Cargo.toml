@@ -21,6 +21,9 @@ pcap = ["wpg-tx/pcap", "wpg-rx/pcap"]
 # Enables the AF_XDP transmit backend (`--backend afxdp`, Linux 5.10+). No extra build
 # dependencies; off by default until zero-copy has been verified on real NICs.
 afxdp = ["wpg-tx/afxdp"]
+# Enables the DPDK transmit backend (`--backend dpdk`, Linux). Needs DPDK 23.11+
+# (dpdk-dev) and libclang at build time, see ADR-0004.
+dpdk = ["wpg-tx/dpdk"]
 
 [dependencies]
 wpg-i18n.workspace = true

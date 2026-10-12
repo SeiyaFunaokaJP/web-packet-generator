@@ -2,7 +2,7 @@
 
 Status: draft
 
-> **The `afxdp` backend is implemented (M8) but optional:** it is only available in builds with `--features afxdp` (`cargo build --release -p wpg-cli --features afxdp`). **Copy mode has been verified on `lo` and `veth`; zero-copy has not been verified on real (physical) NICs.** The `dpdk` backend is not implemented yet (it fails with "not implemented yet"); the DPDK section records the intended setup and has not been verified with wpg.
+> **The `afxdp` backend is implemented (M8) but optional:** it is only available in builds with `--features afxdp` (`cargo build --release -p wpg-cli --features afxdp`). **Copy mode has been verified on `lo` and `veth`; zero-copy has not been verified on real (physical) NICs.** The `dpdk` backend (M8) is optional too (`--features dpdk`) and has only been verified on DPDK virtual devices (`net_null`, `net_ring`, `net_pcap`); physical NICs and CML2's virtio PMD have not been tried yet.
 
 ## AF_XDP
 
@@ -78,30 +78,95 @@ Verified (2026-10, Linux 6.18 container, root): copy-mode transmission on `lo` a
 
 ## DPDK
 
-`scripts/deploy.sh <host> --dpdk [--hugepages N]` does the host-side part below (hugepages now and at boot, `hugetlbfs`, `vfio-pci`, an IOMMU check) but leaves binding the NIC to you; see [Deploying with scripts/deploy.sh](deploy.md#--dpdk-host-preparation-only).
-
-Requirements (from the design decision in ADR 0004):
-
-- DPDK **24.11 LTS** (23.11 LTS is also checked in CI). The DPDK development package and libclang must be installed at build time (see [Building the bindings](#building-the-bindings-dpdk-sys)).
-- Hugepages (`wpg doctor` check `hugepages`, warning when none):
+The `dpdk` backend sends through a DPDK poll-mode driver (PMD). The NIC is taken away from the kernel and driven by wpg's own threads, with no system call per batch. It is optional: build with `--features dpdk` (needs the DPDK development package and libclang, see [Building](#building-the-bindings-dpdk-sys)).
 
 ```sh
-echo 1024 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-grep Huge /proc/meminfo
+cargo build --release -p wpg-cli --features dpdk
 ```
 
-- Bind the NIC to a DPDK-capable driver. The NIC is taken away from the kernel, so keep a separate management interface:
+**Verified so far** (2026-10, Ubuntu 24.04 with DPDK 23.11.4, in a container without hugepages or a NIC): EAL with `--no-huge`, the `net_null` (`wpg bench`, 2 workers), `net_ring` and `net_pcap` virtual devices. A `wpg send` of a template through `net_pcap` wrote the same frames as the `pcapfile` backend. The unit tests run in CI against DPDK 24.11 and 23.11. **Physical NICs (`vfio-pci`), hugepages and the virtio PMD on CML2 have not been tried.**
+
+### How it works
+
+- **EAL** (DPDK's environment layer) is started once per wpg process, by the first `dpdk` job, with your EAL arguments plus two defaults you can override: `-l <first CPU wpg may use>` (the main lcore only; wpg's TX workers are its own threads and register with DPDK as non-EAL lcores) and `--in-memory` (no files under `/var/run/dpdk`; `--no-shconf` instead when you pass `--no-huge`). EAL cannot be restarted inside a process: if it fails, or you need other arguments, restart `wpg serve` (`wpg send` / `wpg bench` start a new process every time).
+- **The interface is a DPDK port**: its number (`0`), its device name (the PCI address of a bound NIC, `0000:00:04.0`), or a virtual device. Virtual devices may carry devargs and are added on first use: `net_tap0,iface=dtap0` (a kernel TAP interface, handy for testing), `net_pcap0,tx_pcap=/tmp/out.pcap` (writes a pcap file), `net_null0` (discards frames, for benchmarks). An unknown name fails with a list of the ports EAL found.
+- **Workers** (`--workers N`) share one port: it is configured with `--queue` + N TX queues, worker `i` sends on TX queue `--queue` + `i`. Only one job can use a port at a time. The port is stopped when the job ends.
+- **Buffers**: one mbuf pool per port on the NIC's NUMA socket, sized from `--ring-depth` (TX descriptors per queue, clamped to the driver's limits) and `--batch`. Each frame is copied into an mbuf (2048 octets of data, so longer frames are counted as `dropped`; jumbo frames are not supported). When the TX ring is full the backend retries for up to 10 ms, then counts the rest as `dropped`. `MBUF_FAST_FREE` is turned on when the driver offers it.
+- The `backend` line of `wpg send` / `wpg bench` shows the DPDK version, port, driver, queue, descriptors, pool, NUMA socket, link state and the full EAL arguments.
+
+### Host setup
+
+`scripts/deploy.sh <host> --dpdk [--hugepages N]` does the first two steps (hugepages now and at boot, `hugetlbfs`, `vfio-pci`, an IOMMU check) but leaves binding the NIC to you; see [Deploying with scripts/deploy.sh](deploy.md#--dpdk-host-preparation-only).
+
+1. **Hugepages** (`wpg doctor` check `hugepages`, a warning when none). The pool for one port with 4 workers and the default `--ring-depth 4096` takes about 70 MiB, plus what the driver allocates:
+
+   ```sh
+   echo 1024 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+   grep Huge /proc/meminfo
+   ```
+
+2. **IOMMU and vfio**: on bare metal enable the IOMMU (`intel_iommu=on iommu=pt` or `amd_iommu=on` on the kernel command line) and `sudo modprobe vfio-pci`.
+3. **Bind the NIC.** The interface disappears from the kernel (and from `wpg ifaces`), so never bind the interface that carries your ssh session:
+
+   ```sh
+   dpdk-devbind.py --status                      # PCI addresses and current drivers
+   sudo ip link set ens4 down
+   sudo dpdk-devbind.py --bind=vfio-pci 0000:00:04.0
+   # back to the kernel: sudo dpdk-devbind.py --bind=virtio-pci 0000:00:04.0 (or ixgbe, i40e, ...)
+   ```
+
+   NVIDIA / Mellanox ConnectX (`mlx5`) is the exception: it stays on its kernel driver and DPDK uses it through `rdma-core`; do not rebind it.
+4. **Privileges**: run as root. vfio as an ordinary user needs `/dev/vfio/*` permissions, `CAP_IPC_LOCK` / a large `RLIMIT_MEMLOCK` and access to the hugepage mount, and is not covered here.
+
+### EAL arguments
+
+`wpg send` / `wpg bench` take them with `--eal-args` (one string, split on spaces); `wpg serve` takes them from `tx.dpdk_eal_args` in `wpg.toml` ([Configuration](../reference/config.md)) or `WPG_TX__DPDK_EAL_ARGS`. The useful ones:
+
+| Argument | Meaning |
+|---|---|
+| `-a 0000:00:04.0` | Only probe this PCI device (repeatable). Without it, EAL takes every NIC bound to a DPDK driver |
+| `-l 2` | Main lcore (default: first CPU wpg may use). Pin the TX workers with `--pin-cores` / `--auto-pin` as usual |
+| `--socket-mem 512` / `-m 512` | Hugepage memory to reserve up front (MiB) |
+| `--vdev net_tap0,iface=dtap0` | Create a virtual device at start (or name it as the interface, see above) |
+| `--file-prefix wpg` | Use shared runtime files instead of `--in-memory` (for `dpdk-proc-info` and the telemetry socket) |
+| `--log-level lib.eal:debug` | More EAL logging when something fails |
+| `--no-huge -m 256` | Run without hugepages (virtual devices only; physical NICs need hugepages) |
 
 ```sh
-dpdk-devbind.py --status
-sudo modprobe vfio-pci        # or uio_pci_generic
-sudo dpdk-devbind.py --bind=vfio-pci 0000:00:04.0
+sudo wpg bench --backend dpdk -i 0000:00:04.0 --eal-args "-a 0000:00:04.0" --workers 2 --auto-pin
+sudo wpg send t.wpg.yaml --backend dpdk -i 0000:00:04.0 --eal-args "-a 0000:00:04.0" --rate 1Mpps
+
+# Without a NIC: a TAP interface you can watch with tcpdump (needs root).
+sudo wpg send t.wpg.yaml --backend dpdk -i net_tap0,iface=dtap0 --count 10 &
+sudo tcpdump -ni dtap0
 ```
 
-- EAL arguments (cores, memory channels, allow-list) come from the configuration file; see [Configuration](../reference/config.md).
-- **CML2**: the Ubuntu node exposes virtio-net devices, which DPDK drives with the virtio PMD. Without an IOMMU in the guest use `uio_pci_generic` or vfio in no-IOMMU mode (`enable_unsafe_noiommu_mode`). Performance is bounded by the host-side vhost path, not by DPDK.
+```toml
+# wpg.toml
+[tx]
+default_backend = "dpdk"
+allowed_ifaces = ["0000:00:04.0"]
+dpdk_eal_args = ["-a", "0000:00:04.0", "-l", "1"]
+```
 
-Expected performance (TODO section 2.2, not measured): AF_XDP about several Mpps per core, DPDK 10 Mpps or more per core on a physical NIC. AF_XDP copy-mode figures measured on `lo` / `veth` are in `docs/perf.md`.
+### CML2 and virtio
+
+On a CML2 Ubuntu node the data interfaces are virtio-net devices, which DPDK drives with the virtio PMD (`net_virtio`, part of the standard DPDK packages):
+
+- The guest normally has no IOMMU, so `vfio-pci` refuses to bind. Use vfio's no-IOMMU mode (`echo 1 | sudo tee /sys/module/vfio/parameters/enable_unsafe_noiommu_mode` before binding; "unsafe" because DMA is not isolated, acceptable in a lab VM) or `uio_pci_generic`.
+- Keep the management interface (usually `ens2`) on the kernel; bind only a data interface.
+- The virtio PMD usually offers as many TX queues as the node has vCPUs / virtio queue pairs; `--workers` above that fails with the queue count in the message.
+- Throughput is bounded by the host's vhost path and the virtual link, not by DPDK. Compare with `afpacket` on the same link before relying on DPDK; on CML2 the gain is often small.
+- The NIC's MAC address does not matter for sending: wpg sends the source MAC in the template. Promiscuous mode is not needed to transmit.
+
+### Limits
+
+- Transmit only (no DPDK receive in `wpg capture`).
+- Frames up to 2048 octets; no multi-segment mbufs, no TX checksum or segmentation offloads (wpg builds complete frames).
+- One job per port at a time; EAL arguments are fixed for the life of the process.
+- Shared DPDK libraries only (PMDs are loaded as plugins).
+
+Expected performance (TODO section 2.2, not measured on hardware): AF_XDP about several Mpps per core, DPDK 10 Mpps or more per core on a physical NIC. Record your numbers with the checklist in `docs/perf.md`.
 
 ### Building the bindings (`dpdk-sys`)
 
@@ -121,4 +186,4 @@ export PKG_CONFIG_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu/pkgconfig
 export LD_LIBRARY_PATH=/opt/dpdk-24.11/lib/x86_64-linux-gnu
 ```
 
-DPDK 24.11 refuses to load PMD plugins from a directory with a world-writable parent (such as `/tmp`), so install it under `/opt` or `/usr/local`. The smoke test runs EAL with `--no-huge --no-pci` on a `net_ring` virtual port, so it needs neither hugepages, a NIC nor root; CI runs it against both LTS releases (job `dpdk`). Only DPDK's shared libraries are supported (PMDs are loaded as plugins). The `dpdk` transmit backend itself is still to come: `wpg` does not have a `dpdk` build feature yet.
+DPDK 24.11 refuses to load PMD plugins from a directory with a world-writable parent (such as `/tmp`), so install it under `/opt` or `/usr/local`. The smoke test runs EAL with `--no-huge --no-pci` on a `net_ring` virtual port, so it needs neither hugepages, a NIC nor root; CI runs it against both LTS releases (job `dpdk`). Only DPDK's shared libraries are supported (PMDs are loaded as plugins). The backend's own tests (`cargo test -p wpg-tx --features dpdk --lib dpdk`) also run without hugepages, a NIC or root, on `net_ring` / `net_pcap` / `net_null` devices.

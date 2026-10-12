@@ -41,12 +41,34 @@ pub fn available() -> Vec<BackendInfo> {
     v.push(afpacket_info());
     v.push(pcap_info());
     v.push(afxdp_info());
-    v.push(info(
-        "dpdk",
-        false,
-        Some("not implemented yet (planned for M8, build with --features dpdk)"),
-    ));
+    v.push(dpdk_info());
     v
+}
+
+#[cfg(all(feature = "dpdk", target_os = "linux"))]
+fn dpdk_info() -> BackendInfo {
+    BackendInfo {
+        name: "dpdk".to_owned(),
+        available: true,
+        reason: Some(format!(
+            "{}; the interface is a DPDK port (number, PCI address or virtual device), \
+             one TX queue per worker; needs hugepages and the NIC bound to vfio-pci",
+            crate::dpdk::version()
+        )),
+    }
+}
+
+#[cfg(not(all(feature = "dpdk", target_os = "linux")))]
+fn dpdk_info() -> BackendInfo {
+    if cfg!(target_os = "linux") {
+        info(
+            "dpdk",
+            false,
+            Some("not compiled in (build with --features dpdk, needs DPDK 23.11+)"),
+        )
+    } else {
+        info("dpdk", false, Some("Linux only"))
+    }
 }
 
 #[cfg(all(feature = "afpacket", target_os = "linux"))]
@@ -141,6 +163,8 @@ pub fn open_by_name(
         "afpacket" => open_afpacket(iface, opts),
         #[cfg(all(feature = "afxdp", target_os = "linux"))]
         "afxdp" => crate::afxdp::open(iface, opts),
+        #[cfg(all(feature = "dpdk", target_os = "linux"))]
+        "dpdk" => crate::dpdk::open(iface, opts),
         // pcap: added by pcap module
         #[cfg(feature = "pcap")]
         "pcap" => crate::pcap::open(iface, opts),
@@ -165,7 +189,8 @@ pub fn supports_workers(name: &str) -> bool {
 
 /// Opens `n` independent instances of the backend `name` on `iface`, one per TX
 /// worker (`afpacket`: one socket and TX ring each; `afxdp`: one socket and UMEM
-/// each, worker `i` bound to queue `opts.queue + i`, see [`worker_options`]). The
+/// each, worker `i` bound to queue `opts.queue + i`, see [`worker_options`];
+/// `dpdk`: one port configured once, worker `i` on its TX queue `opts.queue + i`). The
 /// core in `opts.pin_core` is ignored here; workers pin themselves (see
 /// `JobConfig::pin_cores`).
 ///
@@ -184,6 +209,10 @@ pub fn open_workers(
         return Err(TxError::Config(format!(
             "backend `{name}` supports a single worker (got {n})"
         )));
+    }
+    #[cfg(all(feature = "dpdk", target_os = "linux"))]
+    if name == "dpdk" {
+        return crate::dpdk::open_workers(iface, opts, n);
     }
     let mut out: Vec<Box<dyn TxBackend>> = Vec::with_capacity(n);
     for i in 0..n {
@@ -258,11 +287,14 @@ mod tests {
             open_by_name("afxdp", "x", &TxOptions::default()),
             Err(TxError::Unsupported(_))
         ));
-        for n in ["dpdk", "bogus"] {
-            match open_by_name(n, "x", &TxOptions::default()) {
-                Err(TxError::Unsupported(m)) => assert!(m.contains(n), "{m}"),
-                other => panic!("{n}: {:?}", other.map(|b| b.name())),
-            }
+        #[cfg(not(all(feature = "dpdk", target_os = "linux")))]
+        assert!(matches!(
+            open_by_name("dpdk", "x", &TxOptions::default()),
+            Err(TxError::Unsupported(_))
+        ));
+        match open_by_name("bogus", "x", &TxOptions::default()) {
+            Err(TxError::Unsupported(m)) => assert!(m.contains("bogus"), "{m}"),
+            other => panic!("{:?}", other.map(|b| b.name())),
         }
         assert_eq!(
             open_workers("null", "x", &TxOptions::default(), 3)
@@ -275,7 +307,7 @@ mod tests {
             Err(TxError::Config(_))
         ));
         assert!(supports_workers("afpacket") && !supports_workers("pcap"));
-        assert!(supports_workers("afxdp"));
+        assert!(supports_workers("afxdp") && supports_workers("dpdk"));
         let o = TxOptions {
             queue: Some(2),
             ..TxOptions::default()

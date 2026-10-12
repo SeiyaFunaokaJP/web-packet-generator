@@ -172,7 +172,7 @@ Options:
           Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
 
       --queue <N>
-          First hardware queue (`afxdp`; worker i binds queue N+i)
+          First hardware queue (`afxdp`, `dpdk`; worker i uses queue N+i)
 
       --xdp-mode <MODE>
           AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy
@@ -181,6 +181,9 @@ Options:
 
       --busy-poll
           Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
+
+      --eal-args <ARGS>
+          DPDK EAL arguments (`dpdk`), e.g. "-a 0000:00:04.0 --file-prefix wpg" (split on whitespace; wpg adds `-l <first CPU>` and `--in-memory` unless given)
 
   -h, --help
           Print help
@@ -544,7 +547,7 @@ Options:
           Pin the workers to cores on the NIC's NUMA node, core 0 last (Linux; ignored when --pin-cores is given)
 
       --queue <N>
-          First hardware queue (`afxdp`; worker i binds queue N+i)
+          First hardware queue (`afxdp`, `dpdk`; worker i uses queue N+i)
 
       --xdp-mode <MODE>
           AF_XDP bind mode: auto (zero-copy, else copy), copy or zerocopy
@@ -553,6 +556,9 @@ Options:
 
       --busy-poll
           Busy polling: `afxdp` sockets busy-poll the driver (kernel 5.11+) and `wpg send` paces with `--wait busy-poll` unless --wait says otherwise
+
+      --eal-args <ARGS>
+          DPDK EAL arguments (`dpdk`), e.g. "-a 0000:00:04.0 --file-prefix wpg" (split on whitespace; wpg adds `-l <first CPU>` and `--in-memory` unless given)
 
   -h, --help
           Print help

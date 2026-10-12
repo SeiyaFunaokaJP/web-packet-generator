@@ -71,6 +71,7 @@ Transmit policy and defaults.
 |---|---|---|---|---|
 | `allowed_ifaces` | `string[]` | `[]` | `WPG_TX__ALLOWED_IFACES` | Interfaces jobs may send on; empty = all. The `null` backend and dry runs are not restricted. |
 | `default_backend` | `string` |   | `WPG_TX__DEFAULT_BACKEND` | Backend used when a job names none (`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`); unset = `afpacket` on Linux, else `pcap`, else `null`. |
+| `dpdk_eal_args` | `string[]` | `[]` | `WPG_TX__DPDK_EAL_ARGS` | DPDK EAL arguments for the `dpdk` backend, e.g. `["-a", "0000:00:04.0"]`. wpg adds `-l <first CPU>` and `--in-memory` unless given. EAL starts once per process with the first `dpdk` job; changing them needs a restart. |
 | `max_rate` | `string` |   | `WPG_TX__MAX_RATE` | Highest rate a job may request (`100kpps`, `1Gbps`); jobs without a rate are sent at this rate. |
 
 ## Example (`wpg config init`)
@@ -134,6 +135,10 @@ allowed_ifaces = []
 # Backend when a job names none: null, pcapfile, afpacket, pcap, afxdp, dpdk.
 # Default: afpacket on Linux, else pcap, else null.
 # default_backend = "afpacket"
+# DPDK EAL arguments for the dpdk backend (wpg adds "-l <first CPU>" and
+# "--in-memory" unless given). EAL starts with the first dpdk job; changing them
+# needs a restart.
+# dpdk_eal_args = ["-a", "0000:00:04.0"]
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".
