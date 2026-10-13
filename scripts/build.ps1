@@ -4,15 +4,20 @@
 .PARAMETER Release
   Optimised build.
 .PARAMETER Features
-  Extra cargo features for the workspace (e.g. "dpdk").
+  Extra cargo features for the workspace. "pcap" (the Npcap backend, the only way to send
+  on Windows) is added automatically when the Npcap SDK is found; it needs the SDK at build
+  time, and wpg.exe then delay-loads wpcap.dll at run time.
 .PARAMETER Dpdk
   Shorthand for -Features dpdk.
+.PARAMETER NoPcap
+  Do not add the pcap feature automatically when the Npcap SDK is found.
 #>
 [CmdletBinding()]
 param(
     [switch]$Release,
     [string]$Features = "",
-    [switch]$Dpdk
+    [switch]$Dpdk,
+    [switch]$NoPcap
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,16 +55,38 @@ if (-not $haveTrunk) {
 # ($env:SystemRoot is only set on Windows; pwsh on Linux / macOS skips the check.)
 if ($env:SystemRoot) {
     $system32 = Join-Path $env:SystemRoot "System32"
-    if (-not (Test-Path (Join-Path $system32 "Npcap\wpcap.dll"))) {
-        Write-Warning "Npcap not found: building works, but sending will not. Install it from https://npcap.com/#download and tick 'Install Npcap in WinPcap API-compatible Mode', then run: wpg doctor"
-    } elseif (-not (Test-Path (Join-Path $system32 "wpcap.dll"))) {
-        Write-Warning "Npcap is installed without 'WinPcap API-compatible Mode'; reinstall it with that option if wpg cannot load wpcap.dll (see: wpg doctor)"
+    if (-not (Test-Path (Join-Path $system32 "Npcap\wpcap.dll")) -and -not (Test-Path (Join-Path $system32 "wpcap.dll"))) {
+        Write-Warning "Npcap not found: building works, but sending will not. Install it from https://npcap.com/#download, then run: wpg doctor"
     }
 }
 
-# Npcap SDK (only needed once the pcap feature is used).
-if (-not ($env:LIB -and (Test-Path (Join-Path $env:LIB "wpcap.lib"))) -and -not (Test-Path "C:\Npcap-SDK")) {
-    Write-Warning "Npcap SDK not found (https://npcap.com/#download). Not required yet: the pcap feature is unused. Set LIB to the SDK Lib\x64 directory when it is."
+# Npcap SDK: wpcap.lib is needed to link the pcap feature. scripts/release.sh downloads a
+# pinned SDK by itself; here it is looked up in LIBPCAP_LIBDIR, C:\Npcap-SDK\Lib\x64 or the
+# LIB directories.
+# The pcap backend is the only way to send on Windows, so it is added whenever the SDK is
+# found (unless -NoPcap); without the SDK the build still works but cannot send.
+$wantPcap = $Features -match "(^|,)\s*pcap\s*(,|$)"
+$sdkLib = $env:LIBPCAP_LIBDIR
+if (-not $sdkLib) {
+    $candidates = @("C:\Npcap-SDK\Lib\x64") + @(($env:LIB -split ";") | Where-Object { $_ })
+    $sdkLib = $candidates | Where-Object { Test-Path (Join-Path $_ "wpcap.lib") } | Select-Object -First 1
+}
+if (-not $wantPcap -and -not $NoPcap -and $env:SystemRoot) {
+    if ($sdkLib) {
+        if ($Features) { $Features = "$Features,pcap" } else { $Features = "pcap" }
+        $wantPcap = $true
+    } else {
+        Write-Warning "Npcap SDK not found: building without the pcap backend, so this wpg.exe cannot send. Unpack the SDK (https://npcap.com/#download) to C:\Npcap-SDK, or set LIBPCAP_LIBDIR to its Lib\x64 directory, and build again."
+    }
+}
+if ($wantPcap) {
+    if (-not $sdkLib) {
+        throw "the pcap feature needs the Npcap SDK (https://npcap.com/#download): unpack it to C:\Npcap-SDK or set LIBPCAP_LIBDIR to its Lib\x64 directory"
+    }
+    $env:LIBPCAP_LIBDIR = $sdkLib
+    # The pcap crate cannot read the libpcap version from the SDK; Npcap 1.x is libpcap 1.10.
+    if (-not $env:LIBPCAP_VER) { $env:LIBPCAP_VER = "1.10.0" }
+    Write-Host "==> Npcap SDK: LIBPCAP_LIBDIR=$env:LIBPCAP_LIBDIR LIBPCAP_VER=$env:LIBPCAP_VER"
 }
 
 # ---- frontend ---------------------------------------------------------------

@@ -10,7 +10,8 @@
 //! against `wpcap.dll` behind `#[cfg(windows)]`.
 //!
 //! Requirements: libpcap-dev on Linux, nothing on macOS, the Npcap runtime (plus the Npcap SDK
-//! at build time, `wpcap.lib` on `LIB`) on Windows.
+//! at build time, `wpcap.lib` on `LIB`) on Windows. On Windows `wpcap.dll` is delay-loaded, so
+//! `open` first calls `wpg_sys::npcap::load` and fails cleanly without Npcap.
 
 use pcap::{Active, Capture, Error as PcapError};
 
@@ -132,6 +133,8 @@ impl TxBackend for PcapBackend {
         if self.cap.is_some() {
             return Err(TxError::AlreadyOpen);
         }
+        #[cfg(windows)]
+        wpg_sys::npcap::load().map_err(TxError::Unsupported)?;
         let dev = device_name(iface, cfg!(windows));
         let cap = Capture::from_device(dev.as_str())
             .map_err(|e| map_error(iface, e))?

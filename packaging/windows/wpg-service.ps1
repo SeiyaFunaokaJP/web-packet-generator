@@ -43,9 +43,9 @@ function Assert-Admin {
 }
 
 function Test-Npcap {
-    $dir = Join-Path $env:SystemRoot "System32\Npcap"
-    if (-not (Test-Path (Join-Path $dir "wpcap.dll"))) {
-        Write-Warning "Npcap not found; transmitting will fail. Install it from https://npcap.com/#download (tick 'WinPcap API-compatible Mode'), then run: wpg doctor"
+    $system32 = Join-Path $env:SystemRoot "System32"
+    if (-not (Test-Path (Join-Path $system32 "Npcap\wpcap.dll")) -and -not (Test-Path (Join-Path $system32 "wpcap.dll"))) {
+        Write-Warning "Npcap not found; transmitting will fail. Install it from https://npcap.com/#download, then run: wpg doctor"
     }
 }
 

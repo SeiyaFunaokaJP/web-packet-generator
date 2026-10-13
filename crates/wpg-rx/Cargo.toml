@@ -12,7 +12,7 @@ publish.workspace = true
 [features]
 # libpcap / Npcap receive backend. Needs libpcap-dev (Linux), built in on macOS,
 # the Npcap SDK on Windows.
-pcap = ["dep:pcap"]
+pcap = ["dep:pcap", "dep:wpg-sys"]
 
 [dependencies]
 wpg-core.workspace = true
@@ -21,6 +21,10 @@ wpg-template.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 pcap = { version = "2", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+# `wpg_sys::npcap::load` before the first libpcap call (wpcap.dll is delay-loaded).
+wpg-sys = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.186"

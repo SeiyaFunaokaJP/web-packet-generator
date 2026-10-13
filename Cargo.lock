@@ -4851,6 +4851,7 @@ dependencies = [
  "thiserror 2.0.21",
  "wpg-core",
  "wpg-protocols",
+ "wpg-sys",
  "wpg-template",
  "wpg-tx",
 ]
@@ -4947,6 +4948,7 @@ dependencies = [
  "thiserror 2.0.21",
  "wpg-core",
  "wpg-protocols",
+ "wpg-sys",
  "wpg-template",
  "wpg-testutil",
 ]

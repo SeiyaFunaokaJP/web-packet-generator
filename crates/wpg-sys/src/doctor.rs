@@ -265,11 +265,11 @@ fn check_npcap(info: &NpcapInfo, windows: bool) -> Check {
     if !info.installed() {
         Check::new("npcap", Status::Fail, "doctor-npcap-missing", detail)
             .with_fix("doctor-fix-npcap", "https://npcap.com/#download".to_owned())
-    } else if !info.loadable_without_path_tweak() {
-        Check::new("npcap", Status::Warn, "doctor-npcap-not-compat", detail).with_fix(
-            "doctor-fix-npcap-compat",
-            "Reinstall Npcap with \"Install Npcap in WinPcap API-compatible Mode\"".to_owned(),
-        )
+    } else if !info.loadable() {
+        // wpg adds System32\Npcap to the DLL search path itself (`npcap::load`), so the
+        // WinPcap-compatible mode is not needed; only a missing wpcap.dll is a problem.
+        Check::new("npcap", Status::Warn, "doctor-npcap-no-dll", detail)
+            .with_fix("doctor-fix-npcap", "https://npcap.com/#download".to_owned())
     } else {
         Check::new("npcap", Status::Ok, "doctor-npcap-ok", detail)
     }
@@ -365,9 +365,15 @@ mod tests {
         assert_eq!(check_npcap(&compat, true).status, Status::Ok);
         let non_compat = NpcapInfo {
             registry_key: true,
+            wpcap_dll: Some("C:\\Windows\\System32\\Npcap\\wpcap.dll".into()),
             ..NpcapInfo::default()
         };
-        assert_eq!(check_npcap(&non_compat, true).status, Status::Warn);
+        assert_eq!(check_npcap(&non_compat, true).status, Status::Ok);
+        let broken = NpcapInfo {
+            registry_key: true,
+            ..NpcapInfo::default()
+        };
+        assert_eq!(check_npcap(&broken, true).status, Status::Warn);
         assert_eq!(
             check_npcap(&NpcapInfo::default(), false).status,
             Status::Skip

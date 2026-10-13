@@ -111,6 +111,10 @@ deploy host *args:
 dist *args:
     ./scripts/release.sh {{args}}
 
+# Smoke-test a release archive: contents, --version, doctor, render, serve (see docs: Release process).
+smoke-archive archive *args:
+    ./scripts/smoke-archive.sh {{args}} {{archive}}
+
 # Lint the shell scripts (requires shellcheck).
 shellcheck:
     shellcheck scripts/*.sh scripts/lib/*.sh docs/build.sh
