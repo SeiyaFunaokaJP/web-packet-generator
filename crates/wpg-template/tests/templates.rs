@@ -521,3 +521,42 @@ fn composite_fields_accept_hex_strings() {
     assert_eq!(render_one("\"18 c63364 10 c612\""), typed);
     assert_eq!(&typed[typed.len() - 7..], [24, 198, 51, 100, 16, 198, 18]);
 }
+
+#[test]
+fn expr_references_accept_protocol_ids() {
+    let src = |r: &str| {
+        format!(
+            r#"
+schema: 1
+meta: {{ name: expr }}
+layers:
+  - protocol: ethernet2
+  - protocol: ipv4
+    generators:
+      ttl: {{ kind: list, values: ["7", "9"] }}
+      identification: {{ kind: expr, expr: "{r} + 1" }}
+"#
+        )
+    };
+    for r in ["$1.ttl", "$ipv4.ttl"] {
+        let c = compile(&yaml(&src(r)), &no_vars(), catalog()).unwrap();
+        let exp = Expansion::new(&c.stream, None).unwrap();
+        let ids: Vec<_> = (0..2)
+            .map(|i| {
+                let mut p = c.packet.clone();
+                apply_overrides(&mut p, &exp.nth(i).unwrap()).unwrap();
+                p.layers[1].fields["identification"].clone()
+            })
+            .collect();
+        assert_eq!(ids, [FieldValue::UInt(8), FieldValue::UInt(10)], "{r}");
+    }
+    for r in ["$udp.ttl", "$5.ttl"] {
+        let keys = issue_keys(&src(r));
+        assert!(
+            keys.iter().any(|(l, p, k)| *l == LintLevel::Error
+                && p == "layers[1].generators.identification"
+                && k == "lint-invalid-generator"),
+            "{r}: {keys:#?}"
+        );
+    }
+}
