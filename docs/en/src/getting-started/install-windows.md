@@ -36,7 +36,7 @@ It ends with `==> done: target\release\wpg.exe`.
 
 ## 4. Allow sending
 
-Open **PowerShell as Administrator** for sending, and check that `wpg doctor` reports Npcap as installed. See [Permissions](permissions.md).
+Check that `wpg doctor` reports Npcap as installed. With Npcap's default install an ordinary PowerShell can send (`caps.raw_socket` is ok); if Npcap was installed with "Restrict Npcap driver's access to Administrators only", `caps.raw_socket` fails and you must open **PowerShell as Administrator** for sending. See [Permissions](permissions.md).
 
 ## 5. Start the server
 

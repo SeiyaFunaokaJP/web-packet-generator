@@ -122,7 +122,8 @@ esac
 if [ "$frontend" -eq 1 ]; then
     command -v trunk >/dev/null 2>&1 || die "trunk not found (cargo install trunk --locked), or pass --skip-frontend"
     info "building the web UI (trunk build --release)"
-    (cd crates/wpg-web && trunk build --release)
+    # trunk reads NO_COLOR as a boolean and rejects the usual NO_COLOR=1 (no-color.org).
+    (cd crates/wpg-web && NO_COLOR="${NO_COLOR:+true}" trunk build --release)
 fi
 [ -f crates/wpg-web/dist/index.html ] || die "crates/wpg-web/dist/index.html missing: the release would ship without the web UI"
 

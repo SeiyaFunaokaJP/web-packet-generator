@@ -6,7 +6,7 @@ When something goes wrong, run `wpg doctor` first. It diagnoses privileges, inte
 
 | Check id | State when unmet | Meaning and fix |
 |---|---|---|
-| `caps.raw_socket` | fail (warn on Windows) | Raw-socket privilege: `CAP_NET_RAW` / root on Linux, BPF access on macOS, an elevated terminal on Windows. See [Permissions](../getting-started/permissions.md) |
+| `caps.raw_socket` | fail (Windows: per Npcap admin-only mode) | Raw-socket privilege: `CAP_NET_RAW` / root on Linux, BPF access on macOS, an elevated terminal on Windows only when Npcap is in administrator-only mode. See [Permissions](../getting-started/permissions.md) |
 | `iface.any_up` | warn | A non-loopback interface is up with carrier. Check the cable / link |
 | `kernel.af_xdp` | warn | Kernel 5.10+ for the AF_XDP backend |
 | `kernel.tpacket_v3` | warn | Kernel 3.2+; without it afpacket falls back to `sendmmsg` |
