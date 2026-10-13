@@ -22,8 +22,24 @@ pub use fluent_bundle::{FluentArgs, FluentValue};
 pub const EN_FTL: &str = include_str!("../../../locales/en/main.ftl");
 /// Raw Fluent source for Japanese.
 pub const JA_FTL: &str = include_str!("../../../locales/ja/main.ftl");
+/// Raw Fluent source for Simplified Chinese.
+pub const ZH_CN_FTL: &str = include_str!("../../../locales/zh-CN/main.ftl");
+/// Raw Fluent source for Traditional Chinese.
+pub const ZH_TW_FTL: &str = include_str!("../../../locales/zh-TW/main.ftl");
+/// Raw Fluent source for Korean.
+pub const KO_FTL: &str = include_str!("../../../locales/ko/main.ftl");
+/// Raw Fluent source for German.
+pub const DE_FTL: &str = include_str!("../../../locales/de/main.ftl");
+/// Raw Fluent source for French.
+pub const FR_FTL: &str = include_str!("../../../locales/fr/main.ftl");
+/// Raw Fluent source for Spanish.
+pub const ES_FTL: &str = include_str!("../../../locales/es/main.ftl");
 
-/// Locales supported by wpg. Add a variant + a `locales/<lang>/main.ftl` to add a language.
+/// Locales supported by wpg.
+///
+/// To add a language: a variant here, its entry in [`Locale::ALL`], [`Locale::as_str`],
+/// [`Locale::source`] and `from_langid`, a `locales/<tag>/main.ftl` with every key, and
+/// a `ui-lang-<tag>` key (the language's own name) in every locale file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Locale {
     /// Japanese.
@@ -31,11 +47,36 @@ pub enum Locale {
     /// English (default and fallback).
     #[default]
     En,
+    /// Simplified Chinese (`zh-CN`; also `zh`, `zh-Hans`, `zh-SG`).
+    ZhCn,
+    /// Traditional Chinese (`zh-TW`; also `zh-Hant`, `zh-HK`, `zh-MO`).
+    ZhTw,
+    /// Korean.
+    Ko,
+    /// German.
+    De,
+    /// French.
+    Fr,
+    /// Spanish.
+    Es,
 }
 
 impl Locale {
-    /// All supported locales, in a stable order.
-    pub const ALL: [Locale; 2] = [Locale::Ja, Locale::En];
+    /// All supported locales, in a stable order (the order of the language menus).
+    pub const ALL: [Locale; 8] = [
+        Locale::Ja,
+        Locale::En,
+        Locale::ZhCn,
+        Locale::ZhTw,
+        Locale::Ko,
+        Locale::De,
+        Locale::Fr,
+        Locale::Es,
+    ];
+
+    /// Locales of the manual (`docs/<lang>/`), which is written in Japanese and
+    /// English only; `wpg docs gen` generates the references for these.
+    pub const DOCS: [Locale; 2] = [Locale::Ja, Locale::En];
 
     /// BCP 47 language tag.
     #[must_use]
@@ -43,6 +84,12 @@ impl Locale {
         match self {
             Locale::Ja => "ja",
             Locale::En => "en",
+            Locale::ZhCn => "zh-CN",
+            Locale::ZhTw => "zh-TW",
+            Locale::Ko => "ko",
+            Locale::De => "de",
+            Locale::Fr => "fr",
+            Locale::Es => "es",
         }
     }
 
@@ -52,13 +99,41 @@ impl Locale {
         match self {
             Locale::Ja => JA_FTL,
             Locale::En => EN_FTL,
+            Locale::ZhCn => ZH_CN_FTL,
+            Locale::ZhTw => ZH_TW_FTL,
+            Locale::Ko => KO_FTL,
+            Locale::De => DE_FTL,
+            Locale::Fr => FR_FTL,
+            Locale::Es => ES_FTL,
         }
+    }
+
+    /// Position in [`Locale::ALL`].
+    const fn index(self) -> usize {
+        self as usize
     }
 
     fn from_langid(id: &LanguageIdentifier) -> Option<Self> {
         match id.language.as_str() {
             "ja" => Some(Locale::Ja),
             "en" => Some(Locale::En),
+            "zh" => {
+                let traditional = match id.script {
+                    Some(script) => script.as_str().eq_ignore_ascii_case("hant"),
+                    None => id
+                        .region
+                        .is_some_and(|r| matches!(r.as_str(), "TW" | "HK" | "MO")),
+                };
+                Some(if traditional {
+                    Locale::ZhTw
+                } else {
+                    Locale::ZhCn
+                })
+            }
+            "ko" => Some(Locale::Ko),
+            "de" => Some(Locale::De),
+            "fr" => Some(Locale::Fr),
+            "es" => Some(Locale::Es),
             _ => None,
         }
     }
@@ -146,7 +221,7 @@ fn build_bundle(locale: Locale) -> Bundle {
         .unwrap_or_else(|(_, errors)| panic!("invalid Fluent syntax in {locale}: {errors:?}"));
     let mut bundle = FluentBundle::new(vec![langid]);
     // Unicode isolation marks (U+2068/U+2069) around placeables are noise in terminals,
-    // JSON and logs; ja/en are both LTR so we do not need them.
+    // JSON and logs; every supported locale is LTR so we do not need them.
     bundle.set_use_isolating(false);
     bundle
         .add_resource(resource)
@@ -157,14 +232,12 @@ fn build_bundle(locale: Locale) -> Bundle {
 thread_local! {
     // `FluentBundle`'s default memoizer is not `Sync`; one lazily built bundle per thread
     // is cheap (few KiB) and works identically on native and on WASM.
-    static BUNDLES: RefCell<[Option<Bundle>; 2]> = const { RefCell::new([None, None]) };
+    static BUNDLES: RefCell<[Option<Bundle>; Locale::ALL.len()]> =
+        const { RefCell::new([const { None }; Locale::ALL.len()]) };
 }
 
 fn with_bundle<R>(locale: Locale, f: impl FnOnce(&Bundle) -> R) -> R {
-    let idx = match locale {
-        Locale::Ja => 0,
-        Locale::En => 1,
-    };
+    let idx = locale.index();
     BUNDLES.with(|cell| {
         let mut bundles = cell.borrow_mut();
         f(bundles[idx].get_or_insert_with(|| build_bundle(locale)))
@@ -405,13 +478,18 @@ mod tests {
     fn negotiation() {
         assert_eq!(negotiate("ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7"), Locale::Ja);
         assert_eq!(negotiate("en-US,en;q=0.9,ja;q=0.8"), Locale::En);
-        assert_eq!(negotiate("fr-FR, ja;q=0.5, en;q=0.4"), Locale::Ja);
+        assert_eq!(negotiate("fr-FR, ja;q=0.5, en;q=0.4"), Locale::Fr);
+        assert_eq!(negotiate("pt-BR, ja;q=0.5, en;q=0.4"), Locale::Ja);
         assert_eq!(negotiate("en;q=0.1, ja;q=0.9"), Locale::Ja);
         assert_eq!(negotiate("ja;q=0, en"), Locale::En);
         assert_eq!(negotiate("ja"), Locale::Ja);
         assert_eq!(negotiate("ja_JP.UTF-8"), Locale::Ja);
         assert_eq!(negotiate("C.UTF-8"), Locale::En);
-        assert_eq!(negotiate("de-DE"), Locale::En);
+        assert_eq!(negotiate("de-DE"), Locale::De);
+        assert_eq!(negotiate("ko-KR,ko;q=0.9"), Locale::Ko);
+        assert_eq!(negotiate("es-419"), Locale::Es);
+        assert_eq!(negotiate("fr_CA.UTF-8"), Locale::Fr);
+        assert_eq!(negotiate("pt-BR"), Locale::En);
         assert_eq!(negotiate(""), Locale::En);
         assert_eq!(negotiate("*"), Locale::En);
     }
@@ -422,6 +500,30 @@ mod tests {
             assert_eq!(locale.as_str().parse::<Locale>(), Ok(locale));
         }
         assert!("xx".parse::<Locale>().is_err());
+        for (i, locale) in Locale::ALL.into_iter().enumerate() {
+            assert_eq!(locale.index(), i);
+        }
+    }
+
+    #[test]
+    fn chinese_script_and_region() {
+        for (tag, want) in [
+            ("zh", Locale::ZhCn),
+            ("zh-CN", Locale::ZhCn),
+            ("zh-SG", Locale::ZhCn),
+            ("zh-Hans", Locale::ZhCn),
+            ("zh-Hans-HK", Locale::ZhCn),
+            ("zh_CN.UTF-8", Locale::ZhCn),
+            ("zh-TW", Locale::ZhTw),
+            ("zh-HK", Locale::ZhTw),
+            ("zh-MO", Locale::ZhTw),
+            ("zh-Hant", Locale::ZhTw),
+            ("zh-Hant-CN", Locale::ZhTw),
+            ("zh_TW.UTF-8", Locale::ZhTw),
+        ] {
+            assert_eq!(tag.parse::<Locale>(), Ok(want), "{tag}");
+        }
+        assert_eq!(negotiate("zh-TW,zh;q=0.9,en;q=0.8"), Locale::ZhTw);
     }
 
     /// Every `pub const X: &str = "diag-..."` in wpg-core's `diag::keys` (scanned from

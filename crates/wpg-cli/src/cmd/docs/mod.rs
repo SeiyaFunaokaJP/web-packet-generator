@@ -97,7 +97,7 @@ pub(crate) fn src_path(locale: Locale, rel: &str) -> String {
 /// Directories whose `.md` files all come from the generator; others there are
 /// stale (a protocol was removed or renamed).
 fn owned_dirs() -> Vec<String> {
-    Locale::ALL
+    Locale::DOCS
         .iter()
         .map(|&l| src_path(l, protocols::PAGE_DIR))
         .collect()
@@ -114,7 +114,7 @@ pub(crate) fn read_text(path: &Path) -> std::io::Result<String> {
 /// A source file (template, hand-written page) cannot be read.
 pub(crate) fn generate(root: &Path) -> Result<Vec<Output>, String> {
     let mut out = Vec::new();
-    for locale in Locale::ALL {
+    for locale in Locale::DOCS {
         protocols::outputs(root, locale, &mut out)?;
         out.push(cli::output(locale));
         out.push(api::output(locale));

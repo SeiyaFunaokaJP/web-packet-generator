@@ -1459,8 +1459,8 @@ Index entry of a template.
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
 | `author` | `string` \| `null` |   | Author. |
-| `description` | `string` \| `null` |   | Description in the requested language (`meta.descriptions[lang]`, else `meta.description`). |
-| `descriptions` | `map<string, ``string``>` |   | All localised descriptions (`ja`, `en`). |
+| `description` | `string` \| `null` |   | Description in the requested language (`meta.descriptions[lang]`, else `meta.description`, else `meta.descriptions.en`). |
+| `descriptions` | `map<string, ``string``>` |   | All localised descriptions (language tag → text, e.g. `ja`, `en`). |
 | `error` | `string` \| `null` |   | Load error when the file does not parse. |
 | `favorite` | `boolean` | はい | Marked as favourite. |
 | `id` | `string` | はい | Stable id (slug of the relative path). |

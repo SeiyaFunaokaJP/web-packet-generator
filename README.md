@@ -44,7 +44,7 @@ such as full TCP handshakes, and optimisation for attack tooling.
 - Rate control (pps / bps / line-rate %), bursts, multi-queue / multi-core sending, live statistics over WebSocket
 - Receive counters with tcpdump-style filters, signature-based loss / order / latency checks, pcapng capture
 - REST API with OpenAPI, password authentication (argon2id), optional TLS
-- Japanese and English UI, manuals and messages
+- UI and messages in Japanese, English, Chinese (Simplified / Traditional), Korean, German, French and Spanish (manual in Japanese and English)
 
 ## Quick start
 

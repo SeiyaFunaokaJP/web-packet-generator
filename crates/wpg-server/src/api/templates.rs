@@ -57,9 +57,13 @@ pub struct TemplateDetail {
     pub issues: Vec<Value>,
 }
 
+/// Picks the description in `locale`; a template without one (the bundled ones are
+/// described in `ja` / `en` only) keeps `meta.description`, else shows the English one.
 fn localise(mut s: TemplateSummary, locale: Locale) -> TemplateSummary {
     if let Some(d) = s.descriptions.get(locale.as_str()) {
         s.description = Some(d.clone());
+    } else if s.description.is_none() {
+        s.description = s.descriptions.get(Locale::En.as_str()).cloned();
     }
     s
 }

@@ -57,10 +57,10 @@ pub struct TemplateSummary {
     /// `meta.name` (the file stem when the file does not parse).
     pub name: String,
     /// Description in the requested language (`meta.descriptions[lang]`, else
-    /// `meta.description`).
+    /// `meta.description`, else `meta.descriptions.en`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    /// All localised descriptions (`ja`, `en`).
+    /// All localised descriptions (language tag → text, e.g. `ja`, `en`).
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     #[schema(value_type = BTreeMap<String, String>)]
     pub descriptions: IndexMap<String, String>,

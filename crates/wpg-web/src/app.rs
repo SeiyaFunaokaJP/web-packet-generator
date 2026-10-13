@@ -399,35 +399,27 @@ fn TopBar() -> impl IntoView {
                     <span class="hidden lg:inline">{ws_label}</span>
                     <span class="sr-only lg:hidden">{ws_label}</span>
                 </span>
-                <div
-                    role="group"
+                <select
                     aria-label=tr("ui-language")
-                    class="flex overflow-hidden rounded-md border border-slate-300 text-xs dark:border-slate-700"
+                    title=tr("ui-language")
+                    class="max-w-28 rounded-md border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    on:change=move |ev| {
+                        if let Ok(l) = event_target_value(&ev).parse() {
+                            i18n.locale.set(l);
+                        }
+                    }
                 >
                     {Locale::ALL
                         .into_iter()
                         .map(|l| {
                             view! {
-                                <button
-                                    type="button"
-                                    lang=l.as_str()
-                                    aria-pressed=move || (i18n.locale.get() == l).to_string()
-                                    title=move || i18n.t(locale_label_key(l))
-                                    class=move || {
-                                        if i18n.locale.get() == l {
-                                            "bg-slate-800 px-2 py-1 font-semibold text-white dark:bg-slate-200 dark:text-slate-900"
-                                        } else {
-                                            "px-2 py-1 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                                        }
-                                    }
-                                    on:click=move |_| i18n.locale.set(l)
-                                >
-                                    {l.as_str().to_uppercase()}
-                                </button>
+                                <option value=l.as_str() lang=l.as_str() selected=move || i18n.locale.get() == l>
+                                    {move || i18n.t(locale_label_key(l))}
+                                </option>
                             }
                         })
                         .collect_view()}
-                </div>
+                </select>
                 <button
                     type="button"
                     class=BTN_GHOST

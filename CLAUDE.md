@@ -34,7 +34,7 @@ WPG_TSHARK=1 cargo test -p wpg-golden-tests -- --ignored
 
 ## 守ること
 
-- ユーザーに見える文字列は直書きせず、Fluent キーを `locales/ja/main.ftl` と `locales/en/main.ftl` の両方に追加する。
+- ユーザーに見える文字列は直書きせず、Fluent キーを `locales/*/main.ftl` の全言語 (ja / en / zh-CN / zh-TW / ko / de / fr / es) に追加する。
 - プロトコルを追加・変更したら、サンプルテンプレート、golden テスト、ドキュメント (ja / en) も更新する (CONTRIBUTING.ja.md の「プロトコルの追加」)。
 - TODO.md のチェックボックスは、項目が完全に終わったときだけ更新する。
 - プロトコル、CLI オプション、API、`wpg.toml` のキー、テンプレート形式、同梱テンプレートを変えたら `just docs-gen`（`cargo run -p wpg-cli -- docs gen`）でリファレンス (`docs/*/src/reference/` など) を再生成してコミットする。生成物は手で編集しない。

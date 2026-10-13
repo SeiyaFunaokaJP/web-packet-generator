@@ -8,7 +8,7 @@ The repository is a Cargo workspace under `crates/`. User-facing strings live in
 |---|---|---|
 | `wpg-core` | Protocol definition IR, packet build/parse, field generators and lint diagnostics (`diag::keys`). OS-independent | ✓ |
 | `wpg-protocols` | Built-in protocol definitions (Ethernet through IS-IS / CLNP). A Rust macro compiles them to the `wpg-core` IR | ✓ |
-| `wpg-i18n` | Fluent-based i18n (ja / en); embeds `locales/<lang>/main.ftl` with `include_str!` | ✓ |
+| `wpg-i18n` | Fluent-based i18n (ja / en / zh-CN / zh-TW / ko / de / fr / es); embeds `locales/<lang>/main.ftl` with `include_str!` | ✓ |
 | `wpg-template` | Template file format (`.wpg.yaml` / JSON), schema versioning and (de)serialisation | |
 | `wpg-tx` | Transmit backends (`null`, `pcap`, AF_PACKET, AF_XDP, DPDK) behind the `TxBackend` trait | |
 | `wpg-rx` | Receive-side counters and simple verification (v1: minimal) | |
