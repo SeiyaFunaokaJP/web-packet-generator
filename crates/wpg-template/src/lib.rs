@@ -317,7 +317,8 @@ pub struct StreamOptions {
     #[serde(default)]
     pub mode: StreamMode,
     /// For `nested`: fields from the slowest to the fastest, as `<layer>.<field>`
-    /// where `<layer>` is a 0-based index or a protocol id (`ipv4.src`).
+    /// where `<layer>` is a 0-based index, a protocol id (`ipv4.src`) or the n-th
+    /// occurrence of a protocol (`ipv4[1].src`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub order: Vec<String>,
     /// Number of packets; defaults to `tx.count`, then to the natural length.

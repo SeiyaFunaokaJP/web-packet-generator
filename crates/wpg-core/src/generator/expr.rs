@@ -2,10 +2,10 @@
 //!
 //! Grammar (C-like precedence, low to high): `|`, `^`, `&`, `<< >>`, `+ -`,
 //! `* / %`, unary `- + ~`. Literals are decimal / `0x` / `0b`. `$field` and
-//! `$layer.field` read other fields through a [`FieldLookup`]; `idx` is the packet
-//! index. Functions: `hash(x)` (FNV-1a 64 over the 8 big-endian bytes of `x`),
-//! `crc(x)` (CRC-32/IEEE over the same 8 bytes), `rand(min, max)` (deterministic per
-//! packet index), `min(..)`, `max(..)`. Arithmetic is wrapping `i128`.
+//! `$layer.field` (`layer` may be `proto[n]`) read other fields through a
+//! [`FieldLookup`]; `idx` is the packet index. Functions: `hash(x)` (FNV-1a 64 over
+//! the 8 big-endian bytes of `x`), `crc(x)` (CRC-32/IEEE over the same 8 bytes),
+//! `rand(min, max)` (deterministic per packet index), `min(..)`, `max(..)`. Arithmetic is wrapping `i128`.
 
 use crate::generator::rng::Rng;
 use crate::generator::GeneratorError;
@@ -167,7 +167,9 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, GeneratorError> {
             '$' => {
                 let start = i + 1;
                 i = start;
-                while i < cs.len() && (cs[i].is_alphanumeric() || cs[i] == '_' || cs[i] == '.') {
+                while i < cs.len()
+                    && (cs[i].is_alphanumeric() || matches!(cs[i], '_' | '.' | '[' | ']'))
+                {
                     i += 1;
                 }
                 if i == start {

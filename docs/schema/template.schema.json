@@ -361,7 +361,7 @@
           "description": "Combination mode of the generators."
         },
         "order": {
-          "description": "For `nested`: fields from the slowest to the fastest, as `<layer>.<field>`\nwhere `<layer>` is a 0-based index or a protocol id (`ipv4.src`).",
+          "description": "For `nested`: fields from the slowest to the fastest, as `<layer>.<field>`\nwhere `<layer>` is a 0-based index, a protocol id (`ipv4.src`) or the n-th\noccurrence of a protocol (`ipv4[1].src`).",
           "items": {
             "type": "string"
           },
