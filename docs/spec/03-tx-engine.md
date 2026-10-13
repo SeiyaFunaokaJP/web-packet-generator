@@ -6,7 +6,7 @@ Status: draft / 元: TODO.md §2.2
 
 | バックエンド | OS | 期待性能 | 備考 |
 |---|---|---|---|
-| `pcap` (libpcap / Npcap / BPF) | Win / mac / Linux | 〜数十万 pps | 全 OS 共通のフォールバック。Npcap は WinPcap 互換モード要件を明記 ([ADR-0006](../adr/0006-windows-tx.md)) |
+| `pcap` (libpcap / Npcap / BPF) | Win / mac / Linux | 〜数十万 pps | 全 OS 共通のフォールバック。Windows では `wpcap.dll` を遅延ロードし、`System32\Npcap` を DLL 検索パスに加える (WinPcap 互換モード不要) ([ADR-0006](../adr/0006-windows-tx.md)) |
 | `afpacket` (TPACKET_V3 mmap ring + `sendmmsg`) | Linux | 〜1–3 Mpps/core | CML2 上 Ubuntu (virtio) の主経路。CAP_NET_RAW |
 | `afxdp` | Linux 5.10+ | 〜数 Mpps/core | ドライバ対応要。zero-copy / copy モード自動 ([ADR-0005](../adr/0005-af-xdp.md)) |
 | `dpdk` | Linux | 10 Mpps+ /core | `--features dpdk`、DPDK 24.11 LTS (23.11 も可) ([ADR-0004](../adr/0004-dpdk-bindings.md)) |

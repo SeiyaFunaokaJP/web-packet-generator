@@ -3,6 +3,12 @@
 //! Npcap installs `wpcap.dll` / `Packet.dll` into `System32\Npcap` by default. Only in
 //! "`WinPcap` API-compatible mode" are they also copied to `System32`, where a program
 //! that links `wpcap.dll` finds them without adjusting the DLL search path.
+//!
+//! Windows builds with the `pcap` feature link `wpcap.dll` with `/DELAYLOAD` (see
+//! `crates/wpg-cli/build.rs`), so `wpg.exe` starts without Npcap. Before the first libpcap
+//! call the pcap backends call [`load`], which adds `System32\Npcap` to the DLL search path
+//! (as Npcap recommends) and loads the DLL, so either install mode works and a missing
+//! Npcap is an error message instead of a crash in the delay-load helper.
 
 use std::path::{Path, PathBuf};
 
@@ -35,6 +41,12 @@ impl NpcapInfo {
     #[must_use]
     pub fn loadable_without_path_tweak(&self) -> bool {
         self.winpcap_compatible
+    }
+
+    /// `wpcap.dll` is present where [`load`] looks for it (`System32\Npcap` or `System32`).
+    #[must_use]
+    pub fn loadable(&self) -> bool {
+        self.wpcap_dll.is_some() || self.winpcap_compatible
     }
 }
 
@@ -88,6 +100,56 @@ fn detect_os() -> NpcapInfo {
     NpcapInfo::default()
 }
 
+/// Makes `wpcap.dll` loadable and loads it (Windows; a no-op returning `Ok` elsewhere).
+///
+/// Call it before the first libpcap function. The result is computed once per process.
+///
+/// # Errors
+/// A message naming the problem and the Npcap download page when `wpcap.dll` cannot be
+/// loaded (Npcap not installed, or a broken install).
+pub fn load() -> Result<(), String> {
+    load_os()
+}
+
+#[cfg(windows)]
+fn load_os() -> Result<(), String> {
+    use std::sync::OnceLock;
+    static LOADED: OnceLock<Result<(), String>> = OnceLock::new();
+    LOADED.get_or_init(load_wpcap).clone()
+}
+
+#[cfg(windows)]
+fn load_wpcap() -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::System::LibraryLoader::{LoadLibraryW, SetDllDirectoryW};
+
+    let wide = |s: &std::ffi::OsStr| -> Vec<u16> { s.encode_wide().chain([0]).collect() };
+    let info = detect();
+    if let Some(dir) = info.wpcap_dll.as_deref().and_then(Path::parent) {
+        // SAFETY: NUL-terminated UTF-16 path.
+        unsafe { SetDllDirectoryW(wide(dir.as_os_str()).as_ptr()) };
+    }
+    // SAFETY: NUL-terminated UTF-16 name. The module stays loaded for the process lifetime,
+    // so the delay-load helper later resolves `wpcap.dll` to it.
+    let module = unsafe { LoadLibraryW(wide("wpcap.dll".as_ref()).as_ptr()) };
+    if module.is_null() {
+        let err = std::io::Error::last_os_error();
+        Err(if info.installed() {
+            format!("cannot load wpcap.dll from Npcap ({err}); reinstall Npcap from https://npcap.com/#download and run `wpg doctor`")
+        } else {
+            "Npcap is not installed; install it from https://npcap.com/#download and run `wpg doctor`".to_owned()
+        })
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(not(windows))]
+#[allow(clippy::unnecessary_wraps)] // same signature as the Windows version
+fn load_os() -> Result<(), String> {
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,7 +165,7 @@ mod tests {
         std::fs::write(root.join("Npcap/Packet.dll"), b"").unwrap();
         let i = detect_in(&root, true);
         assert!(i.installed() && i.wpcap_dll.is_some() && i.packet_dll.is_some());
-        assert!(!i.winpcap_compatible && !i.loadable_without_path_tweak());
+        assert!(!i.winpcap_compatible && !i.loadable_without_path_tweak() && i.loadable());
 
         std::fs::write(root.join("wpcap.dll"), b"").unwrap();
         assert!(detect_in(&root, true).loadable_without_path_tweak());
@@ -113,5 +175,6 @@ mod tests {
     #[test]
     fn not_installed_elsewhere() {
         assert!(!detect().installed());
+        assert_eq!(load(), Ok(()));
     }
 }

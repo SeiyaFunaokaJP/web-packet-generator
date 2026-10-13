@@ -76,6 +76,9 @@ impl RxBackend for PcapRx {
         if self.cap.is_some() {
             return Err(RxError::AlreadyOpen);
         }
+        // wpcap.dll is delay-loaded on Windows: load it (or fail cleanly) first.
+        #[cfg(windows)]
+        wpg_sys::npcap::load().map_err(RxError::Unsupported)?;
         let snaplen = i32::try_from(opts.snaplen).unwrap_or(i32::MAX);
         let cap = Capture::from_device(device_name(iface).as_str())
             .map_err(|e| map_error(iface, e))?

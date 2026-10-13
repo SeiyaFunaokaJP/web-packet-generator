@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Build wpg: frontend (trunk, WASM) first, then the backend workspace.
 #
-# Usage: scripts/build.sh [--release] [--features <list>] [--dpdk]
+# Usage: scripts/build.sh [--release] [--features <list>] [--dpdk] [--no-pcap]
 #   --release          optimised build
 #   --features <list>  extra cargo features for wpg-cli (e.g. "dpdk")
 #   --dpdk             shorthand for --features dpdk
+#   --no-pcap          macOS: leave out the pcap backend, which is otherwise added
+#                      because it is the only way to send there (libpcap ships with macOS)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,6 +14,7 @@ cd "$ROOT"
 
 release=0
 features=""
+pcap_default=1
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -29,8 +32,11 @@ while [ "$#" -gt 0 ]; do
         --dpdk)
             features="${features:+$features,}dpdk"
             ;;
+        --no-pcap)
+            pcap_default=0
+            ;;
         -h | --help)
-            sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
@@ -67,7 +73,11 @@ case "$(uname -s)" in
         fi
         ;;
     Darwin)
-        : # libpcap ships with macOS
+        # libpcap ships with macOS, and BPF through libpcap is the only way to send there.
+        case ",$features," in
+            *,pcap,*) ;;
+            *) [ "$pcap_default" -eq 0 ] || features="${features:+$features,}pcap" ;;
+        esac
         ;;
     *)
         warn "unrecognised OS; skipping pcap check (Windows users: use scripts/build.ps1)"

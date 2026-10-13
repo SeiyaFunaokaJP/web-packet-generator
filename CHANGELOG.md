@@ -81,6 +81,14 @@ Everything below is the initial development towards 1.0. No version has been tag
   `scripts/release.sh` and the release workflow, Dockerfile and compose file, systemd, launchd and
   Windows service samples (M0, M10).
 - `wpg doctor` environment checks (privileges, kernel features, Npcap, libpcap, hugepages) (M2).
+- The macOS and Windows release archives include the libpcap / Npcap backend, the only way to send on
+  those systems. `wpg.exe` delay-loads `wpcap.dll` and finds it in `System32\Npcap` itself, so it starts
+  without Npcap, works without the WinPcap-compatible mode, and reports a missing Npcap instead of
+  crashing. `scripts/build.sh` adds the backend on macOS, `scripts/build.ps1` when the Npcap SDK is found,
+  and `scripts/release.sh` fetches a pinned Npcap SDK for Windows targets (M10).
+- `scripts/smoke-archive.sh` (`just smoke-archive`) and release-workflow jobs, also run on pull requests
+  touching the packaging, that test each archive, the launchd daemon with pcap send / receive on macOS,
+  the Windows scheduled task and the no-Npcap path, `build.ps1`, and the Docker compose setup (M10).
 
 #### Documentation
 
@@ -103,4 +111,6 @@ Everything below is the initial development towards 1.0. No version has been tag
 - AF_XDP zero-copy, DPDK on physical NICs and the virtio PMD, and the CML2 deployment are not yet
   verified on real hardware.
 - Binaries are not signed or notarised on macOS and Windows.
+- Sending through Npcap on Windows is not covered by CI (Npcap cannot be installed unattended on the
+  runners).
 - wpg is stateless: no TCP handshakes, DHCP leases, LSP flooding or other protocol state machines.

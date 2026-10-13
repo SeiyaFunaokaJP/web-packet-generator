@@ -123,11 +123,7 @@ fn afxdp_info() -> BackendInfo {
 // `pub fn open(iface: &str, opts: &TxOptions) -> Result<Box<dyn TxBackend>, TxError>`.
 #[cfg(feature = "pcap")]
 fn pcap_info() -> BackendInfo {
-    info(
-        "pcap",
-        true,
-        Some("libpcap / Npcap (Windows: Npcap in WinPcap-compatible mode)"),
-    )
+    info("pcap", true, Some("libpcap / Npcap"))
 }
 
 #[cfg(not(feature = "pcap"))]

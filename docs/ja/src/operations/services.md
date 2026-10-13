@@ -80,4 +80,4 @@ sc.exe query wpg
 
 ## 確認状況
 
-systemd unit は、systemd が動く Ubuntu 24.04 コンテナで `scripts/deploy.sh` から起動しました (サーバは `CAP_NET_RAW` と `CAP_NET_ADMIN` だけを持つユーザ `wpg` で動き、`/api/health` に応答しました)。`systemd-analyze verify` も通ります。launchd の plist はパースできることだけ、PowerShell スクリプトはパースと PSScriptAnalyzer のみ確認しました。**実際の macOS と Windows ではまだ確認していません。**
+systemd unit は、systemd が動く Ubuntu 24.04 コンテナで `scripts/deploy.sh` から起動しました (サーバは `CAP_NET_RAW` と `CAP_NET_ADMIN` だけを持つユーザ `wpg` で動き、`/api/health` に応答しました)。`systemd-analyze verify` も通ります。launchd の plist はパースできることだけ、PowerShell スクリプトはパースと PSScriptAnalyzer のみ確認しました。**実際の macOS と Windows ではまだ確認していません。** リリースのワークフローに、macOS 14 ランナーで launchd デーモンを、Windows ランナーでタスクスケジューラのタスクを登録して `/api/health` を確認するジョブを追加しました ([リリース手順](../dev/release.md) の「CI で確認していること」)。これが緑になった時点でこのページを更新します。

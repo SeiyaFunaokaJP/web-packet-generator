@@ -1,6 +1,6 @@
 # Install on macOS
 
-Supported: macOS 12 or later. Release binaries are not published yet, so you build from source; the result is a single `wpg` executable with the web UI embedded. macOS ships libpcap, so no extra library is needed.
+Supported: macOS 12 or later. Release binaries are not published yet, so you build from source; the result is a single `wpg` executable with the web UI embedded. macOS ships libpcap, so no extra library is needed: `scripts/build.sh` (and `just release`) build the libpcap backend (`pcap` feature) automatically on macOS, because it is the only way wpg can send there (`--no-pcap` leaves it out). Release archives include it too.
 
 ## 1. Install the prerequisites
 

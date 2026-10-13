@@ -132,7 +132,7 @@ mod tests {
             "doctor-hugepages-none",
             "doctor-npcap-ok",
             "doctor-npcap-missing",
-            "doctor-npcap-not-compat",
+            "doctor-npcap-no-dll",
             "doctor-pcaplib-ok",
             "doctor-pcaplib-missing",
             "doctor-skip",
@@ -140,7 +140,6 @@ mod tests {
             "doctor-fix-iface",
             "doctor-fix-hugepages",
             "doctor-fix-npcap",
-            "doctor-fix-npcap-compat",
             "doctor-fix-pcaplib",
         ] {
             for locale in Locale::ALL {

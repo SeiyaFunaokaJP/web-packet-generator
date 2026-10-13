@@ -1,12 +1,31 @@
 # Release builds (TODO §2.8 / M10): one archive per target via scripts/release.sh,
-# then a GitHub Release with SHA256SUMS. Runs on a version tag (vX.Y.Z, matching the
-# workspace version); a manual run builds the archives as workflow artifacts only.
+# smoke-tested on its own OS (scripts/smoke-archive.sh, the launchd daemon on macOS, the
+# Windows scheduled task, build.ps1, the Docker image), then a GitHub Release with
+# SHA256SUMS. Publishing runs on a version tag (vX.Y.Z, matching the workspace version)
+# only; a manual run, or a pull request touching the packaging, builds and tests the
+# archives and keeps them as workflow artifacts.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/release.sh
+      - scripts/smoke-archive.sh
+      - scripts/build.ps1
+      - packaging/**
+      - Dockerfile
+      - docker-compose.yml
+      - .dockerignore
+      - crates/wpg-cli/build.rs
+      - crates/wpg-sys/src/npcap.rs
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,10 +42,14 @@ jobs:
       matrix:
         include:
           # 22.04: link against an older glibc so the binary runs on more distributions.
-          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
-          - { os: macos-14, target: aarch64-apple-darwin }
-          - { os: macos-14, target: x86_64-apple-darwin }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc }
+          # Linux sends with afpacket, so it needs no libpcap at run time.
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu, features: "" }
+          # macOS and Windows can only send through libpcap / Npcap: build with `pcap`.
+          # (libpcap ships with macOS; on Windows release.sh fetches the Npcap SDK and
+          # wpg.exe delay-loads wpcap.dll, so it still starts without Npcap.)
+          - { os: macos-14, target: aarch64-apple-darwin, features: pcap }
+          - { os: macos-14, target: x86_64-apple-darwin, features: pcap }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, features: pcap }
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -42,16 +65,200 @@ jobs:
         shell: bash
         run: |
           rustup target add "${{ matrix.target }}"
-          ./scripts/release.sh --target "${{ matrix.target }}" --out dist
+          ./scripts/release.sh --target "${{ matrix.target }}" --features "${{ matrix.features }}" --out dist
+      - name: Smoke test the archive
+        shell: bash
+        run: |
+          for f in dist/wpg-*-"${{ matrix.target }}".tar.gz dist/wpg-*-"${{ matrix.target }}".zip; do
+            [ ! -f "$f" ] || archive="$f"
+          done
+          if [ "${{ matrix.target }}" = x86_64-apple-darwin ]; then
+            ./scripts/smoke-archive.sh --no-run "$archive"    # cross-built on Apple silicon
+          else
+            ./scripts/smoke-archive.sh "$archive"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: wpg-${{ matrix.target }}
           path: dist/*
           if-no-files-found: error
 
+  # The launchd daemon from packaging/ as documented in operations/services, and sending
+  # and receiving through the pcap backend on a feth(4) pair (BPF, no traffic leaves the VM).
+  macos:
+    name: macOS (launchd, pcap)
+    needs: build
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: wpg-aarch64-apple-darwin
+          path: dist
+      - name: Unpack
+        run: |
+          mkdir -p pkg
+          tar -C pkg -xzf dist/wpg-*-aarch64-apple-darwin.tar.gz
+          echo "PKG=$(echo "$PWD"/pkg/wpg-*)" >> "$GITHUB_ENV"
+      - name: Install and start the launchd daemon
+        run: |
+          sudo install -m 0755 "$PKG/wpg" /usr/local/bin/wpg
+          sudo mkdir -p /usr/local/etc/wpg /usr/local/var/wpg /usr/local/var/log
+          sudo /usr/local/bin/wpg config init --path /usr/local/etc/wpg/wpg.toml
+          sudo install -m 0644 "$PKG/packaging/launchd/io.github.seiyafunaokajp.wpg.plist" /Library/LaunchDaemons/
+          sudo launchctl bootstrap system /Library/LaunchDaemons/io.github.seiyafunaokajp.wpg.plist
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8080/api/health && exit 0
+            sleep 1
+          done
+          sudo cat /usr/local/var/log/wpg.log
+          exit 1
+      - name: Stop and remove the daemon
+        run: |
+          sudo launchctl print system/io.github.seiyafunaokajp.wpg | head -n 20
+          sudo launchctl bootout system/io.github.seiyafunaokajp.wpg
+          sleep 2
+          if curl -fsS http://127.0.0.1:8080/api/health; then echo "still running" >&2; exit 1; fi
+          sudo cat /usr/local/var/log/wpg.log
+      - name: Send and receive with the pcap backend (feth pair)
+        run: |
+          sudo ifconfig feth0 create
+          sudo ifconfig feth1 create
+          sudo ifconfig feth0 peer feth1
+          sudo ifconfig feth0 up
+          sudo ifconfig feth1 up
+          sudo wpg doctor || true
+          sudo wpg capture --backend pcap -i feth1 -f arp -c 16 --duration 30s --json | tee rx.json >/dev/null &
+          rx=$!
+          sleep 3
+          sudo wpg send "$PKG/templates/examples/arp-sweep.wpg.yaml" -i feth0 --backend pcap --count 16 --rate 100pps
+          wait "$rx"
+          python3 - <<'PY'
+          import json
+          r = json.load(open("rx.json"))["report"]
+          print("received:", r["stats"]["matched"], r["state"])
+          assert r["stats"]["matched"] >= 16, r["stats"]
+          PY
+
+  # The Windows archive: wpg.exe must start without Npcap (wpcap.dll is delay-loaded),
+  # explain the missing Npcap, and run as the scheduled task from packaging/windows.
+  windows:
+    name: Windows (scheduled task, no Npcap)
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: wpg-x86_64-pc-windows-msvc
+          path: dist
+      - name: Unpack to Program Files
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem dist\wpg-*-x86_64-pc-windows-msvc.zip | Select-Object -First 1
+          Expand-Archive $zip.FullName -DestinationPath $env:RUNNER_TEMP\wpg
+          $pkg = Get-ChildItem $env:RUNNER_TEMP\wpg | Select-Object -First 1
+          New-Item -ItemType Directory -Force "$env:ProgramFiles\wpg" | Out-Null
+          Copy-Item -Recurse "$($pkg.FullName)\*" "$env:ProgramFiles\wpg"
+      - name: wpg doctor and the pcap backend without Npcap
+        shell: pwsh
+        run: |
+          $wpg = "$env:ProgramFiles\wpg\wpg.exe"
+          & $wpg doctor
+          if ($LASTEXITCODE -ne 1) { throw "wpg doctor should fail without Npcap (exit $LASTEXITCODE)" }
+          $out = & $wpg send "$env:ProgramFiles\wpg\templates\examples\arp-sweep.wpg.yaml" -i "{00000000-0000-0000-0000-000000000000}" --backend pcap --count 1 2>&1 | Out-String
+          $code = $LASTEXITCODE
+          Write-Host $out
+          # A crash in the delay-load helper would exit with 0xC06D007E instead.
+          if ($code -ne 1 -or $out -notmatch "Npcap is not installed") { throw "unexpected result (exit $code)" }
+          exit 0
+      - name: Install, check and remove the scheduled task
+        shell: pwsh
+        run: |
+          $wpg = "$env:ProgramFiles\wpg\wpg.exe"
+          $script = "$env:ProgramFiles\wpg\packaging\windows\wpg-service.ps1"
+          & $script -Action Install -Exe $wpg
+          $ok = $false
+          foreach ($i in 1..60) {
+            try { Invoke-RestMethod http://127.0.0.1:8080/api/health | ConvertTo-Json -Compress; $ok = $true; break } catch { Start-Sleep 1 }
+          }
+          & $script -Action Status
+          if (-not $ok) { throw "the scheduled task did not bring up wpg serve" }
+          & $script -Action Stop
+          Start-Sleep 2
+          if (Get-Process -Name wpg -ErrorAction SilentlyContinue) { throw "wpg.exe still running after Stop" }
+          & $script -Action Uninstall
+          if (Get-ScheduledTask -TaskName wpg -ErrorAction SilentlyContinue) { throw "task still registered" }
+          exit 0
+
+  # scripts/build.ps1 end to end (trunk, the Npcap SDK lookup that adds `pcap`, cargo).
+  build-ps1:
+    name: Windows (build.ps1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: build-ps1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
+      - name: Unpack the Npcap SDK to C:\Npcap-SDK
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://npcap.com/dist/npcap-sdk-1.15.zip -OutFile $env:RUNNER_TEMP\npcap-sdk.zip
+          $hash = (Get-FileHash $env:RUNNER_TEMP\npcap-sdk.zip -Algorithm SHA256).Hash
+          if ($hash -ne "52C7B9FB4ABEE3AD9FE739BB545C3EFE77B731C8E127122BDF328EAFDAE3ED4F") { throw "checksum mismatch: $hash" }
+          Expand-Archive $env:RUNNER_TEMP\npcap-sdk.zip -DestinationPath C:\Npcap-SDK
+      # No -Features: build.ps1 adds `pcap` itself once it finds the SDK.
+      - name: build.ps1
+        shell: pwsh
+        run: .\scripts\build.ps1
+      - name: Run the build
+        shell: pwsh
+        run: |
+          .\target\debug\wpg.exe --version
+          if ($LASTEXITCODE -ne 0) { throw "wpg --version failed" }
+          .\target\debug\wpg.exe doctor
+          .\target\debug\wpg.exe render templates\examples\arp-sweep.wpg.yaml --count 4 -o $env:RUNNER_TEMP\arp.pcapng
+          if ($LASTEXITCODE -ne 0) { throw "wpg render failed" }
+          # Built with the pcap backend: it must report the missing Npcap, not "not compiled in".
+          $out = .\target\debug\wpg.exe send templates\examples\arp-sweep.wpg.yaml -i "{00000000-0000-0000-0000-000000000000}" --backend pcap --count 1 2>&1 | Out-String
+          Write-Host $out
+          if ($out -notmatch "Npcap is not installed") { throw "the pcap backend is missing from the build.ps1 build" }
+          exit 0
+
+  # The Docker image and docker-compose.yml (operations/docker).
+  docker:
+    name: Docker (compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: docker compose up
+        env:
+          WPG_PASSWORD: ci-smoke-test-password
+          WPG_BIND: 127.0.0.1:8080
+        run: docker compose up -d --build --wait --wait-timeout 120
+      - name: Check the container
+        run: |
+          curl -fsS http://127.0.0.1:8080/api/health
+          docker compose exec -T wpg wpg --version
+          docker compose exec -T wpg wpg doctor || true
+      - name: Logs
+        if: always()
+        run: docker compose logs
+      - name: docker compose down
+        if: always()
+        env:
+          WPG_PASSWORD: unused
+        run: docker compose down -v
+
   publish:
     name: publish
-    needs: build
+    needs: [build, macos, windows]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

@@ -4,7 +4,9 @@
 #
 # Usage: scripts/release.sh [options]
 #   --target <triple>    cargo target (default: the host, e.g. x86_64-unknown-linux-gnu)
-#   --features <list>    extra cargo features of wpg-cli (e.g. "pcap")
+#   --features <list>    extra cargo features of wpg-cli (e.g. "pcap"); for a Windows target
+#                        with "pcap" the Npcap SDK is downloaded (pinned, checksummed) into
+#                        target/ unless LIBPCAP_LIBDIR points at its Lib\x64 directory
 #   --out <dir>          output directory (default: dist)
 #   --skip-frontend      reuse crates/wpg-web/dist instead of running `trunk build`
 #   --checksums <dir>    only write <dir>/SHA256SUMS for the archives in <dir>
@@ -18,7 +20,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-usage() { sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
@@ -76,6 +78,45 @@ case "$target" in
     *) exe=wpg ;;
 esac
 name="wpg-$version-$target"
+
+# ---- Npcap SDK (Windows + pcap) ----------------------------------------------
+# The SDK only provides wpcap.lib for linking; it is not shipped. wpg.exe delay-loads
+# wpcap.dll (crates/wpg-cli/build.rs), so it starts without Npcap installed.
+NPCAP_SDK_VERSION=1.15
+NPCAP_SDK_SHA256=52c7b9fb4abee3ad9fe739bb545c3efe77b731c8e127122bdf328eafdae3ed4f
+case "$target,$features" in
+    *windows*,*pcap*)
+        if [ -z "${LIBPCAP_LIBDIR:-}" ]; then
+            sdk="$ROOT/target/npcap-sdk-$NPCAP_SDK_VERSION"
+            if [ ! -f "$sdk/Lib/x64/wpcap.lib" ]; then
+                info "downloading the Npcap SDK $NPCAP_SDK_VERSION"
+                mkdir -p "$sdk"
+                zip_file="$sdk.zip"
+                curl -fsSL -o "$zip_file" "https://npcap.com/dist/npcap-sdk-$NPCAP_SDK_VERSION.zip"
+                echo "$NPCAP_SDK_SHA256  $zip_file" | sha256 -c - >/dev/null \
+                    || die "checksum mismatch for npcap-sdk-$NPCAP_SDK_VERSION.zip"
+                if command -v unzip >/dev/null 2>&1; then
+                    unzip -q -o "$zip_file" -d "$sdk"
+                else
+                    7z x -y -bso0 "-o$sdk" "$zip_file"
+                fi
+                rm -f "$zip_file"
+            fi
+            case "$target" in
+                aarch64-*) libdir="$sdk/Lib/ARM64" ;;
+                *) libdir="$sdk/Lib/x64" ;;
+            esac
+            if command -v cygpath >/dev/null 2>&1; then
+                libdir="$(cygpath -w "$libdir")"
+            fi
+            export LIBPCAP_LIBDIR="$libdir"
+        fi
+        # The pcap crate cannot read the version from the SDK (no DLL in it); Npcap 1.x is
+        # based on libpcap 1.10.
+        export LIBPCAP_VER="${LIBPCAP_VER:-1.10.0}"
+        info "LIBPCAP_LIBDIR=$LIBPCAP_LIBDIR LIBPCAP_VER=$LIBPCAP_VER"
+        ;;
+esac
 
 # ---- build ------------------------------------------------------------------
 if [ "$frontend" -eq 1 ]; then

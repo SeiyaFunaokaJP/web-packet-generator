@@ -14,7 +14,7 @@ publish.workspace = true
 # (see `#[cfg(all(feature = "afpacket", target_os = "linux"))]` in lib.rs).
 default = ["afpacket"]
 # Each backend pulls in its own optional dependencies.
-pcap = ["dep:pcap"]
+pcap = ["dep:pcap", "dep:wpg-sys"]
 afpacket = []
 # AF_XDP backend (Linux 5.10+). Talks to the kernel ABI directly (no libbpf /
 # libxdp), so it needs no extra build dependencies; off by default while it has
@@ -31,6 +31,10 @@ serde.workspace = true
 # libpcap / Npcap backend (feature `pcap`). Needs libpcap-dev (Linux), built in on macOS,
 # the Npcap SDK (`wpcap.lib` on LIB) on Windows.
 pcap = { version = "2", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+# `wpg_sys::npcap::load` before the first libpcap call (wpcap.dll is delay-loaded).
+wpg-sys = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # AF_PACKET / AF_XDP backends, `sched_setaffinity` core pinning, `mbind`.

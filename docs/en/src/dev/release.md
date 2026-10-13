@@ -41,22 +41,34 @@ The v1.0 release gate (TODO.md §4, M12) additionally requires:
 4. Commit as `release: vX.Y.Z` and create an annotated tag `vX.Y.Z` (`git tag -a vX.Y.Z -m "wpg X.Y.Z"`).
 5. Push the tag (`git push origin vX.Y.Z`). `.github/workflows/release.yml` builds the archives, writes `SHA256SUMS` and creates the GitHub Release with generated notes; edit the notes afterwards. Tags with a hyphen (`v1.0.0-rc.1`) become pre-releases. `scripts/release.sh` fails when the tag does not match the workspace version.
 
-A manual run of the workflow (`workflow_dispatch`) builds the archives and keeps them as workflow artifacts without publishing anything; use it to test the pipeline.
+A manual run of the workflow (`workflow_dispatch`), or a pull request that touches the packaging (`scripts/release.sh`, `scripts/smoke-archive.sh`, `scripts/build.ps1`, `packaging/`, the Docker files, the workflow itself, or the Npcap loading code), builds and tests the archives and keeps them as workflow artifacts without publishing anything; use it to test the pipeline.
 
 ## Binary distribution
 
-Releases are built by `.github/workflows/release.yml`. Each target is built on its own runner by `scripts/release.sh`, and a final job publishes a GitHub Release with all archives and a `SHA256SUMS` file.
+Releases are built by `.github/workflows/release.yml`. Each target is built on its own runner by `scripts/release.sh` and checked by `scripts/smoke-archive.sh`; further jobs test the archives on their OS (below), and a final job publishes a GitHub Release with all archives and a `SHA256SUMS` file once the macOS and Windows checks pass.
 
 ### Targets
 
-| Archive | Runner | Notes |
-|---|---|---|
-| `wpg-<ver>-x86_64-unknown-linux-gnu.tar.gz` | `ubuntu-22.04` | Built against glibc 2.35, so it runs on Ubuntu 22.04 / Debian 12 and newer |
-| `wpg-<ver>-aarch64-apple-darwin.tar.gz` | `macos-14` | Apple silicon |
-| `wpg-<ver>-x86_64-apple-darwin.tar.gz` | `macos-14` (cross) | Intel Macs |
-| `wpg-<ver>-x86_64-pc-windows-msvc.zip` | `windows-latest` | Needs Npcap at runtime |
+| Archive | Runner | Features | Notes |
+|---|---|---|---|
+| `wpg-<ver>-x86_64-unknown-linux-gnu.tar.gz` | `ubuntu-22.04` | (none) | Built against glibc 2.35, so it runs on Ubuntu 22.04 / Debian 12 and newer. Sends with `afpacket`, so no libpcap is needed |
+| `wpg-<ver>-aarch64-apple-darwin.tar.gz` | `macos-14` | `pcap` | Apple silicon. libpcap ships with macOS |
+| `wpg-<ver>-x86_64-apple-darwin.tar.gz` | `macos-14` (cross) | `pcap` | Intel Macs |
+| `wpg-<ver>-x86_64-pc-windows-msvc.zip` | `windows-latest` | `pcap` | Starts without Npcap; sending needs Npcap |
 
-Each archive holds `wpg` / `wpg.exe` (with the web UI embedded), `README.md`, `README.ja.md`, `CHANGELOG.md`, both licences, `templates/` and `packaging/` (systemd, launchd and Windows service samples). Binaries are built without optional features (no `pcap`), so they need no extra library to start. They are **not signed or notarised**; see the macOS and Windows install pages for what users have to do.
+Each archive holds `wpg` / `wpg.exe` (with the web UI embedded), `README.md`, `README.ja.md`, `CHANGELOG.md`, both licences, `templates/` and `packaging/` (systemd, launchd and Windows service samples). macOS and Windows can only send through libpcap / Npcap, so those binaries are built with the `pcap` feature. For Windows, `release.sh` downloads the Npcap SDK (version and SHA-256 pinned in the script, cached under `target/`) to link `wpcap.lib`; the SDK is not shipped. `wpg.exe` delay-loads `wpcap.dll` (`crates/wpg-cli/build.rs`), so it starts, and `wpg doctor` runs, on machines without Npcap. The binaries are **not signed or notarised**; see the macOS and Windows install pages for what users have to do.
+
+### What CI checks
+
+| Job | Checks |
+|---|---|
+| `build (<target>)` | `scripts/smoke-archive.sh`: the `.sha256` file, the archive contents, `wpg --version`, `wpg doctor --json`, `wpg render`, and `wpg serve` answering `/api/health` with the embedded UI (contents only for the cross-built Intel macOS archive) |
+| `macOS (launchd, pcap)` | Installs the Apple silicon archive and the launchd daemon as in [Running as a service](../operations/services.md), checks `/api/health`, removes it; then sends 16 frames with `--backend pcap` on a `feth` pair and receives them with `wpg capture --backend pcap` |
+| `Windows (scheduled task, no Npcap)` | `wpg doctor` fails the `npcap` check, `wpg send --backend pcap` stops with the "Npcap is not installed" message instead of crashing, and `packaging\windows\wpg-service.ps1` installs, starts (checked through `/api/health`), stops and removes the task |
+| `Windows (build.ps1)` | `scripts\build.ps1` with the Npcap SDK in `C:\Npcap-SDK` (so it adds `pcap`), then runs the result |
+| `Docker (compose)` | `docker compose up --build --wait`, `/api/health` and `wpg doctor` in the container |
+
+Npcap cannot be installed unattended on the runners (silent installation is limited to the OEM edition), so sending through Npcap is not covered by CI; check it by hand on a Windows machine before a release.
 
 ### Building an archive locally
 
@@ -64,6 +76,7 @@ Each archive holds `wpg` / `wpg.exe` (with the web UI embedded), `README.md`, `R
 scripts/release.sh                                    # host target, into dist/
 scripts/release.sh --target x86_64-apple-darwin       # cross target (needs its linker / SDK)
 scripts/release.sh --skip-frontend --features pcap    # reuse crates/wpg-web/dist
+scripts/smoke-archive.sh dist/wpg-*.tar.gz            # or: just smoke-archive <archive>
 scripts/release.sh --checksums dist                   # SHA256SUMS of everything in dist/
 ```
 

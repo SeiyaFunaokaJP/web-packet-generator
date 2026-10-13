@@ -24,7 +24,7 @@ Needs read/write access to `/dev/bpf*`. Run with `sudo`, or make the devices acc
 
 ## Windows
 
-Needs an Administrator terminal plus Npcap installed in WinPcap API-compatible mode. The `wpg doctor` hint is `Run from an elevated (Administrator) terminal`; a missing Npcap points to `https://npcap.com/#download`. An unelevated process can still use Npcap unless it was installed in administrator-only mode, so the privilege check is only a warning there.
+Needs an Administrator terminal plus Npcap (either install mode; wpg finds `wpcap.dll` in `System32\Npcap` itself). The `wpg doctor` hint is `Run from an elevated (Administrator) terminal`; a missing Npcap points to `https://npcap.com/#download`. An unelevated process can still use Npcap unless it was installed in administrator-only mode, so the privilege check is only a warning there.
 
 ## Checking with `wpg doctor`
 
@@ -37,7 +37,7 @@ Needs an Administrator terminal plus Npcap installed in WinPcap API-compatible m
 | `kernel.af_xdp` | warn | Kernel 5.10 or newer for the AF_XDP backend |
 | `kernel.tpacket_v3` | warn | Kernel 3.2 or newer; otherwise afpacket falls back to `sendmmsg` |
 | `hugepages` | warn | Hugepages configured; only needed for the DPDK backend |
-| `npcap` | fail / warn (Windows only) | Npcap installed and in WinPcap-compatible mode; skipped elsewhere |
+| `npcap` | fail / warn (Windows only) | Npcap installed and `wpcap.dll` present (`System32\Npcap` or `System32`); skipped elsewhere |
 | `pcap_lib` | warn | libpcap found (needed by the `pcap` backend); skipped on Windows |
 
 Each check reports `ok`, `warn`, `fail` or `skip` (not applicable on this OS).
