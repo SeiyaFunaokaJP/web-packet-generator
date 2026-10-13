@@ -72,7 +72,7 @@ tx: { ... }                # 任意
 |---|---|
 | `12`、`0x1f`、`0b101` | リテラル (10 進、16 進、2 進) |
 | `idx` | ストリーム内のパケット番号 (0、1、2、…) |
-| `$field`、`$<layer>.field` | 同じパケットでの、別の *ジェネレータ付き* フィールドの値。`<layer>` は `stream.order` と同じく、0 始まりのレイヤ番号か、スタック内で一意なプロトコル ID (`$0.src` と `$ethernet2.src` はどちらも先頭レイヤの `src` ジェネレータ) |
+| `$field`、`$<layer>.field` | 同じパケットでの、別の *ジェネレータ付き* フィールドの値。`<layer>` の書き方は `stream.order` と同じ (`$0.src` と `$ethernet2.src` はどちらも先頭レイヤの `src` ジェネレータ、`$ipv4[1].src` は 2 つ目の `ipv4`) |
 | `+ - * / %`、`<< >>`、`& ^ \|`、単項 `- ~` | C と同じ演算子と優先順位。整数演算 (128 ビット、桁あふれは折り返し) |
 | `hash(x)`、`crc(x)` | `x` (8 オクテットのビッグエンディアン) の FNV-1a 64 / CRC-32。連番を散らすのに使う |
 | `rand(min, max)` | `min` から `max` までの乱数。パケット番号と `stream.seed` で決まる |
@@ -101,7 +101,7 @@ generators:
 | キー | 意味 |
 |---|---|
 | `mode` | `zip` (既定。同時に進める)、`product` (最後が最速)、`nested` |
-| `order` | `nested` 用。遅い方から速い方へ `<レイヤ>.<フィールド>` で列挙。`<レイヤ>` は 0 始まりの添字か、スタック内で一意なプロトコル ID (`dot1q.vid`、`arp.tpa`) |
+| `order` | `nested` 用。遅い方から速い方へ `<レイヤ>.<フィールド>` で列挙。`<レイヤ>` は 0 始まりの添字、スタック内で一意なプロトコル ID (`dot1q.vid`、`arp.tpa`)、または同じプロトコルが複数あるときの `<プロトコル>[<n>]` (0 始まりで n 番目。`ipv4[1].src` はトンネル内側の IPv4) |
 | `count` | パケット数。既定は `tx.count`、無ければジェネレータの自然な長さ |
 | `seed` | ランダムジェネレータの seed。ストリームを再現可能にする |
 
@@ -343,7 +343,7 @@ Stream expansion options.
 |---|---|---|---|
 | `count` | `integer` \| `null` |   | Number of packets; defaults to `tx.count`, then to the natural length. |
 | `mode` | [`StreamMode`](#schema-streammode) |   | Combination mode of the generators. |
-| `order` | `string``[]` |   | For `nested`: fields from the slowest to the fastest, as `<layer>.<field>` where `<layer>` is a 0-based index or a protocol id (`ipv4.src`). |
+| `order` | `string``[]` |   | For `nested`: fields from the slowest to the fastest, as `<layer>.<field>` where `<layer>` is a 0-based index, a protocol id (`ipv4.src`) or the n-th occurrence of a protocol (`ipv4[1].src`). |
 | `seed` | `integer` \| `null` |   | Seed for random generators. |
 
 <a id="schema-templatelayer"></a>

@@ -227,6 +227,17 @@ fn resolve_layer_ref(s: &str, layers: &[Layer]) -> Result<FieldRef, String> {
         (i < layers.len())
             .then_some(i)
             .ok_or_else(|| format!("layer {i} does not exist"))?
+    } else if let Some((proto, nth)) = l.strip_suffix(']').and_then(|s| s.rsplit_once('[')) {
+        let nth: usize = nth
+            .parse()
+            .map_err(|_| format!("`{l}` is not `<protocol>[<n>]`"))?;
+        layers
+            .iter()
+            .enumerate()
+            .filter(|(_, layer)| layer.protocol == proto)
+            .nth(nth)
+            .map(|(i, _)| i)
+            .ok_or_else(|| format!("no layer `{l}` (occurrences of `{proto}` count from 0)"))?
     } else {
         let mut hits = layers
             .iter()
@@ -238,7 +249,7 @@ fn resolve_layer_ref(s: &str, layers: &[Layer]) -> Result<FieldRef, String> {
             .ok_or_else(|| format!("no layer with protocol `{l}`"))?;
         if hits.next().is_some() {
             return Err(format!(
-                "protocol `{l}` occurs more than once; use its index"
+                "protocol `{l}` occurs more than once; use its index or `{l}[<n>]`"
             ));
         }
         first
@@ -247,10 +258,11 @@ fn resolve_layer_ref(s: &str, layers: &[Layer]) -> Result<FieldRef, String> {
 }
 
 /// Rewrites the `$<layer>.field` references of an `expr` generator so `<layer>` is
-/// the layer index, as `stream.order` accepts it (`$ethernet2.src` -> `$0.src`).
+/// the layer index, as `stream.order` accepts it (`$ethernet2.src` -> `$0.src`,
+/// `$ipv4[1].src` -> the second `ipv4` layer).
 /// `$field` without a layer is left as is.
 fn resolve_expr_refs(expr: &str, layers: &[Layer]) -> Result<String, String> {
-    let is_ref = |c: char| c.is_alphanumeric() || c == '_' || c == '.';
+    let is_ref = |c: char| c.is_alphanumeric() || matches!(c, '_' | '.' | '[' | ']');
     let mut out = String::with_capacity(expr.len());
     let mut rest = expr;
     while let Some(at) = rest.find('$') {

@@ -560,3 +560,69 @@ layers:
         );
     }
 }
+
+#[test]
+fn layer_references_pick_the_nth_occurrence() {
+    let src = |inner: &str, stream: &str| {
+        format!(
+            r#"
+schema: 1
+meta: {{ name: nth }}
+layers:
+  - protocol: ethernet2
+  - protocol: ipv4
+    generators:
+      ttl: {{ kind: list, values: ["7", "9"] }}
+  - protocol: ipv4
+    generators:
+{inner}
+stream: {stream}
+"#
+        )
+    };
+    let expr = |r: &str| {
+        src(
+            &format!(
+                "      ttl: {{ kind: list, values: [\"1\", \"2\"] }}\n      identification: {{ kind: expr, expr: \"{r} + 1\" }}"
+            ),
+            "{ mode: zip }",
+        )
+    };
+    let c = compile(&yaml(&expr("$ipv4[0].ttl")), &no_vars(), catalog()).unwrap();
+    let exp = Expansion::new(&c.stream, None).unwrap();
+    let mut p = c.packet.clone();
+    apply_overrides(&mut p, &exp.nth(1).unwrap()).unwrap();
+    assert_eq!(p.layers[2].fields["identification"], FieldValue::UInt(10));
+    for r in ["$ipv4.ttl", "$ipv4[2].ttl", "$ipv4[x].ttl"] {
+        let keys = issue_keys(&expr(r));
+        assert!(
+            keys.iter().any(|(l, p, k)| *l == LintLevel::Error
+                && p == "layers[2].generators.identification"
+                && k == "lint-invalid-generator"),
+            "{r}: {keys:#?}"
+        );
+    }
+
+    // `stream.order` takes the same form: the inner ipv4 runs slowest here
+    let inner = "      ttl: { kind: list, values: [\"1\", \"2\", \"3\"] }";
+    let c = compile(
+        &yaml(&src(
+            inner,
+            r#"{ mode: nested, order: ["ipv4[1].ttl", "ipv4[0].ttl"] }"#,
+        )),
+        &no_vars(),
+        catalog(),
+    )
+    .unwrap();
+    let exp = Expansion::new(&c.stream, None).unwrap();
+    let mut p = c.packet.clone();
+    apply_overrides(&mut p, &exp.nth(1).unwrap()).unwrap();
+    assert_eq!(p.layers[1].fields["ttl"], FieldValue::UInt(9));
+    assert_eq!(p.layers[2].fields["ttl"], FieldValue::UInt(1));
+    let keys = issue_keys(&src(inner, r#"{ mode: nested, order: ["ipv4[2].ttl"] }"#));
+    assert!(
+        keys.iter()
+            .any(|(l, p, _)| *l == LintLevel::Error && p == "stream.order[0]"),
+        "{keys:#?}"
+    );
+}

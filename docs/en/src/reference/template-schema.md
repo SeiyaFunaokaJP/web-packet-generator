@@ -72,7 +72,7 @@ An `expr` generator computes an integer for every packet. The result is written 
 |---|---|
 | `12`, `0x1f`, `0b101` | literals (decimal, hexadecimal, binary) |
 | `idx` | the packet index in the stream (0, 1, 2, ...) |
-| `$field`, `$<layer>.field` | this packet's value of another *generated* field; `<layer>` is a 0-based layer index or a protocol id unique in the stack, as in `stream.order` (`$0.src` and `$ethernet2.src` both name the `src` generator of the first layer) |
+| `$field`, `$<layer>.field` | this packet's value of another *generated* field; `<layer>` is written as in `stream.order` (`$0.src` and `$ethernet2.src` both name the `src` generator of the first layer; `$ipv4[1].src` is the second `ipv4`) |
 | `+ - * / %`, `<< >>`, `& ^ \|`, unary `- ~` | C-like operators and precedence; integer arithmetic (128-bit, wrapping) |
 | `hash(x)`, `crc(x)` | FNV-1a 64 / CRC-32 of `x` (as 8 big-endian octets): spreads sequential values |
 | `rand(min, max)` | a random value between `min` and `max`, fixed per packet index and `stream.seed` |
@@ -101,7 +101,7 @@ How generators combine and how long the stream is.
 | Key | Meaning |
 |---|---|
 | `mode` | `zip` (default, lockstep), `product` (last varies fastest) or `nested` |
-| `order` | for `nested`: fields from slowest to fastest as `<layer>.<field>`, where `<layer>` is a 0-based index or a protocol id unique in the stack (`dot1q.vid`, `arp.tpa`) |
+| `order` | for `nested`: fields from slowest to fastest as `<layer>.<field>`, where `<layer>` is a 0-based index, a protocol id unique in the stack (`dot1q.vid`, `arp.tpa`), or `<protocol>[<n>]` for the n-th (0-based) occurrence of a protocol that appears more than once (`ipv4[1].src` is the inner IPv4 of a tunnel) |
 | `count` | number of packets; default is `tx.count`, else the natural length of the generators |
 | `seed` | seed for random generators; makes the stream reproducible |
 
@@ -343,7 +343,7 @@ Stream expansion options.
 |---|---|---|---|
 | `count` | `integer` \| `null` |   | Number of packets; defaults to `tx.count`, then to the natural length. |
 | `mode` | [`StreamMode`](#schema-streammode) |   | Combination mode of the generators. |
-| `order` | `string``[]` |   | For `nested`: fields from the slowest to the fastest, as `<layer>.<field>` where `<layer>` is a 0-based index or a protocol id (`ipv4.src`). |
+| `order` | `string``[]` |   | For `nested`: fields from the slowest to the fastest, as `<layer>.<field>` where `<layer>` is a 0-based index, a protocol id (`ipv4.src`) or the n-th occurrence of a protocol (`ipv4[1].src`). |
 | `seed` | `integer` \| `null` |   | Seed for random generators. |
 
 <a id="schema-templatelayer"></a>
