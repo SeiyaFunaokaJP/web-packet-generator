@@ -24,7 +24,7 @@ Needs read/write access to `/dev/bpf*`. Run with `sudo`, or make the devices acc
 
 ## Windows
 
-Needs an Administrator terminal plus Npcap (either install mode; wpg finds `wpcap.dll` in `System32\Npcap` itself). The `wpg doctor` hint is `Run from an elevated (Administrator) terminal`; a missing Npcap points to `https://npcap.com/#download`. An unelevated process can still use Npcap unless it was installed in administrator-only mode, so the privilege check is only a warning there.
+Needs Npcap (either install mode; wpg finds `wpcap.dll` in `System32\Npcap` itself) and, only when Npcap was installed in administrator-only mode, an Administrator terminal. `wpg doctor` reads that setting (the `AdminOnly` value under `HKLM\SYSTEM\CurrentControlSet\Services\npcap\Parameters`): unelevated with the default install, `caps.raw_socket` is ok (`npcap_admin_only=no`); with administrator-only mode it fails with the hint `Run from an elevated (Administrator) terminal`; when the setting cannot be read it is a warning. A missing Npcap points to `https://npcap.com/#download`.
 
 ## Checking with `wpg doctor`
 
@@ -32,7 +32,7 @@ Needs an Administrator terminal plus Npcap (either install mode; wpg finds `wpca
 
 | Check id | Status when unmet | Meaning |
 |---|---|---|
-| `caps.raw_socket` | fail (warn on Windows) | Raw-socket privilege: CAP_NET_RAW / root / BPF access / elevation |
+| `caps.raw_socket` | fail (Windows: per Npcap admin-only mode) | Raw-socket privilege: CAP_NET_RAW / root / BPF access / elevation |
 | `iface.any_up` | warn | At least one non-loopback interface is up with carrier |
 | `kernel.af_xdp` | warn | Kernel 5.10 or newer for the AF_XDP backend |
 | `kernel.tpacket_v3` | warn | Kernel 3.2 or newer; otherwise afpacket falls back to `sendmmsg` |

@@ -121,6 +121,8 @@ mod tests {
         for key in [
             "doctor-caps-ok",
             "doctor-caps-missing",
+            "doctor-caps-npcap-user",
+            "doctor-caps-npcap-admin",
             "doctor-iface-ok",
             "doctor-iface-none",
             "doctor-iface-error",

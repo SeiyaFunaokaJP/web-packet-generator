@@ -28,6 +28,9 @@ function Test-Command([string]$Name) {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+# trunk reads NO_COLOR as a boolean and rejects the usual NO_COLOR=1 (no-color.org).
+if ($env:NO_COLOR) { $env:NO_COLOR = "true" }
+
 function Invoke-Checked([scriptblock]$Block) {
     & $Block
     if ($LASTEXITCODE -ne 0) { throw "command failed with exit code $LASTEXITCODE" }

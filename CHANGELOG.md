@@ -84,7 +84,9 @@ Everything below is the initial development towards 1.0. No version has been tag
   rollback, `--dpdk` host preparation), release archives for Linux, macOS and Windows built by
   `scripts/release.sh` and the release workflow, Dockerfile and compose file, systemd, launchd and
   Windows service samples (M0, M10).
-- `wpg doctor` environment checks (privileges, kernel features, Npcap, libpcap, hugepages) (M2).
+- `wpg doctor` environment checks (privileges, kernel features, Npcap, libpcap, hugepages) (M2). On
+  Windows the privilege check follows Npcap's administrator-only setting: ok when unelevated with the
+  default install, a failure in administrator-only mode (M10).
 - The macOS and Windows release archives include the libpcap / Npcap backend, the only way to send on
   those systems. `wpg.exe` delay-loads `wpcap.dll` and finds it in `System32\Npcap` itself, so it starts
   without Npcap, works without the WinPcap-compatible mode, and reports a missing Npcap instead of
@@ -116,5 +118,5 @@ Everything below is the initial development towards 1.0. No version has been tag
   verified on real hardware.
 - Binaries are not signed or notarised on macOS and Windows.
 - Sending through Npcap on Windows is not covered by CI (Npcap cannot be installed unattended on the
-  runners).
+  runners); it is checked by hand on Windows 11.
 - wpg is stateless: no TCP handshakes, DHCP leases, LSP flooding or other protocol state machines.

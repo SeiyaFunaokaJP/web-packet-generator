@@ -99,14 +99,15 @@ pub fn run() -> Report {
         .ok()
         .and_then(|v| v.iter().find(|i| i.is_usable()))
         .map(|i| i.name.clone());
+    let npcap = npcap::detect();
     Report {
         checks: vec![
-            check_caps(&caps::probe(), &exe),
+            check_caps(&caps::probe(), &exe, cfg!(windows), npcap.admin_only),
             check_ifaces(ifaces.as_deref().map_err(ToString::to_string)),
             check_af_xdp(kernel::release().as_deref(), cfg!(target_os = "linux")),
             check_tpacket_v3(kernel::release().as_deref(), cfg!(target_os = "linux")),
             check_hugepages(hugepages::read().as_ref(), first_iface.as_deref()),
-            check_npcap(&npcap::detect(), cfg!(windows)),
+            check_npcap(&npcap, cfg!(windows)),
             check_pcap_lib(
                 pcaplib::find().as_deref().map(|p| p.display().to_string()),
                 cfg!(windows),
@@ -115,25 +116,37 @@ pub fn run() -> Report {
     }
 }
 
-fn check_caps(a: &RawAccess, exe: &str) -> Check {
-    let detail = format!(
+/// `npcap_admin_only`: the Npcap driver's administrator-only setting (Windows).
+fn check_caps(a: &RawAccess, exe: &str, windows: bool, npcap_admin_only: Option<bool>) -> Check {
+    let mut detail = format!(
         "euid/elevated={} CAP_NET_RAW={} CAP_NET_ADMIN={} bpf_writable={}",
         a.privileged_user,
         opt(a.cap_net_raw),
         opt(a.cap_net_admin),
         opt(a.bpf_writable)
     );
+    if windows {
+        detail.push_str(&format!(" npcap_admin_only={}", opt(npcap_admin_only)));
+    }
     if a.allowed() {
         return Check::new("caps.raw_socket", Status::Ok, "doctor-caps-ok", detail);
     }
-    // On Windows an unelevated process can still use Npcap unless it was installed in
-    // administrator-only mode, so this is only a warning there.
-    let status = if cfg!(windows) {
-        Status::Warn
-    } else {
-        Status::Fail
+    // An unelevated process can use Npcap unless it was installed in administrator-only
+    // mode; when that setting cannot be read this is only a warning.
+    let (status, key) = match (windows, npcap_admin_only) {
+        (true, Some(false)) => {
+            return Check::new(
+                "caps.raw_socket",
+                Status::Ok,
+                "doctor-caps-npcap-user",
+                detail,
+            );
+        }
+        (true, Some(true)) => (Status::Fail, "doctor-caps-npcap-admin"),
+        (true, None) => (Status::Warn, "doctor-caps-missing"),
+        (false, _) => (Status::Fail, "doctor-caps-missing"),
     };
-    Check::new("caps.raw_socket", status, "doctor-caps-missing", detail)
+    Check::new("caps.raw_socket", status, key, detail)
         .with_fix("doctor-fix-caps", caps::setcap_hint(exe))
 }
 
@@ -309,13 +322,32 @@ mod tests {
 
     #[test]
     fn caps_check() {
-        let ok = check_caps(&access(Some(true), false), "/x/wpg");
+        let ok = check_caps(&access(Some(true), false), "/x/wpg", false, None);
         assert_eq!(ok.status, Status::Ok);
         assert!(ok.fix_hint.is_none());
-        let bad = check_caps(&access(Some(false), true), "/x/wpg");
-        assert_ne!(bad.status, Status::Ok);
+        let bad = check_caps(&access(Some(false), true), "/x/wpg", false, None);
+        assert_eq!(bad.status, Status::Fail);
         assert_eq!(bad.summary_key, "doctor-caps-missing");
         assert!(bad.fix_hint.unwrap().contains("/x/wpg") || cfg!(windows));
+    }
+
+    #[test]
+    fn caps_check_windows_follows_npcap_admin_only() {
+        let unelevated = access(None, false);
+        let user = check_caps(&unelevated, "wpg.exe", true, Some(false));
+        assert_eq!(user.status, Status::Ok);
+        assert_eq!(user.summary_key, "doctor-caps-npcap-user");
+        assert!(user.detail.contains("npcap_admin_only=no"));
+        let admin = check_caps(&unelevated, "wpg.exe", true, Some(true));
+        assert_eq!(admin.status, Status::Fail);
+        assert_eq!(admin.summary_key, "doctor-caps-npcap-admin");
+        assert!(admin.fix_hint.is_some());
+        let unknown = check_caps(&unelevated, "wpg.exe", true, None);
+        assert_eq!(unknown.status, Status::Warn);
+        assert_eq!(unknown.summary_key, "doctor-caps-missing");
+        let elevated = check_caps(&access(None, true), "wpg.exe", true, Some(true));
+        assert_eq!(elevated.status, Status::Ok);
+        assert_eq!(elevated.summary_key, "doctor-caps-ok");
     }
 
     #[test]

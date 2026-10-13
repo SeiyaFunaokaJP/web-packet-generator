@@ -36,7 +36,7 @@ cd web-packet-generator
 
 ## 4. 送信を許可する
 
-送信するときは **管理者として PowerShell を開き**、`wpg doctor` が Npcap をインストール済みと報告することを確認します。[権限設定](permissions.md) を参照してください。
+`wpg doctor` が Npcap をインストール済みと報告することを確認します。Npcap を既定のオプションで入れていれば、通常の PowerShell から送信できます (`caps.raw_socket` は ok)。「Restrict Npcap driver's access to Administrators only」を選んで入れた場合は `caps.raw_socket` が fail になるので、送信するときは **管理者として PowerShell を開いて** ください。[権限設定](permissions.md) を参照してください。
 
 ## 5. サーバを起動する
 

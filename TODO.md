@@ -391,7 +391,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 - [x] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション（ホスト側は `scripts/lib/deploy-remote.sh`。`--service` で `wpg` ユーザ / `/etc/wpg/wpg.env` / unit 投入、パスワード無しの非ループバック起動を拒否、`/api/health` 待ち、`wpg.prev` と `--rollback`。systemd + sshd の Ubuntu 24.04 コンテナで確認、shellcheck 済み。`--dpdk` は hugepages / hugetlbfs / vfio-pci / IOMMU 確認の準備のみで NIC バインドと DPDK 本体は対象外 (M8)。CML2 実機は未確認）
 - [ ] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS（進捗: `release.sh` と release.yml（cargo-dist は見送り、理由は dev/release）。macOS / Windows 版は `pcap` 付きでビルドし、Windows は固定版の Npcap SDK を取得、`wpcap.dll` は遅延ロード。`scripts/smoke-archive.sh` と PR でも走る 3 OS のスモークテストを追加。Linux のアーカイブはローカルで作成・スモークテスト済み。残り: release.yml の 3 OS ジョブが緑になること（2026-10-13 時点で Actions が全ジョブ即時失敗し未実行）、タグでの実リリース）
 - [ ] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順（進捗: すべて作成済み、Docker と systemd はコンテナで確認済み。launchd（macOS 14）とタスクスケジューラ（Windows）、docker compose を CI で確認するジョブを release.yml に追加。残り: そのジョブが緑になること）
-- [ ] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認（進捗: `wpg doctor` / `build.ps1` / `wpg-service.ps1` の検出と案内、WinPcap 互換モード不要化、Npcap 無しでの送出がクラッシュせずエラーになる処理、SDK があれば `build.ps1` が `pcap` を自動で付ける。`build.ps1` と Npcap 無しの経路を確認する CI ジョブを追加。残り: CI が緑になること。Npcap 経由の送出は CI で確認できないため実機で）
+- [ ] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認（進捗: `wpg doctor` / `build.ps1` / `wpg-service.ps1` の検出と案内、WinPcap 互換モード不要化、Npcap 無しでの送出がクラッシュせずエラーになる処理、SDK があれば `build.ps1` が `pcap` を自動で付ける。`build.ps1` と Npcap 無しの経路を確認する CI ジョブを追加。2026-10-13 に Windows 11 実機（Npcap 1.10.4、既定インストール）で `build.ps1`（trunk + SDK 検出で `pcap` 自動付与）、`wpg doctor`、`wpg serve`（Web UI と `/api/health`）、管理者権限なしでの Npcap 経由の送出と受信（`wpg send --backend pcap --signature` 200 フレームを `wpg capture --backend pcap --verify` で 200 受信、ロス 0）を確認。その際 `wpg doctor` が 32 ビット側（`WOW6432Node`）の Npcap レジストリキーを見落とす点と、Npcap の管理者専用モード（`AdminOnly`）を見ずに権限を警告する点を修正、`NO_COLOR=1` で trunk が失敗する点を回避。残り: CI が緑になること（2026-10-13 時点で GitHub Actions が課金エラーで全ジョブ未実行）。タスクスケジューラ登録（`wpg-service.ps1`）は管理者権限が要るため実機未確認）
 - [x] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)（Gatekeeper / quarantine の回避手順を install-macos に記載、署名は Developer ID 未取得のため見送りと dev/release に記載。実機での確認は未実施）
 - [x] アップグレード手順・テンプレマイグレーション（`wpg template migrate [--check] [--no-backup]` を追加。`schema:` の移行機構 `MIGRATIONS` と DB の `schema_version` は既存。docs `operations/upgrade.md` に手順、DB / 設定 / テンプレの互換方針、スキーマ追加手順。schema は 1 のみのため実移行のテストは対象外）
 
@@ -406,7 +406,7 @@ wpg bench   [--backend ...]                                # 送出性能計測
 
 ### M12: v1.0 リリース判定
 - [ ] P0 + P1 プロトコル全 golden pcap 緑、tshark 突合緑
-- [ ] 3 OS でビルド・起動・pcap バックエンド送出確認
+- [ ] 3 OS でビルド・起動・pcap バックエンド送出確認（進捗: Windows 11 実機で `build.ps1` ビルド・起動・Npcap 経由の送出と受信を確認（2026-10-13）。残り: macOS、Linux の pcap バックエンド）
 - [ ] Linux afpacket で 1 Mpps/core 以上 (参考値)、DPDK は環境依存のため参考記録
 - [ ] GUI E2E 緑、i18n ja/en 抜け漏れ 0 (lint)
 - [x] `cargo audit` / `deny` クリーン（`serde_yaml` 0.9（非推奨、`unsafe-libyaml` の RUSTSEC-2024-0449 で `cargo deny` が失敗）をメンテされている互換フォーク `serde_norway` 0.9.42 に置き換え（ワークスペースで `serde_yaml` の名前のまま、コード変更なし）。`cargo audit` は警告 0、`cargo deny check` は advisories / bans / licenses / sources すべて ok。leptos 0.8 経由のビルド時専用 proc-macro 2 件（`paste`、`proc-macro-error2`、いずれも unmaintained のみ）は理由付きで `deny.toml` / `.cargo/audit.toml` の ignore に残す。重複バージョンは `multiple-versions = "warn"` の警告のみで対象外）

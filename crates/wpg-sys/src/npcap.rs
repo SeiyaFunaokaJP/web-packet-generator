@@ -25,6 +25,10 @@ pub struct NpcapInfo {
     pub packet_dll: Option<PathBuf>,
     /// `wpcap.dll` directly in `System32` (WinPcap-compatible install).
     pub winpcap_compatible: bool,
+    /// The driver only lets administrators capture and send ("Restrict Npcap driver's
+    /// access to Administrators only" at install time; the `AdminOnly` value of the
+    /// `npcap` service parameters). `None` when it could not be read.
+    pub admin_only: Option<bool>,
 }
 
 impl NpcapInfo {
@@ -60,6 +64,7 @@ pub fn detect_in(system32: &Path, registry_key: bool) -> NpcapInfo {
         wpcap_dll: existing(dir.join("wpcap.dll")),
         packet_dll: existing(dir.join("Packet.dll")),
         winpcap_compatible: system32.join("wpcap.dll").is_file(),
+        admin_only: None,
     }
 }
 
@@ -72,27 +77,68 @@ pub fn detect() -> NpcapInfo {
 #[cfg(windows)]
 fn detect_os() -> NpcapInfo {
     let root = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
-    detect_in(&Path::new(&root).join("System32"), registry_key_exists())
+    NpcapInfo {
+        admin_only: admin_only(),
+        ..detect_in(&Path::new(&root).join("System32"), registry_key_exists())
+    }
+}
+
+#[cfg(windows)]
+fn admin_only() -> Option<bool> {
+    use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+    use windows_sys::Win32::System::Registry::{
+        RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD,
+    };
+    let key: Vec<u16> = "SYSTEM\\CurrentControlSet\\Services\\npcap\\Parameters\0"
+        .encode_utf16()
+        .collect();
+    let name: Vec<u16> = "AdminOnly\0".encode_utf16().collect();
+    let mut value: u32 = 0;
+    let mut size: u32 = 4;
+    // SAFETY: `key` and `name` are NUL-terminated; `value` is a DWORD buffer of `size` (4) octets.
+    let rc = unsafe {
+        RegGetValueW(
+            HKEY_LOCAL_MACHINE,
+            key.as_ptr(),
+            name.as_ptr(),
+            RRF_RT_REG_DWORD,
+            std::ptr::null_mut(),
+            std::ptr::from_mut(&mut value).cast(),
+            &mut size,
+        )
+    };
+    (rc == ERROR_SUCCESS).then_some(value != 0)
 }
 
 #[cfg(windows)]
 fn registry_key_exists() -> bool {
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
     use windows_sys::Win32::System::Registry::{
-        RegCloseKey, RegOpenKeyExW, HKEY, HKEY_LOCAL_MACHINE, KEY_READ,
+        RegCloseKey, RegOpenKeyExW, HKEY, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY,
+        KEY_WOW64_64KEY,
     };
     let path: Vec<u16> = "SOFTWARE\\Npcap\0".encode_utf16().collect();
-    let mut key: HKEY = std::ptr::null_mut();
-    // SAFETY: `path` is NUL-terminated; `key` is a valid out-pointer and closed on success.
-    unsafe {
-        let rc = RegOpenKeyExW(HKEY_LOCAL_MACHINE, path.as_ptr(), 0, KEY_READ, &mut key);
-        if rc == ERROR_SUCCESS {
-            RegCloseKey(key);
-            true
-        } else {
-            false
+    // The Npcap installer is a 32-bit program, so on 64-bit Windows its key lands in the
+    // 32-bit view (`SOFTWARE\WOW6432Node\Npcap`); look at both views.
+    [KEY_WOW64_64KEY, KEY_WOW64_32KEY].into_iter().any(|view| {
+        let mut key: HKEY = std::ptr::null_mut();
+        // SAFETY: `path` is NUL-terminated; `key` is a valid out-pointer and closed on success.
+        unsafe {
+            let rc = RegOpenKeyExW(
+                HKEY_LOCAL_MACHINE,
+                path.as_ptr(),
+                0,
+                KEY_READ | view,
+                &mut key,
+            );
+            if rc == ERROR_SUCCESS {
+                RegCloseKey(key);
+                true
+            } else {
+                false
+            }
         }
-    }
+    })
 }
 
 #[cfg(not(windows))]

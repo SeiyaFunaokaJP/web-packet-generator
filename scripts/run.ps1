@@ -25,6 +25,8 @@ if ($Dev) {
     & cargo watch --version *> $null
     if ($LASTEXITCODE -ne 0) { throw "cargo-watch not found. Install: cargo install cargo-watch --locked" }
 
+    # trunk reads NO_COLOR as a boolean and rejects the usual NO_COLOR=1 (no-color.org).
+    if ($env:NO_COLOR) { $env:NO_COLOR = "true" }
     $trunk = Start-Process -FilePath "trunk" -ArgumentList "serve" `
         -WorkingDirectory (Join-Path $Root "crates/wpg-web") -PassThru -NoNewWindow
     try {

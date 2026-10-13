@@ -24,7 +24,7 @@ file capability はバイナリを置き換えると失われ、`nosuid` マウ�
 
 ## Windows
 
-管理者ターミナルと Npcap が必要です (インストールモードは問いません。wpg が `System32\Npcap` の `wpcap.dll` を自分で見つけます)。`wpg doctor` のヒントは `Run from an elevated (Administrator) terminal` で、Npcap がない場合は `https://npcap.com/#download` を案内します。Npcap を管理者専用モードで入れていなければ、管理者権限のないプロセスでも Npcap を使えるため、権限チェックはここでは警告止まりです。
+Npcap が必要です (インストールモードは問いません。wpg が `System32\Npcap` の `wpcap.dll` を自分で見つけます)。管理者ターミナルが必要なのは、Npcap を管理者専用モードで入れた場合だけです。`wpg doctor` はその設定 (`HKLM\SYSTEM\CurrentControlSet\Services\npcap\Parameters` の `AdminOnly`) を読み、既定のインストールなら管理者権限なしでも `caps.raw_socket` を ok (`npcap_admin_only=no`) に、管理者専用モードなら fail にしてヒント `Run from an elevated (Administrator) terminal` を表示します。設定を読めないときは警告です。Npcap がない場合は `https://npcap.com/#download` を案内します。
 
 ## `wpg doctor` による確認
 
@@ -32,7 +32,7 @@ file capability はバイナリを置き換えると失われ、`nosuid` マウ�
 
 | チェック id | 未達のときの状態 | 意味 |
 |---|---|---|
-| `caps.raw_socket` | fail (Windows は warn) | raw ソケットの権限: CAP_NET_RAW / root / BPF アクセス / 昇格 |
+| `caps.raw_socket` | fail (Windows は Npcap の管理者専用モードしだい) | raw ソケットの権限: CAP_NET_RAW / root / BPF アクセス / 昇格 |
 | `iface.any_up` | warn | loopback 以外のインタフェースが carrier 付きで up |
 | `kernel.af_xdp` | warn | AF_XDP バックエンド用にカーネル 5.10 以降 |
 | `kernel.tpacket_v3` | warn | カーネル 3.2 以降。なければ afpacket は `sendmmsg` にフォールバック |

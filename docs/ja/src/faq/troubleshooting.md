@@ -6,7 +6,7 @@
 
 | チェック id | 未達のときの状態 | 意味と対処 |
 |---|---|---|
-| `caps.raw_socket` | fail (Windows は warn) | raw ソケットの権限。Linux は `CAP_NET_RAW` / root、macOS は BPF アクセス、Windows は管理者昇格。[権限設定](../getting-started/permissions.md) |
+| `caps.raw_socket` | fail (Windows は Npcap の管理者専用モードしだい) | raw ソケットの権限。Linux は `CAP_NET_RAW` / root、macOS は BPF アクセス、Windows は Npcap が管理者専用モードのときだけ管理者昇格。[権限設定](../getting-started/permissions.md) |
 | `iface.any_up` | warn | loopback 以外のインタフェースが carrier 付きで up。ケーブル / リンクを確認 |
 | `kernel.af_xdp` | warn | AF_XDP バックエンド用にカーネル 5.10 以降 |
 | `kernel.tpacket_v3` | warn | カーネル 3.2 以降。なければ afpacket は `sendmmsg` にフォールバック |
