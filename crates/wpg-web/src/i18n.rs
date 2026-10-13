@@ -64,6 +64,12 @@ pub(crate) fn locale_label_key(l: Locale) -> &'static str {
     match l {
         Locale::Ja => "ui-lang-ja",
         Locale::En => "ui-lang-en",
+        Locale::ZhCn => "ui-lang-zh-cn",
+        Locale::ZhTw => "ui-lang-zh-tw",
+        Locale::Ko => "ui-lang-ko",
+        Locale::De => "ui-lang-de",
+        Locale::Fr => "ui-lang-fr",
+        Locale::Es => "ui-lang-es",
     }
 }
 

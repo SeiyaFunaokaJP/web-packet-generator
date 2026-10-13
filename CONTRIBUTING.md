@@ -56,8 +56,8 @@ a test fails while they are stale.
 
 - **No hard-coded user-visible strings** in the server, CLI, or web UI (including error messages).
   Use Fluent message keys.
-- Every key must exist in **both** `locales/ja/main.ftl` and `locales/en/main.ftl`. A missing key in either
-  language fails CI (`cargo test -p wpg-i18n`).
+- Every key must exist in **every** `locales/*/main.ftl` (ja / en / zh-CN / zh-TW / ko / de / fr / es).
+  A missing key in any language fails CI (`cargo test -p wpg-i18n`).
 - Adding a language: see the developer guide, `docs/en/src/dev/add-i18n.md`.
 
 ## Licensing and DCO

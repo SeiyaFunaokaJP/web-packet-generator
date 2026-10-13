@@ -5,7 +5,7 @@
 ## 手順
 
 1. **定義する。** `crates/wpg-protocols/src/` の該当モジュール (例: アプリ層なら `app.rs`) にマクロでプロトコルを足し、カタログに登録します。フィールドには `desc = "key"` で Fluent キーを付けます。近似に逃げる前に、下の「定義の部品」で表現できないか確認してください。
-2. **Fluent 文字列を足す。** プロトコル名と各フィールドの `desc` キーを `locales/ja/main.ftl` と `locales/en/main.ftl` の両方に追加します ([i18n 文字列の追加手順](add-i18n.md))。
+2. **Fluent 文字列を足す。** プロトコル名と各フィールドの `desc` キーを `locales/*/main.ftl` の全言語に追加します ([i18n 文字列の追加手順](add-i18n.md))。
 3. **サンプルテンプレートを置く。** `templates/protocols/<group>/` に `.wpg.yaml` を 1 つ以上追加します。`descriptions` の ja / en と `protocol:` / `layer:` タグを付けます。`samples.rs` のテストが、全プロトコルにサンプルがあること、整形式サンプルが同じスタックに読み戻せることを検査します。
 4. **golden を再生成する。** `just golden-update` で `tests/golden/*.hex` / `*.pcap` を作り直し、差分を確認します。`.hex` / `.pcap` は手で編集しないでください。
 5. **突合する。** tshark があれば `WPG_TSHARK=1 cargo test -p wpg-golden-tests -- --ignored` で Wireshark と突き合わせます。

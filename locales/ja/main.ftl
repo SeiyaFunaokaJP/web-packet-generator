@@ -344,6 +344,12 @@ serve-password-arg-warning = 警告: --password はプロセス一覧から他�
 ## Web UI (wpg-web). Keys are checked by the `ui_keys_exist` test in crates/wpg-web.
 ui-lang-ja = 日本語
 ui-lang-en = English
+ui-lang-zh-cn = 简体中文
+ui-lang-zh-tw = 繁體中文
+ui-lang-ko = 한국어
+ui-lang-de = Deutsch
+ui-lang-fr = Français
+ui-lang-es = Español
 ui-loading = 読み込み中…
 ui-close = 閉じる
 ui-cancel = キャンセル

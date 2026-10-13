@@ -63,6 +63,10 @@ Everything below is the initial development towards 1.0. No version has been tag
   generator settings with count and duration estimates, jobs with live charts, template library,
   receive page, settings, undo / redo, keyboard operation and Japanese / English UI (M4, M9).
 - Playwright end-to-end tests of the UI (M4, M9).
+- UI, CLI, API and error messages in Simplified Chinese, Traditional Chinese, Korean, German, French and
+  Spanish besides Japanese and English, picked from the browser language, `Accept-Language` or `LANG`
+  (Chinese by script and region), with a language menu in the header; the manual and the bundled
+  template descriptions stay Japanese / English, falling back to English.
 
 #### Templates
 

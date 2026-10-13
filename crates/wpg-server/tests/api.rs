@@ -387,6 +387,24 @@ async fn template_crud() {
         .expect("examples-arp-sweep found");
     assert!(arp["description"].as_str().unwrap().contains("スイープ"));
     assert_eq!(arp["source"], "library");
+
+    // a language the bundled templates are not described in falls back to English
+    let ko = app
+        .call(
+            Method::GET,
+            "/api/templates?q=sweep&tag=arp",
+            None,
+            Some("ko"),
+        )
+        .await
+        .json();
+    let arp_ko = ko["templates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["id"] == "examples-arp-sweep")
+        .expect("examples-arp-sweep found");
+    assert_eq!(arp_ko["description"], arp["descriptions"]["en"]);
     assert_eq!(arp["protocols"], json!(["ethernet2", "arp"]));
 
     // library templates are read-only

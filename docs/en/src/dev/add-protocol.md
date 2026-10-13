@@ -5,7 +5,7 @@ Core protocols are defined with a Rust macro (`crates/wpg-protocols/src/`) and c
 ## Steps
 
 1. **Define it.** Add the protocol with the macro to the right module in `crates/wpg-protocols/src/` (for example `app.rs` for an application-layer protocol) and register it in the catalog. Tag each field with a Fluent key via `desc = "key"`. Before reaching for an approximation, check the building blocks below.
-2. **Add Fluent strings.** Add the protocol name and every field's `desc` key to both `locales/ja/main.ftl` and `locales/en/main.ftl` (see [Adding i18n strings](add-i18n.md)).
+2. **Add Fluent strings.** Add the protocol name and every field's `desc` key to every language's `locales/*/main.ftl` (see [Adding i18n strings](add-i18n.md)).
 3. **Add a sample template.** Put one or more `.wpg.yaml` files under `templates/protocols/<group>/`, with ja / en `descriptions` and `protocol:` / `layer:` tags. The `samples.rs` tests check that every protocol has a sample and that well-formed samples parse back to the same stack.
 4. **Regenerate the golden files.** Rebuild `tests/golden/*.hex` / `*.pcap` with `just golden-update` and review the diff. Never edit the `.hex` / `.pcap` by hand.
 5. **Cross-check.** If tshark is available, compare against Wireshark with `WPG_TSHARK=1 cargo test -p wpg-golden-tests -- --ignored`.

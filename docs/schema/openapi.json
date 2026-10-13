@@ -1618,7 +1618,7 @@
             ]
           },
           "description": {
-            "description": "Description in the requested language (`meta.descriptions[lang]`, else\n`meta.description`).",
+            "description": "Description in the requested language (`meta.descriptions[lang]`, else\n`meta.description`, else `meta.descriptions.en`).",
             "type": [
               "string",
               "null"
@@ -1628,7 +1628,7 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "All localised descriptions (`ja`, `en`).",
+            "description": "All localised descriptions (language tag → text, e.g. `ja`, `en`).",
             "propertyNames": {
               "type": "string"
             },

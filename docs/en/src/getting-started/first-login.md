@@ -26,7 +26,7 @@ After logging in you land on the dashboard: interface state, running jobs and re
 1. **Templates**: the bundled library (`examples`, `protocols`, `scenarios`, `malformed`) is listed here, searchable by tag (`protocol:ipv4`, `layer:l3`, `scenario`, `malformed`). Open one, or duplicate it to make your own.
 2. **Builder**: stack layers, edit fields (Auto/Manual, generators) and watch the hex dump and field tree update.
 3. **Jobs**: pick templates, an interface, a rate and a count, and start. A dry run writes a pcapng instead of sending.
-4. **Settings**: language (Japanese/English), theme, template library paths.
+4. **Settings**: language (Japanese, English, Simplified Chinese, Traditional Chinese, Korean, German, French, Spanish), theme, template library paths.
 
 ![The dashboard: totals, running jobs, the self-check summary and the interfaces](../images/dashboard.png)
 
@@ -38,6 +38,6 @@ After logging in you land on the dashboard: interface state, running jobs and re
 
 ![A finished job: live statistics, per-stream and per-worker counters and pacing accuracy](../images/job-detail.png)
 
-The language switch (JA / EN) and the theme toggle are in the header of every screen.
+The language menu and the theme toggle are in the header of every screen.
 
 If sending is refused, run `wpg doctor` and read [Permissions](permissions.md). Then work through the [ARP sweep tutorial](../tutorials/arp-sweep.md).

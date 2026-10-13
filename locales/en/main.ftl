@@ -344,6 +344,12 @@ serve-password-arg-warning = Warning: --password is visible to other users in th
 ## Web UI (wpg-web). Keys are checked by the `ui_keys_exist` test in crates/wpg-web.
 ui-lang-ja = 日本語
 ui-lang-en = English
+ui-lang-zh-cn = 简体中文
+ui-lang-zh-tw = 繁體中文
+ui-lang-ko = 한국어
+ui-lang-de = Deutsch
+ui-lang-fr = Français
+ui-lang-es = Español
 ui-loading = Loading…
 ui-close = Close
 ui-cancel = Cancel

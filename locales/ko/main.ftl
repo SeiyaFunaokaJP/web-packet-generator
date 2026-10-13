@@ -1,0 +1,1487 @@
+# 한국어 (ko) 로캘. 모든 메시지는 모든 로캘 파일(locales/*/main.ftl)에 존재해야 합니다
+# (wpg-i18n 단위 테스트로 검사합니다).
+
+app-name = Web Packet Generator
+app-tagline = 브라우저에서 조작하는 네트워크 테스트용 고성능 패킷 생성기입니다.
+
+## 서버 / API
+health-ok = 서비스가 정상입니다
+server-listening = { $addr }에서 수신 대기 중
+server-placeholder-ui = 웹 UI가 아직 빌드되지 않았습니다. crates/wpg-web에서 `trunk build`를 실행하십시오.
+
+## 오류
+error-not-implemented = `{ $command }`는 아직 구현되지 않았습니다.
+error-not-found = 찾을 수 없음
+error-internal = 내부 서버 오류
+
+## UI
+ui-language = 언어
+ui-protocols = 프로토콜
+
+## 진단 (wpg-core `diag::keys`, 인수 이름은 계약의 일부)
+diag-field-out-of-range = 필드 `{ $field }` = { $value } 값이 범위 { $min }..{ $max }를 벗어났습니다.
+diag-field-not-equal = 필드 `{ $field }` = { $value } 값이 예상 값 { $expected }와 다릅니다.
+diag-field-forbidden-value = 필드 `{ $field }`에 권장되지 않는 값이 있습니다: { $value }.
+diag-length-too-short = `{ $span }`의 길이는 { $len }바이트이며, 최소 { $min }바이트가 필요합니다.
+diag-length-too-long = `{ $span }`의 길이는 { $len }바이트이며, 최대 { $max }바이트까지 허용됩니다.
+diag-length-mismatch = 길이 필드 `{ $field }` = { $value } 값이 계산된 길이 { $expected }와 다릅니다.
+diag-count-mismatch = 개수 필드 `{ $field }` = { $value } 값이 실제 요소 수 { $expected }와 다릅니다.
+diag-fill-inexact = 채움 항목으로 `{ $field }`를 정확히 맞출 수 없습니다: { $len }옥텟이 부족합니다.
+diag-checksum-mismatch = 체크섬 필드 `{ $field }` = { $value } 값이 계산된 체크섬 { $expected }와 다릅니다.
+diag-next-protocol-mismatch = 필드 `{ $field }` = { $value } 값이 다음 계층 `{ $next }`를 나타내지 않습니다(예상 값 { $expected }).
+diag-auto-overflow = `{ $field }`의 자동 값 { $value }가 { $bits }비트에 들어가지 않습니다.
+diag-length-not-aligned = `{ $field }`의 길이 { $len }가 { $unit }바이트의 배수가 아닙니다.
+diag-no-pseudo-header = 체크섬 `{ $field }`에는 의사 헤더가 필요하지만 하위에 IP 계층이 없습니다.
+diag-not-implemented = `{ $field }`: { $what }는 아직 구현되지 않았습니다.
+diag-truncated = 이 계층은 의도적으로 { $len }바이트로 잘렸습니다.
+diag-short-header = 입력이 { $protocol } 헤더 도중(오프셋 { $offset })에서 끝났습니다.
+diag-length-exceeds-data = 길이 필드 `{ $field }` = { $len } 값이 사용 가능한 { $available }바이트를 초과합니다.
+diag-trailing-bytes = 패킷 끝 뒤에 { $len }바이트가 남아 있습니다.
+diag-unsupported-field = 파서가 아직 { $protocol }의 필드 `{ $field }`를 디코딩할 수 없습니다.
+
+## 프로토콜 필드 설명 (wpg-protocols `desc = "..."`)
+arp-hlen = 하드웨어 주소 길이(바이트, Ethernet은 6).
+arp-htype = 하드웨어 유형(1 = Ethernet).
+arp-oper = 동작(1 = 요청, 2 = 응답).
+arp-plen = 프로토콜 주소 길이(바이트, IPv4는 4).
+arp-ptype = 프로토콜 유형(EtherType, 0x0800 = IPv4).
+arp-sha = 송신자 하드웨어 주소.
+arp-spa = 송신자 프로토콜 주소.
+arp-tha = 대상 하드웨어 주소.
+arp-tpa = 대상 프로토콜 주소.
+icmp-code = 메시지 코드. 의미는 유형에 따라 다릅니다.
+icmp-identifier = 에코 요청과 응답을 대응시키는 식별자.
+icmp-rest = 유형별 4바이트 "rest of header" 필드.
+icmp-sequence = 에코 요청과 응답을 대응시키는 시퀀스 번호.
+icmp-type = 메시지 유형.
+ipv6-fragment-offset = 이 프래그먼트의 오프셋(8바이트 단위).
+ipv6-more-fragments = More Fragments 플래그(1 = 뒤에 프래그먼트가 더 있음).
+ipv6-options = 원시 TLV 옵션. 8바이트의 배수로 패딩됩니다.
+ipv6-routing-data = 유형별 라우팅 데이터.
+ipv6-routing-type = 라우팅 헤더 유형(예: 2 = Mobile IPv6, 4 = SRH).
+ipv6-segments-left = 남은 경로 세그먼트 수.
+srh-segments-left = Segments Left: 다음에 방문할 세그먼트의 (세그먼트 목록 내) 인덱스. 마지막 세그먼트에서는 0.
+srh-last-entry = Last Entry: 세그먼트 목록 마지막 요소의 인덱스, 즉 세그먼트 수 - 1(Auto).
+srh-flags = 플래그(RFC 8754에서 정의된 플래그 없음, 0).
+srh-tag = Tag: 패킷을 특정 클래스나 그룹에 속하는 것으로 표시합니다(0 = 미사용).
+srh-segment-list = 경로의 역순으로 나열된 세그먼트 목록(SID): 요소 0이 마지막 세그먼트, 마지막 요소가 첫 세그먼트입니다. Segments Left가 0이 아닌 동안 상위 계층 체크섬은 요소 0을 목적지로 사용합니다.
+srh-tlvs = 선택적 TLV(8비트 유형, 8비트 길이): Pad1, PadN, HMAC(HMAC 값은 Manual). 그 후 헤더는 Pad1 옥텟으로 8의 배수까지 패딩됩니다(Auto).
+ndp-destination = 리디렉션의 목적지 주소.
+ndp-managed = Managed 주소 구성 플래그(M).
+ndp-options = 원시 NDP 옵션(TLV).
+ndp-other = Other 구성 플래그(O).
+ndp-override-flag = Override 플래그(O).
+ndp-router-flag = Router 플래그(R).
+ndp-solicited-flag = Solicited 플래그(S).
+ndp-target = 대상 주소.
+
+## wpg ifaces
+ifaces-col-name = 이름
+ifaces-col-index = IDX
+ifaces-col-mac = MAC
+ifaces-col-ipv4 = IPV4
+ifaces-col-ipv6 = IPV6
+ifaces-col-mtu = MTU
+ifaces-col-state = 상태
+ifaces-col-speed = 속도
+ifaces-col-driver = 드라이버
+ifaces-state-up = up
+ifaces-state-down = down
+ifaces-state-no-carrier = 캐리어 없음
+ifaces-state-loopback = 루프백
+ifaces-none = 네트워크 인터페이스를 찾을 수 없습니다.
+ifaces-error = 네트워크 인터페이스 목록을 가져올 수 없습니다: { $error }
+
+## wpg doctor
+doctor-title = wpg doctor: 환경 점검
+doctor-summary = 정상 { $ok }개, 경고 { $warn }개, 실패 { $fail }개
+doctor-skip = 이 운영 체제에는 해당되지 않습니다
+doctor-caps-ok = 원시 소켓을 사용할 수 있습니다
+doctor-caps-missing = 원시 패킷 송신 권한이 없습니다(CAP_NET_RAW / root / Administrator)
+doctor-fix-caps = 권한을 부여하십시오: { $hint }
+doctor-iface-ok = 사용 가능한 네트워크 인터페이스가 하나 이상 up 상태입니다
+doctor-iface-none = 캐리어가 있는 up 상태의 비루프백 인터페이스가 없습니다
+doctor-iface-error = 네트워크 인터페이스를 열거할 수 없습니다
+doctor-fix-iface = 인터페이스를 확인하십시오: { $hint }
+doctor-af-xdp-ok = 커널이 AF_XDP를 지원합니다(5.10 이상)
+doctor-af-xdp-old = 커널이 너무 오래되어 AF_XDP를 사용할 수 없습니다(5.10 이상 필요). afpacket 백엔드는 계속 사용할 수 있습니다
+doctor-tpacket-v3-ok = 커널이 TPACKET_V3를 지원합니다
+doctor-tpacket-v3-old = 커널이 TPACKET_V3를 지원하지 않습니다. afpacket은 sendmmsg로 대체됩니다
+doctor-hugepages-ok = Hugepage가 구성되어 있습니다
+doctor-hugepages-none = Hugepage가 구성되어 있지 않습니다(DPDK 백엔드에만 필요)
+doctor-fix-hugepages = Hugepage를 예약하고 NIC를 DPDK에 바인딩하십시오: { $hint }
+doctor-npcap-ok = Npcap이 설치되어 있습니다
+doctor-npcap-missing = Npcap이 설치되어 있지 않습니다. Windows에서 송신하려면 필요합니다
+doctor-npcap-no-dll = Npcap이 설치된 것으로 보이지만 System32\Npcap에도 System32에도 wpcap.dll이 없습니다
+doctor-fix-npcap = Npcap을 설치(또는 재설치)한 후 wpg doctor를 다시 실행하십시오: { $hint }
+doctor-pcaplib-ok = libpcap을 사용할 수 있습니다
+doctor-pcaplib-missing = libpcap을 찾을 수 없습니다. pcap 백엔드를 사용할 수 없습니다
+doctor-fix-pcaplib = libpcap을 설치하십시오: { $hint }
+
+## wpg template lint (wpg-template `LintIssue` 키)
+lint-level-error = 오류
+lint-level-warning = 경고
+lint-schema-version = 지원되지 않는 스키마 버전 { $value }입니다(지원: { $expected }).
+lint-missing-name = `meta.name`이 비어 있습니다.
+lint-no-layers = 템플릿에 계층이 없습니다.
+lint-unknown-protocol = 알 수 없는 프로토콜 `{ $protocol }`입니다.
+lint-unknown-field = 프로토콜 `{ $protocol }`에 필드 `{ $field }`가 없습니다.
+lint-invalid-value = `{ $field }`의 값이 잘못되었습니다: { $value }
+lint-invalid-generator = `{ $field }`의 생성기가 잘못되었습니다: { $value }
+lint-unknown-variable = 알 수 없는 변수 `{ $value }`입니다.
+lint-missing-variable = 변수 `{ $value }`에 기본값이 없고 값도 지정되지 않았습니다.
+lint-unused-variable = 변수 `{ $value }`는 사용되지 않습니다.
+lint-duplicate-variable = 변수 `{ $value }`가 두 번 이상 선언되었습니다.
+lint-var-syntax = `{ $value }`에 닫히지 않은 변수 플레이스홀더가 있습니다.
+lint-override-unknown = 알 수 없는 변수 재정의 `{ $value }`입니다.
+lint-field-and-generator = `{ $field }`에 고정 값과 생성기가 모두 있습니다. 생성기가 우선합니다.
+lint-next-protocol-manual = `{ $next }`는 `{ $protocol }`의 바인딩 테이블에 없습니다. `{ $field }`는 Manual이 됩니다.
+lint-unknown-order = 스트림 순서의 `{ $value }`에 해당하는 생성기가 없습니다.
+lint-invalid-stream = 스트림 설정이 잘못되었습니다: { $value }
+lint-build-error = 패킷을 빌드할 수 없습니다: { $value }
+
+## wpg template / wpg render
+template-lint-ok = { $value }: 문제 없음
+template-lint-load-error = { $value }: { $error }
+template-lint-summary = 파일 { $ok }개에서 오류 { $fail }개, 경고 { $warn }개
+template-list-empty = { $value }에서 템플릿을 찾을 수 없습니다.
+template-show-hex = 16진 덤프({ $len }바이트)
+template-show-layout = 레이아웃
+render-done = 패킷 { $len }개를 { $value }에 기록했습니다.
+render-unbounded = 스트림이 무한합니다. --count N을 지정하십시오.
+cli-bad-var = 잘못된 --var `{ $value }`입니다. NAME=VALUE 형식이어야 합니다.
+
+## wpg send / wpg bench (진행 상황, 요약, 오류)
+tx-progress = [{ $t } s] { $packets } pkts  { $pps }pps  { $bps }bps  드롭 { $dropped }
+tx-progress-rate = 속도 { $ratio }%
+tx-progress-paused = (일시 중지됨)
+tx-progress-scheduled = (예약됨, { $secs }초 후 시작)
+tx-interrupted = 중단되었습니다. 정지하는 중...
+tx-ctrlc-warning = 경고: Ctrl-C 핸들러를 설치할 수 없습니다: { $error }
+tx-open-failed = `{ $iface }`에서 { $backend }를 열 수 없습니다: { $error }
+tx-start-failed = 작업을 시작할 수 없습니다: { $error }
+tx-available-backends = 사용 가능한 백엔드: { $value }
+tx-iface-required = { $backend } 백엔드에는 --iface가 필요합니다.
+tx-iface-required-pcapfile = pcapfile 백엔드에는 --iface <출력 경로>가 필요합니다.
+tx-bad-workers = --workers는 1 이상이어야 합니다.
+tx-workers-unsupported = { $backend } 백엔드는 워커를 하나만 지원합니다. --workers 1을 사용하십시오.
+tx-pin-cores-short = 경고: --pin-cores에 워커 { $workers }개에 대해 코어가 { $count }개만 지정되었습니다. 나머지는 고정되지 않습니다.
+tx-json-error = JSON을 기록할 수 없습니다: { $error }
+send-bad-rate = 잘못된 --rate: { $error }
+send-bad-duration = 잘못된 --duration: { $error }
+send-bad-ramp-up = 잘못된 --ramp-up: { $error }
+send-bad-start-at = 잘못된 --start-at: { $error }
+send-link-speed-unknown = `{ $value }%`에 필요한 `{ $iface }`의 링크 속도를 확인할 수 없습니다. `1Gbps`와 같은 절대 속도를 지정하십시오.
+send-bad-plan = --plan은 auto, prerender, onthefly 중 하나여야 합니다.
+send-stream-error = 스트림 오류: { $error }
+send-render-error = 렌더링 오류: { $error }
+send-starting = { $iface }에서 { $backend }{ $detail }(으)로 송신: 속도 { $rate }, 버스트 { $burst }, { $limit }, 워커 { $workers }개, 플랜 { $strategy }({ $reason })
+send-limit-count = 패킷 { $count }개
+send-limit-count-or-duration = 패킷 { $count }개 또는 { $duration }
+send-limit-duration = { $duration } 동안
+send-limit-forever = Ctrl-C까지
+send-ramp-up = 램프업: { $duration }에 걸쳐 0에서 { $rate }까지
+send-scheduled = { $time }에 시작 예약됨({ $secs }초 후). Ctrl-C로 취소합니다.
+summary-state = 상태       { $value }
+summary-state-finished = 완료({ $reason })
+summary-state-failed = 실패: { $error }
+summary-reason-count-reached = 개수 도달
+summary-reason-duration-elapsed = 지정 시간 경과
+summary-reason-source-exhausted = 스트림 소진
+summary-reason-stopped = 정지됨
+summary-backend = 백엔드     { $backend }{ $detail }
+summary-workers = 워커       { $workers }
+summary-packets = 패킷       { $value }
+summary-bytes = 바이트     { $value }
+summary-dropped = 드롭       { $value }
+summary-elapsed = 경과 시간  { $secs } s
+summary-average = 평균       { $pps }pps  { $bps }bps (L2)  { $l1 }bps (L1)
+summary-accuracy = 정확도     목표 { $target }{ $unit }  달성률 { $ratio }%  최대 지터 { $max }  평균 지터 { $mean }
+summary-stream = 스트림 { $index }   { $packets } pkts  { $bytes } bytes
+summary-worker = 워커 { $index }   { $packets } pkts  { $bytes } bytes{ $core }
+summary-worker-core = , 코어 { $core }
+summary-warning = 경고       { $error }
+summary-unsigned = 서명 없음  { $value }(서명을 넣을 공간 없음)
+
+## wpg capture (수신 / 검증)
+rx-progress = [{ $t } s] { $packets } pkts  { $pps }pps  { $bps }bps  일치 { $matched }({ $mpps }pps)  드롭 { $dropped }
+capture-starting = { $iface }에서 { $backend }(으)로 캡처 중, 필터 { $filter }(Ctrl-C로 정지)
+capture-filter-all = (모든 프레임)
+capture-iface-required-pcapfile = pcapfile 백엔드에는 --iface <캡처 파일>이 필요합니다.
+capture-bad-filter = 잘못된 --filter: { $error }
+capture-running = 실행 중
+capture-reason-end-of-input = 입력 끝
+capture-packet = #{ $index }  { $time }  { $len } B  { $layers }{ $signature }
+capture-packet-signature = { "  " }[wpg 스트림 { $stream } seq { $seq }]
+capture-summary-matched = 일치       { $packets } pkts  { $bytes } bytes
+capture-summary-average = 평균       { $pps }pps  { $bps }bps  일치 { $mpps }pps  { $mbps }bps
+capture-summary-saved = 저장       { $count } pkts → { $path }
+capture-summary-signed = 서명       서명 있음 { $signed }, 서명 없음 { $unsigned }
+capture-summary-stream = 스트림 { $stream } 수신 { $received }  seq { $first }-{ $last }  손실 { $lost }({ $ratio }%)  순서 바뀜 { $reordered }  중복 { $duplicates }
+capture-summary-latency = { "             " }지연 최소 { $min }  평균 { $avg }  최대 { $max }  지터 { $jitter }
+
+bench-iface = 인터페이스 { $iface }
+bench-worker = 워커 { $index }   { $detail }
+bench-frame = 프레임     { $len } B (+4 FCS)  배치 { $batch }
+bench-template = 템플릿     { $value }(온더플라이, { $mode })
+bench-mode-patch = 제자리 패치
+bench-mode-rebuild = 프레임마다 전체 재빌드
+bench-rate = 속도       { $pps }pps
+bench-bits = { $bps }bps (L2)  { $l1 }bps (L1)
+bench-bad-duration = --duration은 0 이상의 초 단위 숫자여야 합니다.
+bench-failed = 벤치마크 실패: { $error }
+import-done = 패킷 { $len }개를 템플릿 { $count }개로 가져왔습니다: { $value }
+import-read-error = { $value }: { $error }
+import-write-error = { $value }: { $error }
+import-note = { $value }
+import-note-packet = 패킷 { $index }: { $value }
+import-packet-problems = 패킷 { $index }에 파싱 문제가 { $count }개 있습니다
+import-packet-skipped = 패킷 { $index }를 디코딩할 수 없어 건너뛰었습니다
+import-not-reproducible = 가져온 템플릿으로 캡처된 옥텟을 재현할 수 없어 프레임을 원시 데이터로 저장했습니다.
+import-mixed-stacks = 패킷 { $count }개의 계층 스택이 첫 패킷과 다릅니다. 생성기를 추론하지 않았습니다.
+import-generator-approximate = { $value }는 캡처된 값의 근사치일 뿐입니다.
+import-generators-dropped = 추론된 생성기가 잘못된 스트림을 만들어 폐기했습니다.
+template-export-none = 내보낼 템플릿이 지정되지 않았습니다.
+template-export-not-found = 템플릿을 찾을 수 없습니다: { $value }
+template-export-done = 템플릿 { $count }개를 { $value }(으)로 내보냈습니다.
+template-export-error = { $value }: { $error }
+template-import-done = { $value }에서 템플릿 { $count }개를 { $detail }에 추출했습니다.
+template-import-exists = { $value }: 이미 존재합니다(덮어쓰려면 --force 사용)
+template-import-error = { $value }: { $error }
+template-migrate-outdated = { $value }: 스키마 { $found }, { $expected }(으)로 마이그레이션이 필요합니다
+template-migrate-done = { $value }: 스키마 { $found }에서 { $expected }(으)로 마이그레이션했습니다
+template-migrate-error = { $value }: { $error }
+template-migrate-summary = 마이그레이션 { $count }개, 이미 스키마 { $expected } { $ok }개, 오류 { $fail }개
+template-migrate-check-summary = 마이그레이션 필요 { $count }개, 이미 스키마 { $expected } { $ok }개, 오류 { $fail }개
+
+## API 오류 (wpg-server)
+api-error-not-found = { $what }을(를) 찾을 수 없습니다.
+api-error-invalid-body = 잘못된 요청 본문: { $error }
+api-error-invalid-query = 잘못된 요청 매개변수: { $error }
+api-error-invalid-template = 잘못된 템플릿: { $error }
+api-error-invalid-hex = 잘못된 16진 입력: { $error }
+api-error-parse-failed = 바이트를 디코딩할 수 없습니다: { $error }
+api-error-render-failed = 렌더링 실패: { $error }
+api-error-count-range = `count`는 1에서 { $max } 사이여야 합니다(입력 값: { $error }).
+api-error-read-only = 템플릿 { $id }는 읽기 전용 라이브러리에 속합니다. 편집하려면 복제하십시오.
+api-error-policy-iface = 서버 정책상 { $iface }에서 송신할 수 없습니다(허용: { $allowed }).
+api-error-policy-rate = 속도 { $rate }가 서버 정책의 최대값({ $max })을 초과합니다.
+api-error-policy-unlimited = 서버 정책상 무제한 속도는 허용되지 않습니다(최대 { $max }).
+api-error-invalid-state = 작업 { $id }의 상태가 { $state }이므로 { $action }할 수 없습니다.
+api-error-job-spec = 잘못된 작업: { $error }
+api-error-backend = 송신 백엔드 오류: { $error }
+api-error-capture-spec = 잘못된 캡처: { $error }
+api-error-capture-filter = 잘못된 캡처 필터: { $error }
+api-error-capture-backend = 수신 백엔드 오류: { $error }
+api-error-capture-state = 캡처 { $id }의 상태가 { $state }이므로 { $action }할 수 없습니다.
+api-error-internal = 내부 서버 오류: { $error }
+auth-error-unauthorized = 로그인하십시오.
+auth-error-bad-credentials = 사용자 이름 또는 비밀번호가 올바르지 않습니다.
+auth-error-setup-required = 관리자 비밀번호가 아직 설정되지 않았습니다. 먼저 설정을 완료하십시오.
+auth-error-already-configured = 관리자 비밀번호가 이미 설정되어 있습니다.
+auth-error-rate-limited = 로그인 실패가 너무 많습니다. { $secs }초 후에 다시 시도하십시오.
+auth-error-csrf = CSRF 토큰(X-CSRF-Token 헤더)이 없거나 잘못되었습니다.
+auth-error-origin = 다른 출처(origin)에서의 WebSocket 연결은 허용되지 않습니다.
+auth-error-setup-remote = 관리자 비밀번호는 서버 자체(localhost)에서만 설정할 수 있습니다.
+auth-error-password-mismatch = 비밀번호가 일치하지 않습니다.
+auth-error-password-short = 비밀번호는 { $min }자 이상이어야 합니다.
+lint-parse-error = 템플릿을 파싱할 수 없습니다: { $error }
+
+## 구성 (wpg.toml)
+config-issue-file-missing = 파일을 찾을 수 없음
+config-issue-bad-url = http:// 또는 https://로 시작해야 함
+config-issue-not-argon2 = argon2 해시($argon2id$...)로 보이지 않음
+config-issue-password-both = password_hash와 password_file이 모두 설정됨. password_hash가 우선함
+config-issue-zero = 0보다 커야 함
+config-issue-exposed-without-password = 비밀번호 없이 루프백이 아닌 주소에서 수신 대기 중
+config-issue-dir-missing = 디렉터리를 찾을 수 없음
+config-issue-max-rate-percent = 링크 백분율은 서버 전체 최대값으로 사용할 수 없음. pps 또는 bps를 사용할 것
+config-issue-bad-rate = 잘못된 속도
+config-issue-unknown-backend = 알 수 없는 백엔드
+config-issue-backend-unavailable = 이 빌드 또는 이 OS에서 사용할 수 없는 백엔드
+config-issue-bad-log-level = 잘못된 로그 필터
+config-level-error = 오류
+config-level-warning = 경고
+config-issue-line = { $level }: { $key }: { $message }{ $detail }
+config-load-error = 구성 오류: { $error }
+config-init-written = { $path }를 작성했습니다. 편집한 후 `wpg config validate`로 확인하십시오.
+config-init-exists = { $path }가 이미 존재합니다(덮어쓰려면 --force 사용).
+config-validate-ok = 구성에 문제가 없습니다({ $source }).
+config-validate-summary = 오류 { $errors }개, 경고 { $warnings }개({ $source }).
+config-source-defaults = 내장 기본값 및 환경 변수
+config-password-prompt = 새 관리자 비밀번호:{ " " }
+config-password-confirm = 비밀번호 확인:{ " " }
+config-password-mismatch = 비밀번호가 일치하지 않습니다.
+config-password-short = 비밀번호는 { $min }자 이상이어야 합니다.
+config-password-written = 비밀번호 해시를 { $path }(auth.password_hash)에 저장했습니다. 적용하려면 `wpg serve`를 다시 시작하십시오.
+
+## wpg serve
+serve-banner-title = { $app } { $version }
+serve-banner-listen = 수신 대기       { $url }/
+serve-banner-docs = API 문서         { $url }/api/docs/
+serve-banner-config = 구성             { $source }
+serve-banner-data = 데이터 디렉터리  { $path }
+serve-banner-library = 라이브러리       { $path }{ $state }
+serve-banner-user-dir = 사용자 템플릿    { $path }
+serve-banner-templates = 템플릿           { $count }
+serve-banner-backends = 백엔드           { $list }
+serve-banner-missing = { " " }(없음)
+serve-banner-dev = 개발 모드: { $origins }에 대해 CORS 허용
+serve-banner-no-password = 비밀번호가 구성되지 않은 상태로 서버가 { $url }에서 수신 대기 중입니다(--allow-insecure). 접근할 수 있는 누구나 관리자 비밀번호를 설정하고 패킷을 송신할 수 있습니다. 가능한 한 빨리 비밀번호를 설정하십시오(wpg config set-password).
+serve-failed = 서버 오류: { $error }
+serve-log-error = 로깅을 설정할 수 없습니다: { $error }
+serve-banner-tls = TLS              { $path }
+serve-banner-tls-self-signed = TLS              { $path }(자체 서명)
+serve-banner-fingerprint = SHA-256          { $fingerprint }
+serve-banner-auth = 로그인           { $state }
+serve-banner-auth-setup = 비밀번호 미설정: 설정 화면에서 설정하십시오
+serve-banner-auth-configured = 관리자 비밀번호 출처: { $source }
+serve-banner-auth-database = 설정 화면에서 설정한 관리자 비밀번호
+serve-banner-setup-local = 관리자 비밀번호가 아직 설정되지 않았습니다. 이 컴퓨터의 브라우저에서 { $url }을(를) 열어 설정하십시오.
+serve-refuse-insecure = { $addr }에서의 수신 대기를 거부합니다: 관리자 비밀번호가 구성되지 않았습니다. 루프백 주소(127.0.0.1)를 사용하거나, 비밀번호를 설정하거나(--password-file, WPG_PASSWORD, wpg config set-password), --allow-insecure를 지정하십시오.
+serve-password-arg-warning = 경고: --password는 프로세스 목록을 통해 다른 사용자에게 보입니다. --password-file, WPG_PASSWORD 또는 `wpg config set-password`를 사용하십시오.
+
+## 웹 UI (wpg-web). 키는 crates/wpg-web의 `ui_keys_exist` 테스트로 검사합니다.
+ui-lang-ja = 日本語
+ui-lang-en = English
+ui-lang-zh-cn = 简体中文
+ui-lang-zh-tw = 繁體中文
+ui-lang-ko = 한국어
+ui-lang-de = Deutsch
+ui-lang-fr = Français
+ui-lang-es = Español
+ui-loading = 불러오는 중…
+ui-close = 닫기
+ui-cancel = 취소
+ui-delete = 삭제
+ui-save = 저장
+ui-refresh = 새로 고침
+ui-retry = 다시 시도
+ui-yes = 예
+ui-no = 아니요
+ui-unlimited = 무제한
+ui-help = 키보드 단축키
+ui-help-title = 키보드 단축키
+ui-skip-to-content = 본문으로 건너뛰기
+ui-not-found = 이 페이지는 존재하지 않습니다.
+ui-back-to-dashboard = 대시보드로 돌아가기
+ui-view-only = 좁은 화면: 보기 전용입니다. 편집은 더 넓은 화면에서 가능합니다.
+ui-server-unreachable = 서버에 연결할 수 없습니다. `wpg serve`가 실행 중입니까?
+ui-error-http = 서버가 HTTP { $id }(으)로 응답했습니다.
+ui-error-network = 네트워크 오류: { $error }
+ui-error-decode = 서버에서 예상치 못한 응답을 받았습니다: { $error }
+ui-nav-label = 기본 탐색
+ui-nav-dashboard = 대시보드
+ui-nav-builder = 빌더
+ui-nav-jobs = 작업
+ui-nav-templates = 템플릿
+ui-nav-rx = 수신
+ui-nav-settings = 설정
+ui-shortcut-hint = 키보드 단축키 표시
+ui-shortcut-dashboard = 대시보드로 이동
+ui-shortcut-builder = 빌더로 이동
+ui-shortcut-jobs = 작업으로 이동
+ui-shortcut-templates = 템플릿으로 이동
+ui-shortcut-rx = 수신으로 이동
+ui-shortcut-settings = 설정으로 이동
+ui-shortcut-new-job = 새 작업
+ui-shortcut-logs = 서버 로그 표시 / 숨기기
+ui-shortcut-help = 이 도움말 표시
+ui-shortcut-escape = 대화 상자 닫기
+ui-ws-connecting = 연결 중…
+ui-ws-open = 실시간
+ui-ws-closed = 연결 끊김(재시도 중)
+ui-theme = 테마
+ui-theme-light = 라이트
+ui-theme-dark = 다크
+ui-theme-system = 시스템
+ui-theme-to-dark = 다크 테마로 전환
+ui-theme-to-light = 라이트 테마로 전환
+ui-logout = 로그아웃
+ui-logs-toggle = 서버 로그
+ui-logs-title = 서버 로그
+ui-logs-level = 레벨
+ui-logs-follow = 자동 스크롤
+ui-logs-clear = 로그 지우기
+ui-logs-count = { $count }줄
+ui-logs-empty = 아직 로그가 없습니다.
+ui-login-title = 로그인
+ui-login-submit = 로그인
+ui-login-busy = 로그인 중…
+ui-login-wrong = 비밀번호가 올바르지 않습니다.
+ui-login-rate-limited = 시도 횟수가 너무 많습니다. { $secs }초 후에 다시 시도하십시오.
+ui-login-wait = { $secs }초 대기
+ui-password = 비밀번호
+ui-password-confirm = 비밀번호 확인
+ui-setup-title = 관리자 비밀번호 설정
+ui-setup-intro = 이 서버에는 아직 비밀번호가 없습니다. 웹 UI와 API를 보호할 비밀번호를 정하십시오.
+ui-setup-hint = { $min }자 이상.
+ui-setup-too-short = 비밀번호는 { $min }자 이상이어야 합니다.
+ui-setup-mismatch = 비밀번호가 일치하지 않습니다.
+ui-setup-submit = 비밀번호 설정
+ui-dash-totals = 합계
+ui-dash-active-jobs = 활성 작업
+ui-dash-running-jobs = 송신 중
+ui-dash-total-pps = 총 pps
+ui-dash-total-bps = 총 비트 전송률
+ui-dash-templates = 템플릿
+ui-dash-uptime = 서버 가동 시간
+ui-dash-running = 실행 중인 작업
+ui-dash-no-running = 실행 중인 작업이 없습니다.
+ui-dash-doctor = 자가 진단
+ui-dash-ifaces = 인터페이스
+ui-doctor-ok = 모든 점검 통과
+ui-doctor-warn = 경고 있음
+ui-doctor-fail = 문제 발견
+ui-doctor-counts = 정상 { $ok } · 경고 { $warn } · 실패 { $fail }
+ui-doctor-details = 전체 보고서
+ui-doctor-status = 상태
+ui-doctor-check = 점검 항목
+ui-doctor-detail = 세부 정보 / 해결 방법
+ui-doctor-status-ok = 정상
+ui-doctor-status-warn = 경고
+ui-doctor-status-fail = 실패
+ui-doctor-status-skip = 건너뜀
+ui-iface-name = 이름
+ui-iface-state = 상태
+ui-iface-mac = MAC
+ui-iface-addrs = 주소
+ui-iface-mtu = MTU
+ui-iface-speed = 속도
+ui-iface-allowed = 송신 허용
+ui-iface-up = Up
+ui-iface-down = Down
+ui-iface-no-carrier = 캐리어 없음
+ui-stat-pps = 패킷/초
+ui-stat-bps = 비트 전송률(L2)
+ui-stat-l1-bps = 비트 전송률(L1)
+ui-stat-packets = 패킷
+ui-stat-bytes = 바이트
+ui-stat-dropped = 드롭
+ui-stat-ratio = 달성률
+ui-stat-elapsed = 경과 시간
+ui-spark-pps = 초당 패킷 수(최근 30초)
+ui-state-created = 생성됨
+ui-state-scheduled = 예약됨
+ui-state-running = 실행 중
+ui-state-paused = 일시 중지됨
+ui-state-finished = 완료
+ui-state-failed = 실패
+ui-state-unknown = 알 수 없음
+ui-reason-count-reached = 패킷 수 도달
+ui-reason-duration-elapsed = 지정 시간 경과
+ui-reason-source-exhausted = 모든 패킷 송신 완료
+ui-reason-stopped = 정지됨
+ui-jobs-new = 새 작업
+ui-jobs-tab-live = 현재
+ui-jobs-tab-history = 기록
+ui-jobs-empty = 작업이 없습니다.
+ui-jobs-streams = 스트림
+ui-jobs-template = 템플릿
+ui-jobs-choose-template = 템플릿 선택…
+ui-jobs-weight = 가중치
+ui-jobs-add-stream = 스트림 추가
+ui-jobs-remove-stream = 스트림 제거
+ui-jobs-mix = 혼합
+ui-mix-weighted = 가중치 기반
+ui-mix-sequential = 순차
+ui-mix-round-robin = 라운드 로빈
+ui-jobs-target = 송신 대상
+ui-jobs-backend = 백엔드
+ui-jobs-iface = 인터페이스
+ui-jobs-choose-iface = 인터페이스 선택…
+ui-jobs-iface-not-needed = 이 백엔드에는 필요 없음
+ui-jobs-iface-denied = 허용되지 않음
+ui-jobs-dry-run = 드라이 런: pcapng 파일 이름
+ui-jobs-dry-run-hint = 지정하면 아무것도 송신하지 않고, 패킷을 서버의 캡처 디렉터리 아래 이 파일에 기록합니다.
+ui-jobs-how = 송신 방법
+ui-jobs-rate = 속도
+ui-jobs-count = 패킷 수
+ui-jobs-duration = 지속 시간
+ui-jobs-burst = 버스트
+ui-jobs-workers = 워커
+ui-jobs-workers-disabled = 워커를 여러 개 사용하려면 멀티 워커 백엔드와 단일 스트림이 필요합니다.
+ui-jobs-from-template = 템플릿 값 사용
+ui-jobs-name = 이름
+ui-jobs-name-placeholder = 기본값은 템플릿 이름
+ui-jobs-start-now = 즉시 시작
+ui-jobs-create = 작업 생성
+ui-jobs-create-start = 생성 후 시작
+ui-jobs-created = 작업 “{ $id }”을(를) 생성했습니다.
+ui-jobs-need-iface = 인터페이스를 선택하십시오.
+ui-jobs-need-template = 모든 스트림에 템플릿을 선택하십시오.
+ui-jobs-bad-weight = 가중치는 양의 정수여야 합니다.
+ui-rate-default = 비워 두면 템플릿의 속도(또는 서버의 제한)를 사용합니다.
+ui-rate-is-pps = → { $rate }
+ui-rate-is-bps = → 회선상 { $rate }(계층 1)
+ui-rate-is-percent = → 링크 속도의 { $rate } %
+ui-rate-is-ifg = 프레임 간 고정 간격: { $rate }
+ui-rate-is-unlimited = 가능한 한 빠르게
+ui-valid-empty = 필수 항목입니다.
+ui-valid-number = 숫자가 아닙니다.
+ui-valid-integer = 정수를 입력하십시오.
+ui-valid-range = 0보다 커야 합니다.
+ui-valid-percent = 백분율은 100 이하여야 합니다.
+ui-valid-rate-unit = 알 수 없는 단위입니다: pps, kpps, Mpps, bps, kbps, Mbps, Gbps, %, ifg=<시간> 또는 unlimited를 사용하십시오.
+ui-valid-duration-unit = 알 수 없는 단위입니다: ns, us, ms, s, m 또는 h를 사용하십시오.
+ui-valid-capture-name = “..”를 포함하지 않는 상대 파일 이름을 사용하십시오.
+ui-confirm-send-title = 실제 인터페이스로 송신하시겠습니까?
+ui-confirm-send-body = 이 작업은 네트워크에 패킷을 송신합니다. 인터페이스와 속도가 이 네트워크에 적합한지 확인하십시오.
+ui-confirm-send = 송신
+ui-job-detail = 작업
+ui-job-state = 상태
+ui-job-start = 시작
+ui-job-pause = 일시 중지
+ui-job-resume = 재개
+ui-job-stop = 정지
+ui-job-download-report = 보고서(JSON)
+ui-job-live = 실시간 통계
+ui-job-streams = 스트림별
+ui-job-inline-template = (인라인 템플릿)
+ui-job-workers = 워커별
+ui-job-workers-pending = 워커별 카운터는 최종 보고서에 포함되며, 작업이 끝난 후 확인할 수 있습니다.
+ui-job-active = 활성 시간
+ui-job-core = 코어
+ui-job-accuracy = 페이싱 정확도
+ui-acc-target = 목표
+ui-acc-achieved = 달성
+ui-acc-jitter = 지터(평균 / 최대)
+ui-job-spec = 설정
+ui-job-created = 생성 시각
+ui-job-started = 시작 시각
+ui-job-finished = 종료 시각
+ui-job-deleted = 작업을 삭제했습니다.
+ui-job-delete-title = 이 작업을 삭제하시겠습니까?
+ui-job-delete-body = 실행 중인 작업은 먼저 정지됩니다. 보고서는 기록에 남습니다.
+ui-tpl-import = 가져오기
+ui-tpl-new = 새 템플릿
+ui-tpl-search = 이름, 설명, 태그, 프로토콜 검색…
+ui-tpl-source = 출처
+ui-tpl-source-all = 전체
+ui-tpl-source-library = 라이브러리
+ui-tpl-source-user = 내 템플릿
+ui-tpl-favorites-only = 즐겨찾기만
+ui-tpl-tags = 태그
+ui-tpl-recent = 최근 사용
+ui-tpl-empty = 일치하는 템플릿이 없습니다.
+ui-tpl-favorite = 즐겨찾기
+ui-tpl-view = YAML 보기 / 편집
+ui-tpl-open-builder = 빌더에서 열기
+ui-tpl-new-job = 이 템플릿으로 새 작업
+ui-tpl-export = YAML 다운로드
+ui-tpl-duplicate = 복제
+ui-tpl-imported = 템플릿 “{ $id }”을(를) 가져왔습니다.
+ui-tpl-duplicated = 사본 “{ $id }”을(를) 생성했습니다.
+ui-tpl-deleted = 템플릿 “{ $id }”을(를) 삭제했습니다.
+ui-tpl-delete-title = 이 템플릿을 삭제하시겠습니까?
+ui-tpl-delete-body = “{ $id }”이(가) 템플릿 디렉터리에서 제거됩니다.
+ui-tpl-saved = 템플릿을 저장했습니다.
+ui-tpl-yaml = 템플릿 YAML
+ui-tpl-read-only = 라이브러리 템플릿은 읽기 전용입니다. 복제하여 사본을 편집하십시오.
+ui-lint-run = 검사(lint)
+ui-lint-clean = 문제가 없습니다.
+ui-lint-summary = 오류 { $errors }개, 경고 { $warnings }개
+ui-set-appearance = 화면 표시
+ui-set-account = 계정
+ui-set-logged-in = { $id }(으)로 로그인했습니다.
+ui-set-auth-disabled = 이 서버에서는 인증이 활성화되어 있지 않습니다.
+ui-set-client = 이 브라우저
+ui-set-client-note = 이 브라우저에만 저장됩니다. 서버 구성(wpg.toml)은 API를 통해 공개되지 않습니다.
+ui-set-api = API
+ui-set-ws = 이벤트
+ui-set-ui-version = UI 버전
+ui-set-api-docs = API 문서(Swagger UI)
+ui-set-about = 정보
+ui-set-server-version = 서버 버전
+ui-set-api-version = API 버전
+ui-set-platform = 플랫폼
+ui-set-features = 선택적 기능
+ui-set-locales = 언어
+ui-set-license = wpg는 MIT 또는 Apache-2.0 이중 라이선스로 제공됩니다.
+ui-builder-placeholder = 패킷 빌더(프로토콜 팔레트, 계층 스택, 필드 편집기, 16진 / 트리 보기)는 다음 마일스톤 단계에서 제공됩니다.
+ui-builder-placeholder-template = 패킷 빌더는 다음 마일스톤 단계에서 제공됩니다. 템플릿 “{ $id }”은(는) 여기에서 열립니다.
+ui-reason-end-of-input = 캡처 파일 끝
+ui-valid-stream-id = 0에서 4294967295 사이의 정수를 입력하십시오.
+ui-jobs-verification = 수신 검증
+ui-jobs-signature = 검증용 서명 삽입
+ui-jobs-signature-hint = 모든 프레임의 마지막 페이로드 24옥텟에 스트림 ID, 시퀀스 번호, 송신 시각을 기록하여 “서명 검증”을 켠 캡처에서 손실, 순서, 지연을 측정할 수 있게 합니다.
+ui-jobs-stream-id = 서명 스트림 ID(첫 번째 스트림)
+ui-job-signature = 서명
+ui-job-signature-on = 켜짐(스트림 ID { $id }부터)
+ui-rx-new = 새 캡처
+ui-rx-file = 캡처 파일
+ui-rx-file-hint = 서버 캡처 디렉터리에 있는 pcap / pcapng 파일 이름(예: 작업의 드라이 런 출력).
+ui-rx-iface-any = any(모든 인터페이스)
+ui-rx-filter = 필터
+ui-rx-filter-empty = 비워 두면 모든 프레임이 일치합니다.
+ui-rx-filter-checking = 필터 확인 중…
+ui-rx-filter-ok = 유효: { $filter }
+ui-rx-filter-error = { $error }({ $offset }번째 문자)
+ui-rx-count-hint = 일치하는 프레임이 이 개수에 도달하면 정지합니다.
+ui-rx-keep = 보관할 프레임 수
+ui-rx-keep-hint = 일치하는 처음 N개의 프레임을 표시용으로 보관합니다(최대 10000).
+ui-rx-keep-max = 최대 10000입니다.
+ui-rx-save = pcapng로 저장(파일 이름)
+ui-rx-save-hint = 선택 사항: 일치하는 프레임을 서버 캡처 디렉터리의 이 파일에도 기록합니다.
+ui-rx-save-same = 출력 파일은 입력 파일과 달라야 합니다.
+ui-rx-name-placeholder = 기본값은 백엔드:인터페이스
+ui-rx-options = 옵션
+ui-rx-verify = 서명 검증(손실, 순서, 지연)
+ui-rx-promisc = 무차별 모드
+ui-rx-outgoing = 이 호스트가 송신하는 프레임 포함
+ui-rx-start = 캡처 시작
+ui-rx-started = 캡처 “{ $id }”을(를) 시작했습니다.
+ui-rx-list = 캡처
+ui-rx-empty = 아직 캡처가 없습니다.
+ui-rx-source = 인터페이스 / 파일
+ui-rx-actions = 동작
+ui-rx-stop = 정지
+ui-rx-stop-named = “{ $id }” 정지
+ui-rx-delete-named = “{ $id }” 삭제
+ui-rx-deleted = 캡처를 삭제했습니다.
+ui-rx-delete-title = 이 캡처를 삭제하시겠습니까?
+ui-rx-delete-body = 실행 중인 캡처는 먼저 정지됩니다. 저장된 pcapng 파일은 서버에 남습니다.
+ui-rx-download = pcapng 다운로드
+ui-rx-counters = 카운터
+ui-rx-matched = 일치
+ui-rx-matched-pps = 일치 패킷/초
+ui-rx-matched-bps = 일치 비트 전송률
+ui-rx-matched-bytes = 일치 바이트
+ui-rx-saved = 파일에 저장됨
+ui-rx-kept = 표시용으로 보관됨
+ui-rx-verify-title = 검증
+ui-rx-verify-off = 이 캡처에서는 서명 검증이 꺼져 있습니다.
+ui-rx-verify-none = 아직 서명된 프레임을 수신하지 않았습니다.
+ui-rx-signed = 서명된 프레임
+ui-rx-unsigned = 서명되지 않은 프레임
+ui-rx-lost = 손실
+ui-rx-stream = 스트림
+ui-rx-received = 수신
+ui-rx-seq-range = 시퀀스 번호
+ui-rx-out-of-order = 순서 바뀜
+ui-rx-duplicates = 중복
+ui-rx-latency = 지연(최소 / 평균 / 최대)
+ui-rx-jitter = 지터
+ui-rx-latency-note = 손실 프레임은 시퀀스 번호의 공백으로 추정합니다. 지연은 송신자와 수신자가 같은 클럭을 공유할 때(같은 호스트, 또는 PTP / NTP 동기화)에만 의미가 있습니다.
+ui-rx-frames = 캡처된 프레임
+ui-rx-frames-empty = 아직 일치하는 프레임이 없습니다.
+ui-rx-time = 시간(s)
+ui-rx-length = 길이
+ui-rx-signature = 서명
+ui-rx-sig-value = 스트림 { $stream } · seq { $seq }
+ui-rx-show-more = 더 보기({ $max }개 중 { $count }개)
+ui-rx-frame-title = 프레임 { $index }
+ui-rx-select-frame = 프레임을 선택하면 옥텟과 디코딩된 계층을 볼 수 있습니다.
+ui-rx-decode-failed = 프레임을 디코딩할 수 없습니다: { $error }
+ui-rx-truncated = { $len }옥텟 중 { $bytes }옥텟만 캡처되었습니다.
+
+# --- P1 L2/캡슐화 프로토콜 필드 설명 ---
+lldp-tlvs = LLDP TLV(7비트 유형 + 9비트 길이 헤더).
+cdp-version = CDP 프로토콜 버전(2).
+cdp-ttl = 이 광고가 유효한 시간(초).
+cdp-checksum = CDP 헤더와 TLV에 대한 인터넷 체크섬(Auto).
+cdp-tlvs = CDP TLV(16비트 유형, 헤더를 포함한 16비트 길이).
+stp-protocol-id = Spanning Tree 프로토콜 식별자(항상 0).
+stp-version = 프로토콜 버전(0 = STP, 2 = RSTP, 3 = MSTP).
+stp-type = BPDU 유형(0 = 구성, 2 = RST/MST, 0x80 = TCN).
+stp-flags = BPDU 플래그(토폴로지 변경, 제안, 역할, 학습, 전달, 합의, TCA).
+stp-root-priority = 루트 브리지 우선순위 및 시스템 ID 확장.
+stp-root-mac = 루트 브리지 MAC 주소.
+stp-root-path-cost = 루트 브리지까지의 경로 비용.
+stp-bridge-priority = 송신 브리지 우선순위 및 시스템 ID 확장.
+stp-bridge-mac = 송신 브리지 MAC 주소.
+stp-port-id = 송신 포트 식별자(우선순위 + 번호).
+stp-message-age = BPDU의 경과 시간(1/256초 단위).
+stp-max-age = 타임아웃 전 BPDU 최대 경과 시간(1/256초 단위).
+stp-hello-time = 구성 BPDU 간 간격(1/256초 단위).
+stp-forward-delay = 전달 지연 타이머(1/256초 단위).
+stp-trailer = RSTP / MSTP 확장(version-1 길이, v3 길이, MSTI 레코드). 불투명 옥텟.
+lacp-subtype = Slow Protocols 하위 유형(1 = LACP).
+lacp-actor-system = Actor 시스템 MAC 주소.
+lacp-actor-state = Actor 상태 플래그(activity, timeout, aggregation, sync, collecting, distributing, defaulted, expired).
+lacp-partner-system = Partner 시스템 MAC 주소.
+lacp-partner-state = Partner 상태 플래그.
+marker-subtype = Slow Protocols 하위 유형(2 = Marker).
+eapol-version = EAPOL 프로토콜 버전.
+eapol-type = EAPOL 패킷 유형(0 = EAP, 1 = Start, 2 = Logoff, 3 = Key).
+eapol-length = EAPOL 본문 길이(옥텟, Auto).
+eapol-body = EAPOL 본문(유형 0이면 EAP 패킷). 불투명 옥텟.
+pppoe-version = PPPoE 프로토콜 버전(1).
+pppoe-type = PPPoE 유형(1).
+pppoe-code = PPPoE 코드(PADI / PADO / PADR / PADS / PADT, 0 = 세션 데이터).
+pppoe-session-id = PPPoE 세션 식별자.
+pppoe-length = PPPoE 페이로드 길이(옥텟, Auto).
+pppoe-tags = PPPoE 디스커버리 TAG(16비트 유형, 16비트 길이).
+ppp-protocol = 페이로드의 PPP 프로토콜 식별자(LCP / IPCP / IP / IPv6 / ...).
+ppp-cp-code = PPP 제어 프로토콜 코드(Configure-Request / Ack / Nak / ...).
+ppp-cp-identifier = PPP 제어 프로토콜 요청 식별자.
+ppp-cp-length = PPP 제어 프로토콜 패킷 길이(옥텟, Auto).
+ppp-cp-options = PPP 제어 프로토콜 옵션(8비트 유형 / 길이 TLV).
+vxlan-flags = VXLAN 플래그(I 비트 = VNI 유효).
+vxlan-vni = 24비트 VXLAN 네트워크 식별자(VNI).
+gre-flags = GRE 플래그 및 버전(체크섬 / 키 / 시퀀스 존재 비트).
+gre-protocol-type = 캡슐화된 페이로드의 EtherType.
+nvgre-vsid = 24비트 NVGRE 가상 서브넷 ID.
+nvgre-flowid = NVGRE FlowID(부하 분산용 엔트로피).
+mpls-label = 20비트 MPLS 레이블 값. 0-15는 예약됨(0 / 2 explicit null, 1 router alert, 3 implicit null, 7 entropy label indicator, 13 GAL, 14 OAM alert, 15 extension). SR-MPLS SID는 SRGB 기준값 + SID 인덱스입니다.
+mpls-tc = 3비트 트래픽 클래스(QoS / ECN).
+mpls-s = Bottom-of-stack 비트(1 = 마지막 레이블, 다음 계층에서 Auto).
+mpls-ttl = MPLS TTL(Time To Live).
+gtpu-version = GTP 버전(1).
+gtpu-pt = 프로토콜 유형(1 = GTP, 0 = GTP').
+gtpu-e = 확장 헤더 존재 플래그.
+gtpu-s = 시퀀스 번호 존재 플래그.
+gtpu-pn = N-PDU 번호 존재 플래그.
+gtpu-message-type = GTP-U 메시지 유형(255 = G-PDU).
+gtpu-length = 필수 헤더 뒤 페이로드 길이(옥텟, Auto).
+gtpu-teid = 터널 엔드포인트 식별자(TEID).
+geneve-version = Geneve 버전(0).
+geneve-opt-len = 옵션 영역 길이(4옥텟 워드 단위).
+geneve-o = OAM 패킷 플래그.
+geneve-c = 중요(critical) 옵션 존재 플래그.
+geneve-protocol-type = 캡슐화된 페이로드의 EtherType.
+geneve-vni = 24비트 Geneve 가상 네트워크 식별자(VNI).
+geneve-options = Geneve 옵션(불투명, opt_len으로 크기 결정).
+l2tp-flags = L2TP 플래그 및 버전(type, length, sequence, offset, priority 비트).
+l2tp-body = L2TP 본문(존재 조건부 필드 + 페이로드). 불투명 옥텟.
+l2tpv3-session-id = L2TPv3 세션 ID.
+
+# --- 패킷 빌더 (M4 2단계) ---
+ui-bld-palette = 프로토콜
+ui-bld-search = 프로토콜 검색
+ui-bld-favorite = 즐겨찾기
+ui-bld-favorites = 즐겨찾기
+ui-bld-layer-l2 = 데이터 링크(L2)
+ui-bld-layer-l3 = 네트워크(L3)
+ui-bld-layer-l4 = 전송(L4)
+ui-bld-layer-l7 = 애플리케이션(L7)
+ui-bld-layer-payload = 페이로드
+ui-bld-stack = 계층
+ui-bld-empty = 프로토콜을 여기로 끌어 놓거나 팔레트에서 추가하십시오.
+ui-bld-unknown = 알 수 없음
+ui-bld-dup = 계층 복제
+ui-bld-suggest = 다음 계층 추가
+ui-bld-binding-warn = 하위 계층에서 지정되지 않음
+ui-bld-fix = 수정
+ui-bld-added = { $id } 추가됨.
+ui-bld-moved = { $index }번째 위치로 이동했습니다.
+ui-bld-removed = 계층을 제거했습니다.
+ui-bld-fields = 필드 편집기
+ui-bld-select-layer = 필드를 편집할 계층을 선택하십시오.
+ui-bld-auto = Auto
+ui-bld-manual = Manual
+ui-bld-gen = Gen
+ui-bld-computed = 빌드 시 계산
+ui-bld-nsap-parts = AFI { $afi } · 영역 { $area } · 시스템 ID { $sys } · NSEL { $nsel }
+ui-bld-estimate = 스트림의 패킷 수와 총 크기
+ui-bld-expands = { $count }개로 확장(~{ $bytes })
+ui-bld-rate = 속도
+ui-bld-rate-hint = 템플릿과 함께 저장되는 송신 속도(1000pps, 1.5Mpps, 10Gbps, ifg=10us)
+ui-bld-duration = 송신에 약 { $time }
+ui-bld-duration-unknown = 송신 시간: 속도를 지정하십시오
+ui-bld-duration-hint = 이 속도로 송신할 패킷(tx.count, 없으면 스트림 길이), tx.duration_secs로 상한 적용
+ui-bld-gen-kind = 종류
+ui-bld-gen-count = 개수:
+ui-bld-gen-shorthand = 범위 / 목록 / CIDR
+ui-bld-gen-random = 무작위
+ui-bld-gen-random-mac = 무작위 MAC
+ui-bld-gen-counter = 카운터
+ui-bld-gen-file = 파일
+ui-bld-gen-expr = 식
+ui-bld-hex = 16진
+ui-bld-tree = 트리
+ui-bld-no-bytes = 아직 패킷이 없습니다.
+ui-bld-name = 템플릿 이름
+ui-bld-need-name = 먼저 템플릿 이름을 지정하십시오.
+ui-bld-unsaved = 저장되지 않은 변경 사항
+ui-bld-save-as = 다른 이름으로 저장…
+ui-bld-save-first = 작업을 만들기 전에 템플릿을 저장하십시오.
+ui-bld-recompute = 다시 계산
+ui-bld-auto-recompute = 편집할 때마다 미리 보기를 실시간으로 다시 계산
+ui-bld-index = 스트림 인덱스
+ui-bld-index-prev = 이전 패킷
+ui-bld-index-next = 다음 패킷
+ui-bld-undo = 실행 취소
+ui-bld-redo = 다시 실행
+ui-bld-parity-ok = 브라우저 미리 보기가 서버 렌더링과 일치합니다.
+ui-bld-parity-ok-short = 일치
+ui-bld-parity-bad = 브라우저 미리 보기가 서버 렌더링과 일치하지 않습니다.
+ui-bld-parity-bad-short = 불일치
+ui-bld-parity-pending = 서버 렌더링 확인 중…
+ui-bld-help-title = 빌더 단축키
+ui-bld-help-add = 포커스된 프로토콜 추가
+ui-bld-help-move = 선택한 계층 이동
+ui-bld-help-del = 선택한 계층 제거
+ui-bld-help-undo = 실행 취소
+ui-bld-help-redo = 다시 실행
+ui-bld-help-hex = 캐럿 위치 바이트에 16진수 입력
+ui-bld-help-caret = 16진 캐럿 이동
+ui-bld-suggest-prev = 위에 계층 추가
+
+# --- P1 이중화 / 멀티캐스트 프로토콜 필드 설명 ---
+vrrp-version = VRRP 버전(2 = RFC 3768, 3 = RFC 5798).
+vrrp-type = VRRP 패킷 유형(1 = Advertisement).
+vrrp-vrid = 가상 라우터 식별자(VRID).
+vrrp-priority = 송신 라우터 우선순위(255 = 주소 소유자, 0 = 참여 중지).
+vrrp-count = 광고에 포함된 가상 주소 수(Auto).
+vrrp-auth-type = VRRPv2 인증 유형(0 = 없음, 1 = 단순 텍스트, 2 = IP AH).
+vrrp-adver-int = VRRPv2 광고 간격(초).
+vrrp-max-adver-int = VRRPv3 최대 광고 간격(센티초).
+vrrp-checksum = VRRP 메시지에 대한 인터넷 체크섬(VRRPv3는 IP 의사 헤더 포함)(Auto).
+vrrp-addresses = 가상 라우터 주소.
+vrrp-auth-data = VRRPv2 인증 데이터(8옥텟).
+hsrp-version = HSRP 버전(HSRPv1은 0).
+hsrp-op-code = HSRP 동작(0 = Hello, 1 = Coup, 2 = Resign, 3 = Advertise).
+hsrp-state = 송신자 상태(1 = Learn, 2 = Listen, 4 = Speak, 8 = Standby, 16 = Active).
+hsrp-hello-time = Hello 메시지 간 간격(초).
+hsrp-hold-time = Hello가 유효한 시간(초).
+hsrp-priority = 그룹 내 라우터 우선순위.
+hsrp-group = Standby 그룹 번호.
+hsrp-auth-data = 평문 인증 비밀번호(8옥텟, 기본값 "cisco").
+hsrp-virtual-ip = 그룹의 가상 IPv4 주소.
+hsrpv2-tlvs = HSRPv2 TLV(Group State, Interface State, Text / MD5 Authentication. 8비트 유형 및 길이).
+glbp-version = GLBP 버전(1).
+glbp-group = GLBP 그룹 번호.
+glbp-owner-id = 송신 라우터의 MAC 주소.
+glbp-tlvs = GLBP TLV(Hello, Request/Response, Authentication. 길이는 헤더 포함).
+igmp-type = IGMP 메시지 유형(본문에서 Auto: 0x11 query, 0x12 / 0x16 report, 0x17 leave, 0x22 v3 report).
+igmp-max-resp-code = 최대 응답 시간 / 코드(1/10초 단위, 쿼리용. 리포트에서는 0).
+igmp-checksum = IGMP 메시지 전체에 대한 인터넷 체크섬(Auto).
+igmp-group = 멀티캐스트 그룹 주소(일반 쿼리에서는 0.0.0.0).
+igmp-s-flag = 라우터 측 처리 억제 플래그.
+igmp-qrv = Querier의 Robustness Variable.
+igmp-qqic = Querier의 Query Interval Code.
+igmp-num-sources = 소스 주소 수.
+igmp-sources = 소스 주소.
+igmp-num-records = 그룹 레코드 수.
+igmp-records = 그룹 레코드(레코드 유형, 보조 데이터 길이, 소스, 멀티캐스트 주소).
+mld-max-resp = 최대 응답 지연 / 코드(밀리초).
+mld-address = IPv6 멀티캐스트 주소(일반 쿼리에서는 ::).
+pim-version = PIM 버전(2).
+pim-type = PIM 메시지 유형(본문에서 Auto: 0 Hello, 1 Register, 3 Join/Prune).
+pim-checksum = 인터넷 체크섬(메시지 전체. Register는 처음 8옥텟만)(Auto).
+pim-hello-options = PIM Hello 옵션(Holdtime, LAN Prune Delay, DR Priority, Generation ID, Address List).
+pim-addr-family = 인코딩된 주소의 주소 패밀리(1 = IPv4).
+pim-upstream-neighbor = Join/Prune의 대상인 업스트림 네이버 주소.
+pim-num-groups = 그룹 세트 수.
+pim-holdtime = Join/Prune 상태 유지 시간(초).
+pim-groups = 그룹 세트(인코딩된 그룹, join 및 prune된 인코딩 소스).
+pim-register-border = Border 비트(송신자가 PIM 멀티캐스트 경계 라우터임).
+pim-register-null = Null-Register 비트(캡슐화된 데이터 패킷 없음).
+
+# --- P1 애플리케이션 프로토콜 필드 설명 ---
+dhcp-op = BOOTP 메시지 op 코드(1 = BOOTREQUEST, 2 = BOOTREPLY).
+dhcp-htype = 하드웨어 주소 유형(1 = Ethernet).
+dhcp-hlen = 하드웨어 주소 길이(옥텟, Ethernet은 6).
+dhcp-hops = 릴레이 홉 수. 릴레이 에이전트마다 증가합니다.
+dhcp-xid = 클라이언트가 선택한 트랜잭션 ID.
+dhcp-secs = 클라이언트가 주소 획득을 시작한 후 경과한 초.
+dhcp-flags = BOOTP 플래그(비트 15 = 브로드캐스트 응답 요청).
+dhcp-ciaddr = 클라이언트 IP 주소(이미 바인딩된 경우).
+dhcp-yiaddr = 서버가 할당한 "Your"(클라이언트) IP 주소.
+dhcp-siaddr = 다음 서버 IP 주소(부트 서버).
+dhcp-giaddr = 릴레이 에이전트(게이트웨이) IP 주소. 릴레이된 경우 0이 아님.
+dhcp-chaddr = 클라이언트 하드웨어(MAC) 주소. 뒤에 10옥텟의 패딩이 붙습니다.
+dhcp-sname = 선택적 서버 호스트 이름(64옥텟, NUL 패딩).
+dhcp-file = 부트 파일 이름(128옥텟, NUL 패딩).
+dhcp-magic-cookie = DHCP 매직 쿠키(0x63825363).
+dhcp-options = DHCP 옵션(8비트 코드 / 길이. Pad, End, Message Type, Relay Agent Information, ...).
+dhcpv6-msg-type = DHCPv6 메시지 유형(Solicit, Advertise, Request, Reply, Relay-Forward, ...).
+dhcpv6-transaction-id = 24비트 트랜잭션 ID.
+dhcpv6-options = DHCPv6 옵션(16비트 코드 / 길이. Client ID, IA_NA, Relay Message, ...).
+dhcpv6-hop-count = 이 메시지를 릴레이한 릴레이 에이전트 수.
+dhcpv6-link-address = 클라이언트의 링크를 식별하는 주소(릴레이).
+dhcpv6-peer-address = 메시지를 보낸 클라이언트 또는 릴레이의 주소.
+dns-id = 쿼리 식별자. 응답에 복사됩니다.
+dns-qr = 쿼리(0) 또는 응답(1).
+dns-opcode = 쿼리 종류(0 = 표준 쿼리, 4 = NOTIFY, 5 = UPDATE).
+dns-aa = 권한 있는 응답(Authoritative Answer) 플래그.
+dns-tc = 잘림(Truncation) 플래그.
+dns-rd = 재귀 요청(Recursion Desired) 플래그.
+dns-ra = 재귀 가능(Recursion Available) 플래그.
+dns-z = 예약 비트(0이어야 함).
+dns-ad = 인증된 데이터(Authentic Data) 플래그(DNSSEC).
+dns-cd = 검사 비활성화(Checking Disabled) 플래그(DNSSEC).
+dns-rcode = 응답 코드(0 = NOERROR, 3 = NXDOMAIN, ...).
+dns-qdcount = 질문 섹션의 항목 수.
+dns-ancount = 응답 섹션의 리소스 레코드 수.
+dns-nscount = 권한 섹션의 리소스 레코드 수.
+dns-arcount = 추가 섹션의 리소스 레코드 수.
+dns-sections = 질문 / 응답 / 권한 / 추가 섹션(길이 접두사가 붙은 레이블 이름). 불투명 옥텟.
+ntp-li = 윤초 지시자(3 = 클럭 비동기).
+ntp-version = NTP 버전 번호(4).
+ntp-mode = 연결 모드(3 = 클라이언트, 4 = 서버, 5 = 브로드캐스트).
+ntp-stratum = 계층(stratum)(0 = 미지정, 1 = 1차 참조, 2-15 = 2차).
+ntp-poll = 최대 폴링 간격(log2 초, 부호 있음).
+ntp-precision = 클럭 정밀도(log2 초, 부호 있음).
+ntp-root-delay = 참조 클럭까지의 왕복 지연(16.16 고정 소수점 초).
+ntp-root-dispersion = 참조 클럭까지의 분산(16.16 고정 소수점 초).
+ntp-reference-id = 참조 ID(stratum 1이면 ASCII 코드, 그 외에는 IPv4 주소 또는 해시).
+ntp-reference-ts = 시스템 클럭이 마지막으로 설정된 시각(64비트 NTP 타임스탬프).
+ntp-origin-ts = 서버가 되돌려 보낸 클라이언트 송신 시각(64비트 NTP 타임스탬프).
+ntp-receive-ts = 요청이 서버에 도착한 시각(64비트 NTP 타임스탬프).
+ntp-transmit-ts = 패킷이 송신자를 떠난 시각(64비트 NTP 타임스탬프).
+ntp-extensions = 확장 필드 및 MAC. 불투명 옥텟.
+snmp-tag = BER 태그 옥텟(0x30 SEQUENCE, 0x02 INTEGER, 0x04 OCTET STRING).
+snmp-msg-length = SNMP 메시지 SEQUENCE의 BER 길이(Auto, 단형식, 128 미만).
+snmp-version-length = 버전 INTEGER의 BER 길이(1).
+snmp-version = SNMP 버전(0 = v1, 1 = v2c).
+snmp-community-length = 커뮤니티 문자열의 BER 길이(옥텟).
+snmp-community = 커뮤니티 문자열(예: "public").
+snmp-pdu-type = PDU 태그(0xa0 GetRequest, 0xa2 Response, 0xa4 v1 Trap, 0xa7 SNMPv2-Trap, ...).
+snmp-pdu-length = PDU 내용의 BER 길이(Auto, 단형식, 128 미만).
+snmp-pdu-body = BER TLV로 표현한 PDU 내용: request-id, error-status, error-index, variable-bindings SEQUENCE.
+snmp-trap-body = BER TLV로 표현한 Trap 내용: enterprise, agent-addr, generic-trap, specific-trap, time-stamp, variable bindings.
+syslog-message = <PRI>(facility * 8 + severity)로 시작하는 Syslog 메시지 텍스트.
+radius-code = RADIUS 패킷 유형(Access-Request, Access-Accept, Accounting-Request, ...).
+radius-identifier = 요청과 응답을 대응시키는 식별자.
+radius-length = RADIUS 패킷 전체 길이(옥텟, Auto).
+radius-authenticator = 16옥텟 Request / Response Authenticator(Manual).
+radius-attributes = RADIUS 속성(8비트 유형, 헤더를 포함한 8비트 길이).
+tftp-opcode = TFTP opcode(1 = RRQ, 2 = WRQ, 3 = DATA, 4 = ACK, 5 = ERROR, 6 = OACK).
+tftp-filename = 파일 이름(NUL 종료).
+tftp-mode = 전송 모드: netascii, octet 또는 mail(NUL 종료).
+tftp-options = 옵션 이름 / 값 문자열 쌍(RFC 2347): blksize, timeout, tsize, windowsize, ...
+tftp-block = 블록 번호(1부터 시작).
+tftp-data = 데이터 옥텟(블록당 512. 더 짧은 블록이 전송을 종료함).
+tftp-error-code = TFTP 오류 코드(1 = 파일 없음, 2 = 접근 위반, ...).
+tftp-error-message = 오류 메시지(NUL 종료).
+
+# --- P1 라우팅 프로토콜 필드 설명 ---
+ospf-version = OSPF 버전(2 = OSPFv2, 3 = OSPFv3).
+ospf-type = OSPF 패킷 유형(Hello / DB Description / LS Request / LS Update / LS Ack. 다음 계층에서 Auto).
+ospf-packet-length = 헤더를 포함한 OSPF 패킷 길이(옥텟, Auto).
+ospf-router-id = 송신 라우터의 라우터 ID.
+ospf-area-id = 패킷이 속한 영역(0.0.0.0 = 백본).
+ospf-checksum = 인증 필드를 제외한 OSPF 패킷에 대한 인터넷 체크섬(Auto).
+ospf-au-type = 인증 유형(0 = null, 1 = 단순 비밀번호, 2 = 암호화).
+ospf-authentication = 64비트 인증 필드(비밀번호, 또는 암호화 인증의 키 ID / 시퀀스).
+ospf-network-mask = 인터페이스 또는 광고되는 네트워크의 네트워크 마스크.
+ospf-hello-interval = Hello 패킷 간 간격(초).
+ospf-options = 선택적 기능(E, MC, N/P, L, DC, O, DN 비트).
+ospf-router-priority = DR 선출을 위한 라우터 우선순위(0 = DR이 되지 않음).
+ospf-router-dead-interval = Hello를 받지 못한 채 이 시간(초)이 지나면 네이버를 다운으로 판단합니다.
+ospf-designated-router = 지정 라우터(DR)(0.0.0.0 = 없음).
+ospf-backup-designated-router = 백업 지정 라우터(BDR)(0.0.0.0 = 없음).
+ospf-neighbors = 링크에서 확인된 네이버의 라우터 ID.
+ospf-interface-mtu = 인터페이스가 프래그먼트 없이 송신할 수 있는 최대 IP 데이터그램.
+ospf-dbd-flags = Database Description 플래그(I = init, M = more, MS = master).
+ospf-dd-sequence = Database Description 시퀀스 번호.
+ospf-lsa-headers = LSA 헤더(각 20옥텟. 체크섬과 길이는 Manual).
+ospf-lsr-requests = 요청하는 LSA(LS 유형, Link State ID, 광고 라우터).
+ospf-num-lsas = 업데이트에 포함된 LSA 수.
+ospf-ls-age = LSA 생성 후 경과 시간(초)(정확한 Auto 체크섬을 위해 0으로 유지).
+ospf-ls-type = LSA 유형(LSA 본문 계층에서 Auto. 9 / 10 / 11 = Opaque LSA).
+ospf-link-state-id = 기술하는 네트워크 부분을 식별하는 Link State ID.
+ospf-advertising-router = LSA를 생성한 라우터의 라우터 ID.
+ospf-ls-sequence = LSA 시퀀스 번호(0x80000001 = 초기값).
+ospf-ls-checksum = LS age를 제외한 LSA의 Fletcher 체크섬(Auto).
+ospf-lsa-length = 헤더를 포함한 LSA 길이(옥텟, Auto).
+ospf-router-lsa-flags = Router-LSA 플래그(V = 가상 링크 엔드포인트, E = ASBR, B = ABR).
+ospf-num-links = 기술된 라우터 링크 수.
+ospf-router-links = 라우터 링크(링크 ID, 링크 데이터, 유형, TOS 수, 메트릭).
+ospf-attached-routers = 네트워크에 연결된 라우터의 라우터 ID.
+ospf-metric = 경로 비용.
+ospf-external-e = 외부 메트릭 유형(1 = type 2, 0 = type 1).
+ospf-forwarding-address = 목적지로 가는 트래픽을 전달할 주소(0.0.0.0 = ASBR).
+ospf-external-route-tag = 외부 경로와 함께 전달되는 32비트 태그.
+ospf-opaque-ls-type = Opaque LSA 플러딩 범위(9 = 링크 로컬, 10 = 영역, 11 = AS).
+ospf-opaque-type = Opaque 유형(1 = TE, 4 = Router Information, 7 = Extended Prefix, 8 = Extended Link. 본문 계층에서 Auto).
+ospf-opaque-id = 같은 Opaque 유형의 LSA를 구별하는 Opaque ID(24비트).
+ospf-opaque-tlvs = Opaque LSA의 TLV(16비트 유형 및 길이, 값은 4옥텟 단위로 패딩. 길이는 Auto).
+ospfv3-checksum = IPv6 의사 헤더를 포함한 OSPFv3 패킷에 대한 인터넷 체크섬(Auto).
+ospfv3-instance-id = 인스턴스 ID(한 링크에서 OSPFv3 인스턴스를 구분).
+ospfv3-interface-id = 송신 인터페이스의 인터페이스 ID.
+ospfv3-options = OSPFv3 옵션(V6, E, N, R, DC, AF 비트).
+ospfv3-ls-type = U / S 범위 비트를 포함한 LSA 기능 코드(LSA 본문 계층에서 Auto).
+ospfv3-router-links = 라우터 인터페이스(유형, 메트릭, 인터페이스 ID, 네이버 라우터 ID).
+ospfv3-prefix-length = 프리픽스 길이(비트).
+ospfv3-prefix-options = 프리픽스 옵션(NU, LA, P, DN 비트).
+ospfv3-address-prefix = 4옥텟의 배수로 패딩된 주소 프리픽스.
+ospfv3-external-flags = AS-External-LSA 플래그(E = type 2 메트릭, F = 전달 주소 있음, T = 경로 태그 있음).
+ospfv3-referenced-ls-type = 참조되는 LSA의 LS 유형.
+ospfv3-link-local-address = 인터페이스의 링크 로컬 주소.
+ospfv3-num-prefixes = 뒤따르는 프리픽스 수.
+ospfv3-prefixes = 프리픽스 항목(길이, 옵션, 메트릭 / 예약, 주소 프리픽스). 불투명 옥텟.
+ospfv3-referenced-link-state-id = 참조되는 LSA의 Link State ID.
+ospfv3-referenced-advertising-router = 참조되는 LSA의 광고 라우터.
+bgp-marker = 16옥텟 마커(모두 1).
+bgp-length = 헤더를 포함한 BGP 메시지 길이(옥텟, Auto).
+bgp-type = BGP 메시지 유형(OPEN / UPDATE / NOTIFICATION / KEEPALIVE / ROUTE-REFRESH. 다음 계층에서 Auto).
+bgp-version = BGP 버전(4).
+bgp-my-as = 송신자의 자율 시스템 번호(4옥텟 AS의 경우 23456 = AS_TRANS).
+bgp-hold-time = 제안하는 홀드 타임(초)(0 또는 3 이상).
+bgp-identifier = 송신자의 BGP 식별자(라우터 ID).
+bgp-opt-params-length = 선택적 매개변수 길이(옥텟, Auto).
+bgp-opt-params = 선택적 매개변수(유형 2 = capabilities).
+bgp-withdrawn-routes-length = 철회된 경로의 길이(옥텟, Auto).
+bgp-withdrawn-routes = 철회된 IPv4 경로(비트 단위 프리픽스 길이, 프리픽스).
+bgp-total-path-attribute-length = 경로 속성 길이(옥텟, Auto).
+bgp-path-attributes = 경로 속성(플래그 + 유형 코드. Extended Length 플래그가 있으면 길이는 16비트이며, 255옥텟을 넘으면 자동으로 설정됨).
+bgp-nlri = 광고하는 IPv4 경로(비트 단위 프리픽스 길이, 프리픽스). 다른 주소 패밀리는 MP_REACH_NLRI에 넣습니다.
+bgp-error-code = NOTIFICATION 오류 코드.
+bgp-error-subcode = NOTIFICATION 오류 하위 코드.
+bgp-error-data = NOTIFICATION의 진단 데이터.
+bgp-afi = 주소 패밀리 식별자(1 = IPv4, 2 = IPv6).
+bgp-rr-subtype = ROUTE-REFRESH 하위 유형(0 = 일반, 1 = BoRR, 2 = EoRR).
+bgp-safi = 하위 주소 패밀리 식별자(1 = 유니캐스트, 2 = 멀티캐스트).
+rip-command = RIP 명령(1 = 요청, 2 = 응답).
+rip-version = RIP 버전(1 또는 2. RIPng는 1 사용).
+rip-entries = 경로 항목(AFI, 경로 태그, 주소, 마스크, 넥스트 홉, 메트릭).
+ripng-entries = 라우팅 테이블 항목(프리픽스, 경로 태그, 프리픽스 길이, 메트릭. 0xff = 넥스트 홉).
+eigrp-version = EIGRP 헤더 버전(2).
+eigrp-opcode = EIGRP opcode(Update / Query / Reply / Hello / SIA-Query / SIA-Reply).
+eigrp-checksum = EIGRP 패킷에 대한 인터넷 체크섬(Auto).
+eigrp-flags = EIGRP 플래그(Init, Conditional Receive, Restart, End of Table).
+eigrp-sequence = 신뢰성 있는 전달을 위한 시퀀스 번호.
+eigrp-acknowledge = 확인 응답한 시퀀스 번호(0 = 없음).
+eigrp-virtual-router-id = 가상 라우터 ID(0 = 유니캐스트 주소 패밀리).
+eigrp-autonomous-system = EIGRP 자율 시스템 번호.
+eigrp-tlvs = EIGRP TLV(16비트 유형, 헤더를 포함한 16비트 길이).
+
+# --- P2 OSI 캡슐화 필드 설명 ---
+osi-nlpid = 네트워크 계층 프로토콜 식별자(ISO/IEC TR 9577): 0x81 CLNP, 0x82 ES-IS, 0x83 IS-IS.
+osi-data = NLPID 뒤의 나머지 OSI PDU(불투명 옥텟).
+clnp-nlpid = 네트워크 계층 프로토콜 식별자(0x81 = CLNP).
+clnp-length-indicator = 옵션 끝까지의 헤더 길이(옥텟, Auto).
+clnp-version = 버전 / 프로토콜 ID 확장(1).
+clnp-lifetime = 남은 수명(500ms 단위).
+clnp-sp = SP: 분할 허용. 분할 부분이 존재함(분할 부분에서 Auto).
+clnp-ms = MS: 뒤에 세그먼트가 더 있음.
+clnp-er = E/R: PDU가 폐기되면 오류 보고를 송신.
+clnp-pdu-type = PDU 유형: 0x1c DT(데이터), 0x1d MD(멀티캐스트 데이터), 0x01 ER(오류 보고), 0x1e ERQ / 0x1f ERP(에코 요청 / 응답).
+clnp-segment-length = 헤더와 데이터를 포함한 PDU 전체 길이(Auto).
+clnp-checksum = 헤더의 ISO 8473 Fletcher 체크섬(Auto). 0 = 체크섬 미사용.
+clnp-destination = 목적지 NSAP 주소.
+clnp-source = 출발지 NSAP 주소.
+clnp-segmentation = 분할 부분(데이터 단위 식별자, 세그먼트 오프셋, 전체 길이). SP가 설정된 경우에 존재합니다. 전체 길이는 계산되지 않습니다.
+clnp-options = 길이 지시자까지의 옵션(8비트 코드 / 8비트 길이): 보안, QoS 유지, 우선순위, 소스 라우팅, 경로 기록, 패딩, 폐기 사유.
+esis-nlpid = 네트워크 계층 프로토콜 식별자(0x82 = ES-IS).
+esis-length-indicator = PDU 길이(옥텟, Auto).
+esis-version = 버전 / 프로토콜 ID 확장(1).
+esis-pdu-type = PDU 유형: 2 ESH(종단 시스템 Hello), 4 ISH(중간 시스템 Hello), 6 RD(리디렉션).
+esis-holding-time = 보유 시간(초).
+esis-checksum = PDU의 ISO 8473 Fletcher 체크섬(Auto). 0 = 체크섬 미사용.
+esis-number-of-source-addresses = 출발지 주소 수(Auto).
+esis-source-addresses = 종단 시스템이 서비스하는 NSAP 주소.
+esis-net = 중간 시스템의 네트워크 엔터티 타이틀(NET)(리디렉션: 넥스트 홉이 종단 시스템이면 비어 있음).
+esis-destination = 리디렉션되는 목적지 NSAP 주소.
+esis-bsnpa-length = 서브네트워크 주소 길이(Auto).
+esis-bsnpa = 더 나은 넥스트 홉의 서브네트워크 주소(예: MAC 주소).
+esis-options = 길이 지시자까지의 옵션(8비트 코드 / 8비트 길이): 보안, QoS 유지, 우선순위, 주소 마스크, SNPA 마스크, 권장 ES 구성 타이머.
+esis-data = 고정 부분 뒤의 나머지 PDU(불투명 옥텟).
+isis-irpd = 도메인 내 라우팅 프로토콜 판별자(0x83 = IS-IS).
+isis-header-length = 고정 헤더 길이(옥텟)(PDU 유형별 상수: LAN Hello / LSP 27, P2P Hello 20, CSNP 33, PSNP 17).
+isis-version-ext = 버전 / 프로토콜 ID 확장(1).
+isis-id-length = 시스템 ID 길이(0 = 6옥텟).
+isis-pdu-type = PDU 유형(15/16 LAN Hello L1/L2, 17 P2P Hello, 18/20 LSP L1/L2, 24/25 CSNP, 26/27 PSNP).
+isis-version = 버전(1).
+isis-max-area-addresses = 최대 영역 주소 수(0 = 3).
+isis-pdu-length = PDU 전체 길이(Auto). Hello에서 Manual 값을 지정하면 Padding TLV로 PDU를 그 길이까지 채웁니다(예: MTU 1500이면 1497).
+isis-tlvs = TLV(8비트 코드 / 8비트 길이)와 그 하위 TLV.
+isis-source-id = 송신자의 시스템 ID.
+isis-holding-time = 보유 시간(초).
+isis-priority = 지정 IS(DIS) 선출 우선순위(0–127).
+isis-lan-id = LAN ID: 지정 IS의 시스템 ID와 의사 노드 ID.
+isis-circuit-type = 회선 유형: 1 = L1, 2 = L2, 3 = L1/L2.
+isis-local-circuit-id = 로컬 회선 ID.
+isis-remaining-lifetime = LSP의 남은 수명(초)(체크섬 대상 아님).
+isis-lsp-id = LSP ID: 시스템 ID, 의사 노드 ID, 프래그먼트 번호.
+isis-sequence-number = LSP 시퀀스 번호.
+isis-lsp-checksum = LSP ID부터 PDU 끝까지의 Fletcher 체크섬(Auto).
+isis-partition-repair = P 비트: 파티션 복구 지원.
+isis-attached = ATT 비트: 다른 영역에 연결됨(default / delay / expense / error 메트릭).
+isis-overload = OL 비트: LSP 데이터베이스 과부하.
+isis-is-type = IS 유형: 1 = L1, 3 = L1/L2.
+isis-snp-source-id = 송신자의 시스템 ID와 회선 ID(0).
+isis-start-lsp-id = CSNP가 다루는 첫 번째 LSP ID.
+isis-end-lsp-id = CSNP가 다루는 마지막 LSP ID.
+isis-data = 공통 헤더 뒤의 나머지 PDU(불투명 옥텟).
+
+# --- P2 SCTP 필드 설명 ---
+sctp-src-port = 출발지 포트.
+sctp-dst-port = 목적지 포트.
+sctp-verification-tag = 검증 태그: 상대방의 initiate 태그(INIT을 포함한 패킷에서는 0).
+sctp-checksum = 이 필드를 0으로 한 SCTP 패킷 전체의 CRC32c(Auto). 최하위 옥텟부터 송신됩니다.
+sctp-chunks = 청크(8비트 유형, 8비트 플래그, 4옥텟 헤더를 포함한 16비트 길이, 4옥텟 단위 0 패딩): DATA, INIT, INIT ACK, SACK, HEARTBEAT, ABORT, SHUTDOWN, ERROR, COOKIE ECHO / ACK, AUTH, I-DATA, ASCONF, RE-CONFIG, FORWARD TSN, PAD. 길이, 패딩, SACK 개수는 Auto입니다.
+
+# --- P2 LDP / RSVP-TE / BFD 필드 설명 ---
+ldp-version = LDP 버전(1).
+ldp-pdu-length = 버전 및 PDU 길이 필드 뒤의 PDU 길이(Auto).
+ldp-lsr-id = LSR ID: LDP 식별자의 처음 4옥텟.
+ldp-label-space = 레이블 공간 ID: LDP 식별자의 마지막 2옥텟(0 = 플랫폼 전체).
+ldp-messages = 메시지(U 비트를 포함한 16비트 유형, 값의 16비트 길이, 메시지 ID, TLV): Notification, Hello, Initialization, KeepAlive, Address / Address Withdraw, Label Mapping / Request / Withdraw / Release / Abort Request. TLV: FEC, Address List, Hop Count, Path Vector, Generic Label, Status, Common Hello / Session Parameters, 전송 주소, Configuration Sequence Number. 길이는 Auto입니다.
+rsvp-version = RSVP 버전(1).
+rsvp-flags = 플래그(비트 0: refresh reduction 지원, RFC 2961).
+rsvp-msg-type = 메시지 유형(1 Path, 2 Resv, 3 PathErr, 4 ResvErr, 5 PathTear, 6 ResvTear, 7 ResvConf, 12 Bundle, 13 Ack, 15 Srefresh, 20 Hello).
+rsvp-checksum = 이 필드를 0으로 한 메시지 전체의 인터넷 체크섬(Auto).
+rsvp-send-ttl = 메시지 송신 시 IP TTL.
+rsvp-reserved = 예약(0).
+rsvp-length = 공통 헤더를 포함한 메시지 전체 길이(옥텟, Auto).
+rsvp-objects = 객체(4옥텟 헤더를 포함한 16비트 길이, Class-Num, C-Type): SESSION, RSVP_HOP, TIME_VALUES, ERROR_SPEC, SCOPE, STYLE, FLOWSPEC, FILTER_SPEC, SENDER_TEMPLATE, SENDER_TSPEC, RESV_CONFIRM, LABEL, LABEL_REQUEST, EXPLICIT_ROUTE, RECORD_ROUTE, HELLO, MESSAGE_ID, SESSION_ATTRIBUTE. 길이, 세션 이름 길이, 패딩은 Auto입니다.
+bfd-version = BFD 버전(1).
+bfd-diag = 진단 코드: 로컬 세션의 마지막 상태 변경 사유.
+bfd-state = 세션 상태: 0 AdminDown, 1 Down, 2 Init, 3 Up.
+bfd-p = P 비트: Poll(매개변수 변경. 상대방이 F로 응답).
+bfd-f = F 비트: Final(Poll에 대한 응답).
+bfd-c = C 비트: Control Plane Independent.
+bfd-a = A 비트: 인증 존재(Auto: 인증 섹션이 있으면 설정).
+bfd-d = D 비트: Demand 모드.
+bfd-m = M 비트: Multipoint(0).
+bfd-detect-mult = 감지 시간 배수.
+bfd-length = 인증 섹션을 포함한 제어 패킷 길이(옥텟, Auto).
+bfd-my-discriminator = My discriminator: 송신 측에서 세션마다 고유한 0이 아닌 값.
+bfd-your-discriminator = Your discriminator: 상대방의 discriminator(알 수 없는 동안 0).
+bfd-desired-min-tx = 원하는 최소 송신 간격(마이크로초).
+bfd-required-min-rx = 요구하는 최소 수신 간격(마이크로초).
+bfd-required-min-echo-rx = 요구하는 최소 에코 수신 간격(마이크로초)(0 = 에코 없음).
+bfd-authentication = 인증 섹션(8비트 유형, 헤더를 포함한 8비트 길이): 단순 비밀번호, keyed MD5 / SHA1 및 그 meticulous 변형. 다이제스트 / 해시는 Manual입니다.
+
+# --- 생성 문서 (`wpg docs gen`, crates/wpg-cli/src/cmd/docs) ---
+docs-gen-no-root = { $path }는 저장소 루트가 아닙니다(docs/en/src/SUMMARY.md 없음). --root를 지정하십시오.
+docs-gen-error = 문서 생성 실패: { $error }
+docs-gen-stale = 오래됨: { $path }
+docs-gen-extra = 더 이상 생성되지 않음: { $path }
+docs-gen-up-to-date = 생성된 문서가 최신 상태입니다.
+docs-gen-run-hint = `just docs-gen`(또는 `wpg docs gen`)을 실행하고 결과를 커밋하십시오.
+docs-gen-done = 문서 생성 완료: 파일 { $written }개 작성, { $removed }개 삭제.
+docgen-yes = 예
+docgen-octets = { $octets }옥텟
+docgen-items = { $count }개 항목
+docgen-variant = 변형 { $n }
+docgen-col-id = ID
+docgen-col-name = 이름
+docgen-col-fields = 필드
+docgen-col-next-by = 다음 계층 결정
+docgen-col-notes = 비고
+docgen-col-lower = 하위 계층
+docgen-col-selector = 선택자
+docgen-col-value = 값
+docgen-col-protocol = 프로토콜
+docgen-col-note = 비고
+docgen-col-level = 레벨
+docgen-col-rule = 규칙
+docgen-col-field = 필드
+docgen-col-type = 유형
+docgen-col-default = 기본값
+docgen-col-auto = Auto
+docgen-col-description = 설명
+docgen-col-bit = 비트
+docgen-col-mask = 마스크
+docgen-col-type-value = 유형
+docgen-col-value-fields = 값 필드
+docgen-col-key = 키
+docgen-col-required = 필수
+docgen-col-in = 위치
+docgen-col-status = 상태
+docgen-col-body = 본문
+docgen-col-tag = 태그
+docgen-col-endpoint = 엔드포인트
+docgen-col-summary = 요약
+docgen-col-env = 환경 변수
+docgen-layer-l2 = L2(데이터 링크)
+docgen-layer-l3 = L3(네트워크)
+docgen-layer-l4 = L4(전송)
+docgen-layer-l7 = 애플리케이션 및 제어
+docgen-layer-payload = 페이로드
+docgen-proto-title = 프로토콜 레퍼런스
+docgen-proto-intro = 이 장은 `wpg-protocols`의 프로토콜 정의 IR(`GET /api/protocols`에서 제공하는 카탈로그)에서 생성되므로 항상 코드와 일치합니다: 프로토콜 { $count }개. 각 페이지에는 와이어 순서대로 필드의 유형, 기본값, Auto 규칙, 설명과 함께 해당 프로토콜로 이어지는 하위 계층, 다음 계층 테이블, 빌드 후 검사되는 제약 조건, 번들 샘플 템플릿이 나열됩니다. 직접 작성한 [프로토콜 노트](../protocols/overview.md)에서는 각 프로토콜에 도달하는 방법, 수동으로 설정하는 필드, 남아 있는 근사 사항을 설명합니다. 정의를 변경한 후에는 `just docs-gen`으로 다시 생성하십시오.
+docgen-proto-layer = 계층
+docgen-proto-header = 헤더
+docgen-proto-header-fixed = { $octets }옥텟(고정)
+docgen-proto-header-variable = 가변 길이
+docgen-proto-min-frame = 최소 프레임
+docgen-proto-synth = 생성기
+docgen-proto-synth-payload = 내장 페이로드 생성기(아래 필드는 와이어 필드가 아닌 매개변수)
+docgen-proto-pseudo = 의사 헤더
+docgen-proto-pseudo-fields = 상위 계층 체크섬에 { $src } / { $dst }를 제공
+docgen-proto-notes = 비고
+docgen-proto-final-dst = 최종 목적지
+docgen-proto-final-dst-text = { $when }가 0이 아닌 동안 { $list }의 요소 0이 하위 의사 헤더의 목적지 주소를 대체합니다(RFC 8200 §8.1)
+docgen-proto-inbound = 진입 경로
+docgen-proto-inbound-none = 카탈로그의 어떤 프로토콜도 이곳으로 이어지지 않습니다. 첫 번째 계층으로 사용하거나 명시적으로 쌓으십시오.
+docgen-proto-fields = 필드
+docgen-proto-params = 매개변수
+docgen-proto-no-fields = 필드가 없습니다.
+docgen-proto-next = 다음 계층
+docgen-proto-next-intro = 다음 계층은 { $field }로 선택됩니다. 이 필드가 Auto이면 빌더는 위에 쌓인 프로토콜의 값을 기록합니다.
+docgen-proto-next-alt = 디코딩 시 첫 번째 필드가 어떤 항목과도 일치하지 않으면 { $field }도 조회합니다.
+docgen-proto-constraints = 제약 조건
+docgen-proto-samples = 샘플 템플릿
+docgen-proto-samples-none = 아직 이 프로토콜을 사용하는 번들 템플릿이 없습니다.
+docgen-proto-samples-more = 외 { $count }개
+docgen-bind-default = (그 밖의 값)
+docgen-bind-min-len = 남은 길이 { $octets }옥텟 이상
+docgen-bind-reparse = 이 계층을 다시 디코딩
+docgen-bind-peek = { $field } = { $value }일 때 페이로드의 처음 { $bits }비트
+docgen-bind-peek-skip = { $field } = { $value }일 때 페이로드의 처음 { $skip }비트 다음 { $bits }비트
+docgen-level-error = 오류
+docgen-level-warning = 경고
+docgen-level-info = 정보
+docgen-c-range = { $field }가 { $min }..{ $max } 범위 내
+docgen-c-equals = { $field } = { $value }
+docgen-c-not-equals = { $field } ≠ { $value }
+docgen-c-min-length = { $span } { $octets }옥텟 이상
+docgen-c-max-length = { $span } { $octets }옥텟 이하
+docgen-span-header = 헤더
+docgen-span-payload = 페이로드
+docgen-span-total = 헤더 및 페이로드
+docgen-unit-bytes = 옥텟
+docgen-unit-words16 = 16비트 워드
+docgen-unit-words32 = 32비트 워드
+docgen-unit-words64 = 64비트 워드
+docgen-auto-length = { $span } 길이({ $unit } 단위)
+docgen-auto-checksum = { $covers }에 대한 { $algorithm }
+docgen-auto-nonzero = 계산 결과가 0이면 모두 1로 송신
+docgen-auto-exclude = { $fields }는 0으로 계산
+docgen-auto-next = 다음 계층의 프로토콜 번호(다음 계층 참조)
+docgen-auto-count = { $field }의 항목 수
+docgen-auto-size = { $field }의 크기(옥텟)
+docgen-auto-counter = 스트림별 카운터(현재는 기본값 사용)
+docgen-cksum-internet = 인터넷 체크섬
+docgen-cksum-internet-pseudo = 의사 헤더를 포함한 인터넷 체크섬
+docgen-cksum-fletcher = Fletcher 체크섬
+docgen-cksum-crc32c = CRC-32C
+docgen-cksum-crc32 = CRC-32
+docgen-cover-header = 헤더
+docgen-cover-all = 헤더와 그 이후 전체
+docgen-len-from-field = { $expr }옥텟
+docgen-len-count = { $field }개 항목
+docgen-len-until = 그룹의 오프셋 { $expr }까지
+docgen-len-to-end = PDU의 나머지
+docgen-len-to-end-except = 마지막 { $octets }옥텟을 제외한 PDU의 나머지
+docgen-len-until-terminator = 종결자 { $octets }까지(빌드 시 추가)
+docgen-len-until-tlv = 유형 { $type }인 첫 항목까지(해당 항목 포함) 또는 PDU 끝까지
+docgen-tlv-uncounted = 길이 뒤의 처음 { $octets }옥텟 값은 길이에 포함되지 않습니다.
+docgen-list-item = 각 항목은 아래 필드의 그룹입니다.
+docgen-tlv-format = 유형 { $type }비트, 길이 { $len }비트.
+docgen-tlv-len-first = 길이가 유형보다 앞에 옵니다.
+docgen-tlv-len-incl = 길이에는 유형 및 길이 필드도 포함됩니다.
+docgen-tlv-len-excl = 길이에는 값만 포함됩니다.
+docgen-tlv-unit = 길이 단위: { $unit }.
+docgen-tlv-head = 처음 { $octets }옥텟 값은 유형과 길이 사이에 위치합니다.
+docgen-tlv-align = 각 항목은 { $align }옥텟의 배수로 0 패딩됩니다(길이에 포함되지 않음)
+docgen-tlv-unpadded-last = 마지막 항목은 패딩되지 않음
+docgen-tlv-long = 유형 비트 { $flag }가 { $len }비트 길이를 선택합니다.
+docgen-tlv-fill = { $field }에 Manual 값을 지정하면 { $variant } 항목으로 그 크기까지 영역을 채웁니다.
+docgen-tlv-unknown-raw = 알 수 없는 유형은 원시 값 옥텟으로 유지됩니다.
+docgen-tlv-unknown-stop = 알 수 없는 유형이 나오면 유형별 디코딩을 종료합니다(나머지는 하나의 원시 항목이 됨).
+docgen-tlv-type-only = (유형만, 길이와 값 없음)
+docgen-tlv-when-prefix = 값이 { $octets }로 시작할 때
+docgen-tlv-when-len = 값이 { $octets }옥텟일 때
+docgen-notes-heading = 생성된 레퍼런스
+docgen-notes-intro = 이 페이지에 있는 프로토콜의 필드 레퍼런스(정의에서 생성됨):
+docgen-cli-title = CLI 레퍼런스
+docgen-cli-intro = `wpg` 바이너리는 서버(`wpg serve`)와 헤드리스 도구를 모두 실행하므로 CI와 ssh 세션에도 적합합니다. 예를 들어 `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps`는 템플릿을 송신합니다. 이 페이지는 명령 정의에서 생성되며, 각 블록은 현재 빌드의 `--help` 출력 그대로입니다. 실행 시 메시지는 `LANG` / `LC_ALL`을 따르며, `--help` 텍스트 자체는 영어입니다.
+docgen-cli-commands = 명령
+docgen-cli-note-send = 템플릿을 송신합니다. `--plan`으로 모든 프레임을 미리 전개할지(`prerender`) 송신하면서 빌드할지(`onthefly`) 선택합니다. `--json`은 최종 보고서를 stdout에 출력합니다.
+docgen-cli-note-render = 송신하지 않고 템플릿의 프레임을 pcapng 파일에 기록합니다.
+docgen-cli-note-import = 캡처(또는 붙여 넣은 16진수)를 템플릿으로 변환합니다. [pcap 재생 튜토리얼](../tutorials/pcap-replay.md)을 참조하십시오.
+docgen-cli-note-bench = 합성 프레임(EtherType 0x88b5) 또는 `--template`로 지정한 템플릿을 무제한 속도로 송신합니다. 기준 성능은 `docs/perf.md`를 참조하십시오. `--json` 출력 필드: backend, detail, iface, frame_size, batch_size, packets, dropped, pps, bps (L2), l1_bps, elapsed.
+docgen-cli-note-ifaces = 인터페이스를 MAC, 주소, MTU, 링크 상태, 드라이버와 함께 나열합니다.
+docgen-cli-note-doctor = [권한](../getting-started/permissions.md)에 설명된 환경 점검을 실행합니다. 점검이 실패하면 종료 상태가 0이 아닙니다.
+docgen-cli-note-template = 템플릿 도구. `lint`는 오류가 있으면 상태 1로 종료합니다. `export`와 `import`는 템플릿을 `.wpgbundle` 아카이브로 묶거나 풉니다.
+docgen-cli-note-config = `wpg.toml` 도구. [구성 레퍼런스](config.md)를 참조하십시오.
+docgen-api-title = API 레퍼런스
+docgen-api-intro = wpg-server는 `/api` 아래에서 REST(JSON) API를 제공하고, 실시간 통계, 작업 상태 변경, 로그를 WebSocket(`GET /api/ws`)으로 푸시합니다. 이 페이지는 서버의 OpenAPI 문서(utoipa)에서 생성됩니다. 실행 중인 서버는 같은 문서를 `/api/openapi.json`에서, Swagger UI를 `/api/docs/`에서 제공하며, 사본은 [`docs/schema/openapi.json`](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/docs/schema/openapi.json)에 보관됩니다. `POST /api/auth/login`(첫 실행 시에는 `POST /api/auth/setup`)으로 로그인하면 이후 `wpg_session` 쿠키로 모든 요청이 인증되며, POST / PUT / DELETE에는 `GET /api/auth/status`의 CSRF 토큰도 `X-CSRF-Token` 헤더로 보내야 합니다. 오류는 `code`, `message`(`Accept-Language`의 언어), `details`를 포함한 JSON 객체 `error`입니다. 아래의 엔드포인트 및 스키마 설명은 코드에서 가져온 것입니다.
+docgen-api-endpoints = 엔드포인트
+docgen-api-params = 매개변수
+docgen-api-body = 요청 본문
+docgen-api-responses = 응답
+docgen-api-schemas = 스키마
+docgen-api-schemas-intro = 위에서 참조하는 요청 및 응답 본문.
+docgen-api-tag-auth = 로그인, 로그아웃, 첫 실행 설정.
+docgen-api-tag-system = 상태 확인, 버전, 인터페이스, 자가 진단, 송신 백엔드.
+docgen-api-tag-protocols = 프로토콜 카탈로그([프로토콜 레퍼런스](protocols.md) 참조).
+docgen-api-tag-packets = 패킷 렌더링, 디코딩, 린트.
+docgen-api-tag-templates = 템플릿 라이브러리.
+docgen-api-tag-jobs = 송신 작업 및 통계.
+docgen-api-tag-events = WebSocket 이벤트 스트림.
+docgen-config-title = 구성
+docgen-config-intro = 서버는 작업 디렉터리의 `wpg.toml` 또는 `--config` / `WPG_CONFIG`로 지정한 파일을 읽습니다. 우선순위(낮은 것부터): 내장 기본값, 파일, 환경 변수 `WPG_<SECTION>__<KEY>`(`__`는 중첩 수준을 구분합니다. 예: `WPG_SERVER__BIND=0.0.0.0:8080` 또는 `WPG_TX__ALLOWED_IFACES='["eth1"]'`), 그리고 `wpg serve --bind`와 같은 명령줄 옵션입니다. 알 수 없는 키는 오류입니다. `wpg config init`은 아래의 주석이 달린 예제를 작성하고, `wpg config show`는 유효 구성을 출력하며, `wpg config validate`는 구성을 검사하고, `wpg config set-password`는 관리자 비밀번호 해시를 저장합니다. 관리자 비밀번호 자체는 키가 아닙니다: `wpg serve --password`, `--password-file`, `WPG_PASSWORD`가 `auth.password_hash`와 `auth.password_file`보다 우선합니다. 이 페이지는 구성 타입에서 생성됩니다.
+docgen-config-keys = 키
+docgen-config-top-level = 최상위
+docgen-config-default-machine = OS 데이터 디렉터리(Linux: `~/.local/share/wpg`)
+docgen-config-example = 예제(`wpg config init`)
+docgen-config-example-intro = 활성 줄은 모두 내장 기본값과 같으므로 편집하기 전까지 파일은 아무것도 바꾸지 않습니다. 주석 처리된 줄은 선택적 키를 보여 줍니다.
+docgen-config-data-dir = 서버 상태용 디렉터리: 사용자 템플릿, 즐겨찾기, SQLite 데이터베이스(사용자, 세션, 작업 기록), 드라이 런 캡처, 자체 서명 TLS 인증서.
+docgen-config-server = HTTP 리스너.
+docgen-config-server-bind = 수신 대기 주소. 비밀번호가 없으면(설정 화면에서 사용자도 생성하지 않은 경우) 루프백 주소만 허용됩니다(`--allow-insecure`로 무시 가능).
+docgen-config-server-tls = HTTPS 제공에 사용할 TLS 인증서 체인과 개인 키(PEM). `self_signed_tls`보다 우선합니다.
+docgen-config-server-tls-cert = PEM 인증서 체인.
+docgen-config-server-tls-key = PEM 개인 키.
+docgen-config-server-self-signed-tls = `<data_dir>/tls/`에 생성한 자체 서명 인증서로 HTTPS를 제공합니다(이후 시작 시 재사용). `wpg serve --tls`로 설정됩니다.
+docgen-config-server-base-url = 리버스 프록시 뒤에 있는 서버의 공개 URL(`https://wpg.example.net`). 절대 링크에 사용됩니다.
+docgen-config-auth = 인증.
+docgen-config-auth-password-hash = 관리자 비밀번호의 argon2id PHC 문자열. `wpg config set-password`가 기록합니다.
+docgen-config-auth-password-file = 관리자 비밀번호를 담은 파일: argon2 PHC 문자열 또는 시작 시 해시되는 평문.
+docgen-config-auth-session-ttl-secs = 세션 수명(초)(슬라이딩 방식: 요청마다 연장됨).
+docgen-config-templates = 템플릿 라이브러리.
+docgen-config-templates-library-paths = 읽기 전용 템플릿 라이브러리(예: Git 체크아웃). `*.wpg.yaml` / `*.wpg.json`을 재귀적으로 검색하며 파일이 변경되면 다시 불러옵니다.
+docgen-config-templates-user-dir = GUI에서 생성하거나 가져온 템플릿을 위한 쓰기 가능 디렉터리. 기본값 `<data_dir>/templates`.
+docgen-config-tx = 송신 정책 및 기본값.
+docgen-config-tx-allowed-ifaces = 작업이 송신할 수 있는 인터페이스. 비어 있으면 전체. `null` 백엔드와 드라이 런은 제한되지 않습니다.
+docgen-config-tx-max-rate = 작업이 요청할 수 있는 최대 속도(`100kpps`, `1Gbps`). 속도를 지정하지 않은 작업은 이 속도로 송신됩니다.
+docgen-config-tx-default-backend = 작업에서 백엔드를 지정하지 않았을 때 사용할 백엔드(`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`). 미설정 시 Linux에서는 `afpacket`, 그 외에는 `pcap`, 그것도 없으면 `null`.
+docgen-config-tx-dpdk-eal-args = `dpdk` 백엔드용 DPDK EAL 인수(예: `["-a", "0000:00:04.0"]`). 지정하지 않으면 wpg가 `-l <first CPU>`와 `--in-memory`를 추가합니다. EAL은 첫 `dpdk` 작업과 함께 프로세스당 한 번 시작되므로 변경하려면 재시작이 필요합니다.
+docgen-config-log = 로깅.
+docgen-config-log-level = 필터 지시문(`RUST_LOG`가 우선함). 예: `info` 또는 `wpg_tx=debug,info`.
+docgen-config-log-format = 줄 형식: `pretty`(사람이 읽기 쉬운 형식) 또는 `json`(줄마다 객체 하나).
+docgen-config-log-file = 이 파일에도 기록합니다(디렉터리가 생성됨).
+docgen-config-log-rotation = 파일 로테이션: `never`, `hourly` 또는 `daily`.
+docgen-config-log-max-files = 로테이션된 파일을 최대 이 개수만큼 보관합니다(가장 오래된 파일부터 삭제).
+docgen-config-log-ansi = 터미널일 때 콘솔 출력에 색을 입힙니다.
+docgen-schema-heading = 키 레퍼런스(생성됨)
+docgen-schema-intro = 템플릿 형식의 JSON Schema(`wpg template schema`)에서 생성되었습니다. 설명은 코드의 문서 주석(영어)입니다. `Template`이 문서 루트입니다.
+# --- P2 PTP / ESMC / CFM / R-APS / 802.3ah OAM 필드 설명 ---
+ptp-major-sdo-id = majorSdoId(IEEE 1588-2008의 transportSpecific): 기본 프로파일은 0, IEEE 802.1AS(gPTP)는 1.
+ptp-message-type = 메시지 유형: 0 Sync, 1 Delay_Req, 2 Pdelay_Req, 3 Pdelay_Resp, 8 Follow_Up, 9 Delay_Resp, 10 Pdelay_Resp_Follow_Up, 11 Announce, 12 Signaling, 13 Management.
+ptp-minor-version = minorVersionPTP(IEEE 1588-2008은 0, IEEE 1588-2019는 1).
+ptp-version = versionPTP(2).
+ptp-message-length = TLV를 포함한 메시지 전체 길이(옥텟, Auto).
+ptp-domain-number = 도메인 번호.
+ptp-minor-sdo-id = minorSdoId(IEEE 1588-2008에서는 예약, 0).
+ptp-flags = 플래그 필드: 첫 번째 옥텟에는 alternateMaster, twoStep, unicast, 프로파일별 비트 및 보안 비트, 두 번째 옥텟에는 leap61, leap59, currentUtcOffsetValid, ptpTimescale, timeTraceable, frequencyTraceable, synchronizationUncertain.
+ptp-correction-field = 나노초 단위 보정값에 2^16을 곱한 값(부호 있음).
+ptp-message-type-specific = 메시지 유형별 필드(IEEE 1588-2008에서는 예약, 0).
+ptp-clock-identity = 소스 포트의 클럭 ID(EUI-64, 예: 가운데에 ff:fe를 넣은 MAC 주소).
+ptp-port-number = 소스 포트의 포트 번호.
+ptp-sequence-id = 시퀀스 ID. Follow_Up / Delay_Resp / Pdelay_Resp는 응답 대상 메시지의 값을 복사합니다.
+ptp-control-field = 제어 필드(IEEE 1588 버전 1 호환): 0 Sync, 1 Delay_Req, 2 Follow_Up, 3 Delay_Resp, 4 Management, 5 기타 메시지.
+ptp-log-message-interval = 메시지 간격(초)의 log2 값(부호 있음. 해당 없으면 0x7f).
+ptp-timestamp-seconds = 타임스탬프: 초(48비트).
+ptp-timestamp-nanoseconds = 타임스탬프: 나노초(32비트).
+ptp-port-identity-clock = 포트 ID: 클럭 ID(모두 1 = 모든 클럭).
+ptp-port-identity-port = 포트 ID: 포트 번호(0xffff = 모든 포트).
+ptp-current-utc-offset = 현재 UTC 오프셋(초)(TAI - UTC).
+ptp-grandmaster-priority = 그랜드마스터 우선순위(Best Master Clock 알고리즘, 낮을수록 우선).
+ptp-grandmaster-clock-class = 그랜드마스터 클럭 클래스(6 = 1차 기준에 동기화됨, 248 = 기본값, 255 = slave 전용).
+ptp-grandmaster-clock-accuracy = 그랜드마스터 클럭 정확도(0x20 = 25 ns 이내 ... 0xfe = 알 수 없음).
+ptp-grandmaster-variance = 그랜드마스터 offsetScaledLogVariance.
+ptp-grandmaster-identity = 그랜드마스터 클럭 ID.
+ptp-steps-removed = 그랜드마스터와 송신자 사이의 경계 클럭 수.
+ptp-time-source = 그랜드마스터의 시간 소스: 원자 시계, GPS, 지상파 무선, PTP, NTP, 수동 설정, 기타, 내부 발진기.
+ptp-starting-boundary-hops = Management 메시지의 시작 경계 홉 수.
+ptp-boundary-hops = 남은 경계 홉 수.
+ptp-action = Management 동작: GET, SET, RESPONSE, COMMAND, ACKNOWLEDGE.
+ptp-tlvs = TLV(16비트 유형, 값의 16비트 길이, Auto): Management, Management Error Status, Organization Extension, 유니캐스트 협상(Request / Grant / Cancel / Acknowledge Cancel), Path Trace, Alternate Time Offset Indicator. 메시지 길이에서 끝납니다.
+ptp-data = 공통 헤더 뒤의 나머지 메시지(옥텟, 메시지 길이까지).
+esmc-subtype = Slow Protocols 하위 유형(0x0a = 조직별).
+esmc-itu-oui = ITU-T OUI(00-19-a7).
+esmc-itu-subtype = ITU-T 하위 유형(1 = ESMC).
+esmc-version = ESMC 버전(1).
+esmc-event-flag = 이벤트 플래그: QL 변경 직후 송신하는 이벤트 PDU는 1, 1초마다 송신하는 정보 PDU는 0.
+esmc-tlvs = TLV(8비트 유형, 3옥텟 헤더를 포함한 16비트 길이, Auto): SSM 코드를 담은 QL TLV, 향상된 SSM 코드, SyncE 클럭 ID, 캐스케이드 클럭 수를 담은 Extended QL TLV. 그 뒤의 옥텟(패딩)은 하나의 원시 항목으로 유지됩니다.
+cfm-md-level = 유지 관리 도메인 / MEG 레벨(0-7).
+cfm-version = CFM 버전(0. G.8032v2의 R-APS는 1).
+cfm-opcode = OpCode: 1 CCM, 2 LBR, 3 LBM, 4 LTR, 5 LTM, 33 AIS, 35 LCK, 37 TST, 39 Linear APS, 40 R-APS, 41 MCC, 42 LMR, 43 LMM, 45 1DM, 46 DMR, 47 DMM, 52 CSF, 53 1SL, 54 SLR, 55 SLM ...
+cfm-flags = 플래그(OpCode별).
+cfm-first-tlv-offset = 이 필드 끝에서 첫 번째 TLV까지의 오프셋(OpCode별 상수).
+cfm-rdi = RDI: 원격 결함 표시.
+cfm-period = 송신 주기: 1 = 3.33 ms, 2 = 10 ms, 3 = 100 ms, 4 = 1 s, 5 = 10 s, 6 = 1 min, 7 = 10 min.
+cfm-sequence-number = 시퀀스 번호.
+cfm-mep-id = MEP ID(1-8191).
+cfm-maid = MAID / MEG ID, 48옥텟: MD 이름 형식과 이름, 짧은 MA 이름 형식, 길이와 이름, 0 패딩(Y.1731: MD 이름 없음, 형식 32 ICC 기반, 길이 13).
+cfm-frame-counter = 프레임 카운터(손실 측정).
+cfm-transaction-id = 루프백 / 링크트레이스 트랜잭션 식별자.
+cfm-use-fdb-only = UseFDBonly: 포워딩 데이터베이스만으로 송신 포트를 결정합니다.
+cfm-fwd-yes = FwdYes: LTM이 중계되었습니다.
+cfm-terminal-mep = TerminalMEP: 응답이 대상 MEP에서 왔습니다.
+cfm-ttl = 링크트레이스 TTL.
+cfm-relay-action = 중계 동작: 1 RlyHit, 2 RlyFDB, 3 RlyMPDB.
+cfm-original-mac = 링크트레이스를 시작한 MEP의 MAC 주소.
+cfm-target-mac = 링크트레이스 대상 MAC 주소.
+cfm-csf-type = 클라이언트 신호 장애 유형: 0 LOS, 1 FDI / AIS, 2 RDI, 3 DCI.
+cfm-timestamp = IEEE 1588 형식의 타임스탬프(32비트 초 및 나노초).
+cfm-source-mep-id = 소스 MEP ID.
+cfm-responder-mep-id = 응답자 MEP ID(SLM에서는 0).
+cfm-test-id = 합성 손실 측정의 테스트 ID.
+cfm-tlvs = TLV(8비트 유형, 값의 16비트 길이, Auto): Sender ID, Port Status, Data, Interface Status, Reply Ingress / Egress, LTM / LTR Egress Identifier, Organization-Specific, Test. End TLV(유형 0)로 끝납니다.
+cfm-data = 첫 번째 TLV 오프셋 뒤의 나머지 PDU(옥텟, OpCode별 필드 및 TLV).
+raps-request-state = 요청 / 상태: 0000 NR, 0111 MS, 1011 SF, 1101 FS, 1110 Event.
+raps-sub-code = 하위 코드(0000 = Event 요청과 함께 쓰는 플러시 요청).
+raps-rb = RB: RPL이 차단됨.
+raps-dnf = DNF: 포워딩 데이터베이스를 플러시하지 않음.
+raps-bpr = BPR: 차단 포트 참조(0 = 링 링크 0, 1 = 링 링크 1).
+raps-node-id = 노드 ID: 송신 링 노드의 MAC 주소.
+efm-oam-subtype = Slow Protocols 하위 유형(3 = OAM).
+efm-oam-flags = 플래그: link fault, dying gasp, critical event, 로컬 / 원격 evaluating 및 stable.
+efm-oam-code = OAMPDU 코드: 0x00 Information, 0x01 Event Notification, 0x02 Variable Request, 0x03 Variable Response, 0x04 Loopback Control, 0xfe Organization Specific.
+efm-oam-information-tlvs = Information TLV(8비트 유형, 헤더를 포함한 8비트 길이, Auto): Local / Remote Information, Organization Specific. End TLV(유형 0)로 끝납니다.
+efm-oam-sequence-number = 이벤트 알림 시퀀스 번호.
+efm-oam-event-tlvs = 링크 이벤트 TLV(8비트 유형, 헤더를 포함한 8비트 길이, Auto): errored symbol period, errored frame, errored frame period, errored frame seconds summary, Organization Specific. End TLV(유형 0)로 끝납니다.
+efm-oam-variable-descriptors = 변수 디스크립터(옥텟): 각각 branch(1옥텟)와 leaf(2옥텟). 0 branch로 끝납니다.
+efm-oam-variable-containers = 변수 컨테이너(옥텟): 각각 branch, leaf, width, value. 0 branch로 끝납니다.
+efm-oam-loopback-command = 원격 루프백 명령: 1 활성화, 2 비활성화.
+efm-oam-oui = 조직 고유 식별자(OUI).
+efm-oam-data = OAMPDU의 나머지(옥텟).
+
+# --- P2 MACsec / GTPv2-C / Diameter / SIP / RTP 필드 설명 ---
+macsec-v = TCI V 비트: 버전(0).
+macsec-es = TCI ES 비트: End Station(SCI는 출발지 MAC 주소와 포트 1).
+macsec-sc = TCI SC 비트: 명시적 SCI 존재(Auto: SCI가 지정되면 설정).
+macsec-scb = TCI SCB 비트: EPON 단일 복사 브로드캐스트.
+macsec-e = TCI E 비트: 보안 데이터가 암호화됨.
+macsec-c = TCI C 비트: 사용자 데이터가 변경됨(기본 암호 스위트에서는 항상 E와 함께).
+macsec-an = 연결 번호(0-3): 채널 내의 보안 연결(SA).
+macsec-sl = Short length: 보안 데이터 길이가 48옥텟 미만이면 그 길이, 아니면 0(Manual).
+macsec-pn = 패킷 번호(32비트, XPN에서는 하위 절반).
+macsec-sci = 보안 채널 식별자(SCI): 시스템 식별자(MAC 주소)와 포트 식별자. SC가 설정된 경우 존재합니다.
+macsec-secure-data = 보안 데이터: 암호화된(또는 무결성 보호만 된) 사용자 데이터를 불투명 옥텟으로 표현. 실제로 암호화하지는 않습니다.
+macsec-icv = 무결성 검사 값(ICV)(16옥텟), 불투명: 계산되지 않습니다.
+gtpv2-version = GTP 버전(2).
+gtpv2-p = P 플래그: 피기백 메시지가 뒤따름(다음 GTPv2-C 계층).
+gtpv2-t = T 플래그: TEID 필드 존재(Auto: TEID가 지정되면 설정).
+gtpv2-mp = MP 플래그: 메시지 우선순위 존재.
+gtpv2-message-type = 메시지 유형(Echo, Create / Modify / Delete Session, Create / Update / Delete Bearer, ...).
+gtpv2-length = 처음 4옥텟을 제외한 메시지 길이(옥텟, Auto).
+gtpv2-teid = 수신 측의 터널 엔드포인트 식별자(Echo 메시지에는 없음. 초기 요청에서는 0).
+gtpv2-sequence = 응답을 요청과 대응시키는 시퀀스 번호(24비트).
+gtpv2-message-priority = 메시지 우선순위(0이 최고). MP가 설정된 경우 사용됩니다.
+gtpv2-ies = 정보 요소(8비트 유형, 데이터의 16비트 길이, spare / instance 옥텟): IMSI, Cause, Recovery, APN, AMBR, EBI, IP Address, MEI, MSISDN, PAA, Bearer QoS, RAT Type, Serving Network, F-TEID, Bearer Context(그룹), PDN Type, ... 길이는 Auto입니다.
+diameter-version = Diameter 버전(1).
+diameter-length = 헤더와 AVP 패딩을 포함한 메시지 길이(옥텟, Auto).
+diameter-r = R 플래그: 요청(0 = 응답).
+diameter-p = P 플래그: 프록시 가능.
+diameter-e = E 플래그: 응답에 프로토콜 오류가 포함됨.
+diameter-t = T 플래그: 재전송되었을 수 있는 메시지.
+diameter-command-code = 명령 코드(Capabilities-Exchange, Device-Watchdog, Credit-Control, ...).
+diameter-application-id = Application-ID(0 = Diameter 공통 메시지).
+diameter-hop-by-hop = 하나의 연결에서 응답을 요청과 대응시키는 Hop-by-Hop 식별자.
+diameter-end-to-end = 중복 요청을 탐지하는 End-to-End 식별자.
+diameter-avps = AVP(32비트 코드, V / M / P 플래그, 패딩을 제외한 24비트 길이, 선택적 Vendor-ID, 4옥텟 단위로 패딩된 데이터): 기본 프로토콜 및 Credit-Control AVP, 1단계 깊이의 그룹 AVP. 길이, 패딩, V 플래그는 Auto입니다.
+sip-start-line = 시작 줄: 요청 줄(메서드, Request-URI, SIP/2.0) 또는 상태 줄(SIP/2.0, 코드, 사유). CRLF는 자동으로 추가됩니다.
+sip-headers = 헤더 줄(Name: value), 요소당 하나. CRLF와 그 뒤의 빈 줄은 자동으로 추가됩니다. Content-Length는 Manual입니다.
+sip-body = 메시지 본문(SDP offer / answer 등).
+rtp-version = RTP 버전(2).
+rtp-padding = P 비트: 페이로드 끝의 패딩 옥텟(마지막 옥텟이 그 개수, Manual).
+rtp-x = X 비트: CSRC 목록 뒤에 헤더 확장이 뒤따름(Auto).
+rtp-cc = CSRC 수(Auto).
+rtp-marker = 마커 비트(프로파일에서 정의, 예: 토크스퍼트 시작).
+rtp-payload-type = 페이로드 유형(0 PCMU, 8 PCMA, 9 G.722, 18 G.729, 96-127 동적).
+rtp-sequence = 시퀀스 번호. RTP 패킷마다 1씩 증가합니다.
+rtp-timestamp = 타임스탬프: 첫 번째 페이로드 옥텟의 샘플링 시점.
+rtp-ssrc = 동기화 소스 식별자(SSRC).
+rtp-csrc = 기여 소스 식별자(CSRC)(최대 15개).
+rtp-extension = 헤더 확장: 프로파일 정의 16비트(0xBEDE: RFC 8285 1바이트 요소), 32비트 워드 단위 길이(Auto), 확장 워드.
+rtcp-version = RTCP 버전(2).
+rtcp-padding = P 비트: 패킷 끝의 패딩 옥텟(Manual).
+rtcp-count = 유형이 정의되지 않은 패킷 유형의 개수 / 형식 필드(5비트).
+rtcp-report-count = 수신 보고 수(Auto).
+rtcp-source-count = 소스 수: SDES 청크 또는 BYE 식별자(Auto).
+rtcp-subtype = 애플리케이션 정의 하위 유형.
+rtcp-packet-type = 패킷 유형(200 SR, 201 RR, 202 SDES, 203 BYE, 204 APP, 205 RTPFB, 206 PSFB, 207 XR).
+rtcp-length = 32비트 워드 단위 패킷 길이에서 1을 뺀 값(Auto).
+rtcp-body = 공통 헤더 뒤의 패킷 본문(옥텟).
+rtcp-ssrc = 이 패킷 송신자의 SSRC.
+rtcp-ntp-timestamp = NTP 타임스탬프(상위 워드. 다음 필드가 소수부).
+rtcp-rtp-timestamp = NTP 타임스탬프에 대응하는 RTP 타임스탬프.
+rtcp-packet-count = 송신자의 패킷 수.
+rtcp-octet-count = 송신자의 페이로드 옥텟 수.
+rtcp-report-blocks = 수신 보고 블록: SSRC, 손실 비율, 누적 손실, 확장 최고 시퀀스 번호, 지터, LSR, DLSR.
+rtcp-extension = 패킷 길이까지의 프로파일별 확장 옥텟.
+rtcp-chunks = SDES 청크: SSRC / CSRC와 그 항목(유형, 길이(Auto), 텍스트). null 옥텟으로 끝나며 32비트 단위로 패딩됩니다.
+rtcp-ssrcs = 세션을 떠나는 SSRC / CSRC 식별자.
+rtcp-reason = 선택적 이탈 사유: 길이(Auto), 텍스트, 32비트 단위 패딩.
+rtcp-app-name = 이름(ASCII 4문자).
+rtcp-app-data = 애플리케이션 종속 데이터(4옥텟의 배수).

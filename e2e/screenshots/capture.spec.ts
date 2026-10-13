@@ -19,9 +19,13 @@ const hideToasts = 'div.fixed[aria-live="polite"] { display: none !important; }'
 
 test.use({ viewport, deviceScaleFactor: 1, colorScheme: 'light' });
 
-/** Switches the UI language with the header buttons, also behind an open dialog. */
+/** Switches the UI language with the header menu, also behind an open dialog. */
 async function setLanguage(page: Page, lang: 'en' | 'ja'): Promise<void> {
-  await page.getByRole('button', { name: lang.toUpperCase(), exact: true }).evaluate((el) => (el as HTMLElement).click());
+  await page.locator('header select').evaluate((el, l) => {
+    const select = el as HTMLSelectElement;
+    select.value = l;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }, lang);
   const builder = lang === 'ja' ? 'ビルダー' : 'Builder';
   await expect(page.getByRole('navigation').first().getByRole('link', { name: builder })).toBeVisible();
 }
@@ -46,7 +50,7 @@ async function shoot(page: Page, name: string): Promise<void> {
 test('screens', async ({ page }) => {
   test.setTimeout(120_000);
 
-  // The login screen has no language buttons: use the saved preference.
+  // The login screen has no header: use the saved preference.
   for (const lang of ['en', 'ja'] as const) {
     await page.goto('/login');
     await page.evaluate((l) => localStorage.setItem('wpg.locale', l), lang);

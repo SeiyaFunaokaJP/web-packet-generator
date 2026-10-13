@@ -28,7 +28,7 @@ TODO.md §4 の v1.0 リリース判定 (M12) では、これに加えて次を�
 
 - P0 + P1 プロトコルの golden pcap と tshark 突合がすべて緑。
 - 3 OS でビルド・起動・pcap バックエンド送出が確認できている。
-- GUI の E2E (`just e2e`) が緑、i18n の ja / en 抜け漏れが 0 (`cargo test -p wpg-i18n`)。
+- GUI の E2E (`just e2e`) が緑、i18n の全言語の抜け漏れが 0 (`cargo test -p wpg-i18n`)。
 - UI を変えたときは `docs/{ja,en}/src/images/` のスクリーンショットとビルダーの GIF を `just screenshots` で再生成する (コミット前に目で確認)。
 - ドキュメントが ja / en そろっており、`docs/build.sh` が通る。
 - `CHANGELOG.md` が更新されている。

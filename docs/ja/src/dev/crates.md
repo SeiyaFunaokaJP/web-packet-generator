@@ -8,7 +8,7 @@
 |---|---|---|
 | `wpg-core` | プロトコル定義 IR、パケットの合成・解析、フィールドジェネレータ、lint 診断 (`diag::keys`)。OS 非依存 | ○ |
 | `wpg-protocols` | 組み込みプロトコル定義 (Ethernet 〜 IS-IS / CLNP)。Rust マクロで `wpg-core` の IR にコンパイルされる | ○ |
-| `wpg-i18n` | Fluent ベースの i18n (ja / en)。`locales/<lang>/main.ftl` を `include_str!` で埋め込む | ○ |
+| `wpg-i18n` | Fluent ベースの i18n (ja / en / zh-CN / zh-TW / ko / de / fr / es)。`locales/<lang>/main.ftl` を `include_str!` で埋め込む | ○ |
 | `wpg-template` | テンプレートファイル形式 (`.wpg.yaml` / JSON)、スキーマのバージョン管理と (デ)シリアライズ | |
 | `wpg-tx` | 送信バックエンド (`null`、`pcap`、AF_PACKET、AF_XDP、DPDK) を `TxBackend` トレイトの裏に置く | |
 | `wpg-rx` | 受信側カウンタと簡易検証 (v1 は最小限) | |

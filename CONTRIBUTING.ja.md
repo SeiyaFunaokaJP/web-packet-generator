@@ -39,8 +39,9 @@ PR 前に `just fmt lint test check-wasm` を実行してください。CI で�
 ## 国際化 (i18n) ルール
 
 - サーバ / CLI / Web UI（エラーメッセージ含む）に **ユーザー向け文字列を直書きしない**。Fluent のキーを使う。
-- すべてのキーは `locales/ja/main.ftl` と `locales/en/main.ftl` の **両方** に存在すること
+- すべてのキーは `locales/*/main.ftl` の **全言語**（ja / en / zh-CN / zh-TW / ko / de / fr / es）に存在すること
   （抜けは `cargo test -p wpg-i18n` が検出し、CI で失敗します）。
+- 言語の追加手順は開発者ガイド `docs/ja/src/dev/add-i18n.md` を参照してください。
 
 ## ライセンスと DCO
 

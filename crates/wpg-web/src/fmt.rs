@@ -1,6 +1,6 @@
 //! Number / date formatting. Locale-sensitive parts go through the browser's `Intl`
-//! (grouping, dates); SI-prefixed rates are locale independent (ja / en both use
-//! `.` decimals) and pure, so they are unit tested natively.
+//! (grouping, dates); SI-prefixed rates are locale independent (always `.` decimals,
+//! like the CLI output, in every UI language) and pure, so they are unit tested natively.
 
 use wpg_i18n::Locale;
 

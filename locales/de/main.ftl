@@ -1,0 +1,1487 @@
+# Deutsch (de). Jede Nachricht muss in jeder Locale-Datei existieren, auch in locales/en/main.ftl
+# (durchgesetzt von den wpg-i18n-Unit-Tests).
+
+app-name = Web Packet Generator
+app-tagline = Leistungsstarker Paketgenerator für Netzwerktests, gesteuert über Ihren Browser.
+
+## Server / API
+health-ok = Dienst ist betriebsbereit
+server-listening = Lauscht auf { $addr }
+server-placeholder-ui = Die Web-UI wurde noch nicht gebaut. Führen Sie `trunk build` in crates/wpg-web aus.
+
+## Fehler
+error-not-implemented = `{ $command }` ist noch nicht implementiert.
+error-not-found = Nicht gefunden
+error-internal = Interner Serverfehler
+
+## UI
+ui-language = Sprache
+ui-protocols = Protokolle
+
+## Diagnosen (wpg-core `diag::keys`; Argumentnamen sind Teil des Vertrags)
+diag-field-out-of-range = Feld `{ $field }` = { $value } liegt außerhalb des Bereichs { $min }..{ $max }.
+diag-field-not-equal = Feld `{ $field }` = { $value } weicht vom erwarteten Wert { $expected } ab.
+diag-field-forbidden-value = Feld `{ $field }` hat einen nicht empfohlenen Wert: { $value }.
+diag-length-too-short = `{ $span }` ist { $len } Bytes lang, mindestens { $min } erforderlich.
+diag-length-too-long = `{ $span }` ist { $len } Bytes lang, höchstens { $max } zulässig.
+diag-length-mismatch = Längenfeld `{ $field }` = { $value } weicht von der berechneten Länge { $expected } ab.
+diag-count-mismatch = Zählfeld `{ $field }` = { $value } weicht von der tatsächlichen Anzahl der Elemente { $expected } ab.
+diag-fill-inexact = `{ $field }` lässt sich mit Füllelementen nicht exakt erreichen: { $len } Oktett(s) fehlen.
+diag-checksum-mismatch = Prüfsummenfeld `{ $field }` = { $value } weicht von der berechneten Prüfsumme { $expected } ab.
+diag-next-protocol-mismatch = Feld `{ $field }` = { $value } kündigt die nächste Schicht `{ $next }` nicht an (erwartet { $expected }).
+diag-auto-overflow = Automatischer Wert { $value } von `{ $field }` passt nicht in { $bits } Bits.
+diag-length-not-aligned = Länge { $len } von `{ $field }` ist kein Vielfaches von { $unit } Bytes.
+diag-no-pseudo-header = Prüfsumme `{ $field }` benötigt einen Pseudo-Header, aber darunter liegt keine IP-Schicht.
+diag-not-implemented = `{ $field }`: { $what } ist noch nicht implementiert.
+diag-truncated = Die Schicht wurde absichtlich auf { $len } Bytes gekürzt.
+diag-short-header = Die Eingabe endet innerhalb des { $protocol }-Headers bei Offset { $offset }.
+diag-length-exceeds-data = Längenfeld `{ $field }` = { $len } übersteigt die { $available } verfügbaren Bytes.
+diag-trailing-bytes = Nach dem Ende des Pakets verbleiben { $len } Bytes.
+diag-unsupported-field = Der Parser kann das Feld `{ $field }` von { $protocol } noch nicht dekodieren.
+
+## Beschreibungen der Protokollfelder (wpg-protocols `desc = "..."`)
+arp-hlen = Länge der Hardwareadresse in Bytes (6 für Ethernet).
+arp-htype = Hardwaretyp (1 = Ethernet).
+arp-oper = Operation (1 = Request, 2 = Reply).
+arp-plen = Länge der Protokolladresse in Bytes (4 für IPv4).
+arp-ptype = Protokolltyp (EtherType, 0x0800 = IPv4).
+arp-sha = Hardwareadresse des Senders.
+arp-spa = Protokolladresse des Senders.
+arp-tha = Hardwareadresse des Ziels.
+arp-tpa = Protokolladresse des Ziels.
+icmp-code = Nachrichtencode, Bedeutung hängt vom Typ ab.
+icmp-identifier = Kennung zur Zuordnung von Echo Requests und Replies.
+icmp-rest = Typabhängiges 4-Byte-Feld „Rest of Header“.
+icmp-sequence = Sequenznummer zur Zuordnung von Echo Requests und Replies.
+icmp-type = Nachrichtentyp.
+ipv6-fragment-offset = Offset dieses Fragments in Einheiten von 8 Bytes.
+ipv6-more-fragments = More-Fragments-Flag (1 = weitere Fragmente folgen).
+ipv6-options = Rohe TLV-Optionen, aufgefüllt auf ein Vielfaches von 8 Bytes.
+ipv6-routing-data = Typabhängige Routing-Daten.
+ipv6-routing-type = Typ des Routing-Headers (z. B. 2 = Mobile IPv6, 4 = SRH).
+ipv6-segments-left = Anzahl der verbleibenden Routensegmente.
+srh-segments-left = Segments Left: Index (in der Segmentliste) des nächsten zu besuchenden Segments; 0 beim letzten.
+srh-last-entry = Last Entry: Index des letzten Elements der Segmentliste, also Anzahl der Segmente - 1 (Auto).
+srh-flags = Flags (RFC 8754 definiert kein Flag; 0).
+srh-tag = Tag: kennzeichnet Pakete als Teil einer Klasse oder Gruppe (0 = unbenutzt).
+srh-segment-list = Segmentliste (SIDs) in umgekehrter Pfadreihenfolge: Element 0 ist das letzte Segment, das letzte Element das erste. Solange Segments Left ungleich null ist, verwenden Prüfsummen höherer Schichten Element 0 als Ziel.
+srh-tlvs = Optionale TLVs (8-Bit-Typ, 8-Bit-Länge): Pad1, PadN, HMAC (der HMAC-Wert ist Manual). Anschließend wird der Header mit Pad1-Oktetten auf ein Vielfaches von 8 aufgefüllt (Auto).
+ndp-destination = Zieladresse eines Redirects.
+ndp-managed = Flag für verwaltete Adresskonfiguration (M).
+ndp-options = Rohe NDP-Optionen (TLV).
+ndp-other = Flag für sonstige Konfiguration (O).
+ndp-override-flag = Override-Flag (O).
+ndp-router-flag = Router-Flag (R).
+ndp-solicited-flag = Solicited-Flag (S).
+ndp-target = Zieladresse (Target).
+
+## wpg ifaces
+ifaces-col-name = NAME
+ifaces-col-index = IDX
+ifaces-col-mac = MAC
+ifaces-col-ipv4 = IPV4
+ifaces-col-ipv6 = IPV6
+ifaces-col-mtu = MTU
+ifaces-col-state = STATUS
+ifaces-col-speed = TEMPO
+ifaces-col-driver = TREIBER
+ifaces-state-up = up
+ifaces-state-down = down
+ifaces-state-no-carrier = kein Carrier
+ifaces-state-loopback = Loopback
+ifaces-none = Keine Netzwerkschnittstellen gefunden.
+ifaces-error = Netzwerkschnittstellen konnten nicht aufgelistet werden: { $error }
+
+## wpg doctor
+doctor-title = wpg doctor: Umgebungsprüfung
+doctor-summary = { $ok } ok, { $warn } Warnung(en), { $fail } Fehler
+doctor-skip = Auf diesem Betriebssystem nicht zutreffend
+doctor-caps-ok = Raw Sockets sind verfügbar
+doctor-caps-missing = Fehlende Berechtigungen für das Senden roher Pakete (CAP_NET_RAW / root / Administrator)
+doctor-fix-caps = Erteilen Sie die Berechtigung: { $hint }
+doctor-iface-ok = Mindestens eine nutzbare Netzwerkschnittstelle ist aktiv
+doctor-iface-none = Keine Nicht-Loopback-Schnittstelle ist mit Carrier aktiv
+doctor-iface-error = Netzwerkschnittstellen konnten nicht ermittelt werden
+doctor-fix-iface = Prüfen Sie die Schnittstellen: { $hint }
+doctor-af-xdp-ok = Der Kernel unterstützt AF_XDP (5.10 oder neuer)
+doctor-af-xdp-old = Der Kernel ist zu alt für AF_XDP (5.10 oder neuer erforderlich); das afpacket-Backend funktioniert weiterhin
+doctor-tpacket-v3-ok = Der Kernel unterstützt TPACKET_V3
+doctor-tpacket-v3-old = Der Kernel unterstützt TPACKET_V3 nicht; afpacket weicht auf sendmmsg aus
+doctor-hugepages-ok = Hugepages sind konfiguriert
+doctor-hugepages-none = Keine Hugepages konfiguriert (nur für das DPDK-Backend nötig)
+doctor-fix-hugepages = Reservieren Sie Hugepages und binden Sie die NIC an DPDK: { $hint }
+doctor-npcap-ok = Npcap ist installiert
+doctor-npcap-missing = Npcap ist nicht installiert; es wird zum Senden unter Windows benötigt
+doctor-npcap-no-dll = Npcap scheint installiert zu sein, aber wpcap.dll wurde weder in System32\Npcap noch in System32 gefunden
+doctor-fix-npcap = Installieren Sie Npcap (erneut) und führen Sie dann wpg doctor nochmals aus: { $hint }
+doctor-pcaplib-ok = libpcap ist verfügbar
+doctor-pcaplib-missing = libpcap wurde nicht gefunden; das pcap-Backend kann nicht verwendet werden
+doctor-fix-pcaplib = Installieren Sie libpcap: { $hint }
+
+## wpg template lint (wpg-template `LintIssue`-Schlüssel)
+lint-level-error = Fehler
+lint-level-warning = Warnung
+lint-schema-version = Nicht unterstützte Schemaversion { $value } (unterstützt: { $expected }).
+lint-missing-name = `meta.name` ist leer.
+lint-no-layers = Die Vorlage hat keine Schichten.
+lint-unknown-protocol = Unbekanntes Protokoll `{ $protocol }`.
+lint-unknown-field = Protokoll `{ $protocol }` hat kein Feld `{ $field }`.
+lint-invalid-value = Ungültiger Wert für `{ $field }`: { $value }
+lint-invalid-generator = Ungültiger Generator für `{ $field }`: { $value }
+lint-unknown-variable = Unbekannte Variable `{ $value }`.
+lint-missing-variable = Variable `{ $value }` hat keinen Standardwert, und es wurde kein Wert angegeben.
+lint-unused-variable = Variable `{ $value }` wird nie verwendet.
+lint-duplicate-variable = Variable `{ $value }` ist mehrfach deklariert.
+lint-var-syntax = Nicht abgeschlossener Variablenplatzhalter in `{ $value }`.
+lint-override-unknown = Unbekannte Variablenüberschreibung `{ $value }`.
+lint-field-and-generator = `{ $field }` hat sowohl einen festen Wert als auch einen Generator; der Generator hat Vorrang.
+lint-next-protocol-manual = `{ $next }` steht nicht in der Bindungstabelle von `{ $protocol }`; `{ $field }` wird Manual.
+lint-unknown-order = `{ $value }` in der Stream-Reihenfolge hat keinen Generator.
+lint-invalid-stream = Ungültige Stream-Einstellung: { $value }
+lint-build-error = Das Paket kann nicht erstellt werden: { $value }
+
+## wpg template / wpg render
+template-lint-ok = { $value }: keine Probleme
+template-lint-load-error = { $value }: { $error }
+template-lint-summary = { $fail } Fehler, { $warn } Warnung(en) in { $ok } Datei(en)
+template-list-empty = Keine Vorlagen in { $value } gefunden.
+template-show-hex = Hexdump ({ $len } Bytes)
+template-show-layout = Aufbau
+render-done = { $len } Pakete nach { $value } geschrieben.
+render-unbounded = Der Stream ist unbegrenzt; geben Sie --count N an.
+cli-bad-var = Ungültiges --var `{ $value }`; erwartet wird NAME=VALUE.
+
+## wpg send / wpg bench (Fortschritt, Zusammenfassung, Fehler)
+tx-progress = [{ $t } s] { $packets } Pkt.  { $pps }pps  { $bps }bps  verworfen { $dropped }
+tx-progress-rate = Rate { $ratio }%
+tx-progress-paused = (pausiert)
+tx-progress-scheduled = (geplant, Start in { $secs } s)
+tx-interrupted = Unterbrochen, wird beendet...
+tx-ctrlc-warning = Warnung: Der Ctrl-C-Handler kann nicht installiert werden: { $error }
+tx-open-failed = { $backend } kann auf `{ $iface }` nicht geöffnet werden: { $error }
+tx-start-failed = Der Job kann nicht gestartet werden: { $error }
+tx-available-backends = Verfügbare Backends: { $value }
+tx-iface-required = Für das Backend { $backend } ist --iface erforderlich.
+tx-iface-required-pcapfile = Für das pcapfile-Backend ist --iface <Ausgabepfad> erforderlich.
+tx-bad-workers = --workers muss mindestens 1 sein.
+tx-workers-unsupported = Das Backend { $backend } unterstützt nur einen Worker; verwenden Sie --workers 1.
+tx-pin-cores-short = Warnung: --pin-cores nennt { $count } Kern(e) für { $workers } Worker; die übrigen werden nicht gebunden.
+tx-json-error = JSON kann nicht geschrieben werden: { $error }
+send-bad-rate = Ungültiges --rate: { $error }
+send-bad-duration = Ungültiges --duration: { $error }
+send-bad-ramp-up = Ungültiges --ramp-up: { $error }
+send-bad-start-at = Ungültiges --start-at: { $error }
+send-link-speed-unknown = Die Link-Geschwindigkeit von `{ $iface }` für `{ $value }%` lässt sich nicht ermitteln; geben Sie eine absolute Rate wie `1Gbps` an.
+send-bad-plan = --plan muss auto, prerender oder onthefly sein.
+send-stream-error = Stream-Fehler: { $error }
+send-render-error = Render-Fehler: { $error }
+send-starting = Sende auf { $iface } über { $backend }{ $detail }: Rate { $rate }, Burst { $burst }, { $limit }, { $workers } Worker, Plan { $strategy } ({ $reason })
+send-limit-count = { $count } Pakete
+send-limit-count-or-duration = { $count } Pakete oder { $duration }
+send-limit-duration = für { $duration }
+send-limit-forever = bis Ctrl-C
+send-ramp-up = Ramp-up: 0 bis { $rate } über { $duration }
+send-scheduled = Geplanter Start um { $time } (in { $secs } s); Ctrl-C bricht ab.
+summary-state = Status      { $value }
+summary-state-finished = beendet ({ $reason })
+summary-state-failed = fehlgeschlagen: { $error }
+summary-reason-count-reached = Anzahl erreicht
+summary-reason-duration-elapsed = Dauer abgelaufen
+summary-reason-source-exhausted = Stream erschöpft
+summary-reason-stopped = gestoppt
+summary-backend = Backend     { $backend }{ $detail }
+summary-workers = Worker      { $workers }
+summary-packets = Pakete      { $value }
+summary-bytes = Bytes       { $value }
+summary-dropped = verworfen   { $value }
+summary-elapsed = Dauer       { $secs } s
+summary-average = Mittel      { $pps }pps  { $bps }bps (L2)  { $l1 }bps (L1)
+summary-accuracy = Genauigkeit Ziel { $target }{ $unit }  erreicht { $ratio }%  max. Jitter { $max }  mittl. Jitter { $mean }
+summary-stream = Stream { $index }   { $packets } Pkt.  { $bytes } Bytes
+summary-worker = Worker { $index }   { $packets } Pkt.  { $bytes } Bytes{ $core }
+summary-worker-core = , Kern { $core }
+summary-warning = Warnung     { $error }
+summary-unsigned = unsigniert  { $value } (kein Platz für eine Signatur)
+
+## wpg capture (Empfang / Verifikation)
+rx-progress = [{ $t } s] { $packets } Pkt.  { $pps }pps  { $bps }bps  passend { $matched } ({ $mpps }pps)  verworfen { $dropped }
+capture-starting = Capture auf { $iface } über { $backend }, Filter { $filter } (Ctrl-C beendet)
+capture-filter-all = (alle Frames)
+capture-iface-required-pcapfile = Für das pcapfile-Backend ist --iface <Capture-Datei> erforderlich.
+capture-bad-filter = Ungültiges --filter: { $error }
+capture-running = läuft
+capture-reason-end-of-input = Ende der Eingabe
+capture-packet = #{ $index }  { $time }  { $len } B  { $layers }{ $signature }
+capture-packet-signature = { "  " }[wpg Stream { $stream } Seq { $seq }]
+capture-summary-matched = passend     { $packets } Pkt.  { $bytes } Bytes
+capture-summary-average = Mittel      { $pps }pps  { $bps }bps  passend { $mpps }pps  { $mbps }bps
+capture-summary-saved = gespeichert { $count } Pkt. nach { $path }
+capture-summary-signed = signiert    { $signed } mit Signatur, { $unsigned } ohne
+capture-summary-stream = Stream { $stream } empfangen { $received }  Seq { $first }-{ $last }  verloren { $lost } ({ $ratio }%)  umsortiert { $reordered }  Duplikate { $duplicates }
+capture-summary-latency = { "             " }Latenz min. { $min }  Mittel { $avg }  max. { $max }  Jitter { $jitter }
+
+bench-iface = Schnittst.  { $iface }
+bench-worker = Worker { $index }   { $detail }
+bench-frame = Frame       { $len } B (+4 FCS)  Batch { $batch }
+bench-template = Vorlage     { $value } (on the fly, { $mode })
+bench-mode-patch = direkt gepatcht
+bench-mode-rebuild = vollständiger Neuaufbau pro Frame
+bench-rate = Rate        { $pps }pps
+bench-bits = { $bps }bps (L2)  { $l1 }bps (L1)
+bench-bad-duration = --duration muss eine nichtnegative Anzahl Sekunden sein.
+bench-failed = Benchmark fehlgeschlagen: { $error }
+import-done = { $len } Paket(e) in { $count } Vorlage(n) importiert: { $value }
+import-read-error = { $value }: { $error }
+import-write-error = { $value }: { $error }
+import-note = { $value }
+import-note-packet = Paket { $index }: { $value }
+import-packet-problems = Paket { $index } hat { $count } Parse-Problem(e)
+import-packet-skipped = Paket { $index } konnte nicht dekodiert werden und wurde übersprungen
+import-not-reproducible = Die importierte Vorlage reproduziert die erfassten Oktette nicht; der Frame wurde als Rohdaten gespeichert.
+import-mixed-stacks = { $count } Paket(e) haben einen anderen Schichtstapel als das erste; es wurden keine Generatoren abgeleitet.
+import-generator-approximate = { $value } nähert die erfassten Werte nur an.
+import-generators-dropped = Die abgeleiteten Generatoren erzeugten einen ungültigen Stream und wurden verworfen.
+template-export-none = Es wurden keine Vorlagen zum Exportieren angegeben.
+template-export-not-found = Vorlage nicht gefunden: { $value }
+template-export-done = { $count } Vorlage(n) nach { $value } exportiert.
+template-export-error = { $value }: { $error }
+template-import-done = { $count } Vorlage(n) aus { $value } nach { $detail } extrahiert.
+template-import-exists = { $value }: existiert bereits (mit --force überschreiben)
+template-import-error = { $value }: { $error }
+template-migrate-outdated = { $value }: Schema { $found }, Migration auf { $expected } erforderlich
+template-migrate-done = { $value }: von Schema { $found } auf { $expected } migriert
+template-migrate-error = { $value }: { $error }
+template-migrate-summary = { $count } migriert, { $ok } bereits auf Schema { $expected }, { $fail } Fehler
+template-migrate-check-summary = { $count } zu migrieren, { $ok } bereits auf Schema { $expected }, { $fail } Fehler
+
+## API-Fehler (wpg-server)
+api-error-not-found = { $what } wurde nicht gefunden.
+api-error-invalid-body = Ungültiger Request-Body: { $error }
+api-error-invalid-query = Ungültiger Request-Parameter: { $error }
+api-error-invalid-template = Ungültige Vorlage: { $error }
+api-error-invalid-hex = Ungültige Hex-Eingabe: { $error }
+api-error-parse-failed = Die Bytes konnten nicht dekodiert werden: { $error }
+api-error-render-failed = Rendern fehlgeschlagen: { $error }
+api-error-count-range = `count` muss zwischen 1 und { $max } liegen (erhalten: { $error }).
+api-error-read-only = Vorlage { $id } gehört zu einer schreibgeschützten Bibliothek; duplizieren Sie sie zum Bearbeiten.
+api-error-policy-iface = Senden auf { $iface } ist durch die Serverrichtlinie nicht erlaubt (erlaubt: { $allowed }).
+api-error-policy-rate = Die Rate { $rate } übersteigt das von der Serverrichtlinie erlaubte Maximum ({ $max }).
+api-error-policy-unlimited = Eine unbegrenzte Rate ist durch die Serverrichtlinie nicht erlaubt (Maximum { $max }).
+api-error-invalid-state = Job { $id } ist { $state }; { $action } nicht möglich.
+api-error-job-spec = Ungültiger Job: { $error }
+api-error-backend = Fehler im Sende-Backend: { $error }
+api-error-capture-spec = Ungültiger Capture: { $error }
+api-error-capture-filter = Ungültiger Capture-Filter: { $error }
+api-error-capture-backend = Fehler im Empfangs-Backend: { $error }
+api-error-capture-state = Capture { $id } ist { $state }; { $action } nicht möglich.
+api-error-internal = Interner Serverfehler: { $error }
+auth-error-unauthorized = Bitte melden Sie sich an.
+auth-error-bad-credentials = Falscher Benutzername oder falsches Passwort.
+auth-error-setup-required = Es ist noch kein Admin-Passwort gesetzt: Schließen Sie zuerst die Einrichtung ab.
+auth-error-already-configured = Das Admin-Passwort wurde bereits gesetzt.
+auth-error-rate-limited = Zu viele fehlgeschlagene Anmeldungen. Versuchen Sie es in { $secs } Sekunden erneut.
+auth-error-csrf = Fehlendes oder ungültiges CSRF-Token (Header X-CSRF-Token).
+auth-error-origin = WebSocket-Verbindungen von einem anderen Origin sind nicht erlaubt.
+auth-error-setup-remote = Das Admin-Passwort kann nur auf dem Server selbst (localhost) gesetzt werden.
+auth-error-password-mismatch = Die Passwörter stimmen nicht überein.
+auth-error-password-short = Das Passwort muss mindestens { $min } Zeichen lang sein.
+lint-parse-error = Die Vorlage kann nicht geparst werden: { $error }
+
+## Konfiguration (wpg.toml)
+config-issue-file-missing = Datei nicht gefunden
+config-issue-bad-url = muss mit http:// oder https:// beginnen
+config-issue-not-argon2 = sieht nicht wie ein argon2-Hash aus ($argon2id$...)
+config-issue-password-both = password_hash und password_file sind beide gesetzt; password_hash hat Vorrang
+config-issue-zero = muss größer als 0 sein
+config-issue-exposed-without-password = lauscht ohne Passwort auf einer Nicht-Loopback-Adresse
+config-issue-dir-missing = Verzeichnis nicht gefunden
+config-issue-max-rate-percent = ein Link-Prozentsatz kann kein serverweites Maximum sein; verwenden Sie pps oder bps
+config-issue-bad-rate = ungültige Rate
+config-issue-unknown-backend = unbekanntes Backend
+config-issue-backend-unavailable = Backend in diesem Build / auf diesem Betriebssystem nicht verfügbar
+config-issue-bad-log-level = ungültiger Log-Filter
+config-level-error = Fehler
+config-level-warning = Warnung
+config-issue-line = { $level }: { $key }: { $message }{ $detail }
+config-load-error = Konfigurationsfehler: { $error }
+config-init-written = { $path } geschrieben. Bearbeiten Sie die Datei und prüfen Sie sie dann mit `wpg config validate`.
+config-init-exists = { $path } existiert bereits (mit --force überschreiben).
+config-validate-ok = Konfiguration OK ({ $source }).
+config-validate-summary = { $errors } Fehler, { $warnings } Warnung(en) ({ $source }).
+config-source-defaults = eingebaute Standardwerte und Umgebung
+config-password-prompt = Neues Admin-Passwort:{ " " }
+config-password-confirm = Passwort wiederholen:{ " " }
+config-password-mismatch = Die Passwörter stimmen nicht überein.
+config-password-short = Das Passwort muss mindestens { $min } Zeichen lang sein.
+config-password-written = Passwort-Hash in { $path } gespeichert (auth.password_hash). Starten Sie `wpg serve` neu, um ihn zu übernehmen.
+
+## wpg serve
+serve-banner-title = { $app } { $version }
+serve-banner-listen = Lauscht auf     { $url }/
+serve-banner-docs = API-Doku        { $url }/api/docs/
+serve-banner-config = Konfiguration   { $source }
+serve-banner-data = Datenverz.      { $path }
+serve-banner-library = Bibliothek      { $path }{ $state }
+serve-banner-user-dir = Eigene Vorlagen { $path }
+serve-banner-templates = Vorlagen        { $count }
+serve-banner-backends = Backends        { $list }
+serve-banner-missing = { " " }(fehlt)
+serve-banner-dev = Entwicklungsmodus: CORS erlaubt für { $origins }
+serve-banner-no-password = Es ist kein Passwort konfiguriert, und der Server lauscht auf { $url } (--allow-insecure): Jeder, der ihn erreicht, kann das Admin-Passwort setzen und Pakete senden. Setzen Sie so bald wie möglich ein Passwort (wpg config set-password).
+serve-failed = Serverfehler: { $error }
+serve-log-error = Logging kann nicht eingerichtet werden: { $error }
+serve-banner-tls = TLS             { $path }
+serve-banner-tls-self-signed = TLS             { $path } (selbstsigniert)
+serve-banner-fingerprint = SHA-256         { $fingerprint }
+serve-banner-auth = Anmeldung       { $state }
+serve-banner-auth-setup = noch kein Passwort: im Einrichtungsbildschirm festlegen
+serve-banner-auth-configured = Admin-Passwort aus { $source }
+serve-banner-auth-database = Admin-Passwort im Einrichtungsbildschirm gesetzt
+serve-banner-setup-local = Es ist noch kein Admin-Passwort gesetzt. Öffnen Sie { $url } in einem Browser auf diesem Rechner, um es festzulegen.
+serve-refuse-insecure = Lauschen auf { $addr } verweigert: Es ist kein Admin-Passwort konfiguriert. Verwenden Sie eine Loopback-Adresse (127.0.0.1), setzen Sie ein Passwort (--password-file, WPG_PASSWORD, wpg config set-password) oder übergeben Sie --allow-insecure.
+serve-password-arg-warning = Warnung: --password ist für andere Benutzer in der Prozessliste sichtbar; verwenden Sie besser --password-file, WPG_PASSWORD oder `wpg config set-password`.
+
+## Web-UI (wpg-web). Die Schlüssel werden vom Test `ui_keys_exist` in crates/wpg-web geprüft.
+ui-lang-ja = 日本語
+ui-lang-en = English
+ui-lang-zh-cn = 简体中文
+ui-lang-zh-tw = 繁體中文
+ui-lang-ko = 한국어
+ui-lang-de = Deutsch
+ui-lang-fr = Français
+ui-lang-es = Español
+ui-loading = Wird geladen…
+ui-close = Schließen
+ui-cancel = Abbrechen
+ui-delete = Löschen
+ui-save = Speichern
+ui-refresh = Aktualisieren
+ui-retry = Erneut versuchen
+ui-yes = Ja
+ui-no = Nein
+ui-unlimited = Unbegrenzt
+ui-help = Tastenkürzel
+ui-help-title = Tastenkürzel
+ui-skip-to-content = Zum Inhalt springen
+ui-not-found = Diese Seite existiert nicht.
+ui-back-to-dashboard = Zurück zum Dashboard
+ui-view-only = Schmaler Bildschirm: nur Ansicht. Bearbeiten ist auf breiteren Bildschirmen möglich.
+ui-server-unreachable = Der Server ist nicht erreichbar. Läuft `wpg serve`?
+ui-error-http = Der Server antwortete mit HTTP { $id }.
+ui-error-network = Netzwerkfehler: { $error }
+ui-error-decode = Unerwartete Antwort vom Server: { $error }
+ui-nav-label = Hauptnavigation
+ui-nav-dashboard = Dashboard
+ui-nav-builder = Builder
+ui-nav-jobs = Jobs
+ui-nav-templates = Vorlagen
+ui-nav-rx = Empfang
+ui-nav-settings = Einstellungen
+ui-shortcut-hint = zeigt die Tastenkürzel
+ui-shortcut-dashboard = Zum Dashboard
+ui-shortcut-builder = Zum Builder
+ui-shortcut-jobs = Zu den Jobs
+ui-shortcut-templates = Zu den Vorlagen
+ui-shortcut-rx = Zum Empfang
+ui-shortcut-settings = Zu den Einstellungen
+ui-shortcut-new-job = Neuer Job
+ui-shortcut-logs = Server-Log ein-/ausblenden
+ui-shortcut-help = Diese Hilfe anzeigen
+ui-shortcut-escape = Dialog schließen
+ui-ws-connecting = Verbinde…
+ui-ws-open = Live
+ui-ws-closed = Getrennt (neuer Versuch)
+ui-theme = Design
+ui-theme-light = Hell
+ui-theme-dark = Dunkel
+ui-theme-system = System
+ui-theme-to-dark = Zum dunklen Design wechseln
+ui-theme-to-light = Zum hellen Design wechseln
+ui-logout = Abmelden
+ui-logs-toggle = Server-Log
+ui-logs-title = Server-Log
+ui-logs-level = Level
+ui-logs-follow = Mitverfolgen
+ui-logs-clear = Log leeren
+ui-logs-count = { $count } Zeilen
+ui-logs-empty = Noch keine Log-Zeilen.
+ui-login-title = Anmelden
+ui-login-submit = Anmelden
+ui-login-busy = Anmeldung läuft…
+ui-login-wrong = Falsches Passwort.
+ui-login-rate-limited = Zu viele Versuche. Versuchen Sie es in { $secs } s erneut.
+ui-login-wait = { $secs } s warten
+ui-password = Passwort
+ui-password-confirm = Passwort bestätigen
+ui-setup-title = Administratorpasswort festlegen
+ui-setup-intro = Dieser Server hat noch kein Passwort. Wählen Sie eines, um die Web-UI und die API zu schützen.
+ui-setup-hint = Mindestens { $min } Zeichen.
+ui-setup-too-short = Das Passwort muss mindestens { $min } Zeichen haben.
+ui-setup-mismatch = Die Passwörter stimmen nicht überein.
+ui-setup-submit = Passwort festlegen
+ui-dash-totals = Gesamt
+ui-dash-active-jobs = Aktive Jobs
+ui-dash-running-jobs = Sendend
+ui-dash-total-pps = pps gesamt
+ui-dash-total-bps = Bitrate gesamt
+ui-dash-templates = Vorlagen
+ui-dash-uptime = Server-Laufzeit
+ui-dash-running = Laufende Jobs
+ui-dash-no-running = Es läuft kein Job.
+ui-dash-doctor = Selbstdiagnose
+ui-dash-ifaces = Schnittstellen
+ui-doctor-ok = Alle Prüfungen bestanden
+ui-doctor-warn = Warnungen
+ui-doctor-fail = Probleme gefunden
+ui-doctor-counts = { $ok } OK · { $warn } Warnungen · { $fail } Fehler
+ui-doctor-details = Vollständiger Bericht
+ui-doctor-status = Status
+ui-doctor-check = Prüfung
+ui-doctor-detail = Detail / Behebung
+ui-doctor-status-ok = OK
+ui-doctor-status-warn = Warnung
+ui-doctor-status-fail = Fehler
+ui-doctor-status-skip = Übersprungen
+ui-iface-name = Name
+ui-iface-state = Status
+ui-iface-mac = MAC
+ui-iface-addrs = Adressen
+ui-iface-mtu = MTU
+ui-iface-speed = Geschwindigkeit
+ui-iface-allowed = Für TX erlaubt
+ui-iface-up = Up
+ui-iface-down = Down
+ui-iface-no-carrier = Kein Carrier
+ui-stat-pps = Pakete/s
+ui-stat-bps = Bitrate (L2)
+ui-stat-l1-bps = Bitrate (L1)
+ui-stat-packets = Pakete
+ui-stat-bytes = Bytes
+ui-stat-dropped = Verworfen
+ui-stat-ratio = Erreichte Rate
+ui-stat-elapsed = Verstrichen
+ui-spark-pps = Pakete pro Sekunde, letzte 30 Sekunden
+ui-state-created = Erstellt
+ui-state-scheduled = Geplant
+ui-state-running = Läuft
+ui-state-paused = Pausiert
+ui-state-finished = Beendet
+ui-state-failed = Fehlgeschlagen
+ui-state-unknown = Unbekannt
+ui-reason-count-reached = Paketanzahl erreicht
+ui-reason-duration-elapsed = Dauer abgelaufen
+ui-reason-source-exhausted = Alle Pakete gesendet
+ui-reason-stopped = Gestoppt
+ui-jobs-new = Neuer Job
+ui-jobs-tab-live = Aktuell
+ui-jobs-tab-history = Verlauf
+ui-jobs-empty = Keine Jobs.
+ui-jobs-streams = Streams
+ui-jobs-template = Vorlage
+ui-jobs-choose-template = Vorlage wählen…
+ui-jobs-weight = Gewichtung
+ui-jobs-add-stream = Stream hinzufügen
+ui-jobs-remove-stream = Stream entfernen
+ui-jobs-mix = Mischung
+ui-mix-weighted = Gewichtet
+ui-mix-sequential = Sequenziell
+ui-mix-round-robin = Round Robin
+ui-jobs-target = Wohin
+ui-jobs-backend = Backend
+ui-jobs-iface = Schnittstelle
+ui-jobs-choose-iface = Schnittstelle wählen…
+ui-jobs-iface-not-needed = Für dieses Backend nicht nötig
+ui-jobs-iface-denied = nicht erlaubt
+ui-jobs-dry-run = Probelauf: pcapng-Dateiname
+ui-jobs-dry-run-hint = Wenn gesetzt, wird nichts gesendet: Die Pakete werden in diese Datei im Capture-Verzeichnis des Servers geschrieben.
+ui-jobs-how = Wie
+ui-jobs-rate = Rate
+ui-jobs-count = Paketanzahl
+ui-jobs-duration = Dauer
+ui-jobs-burst = Burst
+ui-jobs-workers = Worker
+ui-jobs-workers-disabled = Mehrere Worker erfordern ein Multi-Worker-Backend und einen einzelnen Stream.
+ui-jobs-from-template = Aus der Vorlage
+ui-jobs-name = Name
+ui-jobs-name-placeholder = Standardmäßig der Vorlagenname
+ui-jobs-start-now = Sofort starten
+ui-jobs-create = Job erstellen
+ui-jobs-create-start = Erstellen und starten
+ui-jobs-created = Job „{ $id }“ erstellt.
+ui-jobs-need-iface = Wählen Sie eine Schnittstelle.
+ui-jobs-need-template = Wählen Sie für jeden Stream eine Vorlage.
+ui-jobs-bad-weight = Gewichtungen müssen positive ganze Zahlen sein.
+ui-rate-default = Leer: die Rate der Vorlage (oder das Server-Limit).
+ui-rate-is-pps = → { $rate }
+ui-rate-is-bps = → { $rate } auf der Leitung (Layer 1)
+ui-rate-is-percent = → { $rate } % der Link-Geschwindigkeit
+ui-rate-is-ifg = Fester Abstand zwischen Frames: { $rate }
+ui-rate-is-unlimited = So schnell wie möglich
+ui-valid-empty = Erforderlich.
+ui-valid-number = Keine Zahl.
+ui-valid-integer = Geben Sie eine ganze Zahl ein.
+ui-valid-range = Muss größer als null sein.
+ui-valid-percent = Ein Prozentsatz darf höchstens 100 sein.
+ui-valid-rate-unit = Unbekannte Einheit: Verwenden Sie pps, kpps, Mpps, bps, kbps, Mbps, Gbps, %, ifg=<Zeit> oder unlimited.
+ui-valid-duration-unit = Unbekannte Einheit: Verwenden Sie ns, us, ms, s, m oder h.
+ui-valid-capture-name = Verwenden Sie einen relativen Dateinamen ohne „..“.
+ui-confirm-send-title = Auf einer echten Schnittstelle senden?
+ui-confirm-send-body = Dieser Job sendet Pakete ins Netzwerk. Stellen Sie sicher, dass Schnittstelle und Rate für dieses Netzwerk geeignet sind.
+ui-confirm-send = Senden
+ui-job-detail = Job
+ui-job-state = Status
+ui-job-start = Starten
+ui-job-pause = Pausieren
+ui-job-resume = Fortsetzen
+ui-job-stop = Stoppen
+ui-job-download-report = Bericht (JSON)
+ui-job-live = Live-Statistik
+ui-job-streams = Pro Stream
+ui-job-inline-template = (Inline-Vorlage)
+ui-job-workers = Pro Worker
+ui-job-workers-pending = Zähler pro Worker sind Teil des Abschlussberichts und verfügbar, sobald der Job beendet ist.
+ui-job-active = Aktive Zeit
+ui-job-core = Kern
+ui-job-accuracy = Pacing-Genauigkeit
+ui-acc-target = Ziel
+ui-acc-achieved = Erreicht
+ui-acc-jitter = Jitter (Mittel / Max.)
+ui-job-spec = Einstellungen
+ui-job-created = Erstellt
+ui-job-started = Gestartet
+ui-job-finished = Beendet
+ui-job-deleted = Job gelöscht.
+ui-job-delete-title = Diesen Job löschen?
+ui-job-delete-body = Ein laufender Job wird zuerst gestoppt; sein Bericht bleibt im Verlauf.
+ui-tpl-import = Importieren
+ui-tpl-new = Neue Vorlage
+ui-tpl-search = Name, Beschreibung, Tag, Protokoll suchen…
+ui-tpl-source = Quelle
+ui-tpl-source-all = Alle
+ui-tpl-source-library = Bibliothek
+ui-tpl-source-user = Eigene
+ui-tpl-favorites-only = Nur Favoriten
+ui-tpl-tags = Tags
+ui-tpl-recent = Zuletzt verwendet
+ui-tpl-empty = Keine passende Vorlage.
+ui-tpl-favorite = Favorit
+ui-tpl-view = YAML anzeigen / bearbeiten
+ui-tpl-open-builder = Im Builder öffnen
+ui-tpl-new-job = Neuer Job mit dieser Vorlage
+ui-tpl-export = YAML herunterladen
+ui-tpl-duplicate = Duplizieren
+ui-tpl-imported = Vorlage „{ $id }“ importiert.
+ui-tpl-duplicated = Kopie „{ $id }“ erstellt.
+ui-tpl-deleted = Vorlage „{ $id }“ gelöscht.
+ui-tpl-delete-title = Diese Vorlage löschen?
+ui-tpl-delete-body = „{ $id }“ wird aus Ihrem Vorlagenverzeichnis entfernt.
+ui-tpl-saved = Vorlage gespeichert.
+ui-tpl-yaml = Vorlagen-YAML
+ui-tpl-read-only = Bibliotheksvorlagen sind schreibgeschützt: Duplizieren Sie sie, um eine Kopie zu bearbeiten.
+ui-lint-run = Prüfen (Lint)
+ui-lint-clean = Keine Probleme gefunden.
+ui-lint-summary = { $errors } Fehler, { $warnings } Warnungen
+ui-set-appearance = Darstellung
+ui-set-account = Konto
+ui-set-logged-in = Angemeldet als { $id }.
+ui-set-auth-disabled = Die Authentifizierung ist auf diesem Server nicht aktiviert.
+ui-set-client = Dieser Browser
+ui-set-client-note = Nur in diesem Browser gespeichert. Die Serverkonfiguration (wpg.toml) wird nicht über die API offengelegt.
+ui-set-api = API
+ui-set-ws = Ereignisse
+ui-set-ui-version = UI-Version
+ui-set-api-docs = API-Dokumentation (Swagger UI)
+ui-set-about = Über
+ui-set-server-version = Serverversion
+ui-set-api-version = API-Version
+ui-set-platform = Plattform
+ui-set-features = Optionale Funktionen
+ui-set-locales = Sprachen
+ui-set-license = wpg ist dual lizenziert unter MIT oder Apache-2.0.
+ui-builder-placeholder = Der Paket-Builder (Protokollpalette, Schichtstapel, Feldeditor, Hex-/Baumansicht) folgt im nächsten Meilensteinschritt.
+ui-builder-placeholder-template = Der Paket-Builder folgt im nächsten Meilensteinschritt. Vorlage „{ $id }“ wird hier geöffnet.
+ui-reason-end-of-input = Ende der Capture-Datei
+ui-valid-stream-id = Geben Sie eine ganze Zahl von 0 bis 4294967295 ein.
+ui-jobs-verification = Empfangsverifikation
+ui-jobs-signature = Verifikationssignatur einfügen
+ui-jobs-signature-hint = Schreibt eine Stream-ID, eine Sequenznummer und die TX-Zeit in die letzten 24 Payload-Oktette jedes Frames, sodass ein Capture mit „Signaturen verifizieren“ Verlust, Reihenfolge und Latenz messen kann.
+ui-jobs-stream-id = Signatur-Stream-ID (erster Stream)
+ui-job-signature = Signatur
+ui-job-signature-on = Ein (Stream-ID { $id } und höher)
+ui-rx-new = Neuer Capture
+ui-rx-file = Capture-Datei
+ui-rx-file-hint = Ein pcap-/pcapng-Dateiname im Capture-Verzeichnis des Servers, z. B. die Probelauf-Ausgabe eines Jobs.
+ui-rx-iface-any = any (alle Schnittstellen)
+ui-rx-filter = Filter
+ui-rx-filter-empty = Leer: Jeder Frame passt.
+ui-rx-filter-checking = Filter wird geprüft…
+ui-rx-filter-ok = Gültig: { $filter }
+ui-rx-filter-error = { $error } (bei Zeichen { $offset })
+ui-rx-count-hint = Nach so vielen passenden Frames stoppen.
+ui-rx-keep = Zu behaltende Frames
+ui-rx-keep-hint = Die ersten N passenden Frames werden zur Anzeige behalten (höchstens 10000).
+ui-rx-keep-max = Höchstens 10000.
+ui-rx-save = Als pcapng speichern (Dateiname)
+ui-rx-save-hint = Optional: Die passenden Frames werden zusätzlich in diese Datei im Capture-Verzeichnis des Servers geschrieben.
+ui-rx-save-same = Die Ausgabedatei muss sich von der Eingabedatei unterscheiden.
+ui-rx-name-placeholder = Standardmäßig Backend:Schnittstelle
+ui-rx-options = Optionen
+ui-rx-verify = Signaturen verifizieren (Verlust, Reihenfolge, Latenz)
+ui-rx-promisc = Promiscuous Mode
+ui-rx-outgoing = Von diesem Host gesendete Frames einbeziehen
+ui-rx-start = Capture starten
+ui-rx-started = Capture „{ $id }“ gestartet.
+ui-rx-list = Captures
+ui-rx-empty = Noch keine Captures.
+ui-rx-source = Schnittstelle / Datei
+ui-rx-actions = Aktionen
+ui-rx-stop = Stoppen
+ui-rx-stop-named = „{ $id }“ stoppen
+ui-rx-delete-named = „{ $id }“ löschen
+ui-rx-deleted = Capture gelöscht.
+ui-rx-delete-title = Diesen Capture löschen?
+ui-rx-delete-body = Ein laufender Capture wird zuerst gestoppt. Eine gespeicherte pcapng-Datei bleibt auf dem Server.
+ui-rx-download = pcapng herunterladen
+ui-rx-counters = Zähler
+ui-rx-matched = Passend
+ui-rx-matched-pps = Passende Pakete/s
+ui-rx-matched-bps = Passende Bitrate
+ui-rx-matched-bytes = Passende Bytes
+ui-rx-saved = In Datei gespeichert
+ui-rx-kept = Zur Anzeige behalten
+ui-rx-verify-title = Verifikation
+ui-rx-verify-off = Die Signaturverifikation ist für diesen Capture deaktiviert.
+ui-rx-verify-none = Noch keine signierten Frames empfangen.
+ui-rx-signed = Signierte Frames
+ui-rx-unsigned = Unsignierte Frames
+ui-rx-lost = Verloren
+ui-rx-stream = Stream
+ui-rx-received = Empfangen
+ui-rx-seq-range = Sequenznummern
+ui-rx-out-of-order = Außer Reihenfolge
+ui-rx-duplicates = Duplikate
+ui-rx-latency = Latenz (min. / Mittel / max.)
+ui-rx-jitter = Jitter
+ui-rx-latency-note = Verlorene Frames werden aus Lücken in den Sequenznummern geschätzt. Die Latenz ist nur aussagekräftig, wenn Sender und Empfänger eine gemeinsame Uhr haben (derselbe Host oder per PTP / NTP synchronisiert).
+ui-rx-frames = Erfasste Frames
+ui-rx-frames-empty = Noch keine passenden Frames.
+ui-rx-time = Zeit (s)
+ui-rx-length = Länge
+ui-rx-signature = Signatur
+ui-rx-sig-value = Stream { $stream } · Seq { $seq }
+ui-rx-show-more = Mehr anzeigen ({ $count } von { $max })
+ui-rx-frame-title = Frame { $index }
+ui-rx-select-frame = Wählen Sie einen Frame, um seine Oktette und dekodierten Schichten zu sehen.
+ui-rx-decode-failed = Der Frame kann nicht dekodiert werden: { $error }
+ui-rx-truncated = Nur { $bytes } von { $len } Oktetten wurden erfasst.
+
+# --- P1 Beschreibungen der L2-/Encap-Protokollfelder ---
+lldp-tlvs = LLDP-TLVs (Header aus 7-Bit-Typ + 9-Bit-Länge).
+cdp-version = CDP-Protokollversion (2).
+cdp-ttl = Gültigkeitsdauer dieses Advertisements in Sekunden.
+cdp-checksum = Internet-Prüfsumme über CDP-Header und TLVs (Auto).
+cdp-tlvs = CDP-TLVs (16-Bit-Typ, 16-Bit-Länge inklusive Header).
+stp-protocol-id = Spanning-Tree-Protokollkennung (immer 0).
+stp-version = Protokollversion (0 = STP, 2 = RSTP, 3 = MSTP).
+stp-type = BPDU-Typ (0 = Konfiguration, 2 = RST/MST, 0x80 = TCN).
+stp-flags = BPDU-Flags (Topology Change, Proposal, Rolle, Learning, Forwarding, Agreement, TCA).
+stp-root-priority = Priorität der Root Bridge und System-ID-Erweiterung.
+stp-root-mac = MAC-Adresse der Root Bridge.
+stp-root-path-cost = Pfadkosten zur Root Bridge.
+stp-bridge-priority = Priorität der sendenden Bridge und System-ID-Erweiterung.
+stp-bridge-mac = MAC-Adresse der sendenden Bridge.
+stp-port-id = Kennung des sendenden Ports (Priorität + Nummer).
+stp-message-age = Alter der BPDU in 1/256 Sekunden.
+stp-max-age = Maximales BPDU-Alter bis zum Timeout in 1/256 Sekunden.
+stp-hello-time = Intervall zwischen Konfigurations-BPDUs in 1/256 Sekunden.
+stp-forward-delay = Forward-Delay-Timer in 1/256 Sekunden.
+stp-trailer = RSTP-/MSTP-Erweiterung (Version-1-Länge, v3-Länge, MSTI-Einträge); opake Oktette.
+lacp-subtype = Slow-Protocols-Subtyp (1 = LACP).
+lacp-actor-system = MAC-Adresse des Actor-Systems.
+lacp-actor-state = Actor-Statusflags (Activity, Timeout, Aggregation, Sync, Collecting, Distributing, Defaulted, Expired).
+lacp-partner-system = MAC-Adresse des Partner-Systems.
+lacp-partner-state = Partner-Statusflags.
+marker-subtype = Slow-Protocols-Subtyp (2 = Marker).
+eapol-version = EAPOL-Protokollversion.
+eapol-type = EAPOL-Pakettyp (0 = EAP, 1 = Start, 2 = Logoff, 3 = Key).
+eapol-length = Länge des EAPOL-Bodys in Oktetten (Auto).
+eapol-body = EAPOL-Body (bei Typ 0 das EAP-Paket); opake Oktette.
+pppoe-version = PPPoE-Protokollversion (1).
+pppoe-type = PPPoE-Typ (1).
+pppoe-code = PPPoE-Code (PADI / PADO / PADR / PADS / PADT, 0 = Sitzungsdaten).
+pppoe-session-id = PPPoE-Sitzungskennung.
+pppoe-length = Länge der PPPoE-Payload in Oktetten (Auto).
+pppoe-tags = PPPoE-Discovery-TAGs (16-Bit-Typ, 16-Bit-Länge).
+ppp-protocol = PPP-Protokollkennung der Payload (LCP / IPCP / IP / IPv6 / ...).
+ppp-cp-code = PPP-Control-Protocol-Code (Configure-Request / Ack / Nak / ...).
+ppp-cp-identifier = Request-Kennung des PPP-Control-Protocols.
+ppp-cp-length = Länge des PPP-Control-Protocol-Pakets in Oktetten (Auto).
+ppp-cp-options = PPP-Control-Protocol-Optionen (TLVs mit 8-Bit-Typ / -Länge).
+vxlan-flags = VXLAN-Flags (I-Bit = VNI ist gültig).
+vxlan-vni = 24-Bit-VXLAN Network Identifier.
+gre-flags = GRE-Flags und Version (Bits für vorhandene Checksum / Key / Sequence).
+gre-protocol-type = EtherType der gekapselten Payload.
+nvgre-vsid = 24-Bit-NVGRE Virtual Subnet ID.
+nvgre-flowid = NVGRE-FlowID (Entropie für Load Balancing).
+mpls-label = 20-Bit-MPLS-Labelwert. 0-15 sind reserviert (0 / 2 Explicit Null, 1 Router Alert, 3 Implicit Null, 7 Entropy Label Indicator, 13 GAL, 14 OAM Alert, 15 Extension); SR-MPLS-SIDs sind SRGB-Basis + SID-Index.
+mpls-tc = 3-Bit-Traffic-Class (QoS / ECN).
+mpls-s = Bottom-of-Stack-Bit (1 = letztes Label; Auto aus der nächsten Schicht).
+mpls-ttl = MPLS Time to Live.
+gtpu-version = GTP-Version (1).
+gtpu-pt = Protokolltyp (1 = GTP, 0 = GTP').
+gtpu-e = Flag „Extension Header vorhanden“.
+gtpu-s = Flag „Sequenznummer vorhanden“.
+gtpu-pn = Flag „N-PDU-Nummer vorhanden“.
+gtpu-message-type = GTP-U-Nachrichtentyp (255 = G-PDU).
+gtpu-length = Länge der Payload nach dem Pflicht-Header in Oktetten (Auto).
+gtpu-teid = Tunnel Endpoint Identifier.
+geneve-version = Geneve-Version (0).
+geneve-opt-len = Länge des Optionsbereichs in 4-Oktett-Wörtern.
+geneve-o = OAM-Paket-Flag.
+geneve-c = Flag „kritische Optionen vorhanden“.
+geneve-protocol-type = EtherType der gekapselten Payload.
+geneve-vni = 24-Bit-Geneve Virtual Network Identifier.
+geneve-options = Geneve-Optionen (opak; Größe durch opt_len).
+l2tp-flags = L2TP-Flags und Version (Bits für Type, Length, Sequence, Offset, Priority).
+l2tp-body = L2TP-Body (bedingt vorhandene Felder + Payload); opake Oktette.
+l2tpv3-session-id = L2TPv3 Session ID.
+
+# --- Paket-Builder (M4 Phase 2) ---
+ui-bld-palette = Protokolle
+ui-bld-search = Protokolle suchen
+ui-bld-favorite = Favorit
+ui-bld-favorites = Favoriten
+ui-bld-layer-l2 = Sicherung (L2)
+ui-bld-layer-l3 = Vermittlung (L3)
+ui-bld-layer-l4 = Transport (L4)
+ui-bld-layer-l7 = Anwendung (L7)
+ui-bld-layer-payload = Payload
+ui-bld-stack = Schichten
+ui-bld-empty = Ziehen Sie ein Protokoll hierher oder fügen Sie eines aus der Palette hinzu.
+ui-bld-unknown = unbekannt
+ui-bld-dup = Schicht duplizieren
+ui-bld-suggest = Nächste Schicht hinzufügen
+ui-bld-binding-warn = Von der darunterliegenden Schicht nicht angekündigt
+ui-bld-fix = Beheben
+ui-bld-added = { $id } hinzugefügt.
+ui-bld-moved = An Position { $index } verschoben.
+ui-bld-removed = Schicht entfernt.
+ui-bld-fields = Feldeditor
+ui-bld-select-layer = Wählen Sie eine Schicht, um ihre Felder zu bearbeiten.
+ui-bld-auto = Auto
+ui-bld-manual = Manual
+ui-bld-gen = Gen
+ui-bld-computed = beim Erstellen berechnet
+ui-bld-nsap-parts = AFI { $afi } · Area { $area } · System-ID { $sys } · NSEL { $nsel }
+ui-bld-estimate = Pakete im Stream und ihre Gesamtgröße
+ui-bld-expands = ergibt { $count } (~{ $bytes })
+ui-bld-rate = Rate
+ui-bld-rate-hint = Mit der Vorlage gespeicherte Senderate (1000pps, 1.5Mpps, 10Gbps, ifg=10us)
+ui-bld-duration = ~{ $time } Sendedauer
+ui-bld-duration-unknown = Sendedauer: Rate festlegen
+ui-bld-duration-hint = Zu sendende Pakete (tx.count, sonst die Stream-Länge) bei dieser Rate, begrenzt durch tx.duration_secs
+ui-bld-gen-kind = Art
+ui-bld-gen-count = Anzahl:
+ui-bld-gen-shorthand = Bereich / Liste / CIDR
+ui-bld-gen-random = Zufällig
+ui-bld-gen-random-mac = Zufällige MAC
+ui-bld-gen-counter = Zähler
+ui-bld-gen-file = Datei
+ui-bld-gen-expr = Ausdruck
+ui-bld-hex = Hex
+ui-bld-tree = Baum
+ui-bld-no-bytes = Noch kein Paket.
+ui-bld-name = Vorlagenname
+ui-bld-need-name = Geben Sie der Vorlage zuerst einen Namen.
+ui-bld-unsaved = Ungespeicherte Änderungen
+ui-bld-save-as = Speichern unter…
+ui-bld-save-first = Speichern Sie die Vorlage, bevor Sie einen Job erstellen.
+ui-bld-recompute = Neu berechnen
+ui-bld-auto-recompute = Vorschau bei jeder Änderung live neu berechnen
+ui-bld-index = Stream-Index
+ui-bld-index-prev = Vorheriges Paket
+ui-bld-index-next = Nächstes Paket
+ui-bld-undo = Rückgängig
+ui-bld-redo = Wiederholen
+ui-bld-parity-ok = Die Browser-Vorschau stimmt mit dem Server-Rendering überein.
+ui-bld-parity-ok-short = stimmt überein
+ui-bld-parity-bad = Die Browser-Vorschau stimmt nicht mit dem Server-Rendering überein.
+ui-bld-parity-bad-short = Abweichung
+ui-bld-parity-pending = Server-Rendering wird geprüft…
+ui-bld-help-title = Builder-Tastenkürzel
+ui-bld-help-add = Fokussiertes Protokoll hinzufügen
+ui-bld-help-move = Ausgewählte Schicht verschieben
+ui-bld-help-del = Ausgewählte Schicht entfernen
+ui-bld-help-undo = Rückgängig
+ui-bld-help-redo = Wiederholen
+ui-bld-help-hex = Hex über das Byte am Cursor tippen
+ui-bld-help-caret = Hex-Cursor bewegen
+ui-bld-suggest-prev = Schicht darüber hinzufügen
+
+# --- P1 Beschreibungen der Redundanz-/Multicast-Protokollfelder ---
+vrrp-version = VRRP-Version (2 = RFC 3768, 3 = RFC 5798).
+vrrp-type = VRRP-Pakettyp (1 = Advertisement).
+vrrp-vrid = Virtual Router Identifier.
+vrrp-priority = Priorität des sendenden Routers (255 = Adressbesitzer, 0 = Teilnahme beenden).
+vrrp-count = Anzahl der virtuellen Adressen im Advertisement (Auto).
+vrrp-auth-type = VRRPv2-Authentifizierungstyp (0 = keine, 1 = einfacher Text, 2 = IP AH).
+vrrp-adver-int = VRRPv2-Advertisement-Intervall in Sekunden.
+vrrp-max-adver-int = Maximales VRRPv3-Advertisement-Intervall in Hundertstelsekunden.
+vrrp-checksum = Internet-Prüfsumme über die VRRP-Nachricht (VRRPv3 schließt den IP-Pseudo-Header ein) (Auto).
+vrrp-addresses = Adressen des virtuellen Routers.
+vrrp-auth-data = VRRPv2-Authentifizierungsdaten (8 Oktette).
+hsrp-version = HSRP-Version (0 für HSRPv1).
+hsrp-op-code = HSRP-Operation (0 = Hello, 1 = Coup, 2 = Resign, 3 = Advertise).
+hsrp-state = Status des Senders (1 = Learn, 2 = Listen, 4 = Speak, 8 = Standby, 16 = Active).
+hsrp-hello-time = Intervall zwischen Hello-Nachrichten in Sekunden.
+hsrp-hold-time = Gültigkeitsdauer eines Hello in Sekunden.
+hsrp-priority = Router-Priorität innerhalb der Gruppe.
+hsrp-group = Nummer der Standby-Gruppe.
+hsrp-auth-data = Klartext-Authentifizierungspasswort (8 Oktette, Standard "cisco").
+hsrp-virtual-ip = Virtuelle IPv4-Adresse der Gruppe.
+hsrpv2-tlvs = HSRPv2-TLVs (Group State, Interface State, Text- / MD5-Authentifizierung; 8-Bit-Typ und -Länge).
+glbp-version = GLBP-Version (1).
+glbp-group = GLBP-Gruppennummer.
+glbp-owner-id = MAC-Adresse des sendenden Routers.
+glbp-tlvs = GLBP-TLVs (Hello, Request/Response, Authentication; Länge inklusive Header).
+igmp-type = IGMP-Nachrichtentyp (Auto aus dem Body: 0x11 Query, 0x12 / 0x16 Report, 0x17 Leave, 0x22 v3-Report).
+igmp-max-resp-code = Maximale Antwortzeit / Code in 1/10 s (Queries; null in Reports).
+igmp-checksum = Internet-Prüfsumme über die gesamte IGMP-Nachricht (Auto).
+igmp-group = Multicast-Gruppenadresse (0.0.0.0 in einer General Query).
+igmp-s-flag = Flag zum Unterdrücken der routerseitigen Verarbeitung.
+igmp-qrv = Querier's Robustness Variable.
+igmp-qqic = Querier's Query Interval Code.
+igmp-num-sources = Anzahl der Quelladressen.
+igmp-sources = Quelladressen.
+igmp-num-records = Anzahl der Group Records.
+igmp-records = Group Records (Record-Typ, Aux-Data-Länge, Quellen, Multicast-Adresse).
+mld-max-resp = Maximale Antwortverzögerung / Code in Millisekunden.
+mld-address = IPv6-Multicast-Adresse (:: in einer General Query).
+pim-version = PIM-Version (2).
+pim-type = PIM-Nachrichtentyp (Auto aus dem Body: 0 Hello, 1 Register, 3 Join/Prune).
+pim-checksum = Internet-Prüfsumme (gesamte Nachricht; Register: nur die ersten 8 Oktette) (Auto).
+pim-hello-options = PIM-Hello-Optionen (Holdtime, LAN Prune Delay, DR Priority, Generation ID, Address List).
+pim-addr-family = Adressfamilie der kodierten Adresse (1 = IPv4).
+pim-upstream-neighbor = Adresse des Upstream-Nachbarn, an den das Join/Prune gerichtet ist.
+pim-num-groups = Anzahl der Group Sets.
+pim-holdtime = Haltedauer des Join/Prune-Zustands in Sekunden.
+pim-groups = Group Sets (kodierte Gruppe, gejointe und geprunte kodierte Quellen).
+pim-register-border = Border-Bit (Sender ist ein PIM Multicast Border Router).
+pim-register-null = Null-Register-Bit (kein gekapseltes Datenpaket).
+
+# --- P1 Beschreibungen der Anwendungsprotokollfelder ---
+dhcp-op = BOOTP-Nachrichten-Opcode (1 = BOOTREQUEST, 2 = BOOTREPLY).
+dhcp-htype = Hardwareadresstyp (1 = Ethernet).
+dhcp-hlen = Länge der Hardwareadresse in Oktetten (6 für Ethernet).
+dhcp-hops = Relay-Hop-Zähler, von jedem Relay Agent erhöht.
+dhcp-xid = Vom Client gewählte Transaktions-ID.
+dhcp-secs = Seit Beginn des Bezugs durch den Client vergangene Sekunden.
+dhcp-flags = BOOTP-Flags (Bit 15 = Broadcast-Antwort angefordert).
+dhcp-ciaddr = Client-IP-Adresse (wenn bereits gebunden).
+dhcp-yiaddr = Vom Server zugewiesene "Your"-(Client-)IP-Adresse.
+dhcp-siaddr = IP-Adresse des nächsten Servers (Boot-Server).
+dhcp-giaddr = IP-Adresse des Relay Agents (Gateways); ungleich null, wenn weitergeleitet.
+dhcp-chaddr = Hardware-(MAC-)Adresse des Clients; gefolgt von 10 Oktetten Padding.
+dhcp-sname = Optionaler Server-Hostname (64 Oktette, mit NUL aufgefüllt).
+dhcp-file = Name der Boot-Datei (128 Oktette, mit NUL aufgefüllt).
+dhcp-magic-cookie = DHCP Magic Cookie (0x63825363).
+dhcp-options = DHCP-Optionen (8-Bit-Code / -Länge; Pad, End, Message Type, Relay Agent Information, ...).
+dhcpv6-msg-type = DHCPv6-Nachrichtentyp (Solicit, Advertise, Request, Reply, Relay-Forward, ...).
+dhcpv6-transaction-id = 24-Bit-Transaktions-ID.
+dhcpv6-options = DHCPv6-Optionen (16-Bit-Code / -Länge; Client ID, IA_NA, Relay Message, ...).
+dhcpv6-hop-count = Anzahl der Relay Agents, die diese Nachricht weitergeleitet haben.
+dhcpv6-link-address = Adresse, die den Link des Clients identifiziert (Relay).
+dhcpv6-peer-address = Adresse des Clients oder Relays, von dem die Nachricht kam.
+dns-id = Query-Kennung, wird in die Antwort kopiert.
+dns-qr = Query (0) oder Response (1).
+dns-opcode = Art der Query (0 = Standard-Query, 4 = NOTIFY, 5 = UPDATE).
+dns-aa = Flag „Authoritative Answer“.
+dns-tc = Truncation-Flag.
+dns-rd = Flag „Recursion Desired“.
+dns-ra = Flag „Recursion Available“.
+dns-z = Reserviertes Bit (muss 0 sein).
+dns-ad = Flag „Authentic Data“ (DNSSEC).
+dns-cd = Flag „Checking Disabled“ (DNSSEC).
+dns-rcode = Antwortcode (0 = NOERROR, 3 = NXDOMAIN, ...).
+dns-qdcount = Anzahl der Einträge im Question-Abschnitt.
+dns-ancount = Anzahl der Resource Records im Answer-Abschnitt.
+dns-nscount = Anzahl der Resource Records im Authority-Abschnitt.
+dns-arcount = Anzahl der Resource Records im Additional-Abschnitt.
+dns-sections = Abschnitte Question / Answer / Authority / Additional (Namen aus längenpräfixierten Labels); opake Oktette.
+ntp-li = Leap Indicator (3 = Uhr nicht synchronisiert).
+ntp-version = NTP-Versionsnummer (4).
+ntp-mode = Assoziationsmodus (3 = Client, 4 = Server, 5 = Broadcast).
+ntp-stratum = Stratum (0 = nicht angegeben, 1 = primäre Referenz, 2-15 = sekundär).
+ntp-poll = Maximales Poll-Intervall, log2 Sekunden (vorzeichenbehaftet).
+ntp-precision = Uhrengenauigkeit, log2 Sekunden (vorzeichenbehaftet).
+ntp-root-delay = Round-Trip-Verzögerung zur Referenzuhr (Festkomma 16.16 in Sekunden).
+ntp-root-dispersion = Dispersion zur Referenzuhr (Festkomma 16.16 in Sekunden).
+ntp-reference-id = Referenz-ID (ASCII-Code bei Stratum 1, sonst eine IPv4-Adresse oder ein Hash).
+ntp-reference-ts = Zeitpunkt, zu dem die Systemuhr zuletzt gestellt wurde (64-Bit-NTP-Zeitstempel).
+ntp-origin-ts = Vom Server zurückgegebene Sendezeit des Clients (64-Bit-NTP-Zeitstempel).
+ntp-receive-ts = Ankunftszeit der Anfrage beim Server (64-Bit-NTP-Zeitstempel).
+ntp-transmit-ts = Zeitpunkt, zu dem das Paket den Sender verließ (64-Bit-NTP-Zeitstempel).
+ntp-extensions = Erweiterungsfelder und MAC; opake Oktette.
+snmp-tag = BER-Tag-Oktett (0x30 SEQUENCE, 0x02 INTEGER, 0x04 OCTET STRING).
+snmp-msg-length = BER-Länge der SEQUENCE der SNMP-Nachricht (Auto; Kurzform, unter 128).
+snmp-version-length = BER-Länge des Versions-INTEGER (1).
+snmp-version = SNMP-Version (0 = v1, 1 = v2c).
+snmp-community-length = BER-Länge des Community-Strings in Oktetten.
+snmp-community = Community-String (z. B. "public").
+snmp-pdu-type = PDU-Tag (0xa0 GetRequest, 0xa2 Response, 0xa4 v1 Trap, 0xa7 SNMPv2-Trap, ...).
+snmp-pdu-length = BER-Länge des PDU-Inhalts (Auto; Kurzform, unter 128).
+snmp-pdu-body = PDU-Inhalt als BER-TLVs: request-id, error-status, error-index und die SEQUENCE der Variable Bindings.
+snmp-trap-body = Trap-Inhalt als BER-TLVs: enterprise, agent-addr, generic-trap, specific-trap, time-stamp und Variable Bindings.
+syslog-message = Text der Syslog-Nachricht, beginnend mit <PRI> (Facility * 8 + Severity).
+radius-code = RADIUS-Pakettyp (Access-Request, Access-Accept, Accounting-Request, ...).
+radius-identifier = Kennung zur Zuordnung von Requests und Replies.
+radius-length = Länge des gesamten RADIUS-Pakets in Oktetten (Auto).
+radius-authenticator = 16-Oktett-Request- / Response-Authenticator (Manual).
+radius-attributes = RADIUS-Attribute (8-Bit-Typ, 8-Bit-Länge inklusive Header).
+tftp-opcode = TFTP-Opcode (1 = RRQ, 2 = WRQ, 3 = DATA, 4 = ACK, 5 = ERROR, 6 = OACK).
+tftp-filename = Dateiname (NUL-terminiert).
+tftp-mode = Übertragungsmodus: netascii, octet oder mail (NUL-terminiert).
+tftp-options = Paare aus Optionsname / Wert-String (RFC 2347): blksize, timeout, tsize, windowsize, ...
+tftp-block = Blocknummer (beginnend bei 1).
+tftp-data = Datenoktette (512 pro Block; ein kürzerer Block beendet die Übertragung).
+tftp-error-code = TFTP-Fehlercode (1 = Datei nicht gefunden, 2 = Zugriffsverletzung, ...).
+tftp-error-message = Fehlermeldung (NUL-terminiert).
+
+# --- P1 Beschreibungen der Routing-Protokollfelder ---
+ospf-version = OSPF-Version (2 = OSPFv2, 3 = OSPFv3).
+ospf-type = OSPF-Pakettyp (Hello / DB Description / LS Request / LS Update / LS Ack; Auto aus der nächsten Schicht).
+ospf-packet-length = Länge des OSPF-Pakets inklusive Header in Oktetten (Auto).
+ospf-router-id = Router-ID des sendenden Routers.
+ospf-area-id = Area, zu der das Paket gehört (0.0.0.0 = Backbone).
+ospf-checksum = Internet-Prüfsumme über das OSPF-Paket ohne das Authentifizierungsfeld (Auto).
+ospf-au-type = Authentifizierungstyp (0 = Null, 1 = einfaches Passwort, 2 = kryptografisch).
+ospf-authentication = 64-Bit-Authentifizierungsfeld (Passwort oder Key-ID / Sequenz bei kryptografischer Authentifizierung).
+ospf-network-mask = Netzmaske der Schnittstelle oder des angekündigten Netzes.
+ospf-hello-interval = Intervall zwischen Hello-Paketen in Sekunden.
+ospf-options = Optionale Fähigkeiten (Bits E, MC, N/P, L, DC, O, DN).
+ospf-router-priority = Router-Priorität für die DR-Wahl (0 = nie DR).
+ospf-router-dead-interval = Sekunden ohne Hello, bevor der Nachbar als down gilt.
+ospf-designated-router = Designated Router (0.0.0.0 = keiner).
+ospf-backup-designated-router = Backup Designated Router (0.0.0.0 = keiner).
+ospf-neighbors = Router-IDs der auf dem Link gesehenen Nachbarn.
+ospf-interface-mtu = Größtes IP-Datagramm, das die Schnittstelle ohne Fragmentierung senden kann.
+ospf-dbd-flags = Database-Description-Flags (I = Init, M = More, MS = Master).
+ospf-dd-sequence = Database-Description-Sequenznummer.
+ospf-lsa-headers = LSA-Header (je 20 Oktette; Prüfsummen und Längen sind Manual).
+ospf-lsr-requests = Angeforderte LSAs (LS-Typ, Link State ID, Advertising Router).
+ospf-num-lsas = Anzahl der LSAs im Update.
+ospf-ls-age = Zeit seit Erzeugung des LSA in Sekunden (für eine exakte Auto-Prüfsumme 0 lassen).
+ospf-ls-type = LSA-Typ (Auto aus der LSA-Body-Schicht; 9 / 10 / 11 = Opaque LSA).
+ospf-link-state-id = Link State ID, die den beschriebenen Teil des Netzes kennzeichnet.
+ospf-advertising-router = Router-ID des Routers, der den LSA erzeugt hat.
+ospf-ls-sequence = LSA-Sequenznummer (0x80000001 = initial).
+ospf-ls-checksum = Fletcher-Prüfsumme des LSA ohne LS Age (Auto).
+ospf-lsa-length = Länge des LSA inklusive Header in Oktetten (Auto).
+ospf-router-lsa-flags = Router-LSA-Flags (V = Endpunkt eines Virtual Links, E = ASBR, B = ABR).
+ospf-num-links = Anzahl der beschriebenen Router-Links.
+ospf-router-links = Router-Links (Link-ID, Link-Daten, Typ, TOS-Anzahl, Metrik).
+ospf-attached-routers = Router-IDs der an das Netz angeschlossenen Router.
+ospf-metric = Kosten der Route.
+ospf-external-e = Externer Metriktyp (1 = Typ 2, 0 = Typ 1).
+ospf-forwarding-address = Adresse, an die Verkehr für das Ziel weitergeleitet wird (0.0.0.0 = der ASBR).
+ospf-external-route-tag = 32-Bit-Tag, das mit der externen Route übertragen wird.
+ospf-opaque-ls-type = Flooding-Bereich des Opaque LSA (9 = link-lokal, 10 = Area, 11 = AS).
+ospf-opaque-type = Opaque-Typ (1 = TE, 4 = Router Information, 7 = Extended Prefix, 8 = Extended Link; Auto aus der Body-Schicht).
+ospf-opaque-id = Opaque-ID zur Unterscheidung von LSAs desselben Opaque-Typs (24 Bit).
+ospf-opaque-tlvs = TLVs des Opaque LSA (16-Bit-Typ und -Länge, Werte auf 4 Oktette aufgefüllt; Längen Auto).
+ospfv3-checksum = Internet-Prüfsumme über das OSPFv3-Paket mit dem IPv6-Pseudo-Header (Auto).
+ospfv3-instance-id = Instanz-ID (trennt OSPFv3-Instanzen auf einem Link).
+ospfv3-interface-id = Interface-ID der sendenden Schnittstelle.
+ospfv3-options = OSPFv3-Optionen (Bits V6, E, N, R, DC, AF).
+ospfv3-ls-type = LSA-Funktionscode mit den Scope-Bits U / S (Auto aus der LSA-Body-Schicht).
+ospfv3-router-links = Router-Schnittstellen (Typ, Metrik, Interface-IDs, Router-ID des Nachbarn).
+ospfv3-prefix-length = Präfixlänge in Bits.
+ospfv3-prefix-options = Präfixoptionen (Bits NU, LA, P, DN).
+ospfv3-address-prefix = Adresspräfix, aufgefüllt auf ein Vielfaches von 4 Oktetten.
+ospfv3-external-flags = AS-External-LSA-Flags (E = Typ-2-Metrik, F = Forwarding Address vorhanden, T = Route Tag vorhanden).
+ospfv3-referenced-ls-type = LS-Typ des referenzierten LSA.
+ospfv3-link-local-address = Link-lokale Adresse der Schnittstelle.
+ospfv3-num-prefixes = Anzahl der folgenden Präfixe.
+ospfv3-prefixes = Präfixeinträge (Länge, Optionen, Metrik / reserviert, Adresspräfix); opake Oktette.
+ospfv3-referenced-link-state-id = Link State ID des referenzierten LSA.
+ospfv3-referenced-advertising-router = Advertising Router des referenzierten LSA.
+bgp-marker = 16-Oktett-Marker (alle Bits 1).
+bgp-length = Länge der BGP-Nachricht inklusive Header in Oktetten (Auto).
+bgp-type = BGP-Nachrichtentyp (OPEN / UPDATE / NOTIFICATION / KEEPALIVE / ROUTE-REFRESH; Auto aus der nächsten Schicht).
+bgp-version = BGP-Version (4).
+bgp-my-as = AS-Nummer des Senders (23456 = AS_TRANS für 4-Oktett-AS).
+bgp-hold-time = Vorgeschlagene Hold Time in Sekunden (0 oder mindestens 3).
+bgp-identifier = BGP-Kennung (Router-ID) des Senders.
+bgp-opt-params-length = Länge der optionalen Parameter in Oktetten (Auto).
+bgp-opt-params = Optionale Parameter (Typ 2 = Capabilities).
+bgp-withdrawn-routes-length = Länge der zurückgezogenen Routen in Oktetten (Auto).
+bgp-withdrawn-routes = Zurückgezogene IPv4-Routen (Präfixlänge in Bits, Präfix).
+bgp-total-path-attribute-length = Länge der Pfadattribute in Oktetten (Auto).
+bgp-path-attributes = Pfadattribute (Flags + Typcode; mit dem Extended-Length-Flag ist die Länge 16 Bit, oberhalb von 255 Oktetten automatisch gesetzt).
+bgp-nlri = Angekündigte IPv4-Routen (Präfixlänge in Bits, Präfix); andere Familien gehören in MP_REACH_NLRI.
+bgp-error-code = NOTIFICATION-Fehlercode.
+bgp-error-subcode = NOTIFICATION-Fehler-Subcode.
+bgp-error-data = Diagnosedaten der NOTIFICATION.
+bgp-afi = Address Family Identifier (1 = IPv4, 2 = IPv6).
+bgp-rr-subtype = ROUTE-REFRESH-Subtyp (0 = normal, 1 = BoRR, 2 = EoRR).
+bgp-safi = Subsequent Address Family Identifier (1 = Unicast, 2 = Multicast).
+rip-command = RIP-Befehl (1 = Request, 2 = Response).
+rip-version = RIP-Version (1 oder 2; RIPng verwendet 1).
+rip-entries = Routeneinträge (AFI, Route Tag, Adresse, Maske, Next Hop, Metrik).
+ripng-entries = Einträge der Routingtabelle (Präfix, Route Tag, Präfixlänge, Metrik; 0xff = Next Hop).
+eigrp-version = EIGRP-Header-Version (2).
+eigrp-opcode = EIGRP-Opcode (Update / Query / Reply / Hello / SIA-Query / SIA-Reply).
+eigrp-checksum = Internet-Prüfsumme über das EIGRP-Paket (Auto).
+eigrp-flags = EIGRP-Flags (Init, Conditional Receive, Restart, End of Table).
+eigrp-sequence = Sequenznummer für die zuverlässige Zustellung.
+eigrp-acknowledge = Bestätigte Sequenznummer (0 = keine).
+eigrp-virtual-router-id = Virtual-Router-ID (0 = Unicast-Adressfamilie).
+eigrp-autonomous-system = EIGRP-AS-Nummer.
+eigrp-tlvs = EIGRP-TLVs (16-Bit-Typ, 16-Bit-Länge inklusive Header).
+
+# --- P2 Beschreibungen der OSI-Kapselungsfelder ---
+osi-nlpid = Network Layer Protocol Identifier (ISO/IEC TR 9577): 0x81 CLNP, 0x82 ES-IS, 0x83 IS-IS.
+osi-data = Rest der OSI-PDU nach der NLPID (opake Oktette).
+clnp-nlpid = Network Layer Protocol Identifier (0x81 = CLNP).
+clnp-length-indicator = Headerlänge in Oktetten bis zum Ende der Optionen (Auto).
+clnp-version = Version / Protocol ID Extension (1).
+clnp-lifetime = Verbleibende Lebensdauer in Einheiten von 500 ms.
+clnp-sp = SP: Segmentierung erlaubt; der Segmentierungsteil ist vorhanden (Auto aus dem Segmentierungsteil).
+clnp-ms = MS: weitere Segmente folgen.
+clnp-er = E/R: Fehlerbericht senden, wenn die PDU verworfen wird.
+clnp-pdu-type = PDU-Typ: 0x1c DT (Daten), 0x1d MD (Multicast-Daten), 0x01 ER (Fehlerbericht), 0x1e ERQ / 0x1f ERP (Echo Request / Reply).
+clnp-segment-length = Länge der gesamten PDU, Header und Daten (Auto).
+clnp-checksum = ISO-8473-Fletcher-Prüfsumme des Headers (Auto). 0 = Prüfsumme nicht verwendet.
+clnp-destination = NSAP-Zieladresse.
+clnp-source = NSAP-Quelladresse.
+clnp-segmentation = Segmentierungsteil (Data Unit Identifier, Segment Offset, Gesamtlänge), vorhanden, wenn SP gesetzt ist. Die Gesamtlänge wird nicht berechnet.
+clnp-options = Optionen (8-Bit-Code / 8-Bit-Länge) bis zum Length Indicator: Security, QoS Maintenance, Priority, Source Routing, Recording of Route, Padding, Reason for Discard.
+esis-nlpid = Network Layer Protocol Identifier (0x82 = ES-IS).
+esis-length-indicator = Länge der PDU in Oktetten (Auto).
+esis-version = Version / Protocol ID Extension (1).
+esis-pdu-type = PDU-Typ: 2 ESH (End System Hello), 4 ISH (Intermediate System Hello), 6 RD (Redirect).
+esis-holding-time = Holding Time in Sekunden.
+esis-checksum = ISO-8473-Fletcher-Prüfsumme der PDU (Auto). 0 = Prüfsumme nicht verwendet.
+esis-number-of-source-addresses = Anzahl der Quelladressen (Auto).
+esis-source-addresses = Vom End System bediente NSAP-Adressen.
+esis-net = Network Entity Title des Intermediate Systems (Redirect: leer, wenn der Next Hop ein End System ist).
+esis-destination = NSAP-Zieladresse, die umgeleitet wird.
+esis-bsnpa-length = Länge der Subnetzwerkadresse (Auto).
+esis-bsnpa = Subnetzwerkadresse (z. B. MAC-Adresse) des besseren Next Hop.
+esis-options = Optionen (8-Bit-Code / 8-Bit-Länge) bis zum Length Indicator: Security, QoS Maintenance, Priority, Address Mask, SNPA Mask, Suggested ES Configuration Timer.
+esis-data = Rest der PDU nach dem festen Teil (opake Oktette).
+isis-irpd = Intradomain Routing Protocol Discriminator (0x83 = IS-IS).
+isis-header-length = Länge des festen Headers in Oktetten (konstant je PDU-Typ: LAN Hello / LSP 27, P2P Hello 20, CSNP 33, PSNP 17).
+isis-version-ext = Version / Protocol ID Extension (1).
+isis-id-length = Länge der System-ID (0 = 6 Oktette).
+isis-pdu-type = PDU-Typ (15/16 LAN Hello L1/L2, 17 P2P Hello, 18/20 LSP L1/L2, 24/25 CSNP, 26/27 PSNP).
+isis-version = Version (1).
+isis-max-area-addresses = Maximale Anzahl von Area-Adressen (0 = 3).
+isis-pdu-length = Länge der gesamten PDU (Auto). Bei einem Hello füllt ein Manual-Wert die PDU mit Padding-TLVs auf diese Länge auf (z. B. 1497 bei einer MTU von 1500).
+isis-tlvs = TLVs (8-Bit-Code / 8-Bit-Länge) und ihre Sub-TLVs.
+isis-source-id = System-ID des Senders.
+isis-holding-time = Holding Time in Sekunden.
+isis-priority = Priorität für die Wahl des Designated IS (0–127).
+isis-lan-id = LAN-ID: System-ID des Designated IS und Pseudonode-ID.
+isis-circuit-type = Circuit-Typ: 1 = L1, 2 = L2, 3 = L1/L2.
+isis-local-circuit-id = Lokale Circuit-ID.
+isis-remaining-lifetime = Verbleibende Lebensdauer des LSP in Sekunden (nicht von der Prüfsumme abgedeckt).
+isis-lsp-id = LSP-ID: System-ID, Pseudonode-ID und Fragmentnummer.
+isis-sequence-number = LSP-Sequenznummer.
+isis-lsp-checksum = Fletcher-Prüfsumme von der LSP-ID bis zum Ende der PDU (Auto).
+isis-partition-repair = P-Bit: Partition Repair unterstützt.
+isis-attached = ATT-Bits: mit einer anderen Area verbunden (Default- / Delay- / Expense- / Error-Metrik).
+isis-overload = OL-Bit: Überlast der LSP-Datenbank.
+isis-is-type = IS-Typ: 1 = L1, 3 = L1/L2.
+isis-snp-source-id = System-ID des Senders und Circuit-ID (0).
+isis-start-lsp-id = Erste vom CSNP abgedeckte LSP-ID.
+isis-end-lsp-id = Letzte vom CSNP abgedeckte LSP-ID.
+isis-data = Rest der PDU nach dem gemeinsamen Header (opake Oktette).
+
+# --- P2 Beschreibungen der SCTP-Felder ---
+sctp-src-port = Quellport.
+sctp-dst-port = Zielport.
+sctp-verification-tag = Verification Tag: das Initiate Tag der Gegenstelle (0 in einem Paket mit INIT).
+sctp-checksum = CRC32c über das gesamte SCTP-Paket mit genulltem Feld (Auto), niederwertigstes Oktett zuerst gesendet.
+sctp-chunks = Chunks (8-Bit-Typ, 8-Bit-Flags, 16-Bit-Länge inklusive 4-Oktett-Header, Null-Padding auf 4 Oktette): DATA, INIT, INIT ACK, SACK, HEARTBEAT, ABORT, SHUTDOWN, ERROR, COOKIE ECHO / ACK, AUTH, I-DATA, ASCONF, RE-CONFIG, FORWARD TSN, PAD. Längen, Padding und SACK-Zähler sind Auto.
+
+# --- P2 Beschreibungen der LDP- / RSVP-TE- / BFD-Felder ---
+ldp-version = LDP-Version (1).
+ldp-pdu-length = Länge der PDU nach den Feldern Version und PDU Length (Auto).
+ldp-lsr-id = LSR-ID: die ersten vier Oktette der LDP-Kennung.
+ldp-label-space = Label-Space-ID: die letzten zwei Oktette der LDP-Kennung (0 = plattformweit).
+ldp-messages = Nachrichten (16-Bit-Typ mit U-Bit, 16-Bit-Länge des Werts, Nachrichten-ID, TLVs): Notification, Hello, Initialization, KeepAlive, Address / Address Withdraw, Label Mapping / Request / Withdraw / Release / Abort Request. TLVs: FEC, Address List, Hop Count, Path Vector, Generic Label, Status, Common Hello / Session Parameters, Transportadressen, Configuration Sequence Number. Längen sind Auto.
+rsvp-version = RSVP-Version (1).
+rsvp-flags = Flags (Bit 0: Refresh-Reduction-fähig, RFC 2961).
+rsvp-msg-type = Nachrichtentyp (1 Path, 2 Resv, 3 PathErr, 4 ResvErr, 5 PathTear, 6 ResvTear, 7 ResvConf, 12 Bundle, 13 Ack, 15 Srefresh, 20 Hello).
+rsvp-checksum = Internet-Prüfsumme der gesamten Nachricht mit genulltem Feld (Auto).
+rsvp-send-ttl = IP-TTL, mit der die Nachricht gesendet wurde.
+rsvp-reserved = Reserviert (0).
+rsvp-length = Länge der gesamten Nachricht in Oktetten, inklusive gemeinsamem Header (Auto).
+rsvp-objects = Objekte (16-Bit-Länge inklusive 4-Oktett-Header, Class-Num, C-Type): SESSION, RSVP_HOP, TIME_VALUES, ERROR_SPEC, SCOPE, STYLE, FLOWSPEC, FILTER_SPEC, SENDER_TEMPLATE, SENDER_TSPEC, RESV_CONFIRM, LABEL, LABEL_REQUEST, EXPLICIT_ROUTE, RECORD_ROUTE, HELLO, MESSAGE_ID, SESSION_ATTRIBUTE. Längen, die Länge des Sitzungsnamens und Padding sind Auto.
+bfd-version = BFD-Version (1).
+bfd-diag = Diagnosecode: Grund der letzten Zustandsänderung der lokalen Sitzung.
+bfd-state = Sitzungszustand: 0 AdminDown, 1 Down, 2 Init, 3 Up.
+bfd-p = P-Bit: Poll (eine Parameteränderung; die Gegenstelle antwortet mit F).
+bfd-f = F-Bit: Final (Antwort auf ein Poll).
+bfd-c = C-Bit: Control Plane Independent.
+bfd-a = A-Bit: Authentifizierung vorhanden (Auto: gesetzt, wenn ein Authentifizierungsabschnitt existiert).
+bfd-d = D-Bit: Demand Mode.
+bfd-m = M-Bit: Multipoint (0).
+bfd-detect-mult = Detect-Time-Multiplikator.
+bfd-length = Länge des Control-Pakets in Oktetten, inklusive Authentifizierungsabschnitt (Auto).
+bfd-my-discriminator = My Discriminator: ein von null verschiedener, beim Sender für die Sitzung eindeutiger Wert.
+bfd-your-discriminator = Your Discriminator: der Discriminator der Gegenstelle (0, solange unbekannt).
+bfd-desired-min-tx = Gewünschtes minimales TX-Intervall in Mikrosekunden.
+bfd-required-min-rx = Erforderliches minimales RX-Intervall in Mikrosekunden.
+bfd-required-min-echo-rx = Erforderliches minimales Echo-RX-Intervall in Mikrosekunden (0 = kein Echo).
+bfd-authentication = Authentifizierungsabschnitt (8-Bit-Typ, 8-Bit-Länge inklusive Header): Simple Password, Keyed MD5 / SHA1 und ihre Meticulous-Varianten. Digest / Hash ist Manual.
+
+# --- Generierte Dokumentation (`wpg docs gen`, crates/wpg-cli/src/cmd/docs) ---
+docs-gen-no-root = { $path } ist nicht das Repository-Root (kein docs/en/src/SUMMARY.md); übergeben Sie --root.
+docs-gen-error = Generieren der Dokumentation fehlgeschlagen: { $error }
+docs-gen-stale = veraltet: { $path }
+docs-gen-extra = wird nicht mehr generiert: { $path }
+docs-gen-up-to-date = Die generierte Dokumentation ist aktuell.
+docs-gen-run-hint = Führen Sie `just docs-gen` (oder `wpg docs gen`) aus und committen Sie das Ergebnis.
+docs-gen-done = Dokumentation generiert: { $written } Dateien geschrieben, { $removed } entfernt.
+docgen-yes = ja
+docgen-octets = { $octets } Oktette
+docgen-items = { $count } Elemente
+docgen-variant = Variante { $n }
+docgen-col-id = ID
+docgen-col-name = Name
+docgen-col-fields = Felder
+docgen-col-next-by = Nächste Schicht über
+docgen-col-notes = Hinweise
+docgen-col-lower = Untere Schicht
+docgen-col-selector = Selektor
+docgen-col-value = Wert
+docgen-col-protocol = Protokoll
+docgen-col-note = Hinweis
+docgen-col-level = Stufe
+docgen-col-rule = Regel
+docgen-col-field = Feld
+docgen-col-type = Typ
+docgen-col-default = Standard
+docgen-col-auto = Auto
+docgen-col-description = Beschreibung
+docgen-col-bit = Bit
+docgen-col-mask = Maske
+docgen-col-type-value = Typ
+docgen-col-value-fields = Wertfelder
+docgen-col-key = Schlüssel
+docgen-col-required = Erforderlich
+docgen-col-in = In
+docgen-col-status = Status
+docgen-col-body = Body
+docgen-col-tag = Tag
+docgen-col-endpoint = Endpunkt
+docgen-col-summary = Zusammenfassung
+docgen-col-env = Umgebungsvariable
+docgen-layer-l2 = L2 (Sicherungsschicht)
+docgen-layer-l3 = L3 (Vermittlungsschicht)
+docgen-layer-l4 = L4 (Transportschicht)
+docgen-layer-l7 = Anwendung und Steuerung
+docgen-layer-payload = Payload
+docgen-proto-title = Protokollreferenz
+docgen-proto-intro = Dieses Kapitel wird aus der IR der Protokolldefinitionen von `wpg-protocols` generiert (dem unter `GET /api/protocols` bereitgestellten Katalog) und stimmt daher immer mit dem Code überein: { $count } Protokolle. Jede Seite listet die Felder in Wire-Reihenfolge mit Typ, Standardwert, Auto-Regel und Beschreibung, die unteren Schichten, die zum Protokoll führen, die Tabelle der nächsten Schichten, die nach dem Erstellen geprüften Constraints und die mitgelieferten Beispielvorlagen. Die handgeschriebenen [Protokollhinweise](../protocols/overview.md) erklären, wie die Protokolle erreicht werden, welche Felder Sie von Hand setzen und welche Näherungen verbleiben. Generieren Sie nach dem Ändern einer Definition mit `just docs-gen` neu.
+docgen-proto-layer = Schicht
+docgen-proto-header = Header
+docgen-proto-header-fixed = { $octets } Oktette (fest)
+docgen-proto-header-variable = variable Länge
+docgen-proto-min-frame = Minimaler Frame
+docgen-proto-synth = Generator
+docgen-proto-synth-payload = eingebauter Payload-Generator (die folgenden Felder sind Parameter, keine Wire-Felder)
+docgen-proto-pseudo = Pseudo-Header
+docgen-proto-pseudo-fields = liefert { $src } / { $dst } für Prüfsummen höherer Schichten
+docgen-proto-notes = Hinweise
+docgen-proto-final-dst = Endgültiges Ziel
+docgen-proto-final-dst-text = solange { $when } nicht 0 ist, ersetzt Element 0 von { $list } die Zieladresse des unteren Pseudo-Headers (RFC 8200 §8.1)
+docgen-proto-inbound = Erreichbar über
+docgen-proto-inbound-none = Kein Protokoll des Katalogs führt hierher: Verwenden Sie es als erste Schicht oder stapeln Sie es explizit.
+docgen-proto-fields = Felder
+docgen-proto-params = Parameter
+docgen-proto-no-fields = Keine Felder.
+docgen-proto-next = Nächste Schicht
+docgen-proto-next-intro = Die nächste Schicht wird über { $field } gewählt; ist das Feld Auto, schreibt der Builder den Wert des darüber gestapelten Protokolls.
+docgen-proto-next-alt = Beim Dekodieren wird zusätzlich { $field } nachgeschlagen, wenn das erste Feld keinem Eintrag entspricht.
+docgen-proto-constraints = Constraints
+docgen-proto-samples = Beispielvorlagen
+docgen-proto-samples-none = Noch keine mitgelieferte Vorlage verwendet dieses Protokoll.
+docgen-proto-samples-more = und { $count } weitere
+docgen-bind-default = (jeder andere Wert)
+docgen-bind-min-len = mindestens { $octets } Oktette verbleibend
+docgen-bind-reparse = dekodiert diese Schicht erneut
+docgen-bind-peek = Erste { $bits } Bits der Payload, wenn { $field } = { $value }
+docgen-bind-peek-skip = { $bits } Bits der Payload nach ihren ersten { $skip } Bits, wenn { $field } = { $value }
+docgen-level-error = Fehler
+docgen-level-warning = Warnung
+docgen-level-info = Info
+docgen-c-range = { $field } innerhalb von { $min }..{ $max }
+docgen-c-equals = { $field } = { $value }
+docgen-c-not-equals = { $field } ≠ { $value }
+docgen-c-min-length = { $span } mindestens { $octets } Oktette
+docgen-c-max-length = { $span } höchstens { $octets } Oktette
+docgen-span-header = Header
+docgen-span-payload = Payload
+docgen-span-total = Header und Payload
+docgen-unit-bytes = Oktetten
+docgen-unit-words16 = 16-Bit-Wörtern
+docgen-unit-words32 = 32-Bit-Wörtern
+docgen-unit-words64 = 64-Bit-Wörtern
+docgen-auto-length = Länge von { $span } in { $unit }
+docgen-auto-checksum = { $algorithm } über { $covers }
+docgen-auto-nonzero = eine berechnete 0 wird als lauter Einsen gesendet
+docgen-auto-exclude = { $fields } als null gezählt
+docgen-auto-next = Protokollnummer der nächsten Schicht (siehe Nächste Schicht)
+docgen-auto-count = Anzahl der Elemente von { $field }
+docgen-auto-size = Größe von { $field } in Oktetten
+docgen-auto-counter = Zähler pro Stream (vorerst wird der Standardwert verwendet)
+docgen-cksum-internet = Internet-Prüfsumme
+docgen-cksum-internet-pseudo = Internet-Prüfsumme mit Pseudo-Header
+docgen-cksum-fletcher = Fletcher-Prüfsumme
+docgen-cksum-crc32c = CRC-32C
+docgen-cksum-crc32 = CRC-32
+docgen-cover-header = den Header
+docgen-cover-all = den Header und alles danach
+docgen-len-from-field = { $expr } Oktette
+docgen-len-count = { $field } Elemente
+docgen-len-until = bis Offset { $expr } der Gruppe
+docgen-len-to-end = Rest der PDU
+docgen-len-to-end-except = Rest der PDU außer ihren letzten { $octets } Oktetten
+docgen-len-until-terminator = bis zum Terminator { $octets } (beim Erstellen angehängt)
+docgen-len-until-tlv = bis einschließlich zum ersten Element vom Typ { $type } oder bis zum Ende der PDU
+docgen-tlv-uncounted = Die ersten { $octets } Wertoktette nach der Länge werden darin nicht mitgezählt.
+docgen-list-item = Jedes Element ist eine Gruppe der folgenden Felder.
+docgen-tlv-format = Typ { $type } Bits, Länge { $len } Bits.
+docgen-tlv-len-first = Die Länge steht vor dem Typ.
+docgen-tlv-len-incl = Die Länge zählt auch die Typ- und Längenfelder.
+docgen-tlv-len-excl = Die Länge zählt nur den Wert.
+docgen-tlv-unit = Längeneinheit: { $unit }.
+docgen-tlv-head = Die ersten { $octets } Wertoktette liegen zwischen Typ und Länge.
+docgen-tlv-align = Jedes Element wird mit Nullen auf ein Vielfaches von { $align } Oktetten aufgefüllt (nicht in der Länge gezählt)
+docgen-tlv-unpadded-last = das letzte Element wird nicht aufgefüllt
+docgen-tlv-long = Typ-Bit { $flag } wählt eine { $len }-Bit-Länge.
+docgen-tlv-fill = Ein Manual-Wert von { $field } füllt den Bereich mit { $variant }-Elementen bis zu dieser Größe auf.
+docgen-tlv-unknown-raw = Unbekannte Typen werden als rohe Wertoktette beibehalten.
+docgen-tlv-unknown-stop = Ein unbekannter Typ beendet die typisierte Dekodierung (der Rest wird ein einzelnes Roh-Element).
+docgen-tlv-type-only = (nur Typ, keine Länge und kein Wert)
+docgen-tlv-when-prefix = wenn der Wert mit { $octets } beginnt
+docgen-tlv-when-len = wenn der Wert { $octets } Oktette lang ist
+docgen-notes-heading = Generierte Referenz
+docgen-notes-intro = Feldreferenz der Protokolle auf dieser Seite (aus den Definitionen generiert):
+docgen-cli-title = CLI-Referenz
+docgen-cli-intro = Das Binary `wpg` führt sowohl den Server (`wpg serve`) als auch die Headless-Werkzeuge aus und eignet sich daher auch für CI und ssh-Sitzungen. Zum Beispiel sendet `wpg send tpl.wpg.yaml -i eth0 --rate 1Mpps` eine Vorlage. Diese Seite wird aus den Befehlsdefinitionen generiert: Jeder Block ist die wörtliche `--help`-Ausgabe des aktuellen Builds. Laufzeitmeldungen folgen `LANG` / `LC_ALL`; der `--help`-Text selbst ist Englisch.
+docgen-cli-commands = Befehle
+docgen-cli-note-send = Sendet eine Vorlage. `--plan` wählt zwischen dem vorherigen Expandieren aller Frames (`prerender`) und dem Erstellen während des Sendens (`onthefly`). `--json` gibt den Abschlussbericht auf stdout aus.
+docgen-cli-note-render = Schreibt die Frames einer Vorlage in eine pcapng-Datei, ohne zu senden.
+docgen-cli-note-import = Wandelt einen Capture (oder eingefügtes Hex) in eine Vorlage um; siehe das [pcap-Replay-Tutorial](../tutorials/pcap-replay.md).
+docgen-cli-note-bench = Senden eines synthetischen Frames (EtherType 0x88b5) oder mit `--template` einer Vorlage mit unbegrenzter Rate. Referenzwerte siehe `docs/perf.md`. Felder der `--json`-Ausgabe: backend, detail, iface, frame_size, batch_size, packets, dropped, pps, bps (L2), l1_bps, elapsed.
+docgen-cli-note-ifaces = Listet Schnittstellen mit MAC, Adressen, MTU, Link-Status und Treiber auf.
+docgen-cli-note-doctor = Führt die unter [Berechtigungen](../getting-started/permissions.md) beschriebenen Umgebungsprüfungen aus; der Exit-Status ist ungleich null, wenn eine Prüfung fehlschlägt.
+docgen-cli-note-template = Vorlagenwerkzeuge. `lint` endet bei Fehlern mit Status 1; `export` und `import` packen Vorlagen in `.wpgbundle`-Archive bzw. entpacken sie daraus.
+docgen-cli-note-config = Werkzeuge für `wpg.toml`; siehe die [Konfigurationsreferenz](config.md).
+docgen-api-title = API-Referenz
+docgen-api-intro = wpg-server stellt unter `/api` eine REST-API (JSON) bereit und überträgt Live-Statistiken, Zustandsänderungen von Jobs und Logs über einen WebSocket (`GET /api/ws`). Diese Seite wird aus dem OpenAPI-Dokument des Servers (utoipa) generiert. Ein laufender Server stellt dasselbe Dokument unter `/api/openapi.json` mit Swagger UI unter `/api/docs/` bereit, und eine Kopie liegt in [`docs/schema/openapi.json`](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/docs/schema/openapi.json). Melden Sie sich mit `POST /api/auth/login` an (beim ersten Start `POST /api/auth/setup`); das Cookie `wpg_session` authentifiziert dann jede Anfrage, und POST / PUT / DELETE müssen zusätzlich das CSRF-Token von `GET /api/auth/status` im Header `X-CSRF-Token` senden. Fehler sind ein JSON-Objekt `error` mit `code`, `message` (in der Sprache von `Accept-Language`) und `details`. Die folgenden Beschreibungen der Endpunkte und Schemas stammen aus dem Code.
+docgen-api-endpoints = Endpunkte
+docgen-api-params = Parameter
+docgen-api-body = Request-Body
+docgen-api-responses = Antworten
+docgen-api-schemas = Schemas
+docgen-api-schemas-intro = Oben referenzierte Request- und Response-Bodys.
+docgen-api-tag-auth = Anmeldung, Abmeldung und Ersteinrichtung.
+docgen-api-tag-system = Health, Version, Schnittstellen, Selbstdiagnose und Sende-Backends.
+docgen-api-tag-protocols = Der Protokollkatalog (siehe die [Protokollreferenz](protocols.md)).
+docgen-api-tag-packets = Rendern, Dekodieren und Linten von Paketen.
+docgen-api-tag-templates = Die Vorlagenbibliothek.
+docgen-api-tag-jobs = Sende-Jobs und Statistiken.
+docgen-api-tag-events = Der WebSocket-Ereignisstream.
+docgen-config-title = Konfiguration
+docgen-config-intro = Der Server liest `wpg.toml` aus dem Arbeitsverzeichnis oder die mit `--config` / `WPG_CONFIG` angegebene Datei. Vorrang, niedrigster zuerst: eingebaute Standardwerte, die Datei, Umgebungsvariablen `WPG_<SECTION>__<KEY>` (`__` trennt Verschachtelungsebenen, zum Beispiel `WPG_SERVER__BIND=0.0.0.0:8080` oder `WPG_TX__ALLOWED_IFACES='["eth1"]'`), danach Kommandozeilenoptionen wie `wpg serve --bind`. Unbekannte Schlüssel sind Fehler. `wpg config init` schreibt das kommentierte Beispiel unten, `wpg config show` gibt die wirksame Konfiguration aus, `wpg config validate` prüft sie und `wpg config set-password` speichert den Hash des Admin-Passworts. Das Admin-Passwort selbst ist kein Schlüssel: `wpg serve --password`, `--password-file` und `WPG_PASSWORD` haben Vorrang vor `auth.password_hash` und `auth.password_file`. Diese Seite wird aus den Konfigurationstypen generiert.
+docgen-config-keys = Schlüssel
+docgen-config-top-level = Oberste Ebene
+docgen-config-default-machine = Datenverzeichnis des Betriebssystems (Linux: `~/.local/share/wpg`)
+docgen-config-example = Beispiel (`wpg config init`)
+docgen-config-example-intro = Jede aktive Zeile entspricht dem eingebauten Standardwert, sodass die Datei nichts ändert, bis sie bearbeitet wird; die auskommentierten Zeilen zeigen die optionalen Schlüssel.
+docgen-config-data-dir = Verzeichnis für den Serverzustand: Benutzervorlagen, Favoriten, die SQLite-Datenbank (Benutzer, Sitzungen, Job-Verlauf), Probelauf-Captures und das selbstsignierte TLS-Zertifikat.
+docgen-config-server = HTTP-Listener.
+docgen-config-server-bind = Lauschadresse. Ohne Passwort (und ohne im Einrichtungsbildschirm angelegten Benutzer) werden nur Loopback-Adressen akzeptiert (`--allow-insecure` hebt dies auf).
+docgen-config-server-tls = TLS-Zertifikatskette und privater Schlüssel (PEM) für HTTPS; hat Vorrang vor `self_signed_tls`.
+docgen-config-server-tls-cert = PEM-Zertifikatskette.
+docgen-config-server-tls-key = Privater PEM-Schlüssel.
+docgen-config-server-self-signed-tls = HTTPS mit einem selbstsignierten Zertifikat bereitstellen, das in `<data_dir>/tls/` erzeugt wird (bei späteren Starts wiederverwendet); `wpg serve --tls` setzt dies.
+docgen-config-server-base-url = Öffentliche URL des Servers hinter einem Reverse Proxy (`https://wpg.example.net`), verwendet für absolute Links.
+docgen-config-auth = Authentifizierung.
+docgen-config-auth-password-hash = argon2id-PHC-String des Admin-Passworts; `wpg config set-password` schreibt ihn.
+docgen-config-auth-password-file = Datei mit dem Admin-Passwort: ein argon2-PHC-String oder Klartext, der beim Start gehasht wird.
+docgen-config-auth-session-ttl-secs = Sitzungsdauer in Sekunden (gleitend: jede Anfrage verlängert sie).
+docgen-config-templates = Vorlagenbibliothek.
+docgen-config-templates-library-paths = Schreibgeschützte Vorlagenbibliotheken (zum Beispiel Git-Checkouts), rekursiv nach `*.wpg.yaml` / `*.wpg.json` durchsucht und bei Dateiänderungen neu geladen.
+docgen-config-templates-user-dir = Beschreibbares Verzeichnis für in der GUI erstellte oder importierte Vorlagen; Standard `<data_dir>/templates`.
+docgen-config-tx = Senderichtlinie und Standardwerte.
+docgen-config-tx-allowed-ifaces = Schnittstellen, auf denen Jobs senden dürfen; leer = alle. Das `null`-Backend und Probeläufe sind nicht eingeschränkt.
+docgen-config-tx-max-rate = Höchste Rate, die ein Job anfordern darf (`100kpps`, `1Gbps`); Jobs ohne Rate werden mit dieser Rate gesendet.
+docgen-config-tx-default-backend = Backend, das verwendet wird, wenn ein Job keines nennt (`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`); nicht gesetzt = `afpacket` unter Linux, sonst `pcap`, sonst `null`.
+docgen-config-tx-dpdk-eal-args = DPDK-EAL-Argumente für das `dpdk`-Backend, z. B. `["-a", "0000:00:04.0"]`. wpg fügt `-l <first CPU>` und `--in-memory` hinzu, sofern nicht angegeben. EAL startet einmal pro Prozess mit dem ersten `dpdk`-Job; Änderungen erfordern einen Neustart.
+docgen-config-log = Logging.
+docgen-config-log-level = Filterdirektiven (`RUST_LOG` überschreibt sie), zum Beispiel `info` oder `wpg_tx=debug,info`.
+docgen-config-log-format = Zeilenformat: `pretty` (menschenlesbar) oder `json` (ein Objekt pro Zeile).
+docgen-config-log-file = Zusätzlich in diese Datei schreiben (ihr Verzeichnis wird angelegt).
+docgen-config-log-rotation = Rotation der Datei: `never`, `hourly` oder `daily`.
+docgen-config-log-max-files = Höchstens so viele rotierte Dateien behalten (die ältesten werden gelöscht).
+docgen-config-log-ansi = Konsolenausgabe einfärben, wenn sie ein Terminal ist.
+docgen-schema-heading = Schlüsselreferenz (generiert)
+docgen-schema-intro = Generiert aus dem JSON Schema des Vorlagenformats (`wpg template schema`); die Beschreibungen sind die Doc-Kommentare des Codes (Englisch). `Template` ist die Dokumentwurzel.
+# --- P2 Beschreibungen der PTP- / ESMC- / CFM- / R-APS- / 802.3ah-OAM-Felder ---
+ptp-major-sdo-id = majorSdoId (transportSpecific in IEEE 1588-2008): 0 für die Standardprofile, 1 für IEEE 802.1AS (gPTP).
+ptp-message-type = Nachrichtentyp: 0 Sync, 1 Delay_Req, 2 Pdelay_Req, 3 Pdelay_Resp, 8 Follow_Up, 9 Delay_Resp, 10 Pdelay_Resp_Follow_Up, 11 Announce, 12 Signaling, 13 Management.
+ptp-minor-version = minorVersionPTP (0 in IEEE 1588-2008, 1 in IEEE 1588-2019).
+ptp-version = versionPTP (2).
+ptp-message-length = Länge der gesamten Nachricht in Oktetten, inklusive TLVs (Auto).
+ptp-domain-number = Domänennummer.
+ptp-minor-sdo-id = minorSdoId (in IEEE 1588-2008 reserviert, 0).
+ptp-flags = Flag-Feld: alternateMaster, twoStep, unicast, die profilspezifischen und Security-Bits im ersten Oktett; leap61, leap59, currentUtcOffsetValid, ptpTimescale, timeTraceable, frequencyTraceable und synchronizationUncertain im zweiten.
+ptp-correction-field = Korrektur in Nanosekunden multipliziert mit 2^16 (vorzeichenbehaftet).
+ptp-message-type-specific = Nachrichtentypspezifisches Feld (in IEEE 1588-2008 reserviert, 0).
+ptp-clock-identity = Clock Identity des Quellports (EUI-64, z. B. eine MAC-Adresse mit ff:fe in der Mitte).
+ptp-port-number = Portnummer des Quellports.
+ptp-sequence-id = Sequenz-ID; ein Follow_Up / Delay_Resp / Pdelay_Resp übernimmt die der beantworteten Nachricht.
+ptp-control-field = Control-Feld (Kompatibilität zu IEEE 1588 Version 1): 0 Sync, 1 Delay_Req, 2 Follow_Up, 3 Delay_Resp, 4 Management, 5 andere Nachrichten.
+ptp-log-message-interval = Log2 des Nachrichtenintervalls in Sekunden (vorzeichenbehaftet; 0x7f, wenn nicht zutreffend).
+ptp-timestamp-seconds = Zeitstempel: Sekunden (48 Bit).
+ptp-timestamp-nanoseconds = Zeitstempel: Nanosekunden (32 Bit).
+ptp-port-identity-clock = Port Identity: Clock Identity (alle Bits 1 = jede Clock).
+ptp-port-identity-port = Port Identity: Portnummer (0xffff = jeder Port).
+ptp-current-utc-offset = Aktueller UTC-Offset in Sekunden (TAI - UTC).
+ptp-grandmaster-priority = Grandmaster-Priorität (Best Master Clock Algorithm, niedriger gewinnt).
+ptp-grandmaster-clock-class = Grandmaster-Clock-Class (6 = an eine primäre Referenz gekoppelt, 248 = Standard, 255 = nur Slave).
+ptp-grandmaster-clock-accuracy = Grandmaster-Clock-Accuracy (0x20 = innerhalb von 25 ns ... 0xfe = unbekannt).
+ptp-grandmaster-variance = Grandmaster-offsetScaledLogVariance.
+ptp-grandmaster-identity = Grandmaster-Clock-Identity.
+ptp-steps-removed = Anzahl der Boundary Clocks zwischen Grandmaster und Sender.
+ptp-time-source = Zeitquelle des Grandmasters: Atomuhr, GPS, terrestrischer Funk, PTP, NTP, manuell gestellt, andere, interner Oszillator.
+ptp-starting-boundary-hops = Anfängliche Boundary Hops einer Management-Nachricht.
+ptp-boundary-hops = Verbleibende Boundary Hops.
+ptp-action = Management-Aktion: GET, SET, RESPONSE, COMMAND, ACKNOWLEDGE.
+ptp-tlvs = TLVs (16-Bit-Typ, 16-Bit-Länge des Werts, Auto): Management, Management Error Status, Organization Extension, Unicast Negotiation (Request / Grant / Cancel / Acknowledge Cancel), Path Trace, Alternate Time Offset Indicator. Sie enden an der Nachrichtenlänge.
+ptp-data = Rest der Nachricht nach dem gemeinsamen Header als Oktette (bis zur Nachrichtenlänge).
+esmc-subtype = Slow-Protocols-Subtyp (0x0a = organisationsspezifisch).
+esmc-itu-oui = ITU-T-OUI (00-19-a7).
+esmc-itu-subtype = ITU-T-Subtyp (1 = ESMC).
+esmc-version = ESMC-Version (1).
+esmc-event-flag = Event-Flag: 1 für eine Event-PDU, die sofort nach einer QL-Änderung gesendet wird, 0 für die sekündliche Information-PDU.
+esmc-tlvs = TLVs (8-Bit-Typ, 16-Bit-Länge inklusive 3-Oktett-Header, Auto): QL-TLV mit dem SSM-Code, Extended-QL-TLV mit dem Enhanced-SSM-Code, SyncE-Clock-Identity und kaskadierten Clock-Zählern. Oktette danach (Padding) werden als ein Roh-Element beibehalten.
+cfm-md-level = Maintenance-Domain- / MEG-Level (0-7).
+cfm-version = CFM-Version (0; 1 für R-APS von G.8032v2).
+cfm-opcode = OpCode: 1 CCM, 2 LBR, 3 LBM, 4 LTR, 5 LTM, 33 AIS, 35 LCK, 37 TST, 39 Linear APS, 40 R-APS, 41 MCC, 42 LMR, 43 LMM, 45 1DM, 46 DMR, 47 DMM, 52 CSF, 53 1SL, 54 SLR, 55 SLM ...
+cfm-flags = Flags (OpCode-spezifisch).
+cfm-first-tlv-offset = Offset des ersten TLV ab dem Ende dieses Felds (konstant je OpCode).
+cfm-rdi = RDI: Remote Defect Indication.
+cfm-period = Sendeperiode: 1 = 3,33 ms, 2 = 10 ms, 3 = 100 ms, 4 = 1 s, 5 = 10 s, 6 = 1 min, 7 = 10 min.
+cfm-sequence-number = Sequenznummer.
+cfm-mep-id = MEP-ID (1-8191).
+cfm-maid = MAID / MEG-ID, 48 Oktette: MD-Namensformat und Name, Short-MA-Namensformat, Länge und Name, mit Nullen aufgefüllt (Y.1731: kein MD-Name, Format 32 ICC-basiert, Länge 13).
+cfm-frame-counter = Frame-Zähler (Verlustmessung).
+cfm-transaction-id = Transaktionskennung für Loopback / Linktrace.
+cfm-use-fdb-only = UseFDBonly: Allein die Forwarding-Datenbank bestimmt den Ausgangsport.
+cfm-fwd-yes = FwdYes: Das LTM wurde weitergeleitet.
+cfm-terminal-mep = TerminalMEP: Die Antwort kommt vom Ziel-MEP.
+cfm-ttl = Linktrace-TTL.
+cfm-relay-action = Relay Action: 1 RlyHit, 2 RlyFDB, 3 RlyMPDB.
+cfm-original-mac = MAC-Adresse des MEP, der den Linktrace gestartet hat.
+cfm-target-mac = Ziel-MAC-Adresse des Linktrace.
+cfm-csf-type = Client-Signal-Fail-Typ: 0 LOS, 1 FDI / AIS, 2 RDI, 3 DCI.
+cfm-timestamp = Zeitstempel im IEEE-1588-Format (32-Bit-Sekunden und Nanosekunden).
+cfm-source-mep-id = Quell-MEP-ID.
+cfm-responder-mep-id = MEP-ID des Responders (0 in einem SLM).
+cfm-test-id = Test-ID der synthetischen Verlustmessung.
+cfm-tlvs = TLVs (8-Bit-Typ, 16-Bit-Länge des Werts, Auto): Sender ID, Port Status, Data, Interface Status, Reply Ingress / Egress, LTM / LTR Egress Identifier, Organization-Specific, Test, abgeschlossen durch das End-TLV (Typ 0).
+cfm-data = Rest der PDU nach dem First-TLV-Offset als Oktette (OpCode-spezifische Felder und TLVs).
+raps-request-state = Request / State: 0000 NR, 0111 MS, 1011 SF, 1101 FS, 1110 Event.
+raps-sub-code = Sub-Code (0000 = Flush Request mit dem Event-Request).
+raps-rb = RB: Der RPL ist blockiert.
+raps-dnf = DNF: Forwarding-Datenbank nicht leeren (Do Not Flush).
+raps-bpr = BPR: Blocked Port Reference (0 = Ring-Link 0, 1 = Ring-Link 1).
+raps-node-id = Node-ID: MAC-Adresse des sendenden Ringknotens.
+efm-oam-subtype = Slow-Protocols-Subtyp (3 = OAM).
+efm-oam-flags = Flags: Link Fault, Dying Gasp, Critical Event, Local / Remote Evaluating und Stable.
+efm-oam-code = OAMPDU-Code: 0x00 Information, 0x01 Event Notification, 0x02 Variable Request, 0x03 Variable Response, 0x04 Loopback Control, 0xfe Organization Specific.
+efm-oam-information-tlvs = Information-TLVs (8-Bit-Typ, 8-Bit-Länge inklusive Header, Auto): Local / Remote Information, Organization Specific, abgeschlossen durch das End-TLV (Typ 0).
+efm-oam-sequence-number = Sequenznummer der Event Notification.
+efm-oam-event-tlvs = Link-Event-TLVs (8-Bit-Typ, 8-Bit-Länge inklusive Header, Auto): Errored Symbol Period, Errored Frame, Errored Frame Period, Errored Frame Seconds Summary, Organization Specific, abgeschlossen durch das End-TLV (Typ 0).
+efm-oam-variable-descriptors = Variable Descriptors als Oktette: jeweils Branch (1 Oktett) und Leaf (2 Oktette), abgeschlossen durch einen Null-Branch.
+efm-oam-variable-containers = Variable Containers als Oktette: jeweils Branch, Leaf, Width und Value, abgeschlossen durch einen Null-Branch.
+efm-oam-loopback-command = Remote-Loopback-Befehl: 1 aktivieren, 2 deaktivieren.
+efm-oam-oui = Organizationally Unique Identifier.
+efm-oam-data = Rest der OAMPDU als Oktette.
+
+# --- P2 Beschreibungen der MACsec- / GTPv2-C- / Diameter- / SIP- / RTP-Felder ---
+macsec-v = TCI-V-Bit: Version (0).
+macsec-es = TCI-ES-Bit: End Station (der SCI ist die Quell-MAC-Adresse mit Port 1).
+macsec-sc = TCI-SC-Bit: ein expliziter SCI ist vorhanden (Auto: gesetzt, wenn der SCI angegeben ist).
+macsec-scb = TCI-SCB-Bit: EPON Single Copy Broadcast.
+macsec-e = TCI-E-Bit: Die gesicherten Daten sind verschlüsselt.
+macsec-c = TCI-C-Bit: Die Benutzerdaten wurden verändert (bei den Standard-Cipher-Suites immer zusammen mit E).
+macsec-an = Association Number (0-3): die Secure Association innerhalb des Kanals.
+macsec-sl = Short Length: die Länge der gesicherten Daten, wenn sie unter 48 Oktetten liegt, sonst 0 (Manual).
+macsec-pn = Packet Number (32 Bit, bei XPN die untere Hälfte).
+macsec-sci = Secure Channel Identifier: System-Kennung (MAC-Adresse) und Port-Kennung; vorhanden, wenn SC gesetzt ist.
+macsec-secure-data = Gesicherte Daten: die verschlüsselten (oder nur integritätsgeschützten) Benutzerdaten als opake Oktette; es wird nichts verschlüsselt.
+macsec-icv = Integrity Check Value (16 Oktette), opak: wird nicht berechnet.
+gtpv2-version = GTP-Version (2).
+gtpv2-p = P-Flag: Eine Piggyback-Nachricht folgt (die nächste GTPv2-C-Schicht).
+gtpv2-t = T-Flag: Das TEID-Feld ist vorhanden (Auto: gesetzt, wenn eine TEID angegeben ist).
+gtpv2-mp = MP-Flag: Die Nachrichtenpriorität ist vorhanden.
+gtpv2-message-type = Nachrichtentyp (Echo, Create / Modify / Delete Session, Create / Update / Delete Bearer, ...).
+gtpv2-length = Nachrichtenlänge in Oktetten, ohne die ersten 4 Oktette (Auto).
+gtpv2-teid = Tunnel Endpoint Identifier des Empfängers (fehlt in Echo-Nachrichten; 0 in einer initialen Anfrage).
+gtpv2-sequence = Sequenznummer (24 Bit), die eine Antwort ihrer Anfrage zuordnet.
+gtpv2-message-priority = Nachrichtenpriorität (0 am höchsten), verwendet, wenn MP gesetzt ist.
+gtpv2-ies = Information Elements (8-Bit-Typ, 16-Bit-Länge der Daten, Spare-/Instance-Oktett): IMSI, Cause, Recovery, APN, AMBR, EBI, IP Address, MEI, MSISDN, PAA, Bearer QoS, RAT Type, Serving Network, F-TEID, Bearer Context (gruppiert), PDN Type, ... Längen sind Auto.
+diameter-version = Diameter-Version (1).
+diameter-length = Nachrichtenlänge in Oktetten, inklusive Header und AVP-Padding (Auto).
+diameter-r = R-Flag: Request (0 = Answer).
+diameter-p = P-Flag: proxyfähig.
+diameter-e = E-Flag: Die Antwort enthält einen Protokollfehler.
+diameter-t = T-Flag: möglicherweise erneut übertragene Nachricht.
+diameter-command-code = Command Code (Capabilities-Exchange, Device-Watchdog, Credit-Control, ...).
+diameter-application-id = Application-ID (0 = gemeinsame Diameter-Nachrichten).
+diameter-hop-by-hop = Hop-by-Hop-Kennung, die eine Antwort ihrer Anfrage auf einer Verbindung zuordnet.
+diameter-end-to-end = End-to-End-Kennung zur Erkennung doppelter Anfragen.
+diameter-avps = AVPs (32-Bit-Code, V- / M- / P-Flags, 24-Bit-Länge ohne Padding, optionale Vendor-ID, Daten auf 4 Oktette aufgefüllt): AVPs des Basisprotokolls und von Credit-Control, gruppierte AVPs eine Ebene tief. Längen, Padding und das V-Flag sind Auto.
+sip-start-line = Startzeile: eine Request-Zeile (Methode, Request-URI, SIP/2.0) oder eine Statuszeile (SIP/2.0, Code, Reason). Das CRLF wird automatisch angefügt.
+sip-headers = Headerzeilen (Name: Wert), eine pro Element; die CRLFs und die Leerzeile danach werden automatisch angefügt. Content-Length ist Manual.
+sip-body = Nachrichten-Body (ein SDP-Offer / -Answer, ...).
+rtp-version = RTP-Version (2).
+rtp-padding = P-Bit: Padding-Oktette am Ende der Payload (das letzte enthält ihre Anzahl, Manual).
+rtp-x = X-Bit: Auf die CSRC-Liste folgt eine Header-Erweiterung (Auto).
+rtp-cc = CSRC-Anzahl (Auto).
+rtp-marker = Marker-Bit (profildefiniert, z. B. der Beginn eines Talkspurts).
+rtp-payload-type = Payload-Typ (0 PCMU, 8 PCMA, 9 G.722, 18 G.729, 96-127 dynamisch).
+rtp-sequence = Sequenznummer, pro RTP-Paket um eins erhöht.
+rtp-timestamp = Zeitstempel: Abtastzeitpunkt des ersten Payload-Oktetts.
+rtp-ssrc = Synchronization Source Identifier.
+rtp-csrc = Contributing Source Identifiers (bis zu 15).
+rtp-extension = Header-Erweiterung: profildefinierte 16 Bit (0xBEDE: One-Byte-Elemente nach RFC 8285), die Länge in 32-Bit-Wörtern (Auto) und die Erweiterungswörter.
+rtcp-version = RTCP-Version (2).
+rtcp-padding = P-Bit: Padding-Oktette am Ende des Pakets (Manual).
+rtcp-count = Count-/Format-Feld (5 Bit) eines nicht typisierten Pakettyps.
+rtcp-report-count = Anzahl der Reception Reports (Auto).
+rtcp-source-count = Source Count: SDES-Chunks oder BYE-Kennungen (Auto).
+rtcp-subtype = Anwendungsdefinierter Subtyp.
+rtcp-packet-type = Pakettyp (200 SR, 201 RR, 202 SDES, 203 BYE, 204 APP, 205 RTPFB, 206 PSFB, 207 XR).
+rtcp-length = Paketlänge in 32-Bit-Wörtern minus eins (Auto).
+rtcp-body = Paket-Body nach dem gemeinsamen Header als Oktette.
+rtcp-ssrc = SSRC des Senders dieses Pakets.
+rtcp-ntp-timestamp = NTP-Zeitstempel (höchstwertiges Wort; das nächste Feld ist der Bruchteil).
+rtcp-rtp-timestamp = RTP-Zeitstempel, der dem NTP-Zeitstempel entspricht.
+rtcp-packet-count = Paketzähler des Senders.
+rtcp-octet-count = Payload-Oktettzähler des Senders.
+rtcp-report-blocks = Reception-Report-Blöcke: SSRC, Fraction Lost, Cumulative Lost, Extended Highest Sequence Number, Jitter, LSR, DLSR.
+rtcp-extension = Profilspezifische Erweiterungsoktette bis zur Paketlänge.
+rtcp-chunks = SDES-Chunks: SSRC / CSRC und ihre Items (Typ, Länge (Auto), Text), abgeschlossen durch ein Null-Oktett und auf 32 Bit aufgefüllt.
+rtcp-ssrcs = SSRC- / CSRC-Kennungen, die die Sitzung verlassen.
+rtcp-reason = Optionaler Grund für das Verlassen: Länge (Auto), Text, Padding auf 32 Bit.
+rtcp-app-name = Name (4 ASCII-Zeichen).
+rtcp-app-data = Anwendungsabhängige Daten (ein Vielfaches von 4 Oktetten).
