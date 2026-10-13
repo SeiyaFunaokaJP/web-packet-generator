@@ -41,22 +41,34 @@ TODO.md §4 の v1.0 リリース判定 (M12) では、これに加えて次を�
 4. `release: vX.Y.Z` でコミットし、注釈付きタグ `vX.Y.Z` を打つ (`git tag -a vX.Y.Z -m "wpg X.Y.Z"`)。
 5. タグをプッシュする (`git push origin vX.Y.Z`)。`.github/workflows/release.yml` がアーカイブをビルドし、`SHA256SUMS` を書き、自動生成のノート付きで GitHub Release を作成するので、その後ノートを編集する。ハイフンを含むタグ (`v1.0.0-rc.1`) はプレリリースになる。タグがワークスペースのバージョンと一致しないと `scripts/release.sh` が失敗する。
 
-ワークフローを手動実行 (`workflow_dispatch`) すると、何も公開せずにアーカイブをビルドしてワークフローの artifact として残します。パイプラインの確認に使ってください。
+ワークフローを手動実行 (`workflow_dispatch`) したとき、またはパッケージングに関わるファイル (`scripts/release.sh`、`scripts/smoke-archive.sh`、`scripts/build.ps1`、`packaging/`、Docker のファイル、ワークフロー自身、Npcap の読み込みコード) を変える PR では、何も公開せずにアーカイブをビルド・テストしてワークフローの artifact として残します。パイプラインの確認に使ってください。
 
 ## バイナリ配布
 
-リリースは `.github/workflows/release.yml` がビルドします。各ターゲットをそれぞれのランナーで `scripts/release.sh` がビルドし、最後のジョブがすべてのアーカイブと `SHA256SUMS` ファイルを付けた GitHub Release を公開します。
+リリースは `.github/workflows/release.yml` がビルドします。各ターゲットをそれぞれのランナーで `scripts/release.sh` がビルドして `scripts/smoke-archive.sh` で確認し、さらに各 OS でアーカイブを試すジョブ (下記) が走ります。macOS と Windows の確認が通ると、最後のジョブがすべてのアーカイブと `SHA256SUMS` ファイルを付けた GitHub Release を公開します。
 
 ### ターゲット
 
-| アーカイブ | ランナー | 補足 |
-|---|---|---|
-| `wpg-<ver>-x86_64-unknown-linux-gnu.tar.gz` | `ubuntu-22.04` | glibc 2.35 でリンクするので、Ubuntu 22.04 / Debian 12 以降で動きます |
-| `wpg-<ver>-aarch64-apple-darwin.tar.gz` | `macos-14` | Apple シリコン |
-| `wpg-<ver>-x86_64-apple-darwin.tar.gz` | `macos-14` (クロス) | Intel Mac |
-| `wpg-<ver>-x86_64-pc-windows-msvc.zip` | `windows-latest` | 実行時に Npcap が必要 |
+| アーカイブ | ランナー | feature | 補足 |
+|---|---|---|---|
+| `wpg-<ver>-x86_64-unknown-linux-gnu.tar.gz` | `ubuntu-22.04` | (なし) | glibc 2.35 でリンクするので、Ubuntu 22.04 / Debian 12 以降で動きます。`afpacket` で送信するので libpcap は不要です |
+| `wpg-<ver>-aarch64-apple-darwin.tar.gz` | `macos-14` | `pcap` | Apple シリコン。libpcap は macOS に標準で入っています |
+| `wpg-<ver>-x86_64-apple-darwin.tar.gz` | `macos-14` (クロス) | `pcap` | Intel Mac |
+| `wpg-<ver>-x86_64-pc-windows-msvc.zip` | `windows-latest` | `pcap` | Npcap が無くても起動します。送信には Npcap が必要です |
 
-各アーカイブには、`wpg` / `wpg.exe` (Web UI を組み込み済み)、`README.md`、`README.ja.md`、`CHANGELOG.md`、2 つのライセンス、`templates/`、`packaging/` (systemd、launchd、Windows サービスのサンプル) が入ります。バイナリは任意の feature 無し (`pcap` 無し) でビルドするので、起動に追加のライブラリは不要です。**署名と公証はしていません**。利用者が行う手順は macOS と Windows のインストールページを参照してください。
+各アーカイブには、`wpg` / `wpg.exe` (Web UI を組み込み済み)、`README.md`、`README.ja.md`、`CHANGELOG.md`、2 つのライセンス、`templates/`、`packaging/` (systemd、launchd、Windows サービスのサンプル) が入ります。macOS と Windows は libpcap / Npcap でしか送信できないため、この 2 つは `pcap` feature 付きでビルドします。Windows では `release.sh` が `wpcap.lib` をリンクするために Npcap SDK (バージョンと SHA-256 はスクリプトに固定、`target/` にキャッシュ) をダウンロードします。SDK は同梱しません。`wpg.exe` は `wpcap.dll` を遅延ロードする (`crates/wpg-cli/build.rs`) ので、Npcap の無いマシンでも起動し、`wpg doctor` を実行できます。**署名と公証はしていません**。利用者が行う手順は macOS と Windows のインストールページを参照してください。
+
+### CI で確認していること
+
+| ジョブ | 確認内容 |
+|---|---|
+| `build (<target>)` | `scripts/smoke-archive.sh`: `.sha256` ファイル、アーカイブの中身、`wpg --version`、`wpg doctor --json`、`wpg render`、`wpg serve` が `/api/health` に応答し組み込みの UI を返すこと (クロスビルドの Intel macOS 版は中身のみ) |
+| `macOS (launchd, pcap)` | Apple シリコン版のアーカイブと launchd デーモンを [サービスとして動かす](../operations/services.md) のとおりに入れて `/api/health` を確認し、削除する。続けて `feth` ペアの片側で `--backend pcap` により 16 フレーム送信し、もう片側で `wpg capture --backend pcap` により受信する |
+| `Windows (scheduled task, no Npcap)` | `wpg doctor` が `npcap` チェックを失敗にすること、`wpg send --backend pcap` がクラッシュせずに「Npcap is not installed」で止まること、`packaging\windows\wpg-service.ps1` でタスクを登録・起動 (`/api/health` で確認)・停止・削除できること |
+| `Windows (build.ps1)` | Npcap SDK を `C:\Npcap-SDK` に置いて (`pcap` が自動で付く) `scripts\build.ps1` を実行し、できたバイナリを動かす |
+| `Docker (compose)` | `docker compose up --build --wait`、コンテナの `/api/health` と `wpg doctor` |
+
+ランナーには Npcap を無人インストールできない (サイレントインストールは OEM 版のみ) ため、Npcap 経由の送信は CI では確認できません。リリース前に Windows 実機で手動確認してください。
 
 ### ローカルでアーカイブを作る
 
@@ -64,6 +76,7 @@ TODO.md §4 の v1.0 リリース判定 (M12) では、これに加えて次を�
 scripts/release.sh                                    # ホストのターゲット、dist/ に出力
 scripts/release.sh --target x86_64-apple-darwin       # クロスターゲット (そのリンカ / SDK が必要)
 scripts/release.sh --skip-frontend --features pcap    # crates/wpg-web/dist を再利用
+scripts/smoke-archive.sh dist/wpg-*.tar.gz            # または: just smoke-archive <archive>
 scripts/release.sh --checksums dist                   # dist/ のすべての SHA256SUMS
 ```
 

@@ -389,9 +389,9 @@ wpg bench   [--backend ...]                                # 送出性能計測
 
 ### M10: デプロイ・配布・運用（2 週）
 - [x] `scripts/deploy.sh` (scp + setcap + systemd + healthcheck)、`--dpdk` オプション（ホスト側は `scripts/lib/deploy-remote.sh`。`--service` で `wpg` ユーザ / `/etc/wpg/wpg.env` / unit 投入、パスワード無しの非ループバック起動を拒否、`/api/health` 待ち、`wpg.prev` と `--rollback`。systemd + sshd の Ubuntu 24.04 コンテナで確認、shellcheck 済み。`--dpdk` は hugepages / hugetlbfs / vfio-pci / IOMMU 確認の準備のみで NIC バインドと DPDK 本体は対象外 (M8)。CML2 実機は未確認）
-- [ ] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS
-- [ ] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順
-- [ ] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認
+- [ ] `scripts/release.sh` / cargo-dist、GitHub Release 3 OS（進捗: `release.sh` と release.yml（cargo-dist は見送り、理由は dev/release）。macOS / Windows 版は `pcap` 付きでビルドし、Windows は固定版の Npcap SDK を取得、`wpcap.dll` は遅延ロード。`scripts/smoke-archive.sh` と PR でも走る 3 OS のスモークテストを追加。Linux のアーカイブはローカルで作成・スモークテスト済み。残り: release.yml の 3 OS ジョブが緑になること（2026-10-13 時点で Actions が全ジョブ即時失敗し未実行）、タグでの実リリース）
+- [ ] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順（進捗: すべて作成済み、Docker と systemd はコンテナで確認済み。launchd（macOS 14）とタスクスケジューラ（Windows）、docker compose を CI で確認するジョブを release.yml に追加。残り: そのジョブが緑になること）
+- [ ] Windows: Npcap 検出とインストール案内、`build.ps1` 動作確認（進捗: `wpg doctor` / `build.ps1` / `wpg-service.ps1` の検出と案内、WinPcap 互換モード不要化、Npcap 無しでの送出がクラッシュせずエラーになる処理、SDK があれば `build.ps1` が `pcap` を自動で付ける。`build.ps1` と Npcap 無しの経路を確認する CI ジョブを追加。残り: CI が緑になること。Npcap 経由の送出は CI で確認できないため実機で）
 - [x] macOS: 署名/公証は要検討 (未署名の回避手順をまず記載)（Gatekeeper / quarantine の回避手順を install-macos に記載、署名は Developer ID 未取得のため見送りと dev/release に記載。実機での確認は未実施）
 - [x] アップグレード手順・テンプレマイグレーション（`wpg template migrate [--check] [--no-backup]` を追加。`schema:` の移行機構 `MIGRATIONS` と DB の `schema_version` は既存。docs `operations/upgrade.md` に手順、DB / 設定 / テンプレの互換方針、スキーマ追加手順。schema は 1 のみのため実移行のテストは対象外）
 

@@ -80,4 +80,4 @@ Npcap must be installed in either case (`wpg doctor` checks it). Allow `wpg.exe`
 
 ## Verification status
 
-The systemd unit was started by `scripts/deploy.sh` in an Ubuntu 24.04 container running systemd (the server ran as `wpg` with only `CAP_NET_RAW` and `CAP_NET_ADMIN` and answered `/api/health`); `systemd-analyze verify` accepts it. The launchd plist was only checked to parse; the PowerShell script was only parsed and linted with PSScriptAnalyzer. **Not tested on real macOS or Windows.**
+The systemd unit was started by `scripts/deploy.sh` in an Ubuntu 24.04 container running systemd (the server ran as `wpg` with only `CAP_NET_RAW` and `CAP_NET_ADMIN` and answered `/api/health`); `systemd-analyze verify` accepts it. The launchd plist was only checked to parse; the PowerShell script was only parsed and linted with PSScriptAnalyzer. **Not tested on real macOS or Windows yet.** The release workflow now has jobs that install the launchd daemon on a macOS 14 runner and the scheduled task on a Windows runner and check `/api/health` (see "What CI checks" in [Release process](../dev/release.md)); this page will be updated once they have run green.

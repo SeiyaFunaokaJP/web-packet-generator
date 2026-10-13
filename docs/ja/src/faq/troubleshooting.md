@@ -11,7 +11,7 @@
 | `kernel.af_xdp` | warn | AF_XDP バックエンド用にカーネル 5.10 以降 |
 | `kernel.tpacket_v3` | warn | カーネル 3.2 以降。なければ afpacket は `sendmmsg` にフォールバック |
 | `hugepages` | warn | Hugepages の設定。DPDK バックエンドでのみ必要 |
-| `npcap` | fail / warn (Windows のみ) | Npcap が WinPcap 互換モードで導入済みか。他 OS では skip |
+| `npcap` | fail / warn (Windows のみ) | Npcap が導入され、`wpcap.dll` が `System32\Npcap` か `System32` にあるか。他 OS では skip |
 | `pcap_lib` | warn | libpcap が見つかること (`pcap` バックエンドで必要)。Windows では skip |
 
 各結果は `ok` / `warn` / `fail` / `skip` (この OS では対象外) のいずれかです。

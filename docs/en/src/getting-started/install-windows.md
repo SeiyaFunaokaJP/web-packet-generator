@@ -13,8 +13,8 @@ Supported: Windows 10 21H2 or later. Release binaries are not published yet, so 
    cargo install just --locked      # optional
    ```
 
-3. Install [Npcap](https://npcap.com/#download) and tick **Install Npcap in WinPcap API-compatible Mode**. Sending needs it.
-4. Only if you build the optional libpcap backend (`--features pcap`): install the Npcap SDK and put its `Lib\x64` directory on the `LIB` environment variable.
+3. Install [Npcap](https://npcap.com/#download) (the default options are fine; the WinPcap API-compatible mode is not needed). Sending needs it.
+4. Download the [Npcap SDK](https://npcap.com/#download) and unpack it to `C:\Npcap-SDK` (or set `LIBPCAP_LIBDIR` to its `Lib\x64` directory). `scripts\build.ps1` then builds the Npcap backend (`pcap` feature), the only way wpg can send on Windows. Without the SDK the build still succeeds, but the resulting `wpg.exe` cannot send and `build.ps1` warns about it.
 5. Optional: Wireshark (for `tshark`).
 
 ## 2. Build
@@ -36,7 +36,7 @@ It ends with `==> done: target\release\wpg.exe`.
 
 ## 4. Allow sending
 
-Open **PowerShell as Administrator** for sending, and check that `wpg doctor` reports Npcap as installed in WinPcap-compatible mode. See [Permissions](permissions.md).
+Open **PowerShell as Administrator** for sending, and check that `wpg doctor` reports Npcap as installed. See [Permissions](permissions.md).
 
 ## 5. Start the server
 
@@ -57,7 +57,7 @@ Use the interface name printed by `wpg ifaces`. Only send on networks you own or
 
 ## Release archive and Npcap check
 
-Release archives (`wpg-<version>-x86_64-pc-windows-msvc.zip`) contain `wpg.exe` with the web UI, the sample templates and `packaging\windows\wpg-service.ps1`. They are not code-signed:
+Release archives (`wpg-<version>-x86_64-pc-windows-msvc.zip`) contain `wpg.exe` with the web UI and the Npcap backend, the sample templates and `packaging\windows\wpg-service.ps1`. They are not code-signed:
 
 ```powershell
 # Verify, then clear the "downloaded from the Internet" mark before extracting
@@ -68,9 +68,10 @@ Expand-Archive .\wpg-0.2.0-x86_64-pc-windows-msvc.zip -DestinationPath "C:\Progr
 
 If SmartScreen still shows "Windows protected your PC", choose **More info → Run anyway** once.
 
-Npcap is not bundled (its licence does not allow redistribution with the free edition). Both `wpg doctor` and `scripts\build.ps1` check for it:
+Npcap is not bundled (its licence does not allow redistribution with the free edition). `wpg.exe` loads `wpcap.dll` only when the `pcap` backend is first used (it is linked with `/DELAYLOAD`) and adds `System32\Npcap` to the DLL search path itself, so it starts without Npcap and works with either Npcap install mode. Both `wpg doctor` and `scripts\build.ps1` check for it:
 
-- `wpg doctor` fails the `npcap` check when Npcap is missing and warns when it is installed without **WinPcap API-compatible Mode** (then `wpcap.dll` is not on the default DLL path). The fix line links to <https://npcap.com/#download>.
-- `scripts\build.ps1` prints the same warning before building, since a build without Npcap succeeds but cannot send.
+- `wpg doctor` fails the `npcap` check when Npcap is missing and warns when Npcap looks installed but `wpcap.dll` is in neither `System32\Npcap` nor `System32`. The fix line links to <https://npcap.com/#download>.
+- Sending without Npcap stops with `Npcap is not installed; install it from https://npcap.com/#download and run wpg doctor` instead of crashing.
+- `scripts\build.ps1` prints a warning before building, since a build without Npcap succeeds but cannot send.
 
 To run wpg in the background at boot, see [Running as a service](../operations/services.md#windows).

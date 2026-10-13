@@ -24,7 +24,7 @@ file capability はバイナリを置き換えると失われ、`nosuid` マウ�
 
 ## Windows
 
-管理者ターミナルと、WinPcap API 互換モードで入れた Npcap が必要です。`wpg doctor` のヒントは `Run from an elevated (Administrator) terminal` で、Npcap がない場合は `https://npcap.com/#download` を案内します。Npcap を管理者専用モードで入れていなければ、管理者権限のないプロセスでも Npcap を使えるため、権限チェックはここでは警告止まりです。
+管理者ターミナルと Npcap が必要です (インストールモードは問いません。wpg が `System32\Npcap` の `wpcap.dll` を自分で見つけます)。`wpg doctor` のヒントは `Run from an elevated (Administrator) terminal` で、Npcap がない場合は `https://npcap.com/#download` を案内します。Npcap を管理者専用モードで入れていなければ、管理者権限のないプロセスでも Npcap を使えるため、権限チェックはここでは警告止まりです。
 
 ## `wpg doctor` による確認
 
@@ -37,7 +37,7 @@ file capability はバイナリを置き換えると失われ、`nosuid` マウ�
 | `kernel.af_xdp` | warn | AF_XDP バックエンド用にカーネル 5.10 以降 |
 | `kernel.tpacket_v3` | warn | カーネル 3.2 以降。なければ afpacket は `sendmmsg` にフォールバック |
 | `hugepages` | warn | Hugepages の設定。DPDK バックエンドでのみ必要 |
-| `npcap` | fail / warn (Windows のみ) | Npcap が導入され WinPcap 互換モードであること。他の OS では skip |
+| `npcap` | fail / warn (Windows のみ) | Npcap が導入され、`wpcap.dll` が `System32\Npcap` か `System32` にあること。他の OS では skip |
 | `pcap_lib` | warn | libpcap が見つかること (`pcap` バックエンドで必要)。Windows では skip |
 
 各チェックの結果は `ok`、`warn`、`fail`、`skip` (この OS では対象外) のいずれかです。
