@@ -246,6 +246,30 @@ fn resolve_layer_ref(s: &str, layers: &[Layer]) -> Result<FieldRef, String> {
     Ok(FieldRef::new(index.to_string(), f))
 }
 
+/// Rewrites the `$<layer>.field` references of an `expr` generator so `<layer>` is
+/// the layer index, as `stream.order` accepts it (`$ethernet2.src` -> `$0.src`).
+/// `$field` without a layer is left as is.
+fn resolve_expr_refs(expr: &str, layers: &[Layer]) -> Result<String, String> {
+    let is_ref = |c: char| c.is_alphanumeric() || c == '_' || c == '.';
+    let mut out = String::with_capacity(expr.len());
+    let mut rest = expr;
+    while let Some(at) = rest.find('$') {
+        out.push_str(&rest[..=at]);
+        rest = &rest[at + 1..];
+        let end = rest.find(|c: char| !is_ref(c)).unwrap_or(rest.len());
+        let name = &rest[..end];
+        if name.contains('.') {
+            let r = resolve_layer_ref(name, layers)?;
+            out.push_str(&format!("{}.{}", r.layer, r.field));
+        } else {
+            out.push_str(name);
+        }
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    Ok(out)
+}
+
 #[allow(clippy::too_many_lines)] // one linear pass over the template
 pub(crate) fn analyze(
     t: &Template,
@@ -483,6 +507,25 @@ pub(crate) fn analyze(
                 )
                 .arg("value", &v.name),
             );
+        }
+    }
+
+    // -- expr references -----------------------------------------------------------
+    for a in &mut assignments {
+        let Generator::Expr { expr } = &mut a.generator else {
+            continue;
+        };
+        match resolve_expr_refs(expr, &layers) {
+            Ok(e) => *expr = e,
+            Err(msg) => issues.push(
+                LintIssue::error(
+                    format!("layers[{}].generators.{}", a.target.layer, a.target.field),
+                    "lint-invalid-generator",
+                    format!("generator for `{}`: {msg}", a.target.field),
+                )
+                .arg("field", &a.target.field)
+                .arg("value", msg),
+            ),
         }
     }
 

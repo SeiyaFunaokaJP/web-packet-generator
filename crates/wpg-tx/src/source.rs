@@ -291,7 +291,8 @@ pub struct OnTheFly {
     targets: Vec<PatchTarget>,
     values: Vec<FieldValue>,
     /// Numeric Manual fields of the base packet for `$field` references in `expr`
-    /// generators (`field` for the first occurrence and `layer.field`).
+    /// generators (`field` for the first occurrence, `<protocol>.field` and
+    /// `<index>.field`).
     base_fields: Arc<HashMap<String, i128>>,
     index: u64,
     /// Index increment per frame (> 1 for strided workers, see [`Self::split`]).
@@ -321,13 +322,14 @@ impl OnTheFly {
             }
         }
         let mut base_fields = HashMap::new();
-        for layer in &packet.layers {
+        for (i, layer) in packet.layers.iter().enumerate() {
             for (name, v) in &layer.fields {
                 if let Some(x) = field_value_to_i128(v) {
                     base_fields.entry(name.clone()).or_insert(x);
                     base_fields
                         .entry(format!("{}.{name}", layer.protocol))
                         .or_insert(x);
+                    base_fields.insert(format!("{i}.{name}"), x);
                 }
             }
         }

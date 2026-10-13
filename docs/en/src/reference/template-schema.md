@@ -72,7 +72,7 @@ An `expr` generator computes an integer for every packet. The result is written 
 |---|---|
 | `12`, `0x1f`, `0b101` | literals (decimal, hexadecimal, binary) |
 | `idx` | the packet index in the stream (0, 1, 2, ...) |
-| `$field`, `$<layer>.field` | this packet's value of another *generated* field; `<layer>` is the 0-based layer index (`$0.src` is the `src` generator of the first layer) |
+| `$field`, `$<layer>.field` | this packet's value of another *generated* field; `<layer>` is a 0-based layer index or a protocol id unique in the stack, as in `stream.order` (`$0.src` and `$ethernet2.src` both name the `src` generator of the first layer) |
 | `+ - * / %`, `<< >>`, `& ^ \|`, unary `- ~` | C-like operators and precedence; integer arithmetic (128-bit, wrapping) |
 | `hash(x)`, `crc(x)` | FNV-1a 64 / CRC-32 of `x` (as 8 big-endian octets): spreads sequential values |
 | `rand(min, max)` | a random value between `min` and `max`, fixed per packet index and `stream.seed` |
