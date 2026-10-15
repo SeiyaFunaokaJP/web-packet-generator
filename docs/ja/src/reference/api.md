@@ -18,6 +18,7 @@ wpg-server は `/api` 以下で REST (JSON) API を提供し、リアルタイ�
 | system | [`GET /api/system/ifaces`](#op-get-api-system-ifaces) | Network interfaces with `usable` (up, running, not loopback) and `allowed` (by `tx.allowed_ifaces`). |
 | system | [`GET /api/version`](#op-get-api-version) | Build information. |
 | protocols | [`GET /api/protocols`](#op-get-api-protocols) | The catalog in palette order. |
+| protocols | [`GET /api/protocols/extensions`](#op-get-api-protocols-extensions) | The user-defined protocol files loaded at startup (`[protocols] dirs`, `--protocols-dir`): their definitions and bindings, so that the web UI can add them to its in-browser catalog. Empty without extensions. |
 | protocols | [`GET /api/protocols/{id}`](#op-get-api-protocols-id) | The full definition (`wpg_core::ProtocolDef`): fields with types, defaults, auto computations and bindings. Every `description_key` gets a localised `description` next to it. |
 | packets | [`POST /api/lint`](#op-post-api-lint) | Checks a template (`wpg template lint`). A template that does not even parse is reported as a single error at path `""`. |
 | packets | [`POST /api/parse`](#op-post-api-parse) | Decodes raw bytes into layers (Hex paste import). |
@@ -203,6 +204,18 @@ The catalog in palette order.
 | ステータス | 説明 | 本文 |
 |---|---|---|
 | `200` | Catalog summary | `application/json` [`ProtocolSummary`](#schema-protocolsummary)`[]` |
+
+<a id="op-get-api-protocols-extensions"></a>
+
+#### `GET /api/protocols/extensions`
+
+The user-defined protocol files loaded at startup (`[protocols] dirs`, `--protocols-dir`): their definitions and bindings, so that the web UI can add them to its in-browser catalog. Empty without extensions.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Extension files (`protocols`, `bind`, `source`) | `application/json` `object``[]` |
 
 <a id="op-get-api-protocols-id"></a>
 

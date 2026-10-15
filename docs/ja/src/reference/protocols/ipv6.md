@@ -5,7 +5,7 @@
 - **レイヤ**: L3 (ネットワーク)
 - **ヘッダ**: 40 オクテット (固定長)
 - **疑似ヘッダ**: 上位レイヤのチェックサムに `src` / `dst` を提供
-- **補足**: [カプセル化・トンネル](../../protocols/encap.md), [IS-IS (P2)](../../protocols/isis.md), [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../../protocols/mobile-voip.md)
+- **補足**: [カプセル化・トンネル](../../protocols/encap.md), [IS-IS (P2)](../../protocols/isis.md), [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../../protocols/mobile-voip.md), [ユーザ定義プロトコル (protocols.d)](../../protocols/user-defined.md)
 
 ## 下位レイヤからの到達
 

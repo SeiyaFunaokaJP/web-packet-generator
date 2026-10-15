@@ -1,7 +1,7 @@
 //! `wpg serve`: load the configuration, set up logging, print the banner and run
 //! the HTTP server until Ctrl-C / SIGTERM.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use wpg_i18n::{t, Locale};
@@ -145,7 +145,7 @@ pub(crate) fn banner(
 }
 
 /// Runs `wpg serve`.
-pub(crate) fn run(args: &crate::ServeArgs) -> ExitCode {
+pub(crate) fn run(args: &crate::ServeArgs, protocols_dirs: &[PathBuf]) -> ExitCode {
     let locale = cli_locale();
     if args.password.is_some() {
         eprintln!("{}", t(locale, "serve-password-arg-warning"));
@@ -178,6 +178,11 @@ pub(crate) fn run(args: &crate::ServeArgs) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let mut dirs = config.protocols.dirs.clone();
+    dirs.extend(protocols_dirs.iter().cloned());
+    if let Err(code) = crate::cmd::protocols::install(&dirs, locale) {
+        return code;
+    }
     let runtime = match tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()

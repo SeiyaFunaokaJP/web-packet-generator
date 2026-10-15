@@ -19,6 +19,15 @@ mod cmd;
     propagate_version = true
 )]
 struct Cli {
+    /// Directory of user-defined protocol files (`*.yaml`, repeatable; added to
+    /// `[protocols] dirs` of `wpg serve`).
+    #[arg(
+        long = "protocols-dir",
+        value_name = "DIR",
+        global = true,
+        env = "WPG_PROTOCOLS_DIR"
+    )]
+    protocols_dirs: Vec<PathBuf>,
     #[command(subcommand)]
     command: Command,
 }
@@ -396,8 +405,15 @@ impl Command {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
+    // `serve` merges the directories with its configuration; the reference
+    // documentation always describes the built-in protocols only.
+    if !matches!(cli.command, Command::Serve(_) | Command::Docs(_)) {
+        if let Err(code) = cmd::protocols::install(&cli.protocols_dirs, cmd::cli_locale()) {
+            return code;
+        }
+    }
     match cli.command {
-        Command::Serve(args) => cmd::serve::run(&args),
+        Command::Serve(args) => cmd::serve::run(&args, &cli.protocols_dirs),
         Command::Send(args) => cmd::send::run(args),
         Command::Render(args) => cmd::render::run(&args),
         Command::Import(args) => cmd::import::run(&args),
@@ -442,6 +458,15 @@ mod tests {
             &["wpg", "template", "lint", "t.wpg.yaml"],
             &["wpg", "ifaces", "--json"],
             &["wpg", "doctor"],
+            &[
+                "wpg",
+                "render",
+                "t.wpg.yaml",
+                "-o",
+                "o.pcapng",
+                "--protocols-dir",
+                "p.d",
+            ],
             &[
                 "wpg",
                 "capture",

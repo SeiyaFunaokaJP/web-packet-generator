@@ -35,6 +35,14 @@
 | `max_files` | `integer` |   | `WPG_LOG__MAX_FILES` | 残すローテーション済みファイルの最大数 (古いものから削除)。 |
 | `rotation` | `"never"` \| `"hourly"` \| `"daily"` | `"never"` | `WPG_LOG__ROTATION` | ファイルのローテーション: `never`、`hourly`、`daily`。 |
 
+### `[protocols]`
+
+ユーザ定義プロトコル。
+
+| キー | 型 | 既定値 | 環境変数 | 説明 |
+|---|---|---|---|---|
+| `dirs` | `string[]` | `[]` | `WPG_PROTOCOLS__DIRS` | ユーザ定義プロトコルのファイル (`*.yaml`: 新しいプロトコル定義と既存プロトコルの下への結び付け) を置くディレクトリ。起動時にファイル名順で読み込みます。`wpg serve --protocols-dir` で追加できます。 |
+
 ### `[server]`
 
 HTTP リスナ。
@@ -124,6 +132,11 @@ library_paths = ["./templates"]
 # Writable directory for templates created or imported in the GUI.
 # Default: <data_dir>/templates
 # user_dir = "/var/lib/wpg/templates"
+
+[protocols]
+# Directories of user-defined protocol files (*.yaml), loaded at startup.
+# Changes need a restart.
+# dirs = ["/etc/wpg/protocols.d"]
 
 [tx]
 # Interfaces jobs may send on; empty = all. The null backend and dry runs are

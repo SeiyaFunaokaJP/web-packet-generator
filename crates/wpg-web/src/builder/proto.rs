@@ -5,7 +5,8 @@
 use wpg_core::{FieldType, ProtocolDef};
 use wpg_protocols::Catalog;
 
-/// The static built-in catalog (identical to the one the server builds with).
+/// The in-browser catalog: the built-ins plus the server's user-defined
+/// protocols once they were fetched (identical to the server's catalog).
 #[must_use]
 pub(crate) fn catalog() -> &'static Catalog {
     wpg_protocols::catalog()

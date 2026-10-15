@@ -64,6 +64,17 @@ pub async fn list(State(st): State<AppState>) -> Json<Vec<ProtocolSummary>> {
     )
 }
 
+/// The user-defined protocol files loaded at startup (`[protocols] dirs`,
+/// `--protocols-dir`): their definitions and bindings, so that the web UI can
+/// add them to its in-browser catalog. Empty without extensions.
+#[utoipa::path(get, path = "/api/protocols/extensions", tag = "protocols",
+    responses((status = 200, description = "Extension files (`protocols`, `bind`, `source`)", body = Vec<Object>)))]
+pub async fn extensions() -> ApiResult<Json<Value>> {
+    let v =
+        serde_json::to_value(wpg_protocols::extension::extensions()).map_err(ApiError::internal)?;
+    Ok(Json(v))
+}
+
 /// The full definition (`wpg_core::ProtocolDef`): fields with types, defaults,
 /// auto computations and bindings. Every `description_key` gets a localised
 /// `description` next to it.

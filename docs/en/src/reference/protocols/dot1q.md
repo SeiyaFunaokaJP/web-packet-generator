@@ -4,6 +4,7 @@
 
 - **Layer**: L2 (data link)
 - **Header**: 4 octets (fixed)
+- **Notes**: [User-defined protocols (protocols.d)](../../protocols/user-defined.md)
 
 ## Reached from
 

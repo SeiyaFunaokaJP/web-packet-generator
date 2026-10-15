@@ -11,7 +11,7 @@ The `wpg` binary runs both the server (`wpg serve`) and the headless tools, so i
 ```text
 Web Packet Generator
 
-Usage: wpg <COMMAND>
+Usage: wpg [OPTIONS] <COMMAND>
 
 Commands:
   serve     Start the web UI / API server
@@ -27,6 +27,11 @@ Commands:
   help      Print this message or the help of the given subcommand(s)
 
 Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -46,6 +51,11 @@ Options:
           Address to listen on (default from the config: 127.0.0.1:8080). Without a password only loopback addresses are accepted (see --allow-insecure)
 
           [env: WPG_BIND]
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
       --password <PASSWORD>
           Admin password (plain text or argon2 hash). Visible in the process list: prefer --password-file, `WPG_PASSWORD` or `wpg config set-password`
@@ -96,6 +106,11 @@ Arguments:
 Options:
   -i, --iface <IFACE>
           Interface to transmit on
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
       --backend <BACKEND>
           Transmit backend (null, pcapfile, pcap, afpacket, afxdp, dpdk)
@@ -209,6 +224,11 @@ Options:
   -o, --output <OUTPUT>
           Output pcapng file
 
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
       --count <COUNT>
           Number of packets
 
@@ -238,6 +258,11 @@ Arguments:
 Options:
   -o, --output <OUTPUT>
           Output template (`-` prints YAML on standard output)
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
       --per-packet <DIR>
           Write one template per packet into this directory instead of one merged template
@@ -270,7 +295,7 @@ Template tools. `lint` exits with status 1 on errors; `export` and `import` pack
 ```text
 Template tools (lint, list, migrate, export, import)
 
-Usage: wpg template <COMMAND>
+Usage: wpg template [OPTIONS] <COMMAND>
 
 Commands:
   lint     Check templates for errors and warnings (exit status 1 on errors)
@@ -283,6 +308,11 @@ Commands:
   help     Print this message or the help of the given subcommand(s)
 
 Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -295,13 +325,18 @@ Options:
 ```text
 Check templates for errors and warnings (exit status 1 on errors)
 
-Usage: wpg template lint <FILES>...
+Usage: wpg template lint [OPTIONS] <FILES>...
 
 Arguments:
   <FILES>...
           Template files
 
 Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -314,13 +349,18 @@ Options:
 ```text
 List the templates of a directory (default: `templates/`)
 
-Usage: wpg template list [DIR]
+Usage: wpg template list [OPTIONS] [DIR]
 
 Arguments:
   [DIR]
           Directory to scan recursively
 
 Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -340,6 +380,11 @@ Arguments:
           Template file
 
 Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
       --var <NAME=VALUE>
           Template variable override (`name=value`), repeatable
 
@@ -355,9 +400,14 @@ Options:
 ```text
 Print the JSON Schema of the template format
 
-Usage: wpg template schema
+Usage: wpg template schema [OPTIONS]
 
 Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -379,6 +429,11 @@ Arguments:
 Options:
   -o, --output <OUTPUT>
           Output bundle
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
       --attach <FILE>
           Attach a capture (pcap / pcapng) or other file, repeatable
@@ -410,6 +465,11 @@ Options:
       --check
           Only report outdated templates (exit status 1 if any needs migrating)
 
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
       --no-backup
           Do not keep a `.bak` copy of migrated files
 
@@ -435,6 +495,11 @@ Options:
   -o, --output <OUTPUT>
           Output directory
 
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
       --force
           Overwrite existing files
 
@@ -458,6 +523,11 @@ Options:
       --json
           Output JSON
 
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -478,6 +548,11 @@ Options:
       --json
           Output JSON
 
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -497,6 +572,11 @@ Usage: wpg bench [OPTIONS]
 Options:
       --backend <BACKEND>
           Backend to benchmark
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
   -i, --iface <IFACE>
           Interface (for real backends)
@@ -578,6 +658,11 @@ Options:
   -i, --iface <IFACE>
           Interface to receive on (`any` = every interface with `afpacket`); for the `pcapfile` backend the capture file to replay
 
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
       --backend <BACKEND>
           Receive backend: afpacket (Linux), pcap (feature `pcap`), pcapfile, null
 
@@ -627,7 +712,7 @@ Options:
 ```text
 Configuration file tools (init, show, validate)
 
-Usage: wpg config <COMMAND>
+Usage: wpg config [OPTIONS] <COMMAND>
 
 Commands:
   init          Write a fully commented example `wpg.toml`
@@ -637,6 +722,11 @@ Commands:
   help          Print this message or the help of the given subcommand(s)
 
 Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -656,6 +746,11 @@ Options:
           Output file
 
           [default: wpg.toml]
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
       --force
           Overwrite an existing file
@@ -680,6 +775,11 @@ Options:
 
           [env: WPG_CONFIG]
 
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
   -h, --help
           Print help
 
@@ -699,6 +799,11 @@ Options:
           Configuration file (default: `wpg.toml` if present)
 
           [env: WPG_CONFIG]
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
   -h, --help
           Print help
@@ -720,6 +825,11 @@ Options:
 
           [env: WPG_CONFIG]
           [default: wpg.toml]
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
 
       --stdin
           Read the password from the first line of standard input (no prompt)

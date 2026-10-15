@@ -4,7 +4,7 @@
 
 - **レイヤ**: L4 (トランスポート)
 - **ヘッダ**: 8 オクテット (固定長)
-- **補足**: [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../../protocols/mobile-voip.md)
+- **補足**: [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](../../protocols/mobile-voip.md), [ユーザ定義プロトコル (protocols.d)](../../protocols/user-defined.md)
 
 ## 下位レイヤからの到達
 

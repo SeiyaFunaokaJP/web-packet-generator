@@ -229,6 +229,7 @@
   - [SRv6 SRH / SR-MPLS (P2)](protocols/srv6.md)
   - [PTP / ESMC / CFM / R-APS / 802.3ah OAM (P2)](protocols/timing-oam.md)
   - [MACsec / GTPv2-C / Diameter / SIP / RTP (P2)](protocols/mobile-voip.md)
+  - [User-defined protocols (protocols.d)](protocols/user-defined.md)
 - [Template schema](reference/template-schema.md)
 - [API reference](reference/api.md)
 - [CLI reference](reference/cli.md)

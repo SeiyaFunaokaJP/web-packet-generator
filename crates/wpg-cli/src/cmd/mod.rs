@@ -9,6 +9,7 @@ pub(crate) mod docs;
 pub(crate) mod doctor;
 pub(crate) mod ifaces;
 pub(crate) mod import;
+pub(crate) mod protocols;
 pub(crate) mod render;
 pub(crate) mod send;
 pub(crate) mod serve;

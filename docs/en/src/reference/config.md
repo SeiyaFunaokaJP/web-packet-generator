@@ -35,6 +35,14 @@ Logging.
 | `max_files` | `integer` |   | `WPG_LOG__MAX_FILES` | Keep at most this many rotated files (the oldest are deleted). |
 | `rotation` | `"never"` \| `"hourly"` \| `"daily"` | `"never"` | `WPG_LOG__ROTATION` | Rotation of the file: `never`, `hourly` or `daily`. |
 
+### `[protocols]`
+
+User-defined protocols.
+
+| Key | Type | Default | Environment variable | Description |
+|---|---|---|---|---|
+| `dirs` | `string[]` | `[]` | `WPG_PROTOCOLS__DIRS` | Directories of user-defined protocol files (`*.yaml`: new protocol definitions and bindings under existing protocols), loaded at startup in file name order. `wpg serve --protocols-dir` adds more. |
+
 ### `[server]`
 
 HTTP listener.
@@ -124,6 +132,11 @@ library_paths = ["./templates"]
 # Writable directory for templates created or imported in the GUI.
 # Default: <data_dir>/templates
 # user_dir = "/var/lib/wpg/templates"
+
+[protocols]
+# Directories of user-defined protocol files (*.yaml), loaded at startup.
+# Changes need a restart.
+# dirs = ["/etc/wpg/protocols.d"]
 
 [tx]
 # Interfaces jobs may send on; empty = all. The null backend and dry runs are

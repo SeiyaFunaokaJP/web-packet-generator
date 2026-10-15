@@ -12,11 +12,11 @@ publish.workspace = true
 [dependencies]
 wpg-core.workspace = true
 serde.workspace = true
+serde_yaml.workspace = true
 
 [dev-dependencies]
 wpg-testutil.workspace = true
 serde_json.workspace = true
-serde_yaml.workspace = true
 proptest = "1"
 
 [lints]
