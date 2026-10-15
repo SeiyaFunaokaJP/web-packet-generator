@@ -13,7 +13,7 @@ use wpg_core::{
     FieldValue, ItemDef, Length, LengthOf, LengthUnit, Peek, ProtocolDef, ProtocolLayer, TlvDef,
 };
 use wpg_i18n::{try_t, Locale};
-use wpg_protocols::catalog;
+use wpg_protocols::builtin_catalog as catalog;
 use wpg_template::Template;
 
 use super::md::{code, finish, heading, num, para, plain, table, tx, txa};

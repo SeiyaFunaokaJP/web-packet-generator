@@ -44,7 +44,15 @@ pub const REDACTED: &str = "<redacted>";
 
 /// Top-level sections a `WPG_*` variable may address. Other `WPG_*` variables
 /// (`WPG_BIND`, `WPG_CONFIG` of the CLI) are not configuration keys.
-const ENV_SECTIONS: &[&str] = &["server", "auth", "templates", "data_dir", "tx", "log"];
+const ENV_SECTIONS: &[&str] = &[
+    "server",
+    "auth",
+    "templates",
+    "protocols",
+    "data_dir",
+    "tx",
+    "log",
+];
 
 /// The whole configuration (`wpg.toml`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -62,6 +70,8 @@ pub struct Config {
     pub auth: AuthConfig,
     /// Template library.
     pub templates: TemplatesConfig,
+    /// User-defined protocols.
+    pub protocols: ProtocolsConfig,
     /// Transmit policy and defaults.
     pub tx: TxConfig,
     /// Logging.
@@ -149,6 +159,16 @@ pub struct TemplatesConfig {
     pub user_dir: Option<PathBuf>,
 }
 
+/// `[protocols]`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct ProtocolsConfig {
+    /// Directories of user-defined protocol files (`*.yaml`: new protocol
+    /// definitions and bindings under existing ones), loaded at startup in file
+    /// name order. `wpg serve --protocols-dir` adds more.
+    pub dirs: Vec<PathBuf>,
+}
+
 /// `[tx]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
@@ -206,6 +226,7 @@ impl Default for Config {
             server: ServerConfig::default(),
             auth: AuthConfig::default(),
             templates: TemplatesConfig::default(),
+            protocols: ProtocolsConfig::default(),
             tx: TxConfig::default(),
             log: LogConfig::default(),
         }
@@ -514,6 +535,25 @@ impl Config {
                 ));
             }
         }
+        if !self.protocols.dirs.is_empty() {
+            if let Some(p) = self.protocols.dirs.iter().find(|p| !p.is_dir()) {
+                out.push(ConfigIssue::new(
+                    Error,
+                    "protocols.dirs",
+                    "config-issue-dir-missing",
+                    p.display().to_string(),
+                ));
+            } else if let Err(e) = wpg_protocols::extension::load_dirs(&self.protocols.dirs)
+                .and_then(|exts| wpg_protocols::extension::with_extensions(&exts))
+            {
+                out.push(ConfigIssue::new(
+                    Error,
+                    "protocols.dirs",
+                    "config-issue-protocols",
+                    e.to_string(),
+                ));
+            }
+        }
         if let Some(r) = &self.tx.max_rate {
             match wpg_tx::rate::Rate::parse(r) {
                 Ok(rate) if rate.is_unlimited() => {}
@@ -700,6 +740,11 @@ library_paths = ["./templates"]
 # Writable directory for templates created or imported in the GUI.
 # Default: <data_dir>/templates
 # user_dir = "/var/lib/wpg/templates"
+
+[protocols]
+# Directories of user-defined protocol files (*.yaml), loaded at startup.
+# Changes need a restart.
+# dirs = ["/etc/wpg/protocols.d"]
 
 [tx]
 # Interfaces jobs may send on; empty = all. The null backend and dry runs are

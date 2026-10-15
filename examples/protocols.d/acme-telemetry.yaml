@@ -1,0 +1,56 @@
+# User-defined protocol example (`wpg --protocols-dir examples/protocols.d ...`,
+# or `[protocols] dirs = ["examples/protocols.d"]` in wpg.toml).
+#
+# ACME Telemetry: a made-up sensor report carried over UDP port 47000.
+#
+#  0                   1                   2                   3
+#  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-------+-------+---------------+-------------------------------+
+# |Version| Type  |     Flags     |            Length             |
+# +-------+-------+---------------+-------------------------------+
+# |                        Sequence Number                        |
+# +-------------------------------+-------------------------------+
+# |           Sensor ID           |  Readings (16 bits each) ...  |
+# +-------------------------------+-------------------------------+
+protocols:
+  - id: acme_tlm
+    name: ACME Telemetry
+    layer: l7
+    fields:
+      - name: version
+        type: { kind: uint, bits: 4 }
+        default: { uint: 1 }
+      - name: msg_type
+        type:
+          kind: enum
+          bits: 4
+          variants:
+            - { value: 1, name: report }
+            - { value: 2, name: alarm }
+            - { value: 3, name: heartbeat }
+        default: { uint: 1 }
+      - name: flags
+        type:
+          kind: flags
+          bits: 8
+          flags:
+            - { bit: 0, name: ack_requested }
+            - { bit: 1, name: last }
+        default: { uint: 0 }
+      - name: length # header + readings, in octets
+        type: { kind: uint, bits: 16 }
+        auto: { kind: length, of: total }
+      - name: sequence
+        type: { kind: uint, bits: 32 }
+        default: { uint: 0 }
+      - name: sensor_id
+        type: { kind: uint, bits: 16 }
+        default: { uint: 0 }
+      - name: readings
+        type: { kind: bytes, len: { kind: to_end } }
+
+# Decode UDP port 47000 (either direction) as ACME Telemetry.
+bind:
+  - under: udp
+    value: 47000
+    protocol: acme_tlm

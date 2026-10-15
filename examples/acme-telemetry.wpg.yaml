@@ -1,0 +1,39 @@
+# ACME Telemetry reports from 16 sensors (needs examples/protocols.d):
+#   wpg render examples/acme-telemetry.wpg.yaml -o acme.pcapng --protocols-dir examples/protocols.d
+schema: 1
+
+meta:
+  name: acme-telemetry
+  descriptions:
+    ja: "ユーザ定義プロトコル (examples/protocols.d) の例: 16 台のセンサからの ACME Telemetry レポート"
+    en: "User-defined protocol example (examples/protocols.d): ACME Telemetry reports from 16 sensors"
+  tags: ["protocol:acme_tlm", example]
+  author: wpg
+  created: 2026-10-15
+
+layers:
+  - protocol: ethernet2
+    fields:
+      dst: "02:00:00:00:00:02"
+      src: "02:00:00:00:00:01"
+  - protocol: ipv4
+    fields:
+      src: 192.0.2.1
+      dst: 192.0.2.2
+  - protocol: udp
+    fields:
+      src_port: 47000
+      dst_port: 47000
+  - protocol: acme_tlm
+    fields:
+      flags: last
+      readings: "00 64 00 65 00 66"
+    generators:
+      sequence: { kind: counter, start: 1 }
+      sensor_id: { kind: range, start: 1, end: 16 }
+
+stream:
+  mode: zip
+
+tx:
+  count: 16

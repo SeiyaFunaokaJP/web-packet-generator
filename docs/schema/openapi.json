@@ -2950,6 +2950,30 @@
         ]
       }
     },
+    "/api/protocols/extensions": {
+      "get": {
+        "operationId": "extensions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Extension files (`protocols`, `bind`, `source`)"
+          }
+        },
+        "summary": "The user-defined protocol files loaded at startup (`[protocols] dirs`,\n`--protocols-dir`): their definitions and bindings, so that the web UI can\nadd them to its in-browser catalog. Empty without extensions.",
+        "tags": [
+          "protocols"
+        ]
+      }
+    },
     "/api/protocols/{id}": {
       "get": {
         "operationId": "get",

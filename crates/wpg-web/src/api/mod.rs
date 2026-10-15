@@ -423,6 +423,12 @@ pub(crate) async fn protocols() -> Result<Vec<ProtocolSummary>, ApiError> {
     get("/api/protocols").await
 }
 
+/// `GET /api/protocols/extensions`: user-defined protocol files of the server.
+pub(crate) async fn protocol_extensions(
+) -> Result<Vec<wpg_protocols::extension::Extension>, ApiError> {
+    get("/api/protocols/extensions").await
+}
+
 /// `GET /api/templates/{id}` (loads a template into the builder).
 pub(crate) async fn template(id: &str) -> Result<TemplateDetail, ApiError> {
     get(&format!("/api/templates/{}", enc(id))).await

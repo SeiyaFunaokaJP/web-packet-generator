@@ -445,6 +445,8 @@ mod tests {
                     "when",
                     // wpg template migrate
                     "found",
+                    // user-defined protocols
+                    "file",
                 ] {
                     args.set(name, "1");
                 }

@@ -5,7 +5,7 @@
 - **レイヤ**: L2 (データリンク)
 - **ヘッダ**: 14 オクテット (固定長)
 - **最小フレーム長**: 60 オクテット
-- **補足**: [カプセル化・トンネル](../../protocols/encap.md), [L2 制御プロトコル](../../protocols/l2-control.md), [SRv6 SRH / SR-MPLS (P2)](../../protocols/srv6.md)
+- **補足**: [カプセル化・トンネル](../../protocols/encap.md), [L2 制御プロトコル](../../protocols/l2-control.md), [SRv6 SRH / SR-MPLS (P2)](../../protocols/srv6.md), [ユーザ定義プロトコル (protocols.d)](../../protocols/user-defined.md)
 
 ## 下位レイヤからの到達
 

@@ -23,6 +23,7 @@ pub mod diameter;
 pub mod efm_oam;
 pub mod encap;
 pub mod esmc;
+pub mod extension;
 pub mod fhrp;
 pub mod gtpv2;
 pub mod icmp;
@@ -308,9 +309,17 @@ pub fn builtin() -> Vec<ProtocolDef> {
     ]
 }
 
-/// The built-in protocol catalog (built once, then shared).
+/// The protocol catalog: the built-in protocols, plus the user extensions once
+/// [`extension::install`] was called (built once, then shared).
 #[must_use]
 pub fn catalog() -> &'static Catalog {
+    extension::installed().unwrap_or_else(builtin_catalog)
+}
+
+/// The built-in protocols only, whatever [`extension::install`] did (reference
+/// documentation, golden tests).
+#[must_use]
+pub fn builtin_catalog() -> &'static Catalog {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
     CATALOG.get_or_init(|| Catalog::new(builtin()))
 }

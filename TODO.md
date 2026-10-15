@@ -145,7 +145,7 @@ web-packet-generator/
 - GTP-C, Diameter, SIP (基本), RTP
 
 **P3 / 拡張機構**
-- ユーザ定義プロトコル: YAML でフィールド定義を書いてドロップインできる `protocols.d/` 機構
+- ユーザ定義プロトコル: YAML でフィールド定義を書いてドロップインできる `protocols.d/` 機構（実装済み: `[protocols] dirs` / `--protocols-dir` / `WPG_PROTOCOLS_DIR`、既存プロトコル下への `bind`、Web UI へは `GET /api/protocols/extensions`。例は `examples/protocols.d/`、手順は docs `protocols/user-defined`）
 - Lua or WASM プラグインでカスタム計算フィールド（要検討）
 
 #### 変数・インクリメント・大量生成

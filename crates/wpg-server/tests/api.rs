@@ -185,6 +185,8 @@ async fn protocols_catalog_and_definition() {
     assert_ne!(desc(&arp_en), desc(&arp_ja));
     assert!(desc(&arp_ja).contains("ハードウェア"));
 
+    // No user-defined protocols in this process.
+    assert_eq!(app.get("/api/protocols/extensions").await.json(), json!([]));
     app.call(Method::GET, "/api/protocols/nope", None, Some("ja"))
         .await
         .expect_error(StatusCode::NOT_FOUND, "not_found");
@@ -833,6 +835,7 @@ async fn openapi_lists_every_route() {
         ("/api/system/doctor", &["get"]),
         ("/api/system/backends", &["get"]),
         ("/api/protocols", &["get"]),
+        ("/api/protocols/extensions", &["get"]),
         ("/api/protocols/{id}", &["get"]),
         ("/api/render", &["post"]),
         ("/api/parse", &["post"]),
