@@ -235,12 +235,13 @@ jobs:
   docker:
     name: Docker (compose)
     runs-on: ubuntu-latest
+    # Every compose command interpolates docker-compose.yml, which requires WPG_PASSWORD.
+    env:
+      WPG_PASSWORD: ci-smoke-test-password
+      WPG_BIND: 127.0.0.1:8080
     steps:
       - uses: actions/checkout@v7
       - name: docker compose up
-        env:
-          WPG_PASSWORD: ci-smoke-test-password
-          WPG_BIND: 127.0.0.1:8080
         run: docker compose up -d --build --wait --wait-timeout 120
       - name: Check the container
         run: |
@@ -252,8 +253,6 @@ jobs:
         run: docker compose logs
       - name: docker compose down
         if: always()
-        env:
-          WPG_PASSWORD: unused
         run: docker compose down -v
 
   publish:
