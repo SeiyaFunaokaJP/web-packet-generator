@@ -26,9 +26,9 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `dst` | `mac` | `ff:ff:ff:ff:ff:ff` |   |   |
-| `src` | `mac` | `02:00:00:00:00:01` |   |   |
-| `ethertype` | `enum(16)` | `34997` (local_experimental) | Protocol number of the next layer (see Next layer) |   |
+| `dst` | `mac` | `ff:ff:ff:ff:ff:ff` |   | Destination MAC address. |
+| `src` | `mac` | `02:00:00:00:00:01` |   | Source MAC address. |
+| `ethertype` | `enum(16)` | `34997` (local_experimental) | Protocol number of the next layer (see Next layer) | EtherType of the next layer (Auto from the layer above; 0x88b5 = local experimental with no known next layer). A value up to 0x05ff is an IEEE 802.3 length. |
 
 ### `ethertype`
 

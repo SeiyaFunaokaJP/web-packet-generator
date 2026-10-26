@@ -27,12 +27,12 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) |   |
-| `hdr_ext_len` | `uint(8)` |   | Length of the header in 64-bit words (`-1`) |   |
+| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) | Protocol number of the header following this extension header (Auto). |
+| `hdr_ext_len` | `uint(8)` |   | Length of the header in 64-bit words (`-1`) | Length of this extension header in 8-octet units, not counting the first 8 octets (Auto). |
 | `routing_type` | `enum(8)` | `2` (mobile_ipv6) |   | Routing header type (e.g. 2 = Mobile IPv6, 4 = SRH). |
 | `segments_left` | `uint(8)` | `1` |   | Number of route segments remaining. |
 | `data` | `bytes` — `hdr_ext_len * 8 + 4` octets | `00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00` |   | Type-specific routing data. |
-| `padding` | `padding(8)` |   |   |   |
+| `padding` | `padding(8)` |   |   | Zero padding (Pad1) of the extension header to a multiple of 8 octets (Auto). |
 
 ### `routing_type`
 

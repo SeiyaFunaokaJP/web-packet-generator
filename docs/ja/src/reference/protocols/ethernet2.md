@@ -26,9 +26,9 @@
 
 | フィールド | 型 | 既定値 | Auto | 説明 |
 |---|---|---|---|---|
-| `dst` | `mac` | `ff:ff:ff:ff:ff:ff` |   |   |
-| `src` | `mac` | `02:00:00:00:00:01` |   |   |
-| `ethertype` | `enum(16)` | `34997` (local_experimental) | 次レイヤのプロトコル番号 (「次レイヤ」参照) |   |
+| `dst` | `mac` | `ff:ff:ff:ff:ff:ff` |   | 宛先 MAC アドレス。 |
+| `src` | `mac` | `02:00:00:00:00:01` |   | 送信元 MAC アドレス。 |
+| `ethertype` | `enum(16)` | `34997` (local_experimental) | 次レイヤのプロトコル番号 (「次レイヤ」参照) | 次レイヤの EtherType (上位レイヤから Auto。次レイヤ不明時は 0x88b5 = ローカル実験用)。0x05ff 以下の値は IEEE 802.3 の長さ。 |
 
 ### `ethertype`
 

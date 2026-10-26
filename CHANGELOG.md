@@ -67,6 +67,10 @@ Everything below is the initial development towards 1.0. No version has been tag
   generator settings with count and duration estimates, jobs with live charts, template library,
   receive page, settings, undo / redo, keyboard operation and Japanese / English UI (M4, M9).
 - Playwright end-to-end tests of the UI (M4, M9).
+- Field descriptions of the P0 protocols (Ethernet II, 802.3, LLC, SNAP, 802.1Q / 802.1ad, IPv4, IPv6 and
+  its extension headers, ICMPv4 / ICMPv6, NDP, TCP, UDP, payload) in all eight languages; the packet
+  builder shows every field's description as a tooltip on the field name, and the generated protocol
+  reference lists them (M11).
 - UI, CLI, API and error messages in Simplified Chinese, Traditional Chinese, Korean, German, French and
   Spanish besides Japanese and English, picked from the browser language, `Accept-Language` or `LANG`
   (Chinese by script and region), with a language menu in the header; the manual and the bundled

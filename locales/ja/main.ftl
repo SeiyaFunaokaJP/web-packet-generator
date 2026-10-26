@@ -73,6 +73,79 @@ ndp-other = その他設定フラグ (O)。
 ndp-override-flag = 上書きフラグ (O)。
 ndp-router-flag = ルータフラグ (R)。
 ndp-solicited-flag = 要請応答フラグ (S)。
+
+# --- P0 プロトコルのフィールド説明 (Ethernet、VLAN、IPv4 / IPv6、TCP / UDP、ペイロード) ---
+eth-dst = 宛先 MAC アドレス。
+eth-src = 送信元 MAC アドレス。
+eth-ethertype = 次レイヤの EtherType (上位レイヤから Auto。次レイヤ不明時は 0x88b5 = ローカル実験用)。0x05ff 以下の値は IEEE 802.3 の長さ。
+dot3-length = LLC データの長さ (バイト、Auto、最大 1500)。
+llc-dsap = 宛先サービスアクセスポイント (Auto: 0xaa = SNAP、0xfe = OSI、0x42 = スパニングツリー)。
+llc-ssap = 送信元サービスアクセスポイント (Auto、通常 DSAP と同じ)。
+llc-control = 制御フィールド。0x03 = 非番号付き情報 (UI)。
+snap-oui = 組織固有識別子 (OUI)。0 ならプロトコル ID は EtherType。
+snap-pid = プロトコル ID (OUI が 0 のとき EtherType。次レイヤから Auto)。
+vlan-pcp = 優先度コードポイント (802.1p のサービスクラス、0〜7)。
+vlan-dei = 廃棄適格表示 (DEI)。
+vlan-vid = VLAN ID (1〜4094。0 = 優先度タグのみ、4095 は予約)。
+vlan-ethertype = タグの次のレイヤの EtherType (Auto。もう 1 つの 802.1Q タグなら 0x8100)。
+dot1ad-ethertype = S タグの次のレイヤの EtherType (Auto。通常は 802.1Q の C タグを示す 0x8100)。
+ipv4-version = IP バージョン。常に 4。
+ipv4-ihl = ヘッダ長 (32 ビット語単位、5〜15。Auto、オプションを含む)。
+ip-dscp = DSCP (QoS クラス、0〜63)。
+ip-ecn = 明示的輻輳通知 (0 = 非 ECT、1 / 2 = ECT、3 = CE)。
+ipv4-total-length = ヘッダとペイロードの合計長 (バイト、Auto)。
+ipv4-identification = 同じデータグラムのフラグメントで共通の識別子。
+ipv4-flags = フラグ: DF (分割禁止) と MF (後続フラグメントあり)。最上位ビットは予約。
+ipv4-frag-offset = このフラグメントのオフセット (8 バイト単位)。
+ipv4-ttl = 生存時間。ルータごとに減算され、0 は送信されない。
+ipv4-protocol = 次レイヤのプロトコル番号 (Auto。次レイヤ不明時は 253 = 実験用)。
+ipv4-header-checksum = ヘッダのインターネットチェックサム (Auto)。
+ipv4-src = 送信元 IPv4 アドレス。
+ipv4-dst = 宛先 IPv4 アドレス。
+ipv4-options = IPv4 オプション (TLV: EOL、NOP、セキュリティ、経路記録、タイムスタンプなど)。
+ipv4-padding = オプションを 32 ビット境界に揃えるゼロパディング (Auto)。
+udp-src-port = 送信元ポート。
+udp-dst-port = 宛先ポート。Auto のとき次レイヤを選択する (53 = DNS、67 / 68 = DHCP、4789 = VXLAN など)。
+udp-length = ヘッダとペイロードの長さ (バイト、Auto)。
+udp-checksum = IPv4 / IPv6 擬似ヘッダを含むインターネットチェックサム (Auto。0 は 0xffff になる)。
+tcp-src-port = 送信元ポート。
+tcp-dst-port = 宛先ポート。次レイヤを選択する (179 = BGP、646 = LDP、3868 = Diameter、5060 = SIP)。
+tcp-seq = 先頭データオクテットのシーケンス番号 (SYN では初期シーケンス番号)。
+tcp-ack = 確認応答番号。ACK フラグが立っているとき有効。
+tcp-data-offset = ヘッダ長 (32 ビット語単位、5〜15。Auto、オプションを含む)。
+tcp-reserved = 予約ビット。0。
+tcp-flags = 制御フラグ: CWR、ECE、URG、ACK、PSH、RST、SYN、FIN (既定は SYN)。
+tcp-window = 受信ウィンドウ (バイト。ウィンドウスケールオプションで拡大)。
+tcp-checksum = IPv4 / IPv6 擬似ヘッダを含むインターネットチェックサム (Auto)。
+tcp-urgent-ptr = 緊急ポインタ。URG フラグが立っているとき有効。
+tcp-options = TCP オプション (TLV: EOL、NOP、MSS、ウィンドウスケール、SACK 許可、SACK、タイムスタンプ)。
+tcp-padding = オプションを 32 ビット境界に揃えるゼロパディング (Auto)。
+payload-mode = ペイロードの生成方法: fixed (data をそのまま)、pattern (data を length まで繰り返し)、random (seed から length バイト)、counter (data にパケットごとのカウンタを埋め込み)。
+payload-data = ペイロードのオクテット列。fixed では length が 0 以外のとき切り詰め / ゼロ拡張、pattern では繰り返し単位 (空なら 00 01 02 ...)。
+payload-length = ペイロード長 (バイト)。0 なら data の長さのまま (fixed / counter)。
+payload-seed = random モードの擬似乱数のシード。
+payload-counter-offset = counter モードで埋め込むカウンタのオクテットオフセット。
+payload-counter-width = 埋め込むカウンタの幅: 4 または 8 バイト (ビッグエンディアン)。
+payload-counter-value = ストリーム展開がパケットごとに書き込むカウンタ値 (counter モード)。
+raw-data = フレーム末尾までの生のオクテット列。
+ipv6-version = IP バージョン。常に 6。
+ipv6-flow-label = フローラベル (20 ビット)。ルータがフローを識別する。0 = なし。
+ipv6-payload-length = このヘッダ以降の長さ (拡張ヘッダを含む、Auto)。
+ipv6-next-header = 次ヘッダのプロトコル番号 (Auto。次レイヤ不明時は 253 = 実験用)。
+ipv6-hop-limit = ホップリミット。ルータごとに減算され、0 は送信されない。
+ipv6-src = 送信元 IPv6 アドレス。
+ipv6-dst = 宛先 IPv6 アドレス。
+ipv6-ext-next-header = この拡張ヘッダに続くヘッダのプロトコル番号 (Auto)。
+ipv6-hdr-ext-len = この拡張ヘッダの長さ (8 バイト単位、先頭 8 バイトを除く。Auto)。
+ipv6-ext-padding = 拡張ヘッダを 8 バイトの倍数に揃えるゼロパディング (Pad1、Auto)。
+field-reserved = 予約。0。
+ipv6-frag-identification = 同じパケットのフラグメントで共通の識別子。
+icmp-checksum = ヘッダとペイロードのインターネットチェックサム (Auto)。
+icmpv6-checksum = IPv6 擬似ヘッダを含むヘッダとペイロードのインターネットチェックサム (Auto)。
+ndp-cur-hop-limit = ホストが使うべきホップリミット (0 = 未指定)。
+ndp-router-lifetime = デフォルトルータとしての生存時間 (秒。0 = デフォルトルータではない)。
+ndp-reachable-time = 到達可能時間 (ミリ秒。0 = 未指定)。
+ndp-retrans-timer = 再送タイマ (ミリ秒。0 = 未指定)。
 ndp-target = ターゲットアドレス。
 
 ## wpg ifaces

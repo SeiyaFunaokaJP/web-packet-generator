@@ -80,10 +80,10 @@ pub fn udp() -> ProtocolDef {
         name: "UDP",
         layer: L4,
         fields: {
-            src_port: uint(16) = 49152;
-            dst_port: uint(16) = 9;
-            length: uint(16), auto = length(total);
-            checksum: uint(16), auto = checksum(internet_pseudo, header_payload, nonzero);
+            src_port: uint(16) = 49152, desc = "udp-src-port";
+            dst_port: uint(16) = 9, desc = "udp-dst-port";
+            length: uint(16), auto = length(total), desc = "udp-length";
+            checksum: uint(16), auto = checksum(internet_pseudo, header_payload, nonzero), desc = "udp-checksum";
         },
         next: dst_port {
             520 => "rip",
@@ -153,12 +153,12 @@ pub fn tcp() -> ProtocolDef {
         name: "TCP",
         layer: L4,
         fields: {
-            src_port: uint(16) = 49152;
-            dst_port: uint(16) = 80;
-            seq: uint(32) = 0;
-            ack: uint(32) = 0;
-            data_offset: uint(4), auto = length(header, unit = words32);
-            reserved: uint(4) = 0;
+            src_port: uint(16) = 49152, desc = "tcp-src-port";
+            dst_port: uint(16) = 80, desc = "tcp-dst-port";
+            seq: uint(32) = 0, desc = "tcp-seq";
+            ack: uint(32) = 0, desc = "tcp-ack";
+            data_offset: uint(4), auto = length(header, unit = words32), desc = "tcp-data-offset";
+            reserved: uint(4) = 0, desc = "tcp-reserved";
             flags: flags(8) {
                 7 => cwr,
                 6 => ece,
@@ -168,12 +168,12 @@ pub fn tcp() -> ProtocolDef {
                 2 => rst,
                 1 => syn,
                 0 => fin,
-            } = 0x02;
-            window: uint(16) = 65535;
-            checksum: uint(16), auto = checksum(internet_pseudo, header_payload);
-            urgent_ptr: uint(16) = 0;
-            options: ty(tcp_options());
-            padding: padding(4);
+            } = 0x02, desc = "tcp-flags";
+            window: uint(16) = 65535, desc = "tcp-window";
+            checksum: uint(16), auto = checksum(internet_pseudo, header_payload), desc = "tcp-checksum";
+            urgent_ptr: uint(16) = 0, desc = "tcp-urgent-ptr";
+            options: ty(tcp_options()), desc = "tcp-options";
+            padding: padding(4), desc = "tcp-padding";
         },
         next: dst_port { 179 => "bgp", 646 => "ldp", 3868 => "diameter", 5060 => "sip" },
         constraints: {

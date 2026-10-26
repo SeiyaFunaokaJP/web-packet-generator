@@ -15,13 +15,13 @@
 
 | フィールド | 型 | 既定値 | Auto | 説明 |
 |---|---|---|---|---|
-| `cur_hop_limit` | `uint(8)` | `64` |   |   |
+| `cur_hop_limit` | `uint(8)` | `64` |   | ホストが使うべきホップリミット (0 = 未指定)。 |
 | `m` | `uint(1)` | `0` |   | 管理アドレス設定フラグ (M)。 |
 | `o` | `uint(1)` | `0` |   | その他設定フラグ (O)。 |
-| `reserved` | `uint(6)` | `0` |   |   |
-| `router_lifetime` | `uint(16)` | `1800` |   |   |
-| `reachable_time` | `uint(32)` | `0` |   |   |
-| `retrans_timer` | `uint(32)` | `0` |   |   |
+| `reserved` | `uint(6)` | `0` |   | 予約。0。 |
+| `router_lifetime` | `uint(16)` | `1800` |   | デフォルトルータとしての生存時間 (秒。0 = デフォルトルータではない)。 |
+| `reachable_time` | `uint(32)` | `0` |   | 到達可能時間 (ミリ秒。0 = 未指定)。 |
+| `retrans_timer` | `uint(32)` | `0` |   | 再送タイマ (ミリ秒。0 = 未指定)。 |
 | `options` | `bytes` — PDU の残りすべて |   |   | 生の NDP オプション (TLV)。 |
 
 ## サンプルテンプレート

@@ -20,12 +20,12 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) |   |
-| `reserved` | `uint(8)` | `0` |   |   |
+| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) | Protocol number of the header following this extension header (Auto). |
+| `reserved` | `uint(8)` | `0` |   | Reserved, 0. |
 | `fragment_offset` | `uint(13)` | `0` |   | Offset of this fragment in 8-byte units. |
-| `res` | `uint(2)` | `0` |   |   |
+| `res` | `uint(2)` | `0` |   | Reserved, 0. |
 | `m` | `uint(1)` | `0` |   | More-fragments flag (1 = more fragments follow). |
-| `identification` | `uint(32)` | `0` |   |   |
+| `identification` | `uint(32)` | `0` |   | Identification shared by the fragments of one packet. |
 
 ## Next layer
 

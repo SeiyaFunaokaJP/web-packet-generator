@@ -15,13 +15,13 @@
 
 | フィールド | 型 | 既定値 | Auto | 説明 |
 |---|---|---|---|---|
-| `mode` | `enum(8)` | `0` (fixed) |   |   |
-| `data` | `bytes` — PDU の残りすべて | `""` |   |   |
-| `length` | `uint(32)` | `0` |   |   |
-| `seed` | `uint(64)` | `0` |   |   |
-| `counter_offset` | `uint(32)` | `0` |   |   |
-| `counter_width` | `enum(8)` | `4` (u32) |   |   |
-| `counter_value` | `uint(64)` | `0` |   |   |
+| `mode` | `enum(8)` | `0` (fixed) |   | ペイロードの生成方法: fixed (data をそのまま)、pattern (data を length まで繰り返し)、random (seed から length バイト)、counter (data にパケットごとのカウンタを埋め込み)。 |
+| `data` | `bytes` — PDU の残りすべて | `""` |   | ペイロードのオクテット列。fixed では length が 0 以外のとき切り詰め / ゼロ拡張、pattern では繰り返し単位 (空なら 00 01 02 ...)。 |
+| `length` | `uint(32)` | `0` |   | ペイロード長 (バイト)。0 なら data の長さのまま (fixed / counter)。 |
+| `seed` | `uint(64)` | `0` |   | random モードの擬似乱数のシード。 |
+| `counter_offset` | `uint(32)` | `0` |   | counter モードで埋め込むカウンタのオクテットオフセット。 |
+| `counter_width` | `enum(8)` | `4` (u32) |   | 埋め込むカウンタの幅: 4 または 8 バイト (ビッグエンディアン)。 |
+| `counter_value` | `uint(64)` | `0` |   | ストリーム展開がパケットごとに書き込むカウンタ値 (counter モード)。 |
 
 ### `mode`
 

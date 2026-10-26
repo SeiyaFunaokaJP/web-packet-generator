@@ -43,7 +43,7 @@ pub fn icmpv4() -> ProtocolDef {
                 43 => extended_echo_reply,
             } = 8, desc = "icmp-type";
             code: uint(8) = 0, desc = "icmp-code";
-            checksum: uint(16), auto = checksum(internet, header_payload);
+            checksum: uint(16), auto = checksum(internet, header_payload), desc = "icmp-checksum";
             rest: bytes(4) = [0, 0, 0, 0], desc = "icmp-rest";
         },
         constraints: {
@@ -81,7 +81,7 @@ pub fn icmpv6() -> ProtocolDef {
                 143 => mldv2_report,
             } = 128, auto = next_protocol, desc = "icmp-type";
             code: uint(8) = 0, desc = "icmp-code";
-            checksum: uint(16), auto = checksum(internet_pseudo, header_payload);
+            checksum: uint(16), auto = checksum(internet_pseudo, header_payload), desc = "icmpv6-checksum";
         },
         next: type {
             128 => "icmpv6_echo",
@@ -131,7 +131,7 @@ pub fn ndp_rs() -> ProtocolDef {
         name: "NDP Router Solicitation",
         layer: L3,
         fields: {
-            reserved: uint(32) = 0;
+            reserved: uint(32) = 0, desc = "field-reserved";
             options: bytes(to_end), desc = "ndp-options";
         },
     }
@@ -146,13 +146,13 @@ pub fn ndp_ra() -> ProtocolDef {
         name: "NDP Router Advertisement",
         layer: L3,
         fields: {
-            cur_hop_limit: uint(8) = 64;
+            cur_hop_limit: uint(8) = 64, desc = "ndp-cur-hop-limit";
             m: uint(1) = 0, desc = "ndp-managed";
             o: uint(1) = 0, desc = "ndp-other";
-            reserved: uint(6) = 0;
-            router_lifetime: uint(16) = 1800;
-            reachable_time: uint(32) = 0;
-            retrans_timer: uint(32) = 0;
+            reserved: uint(6) = 0, desc = "field-reserved";
+            router_lifetime: uint(16) = 1800, desc = "ndp-router-lifetime";
+            reachable_time: uint(32) = 0, desc = "ndp-reachable-time";
+            retrans_timer: uint(32) = 0, desc = "ndp-retrans-timer";
             options: bytes(to_end), desc = "ndp-options";
         },
     }
@@ -167,7 +167,7 @@ pub fn ndp_ns() -> ProtocolDef {
         name: "NDP Neighbor Solicitation",
         layer: L3,
         fields: {
-            reserved: uint(32) = 0;
+            reserved: uint(32) = 0, desc = "field-reserved";
             target: ipv6 = [0xfe80u16, 0, 0, 0, 0, 0, 0, 1], desc = "ndp-target";
             options: bytes(to_end), desc = "ndp-options";
         },
@@ -186,7 +186,7 @@ pub fn ndp_na() -> ProtocolDef {
             r: uint(1) = 0, desc = "ndp-router-flag";
             s: uint(1) = 1, desc = "ndp-solicited-flag";
             o: uint(1) = 1, desc = "ndp-override-flag";
-            reserved: uint(29) = 0;
+            reserved: uint(29) = 0, desc = "field-reserved";
             target: ipv6 = [0xfe80u16, 0, 0, 0, 0, 0, 0, 1], desc = "ndp-target";
             options: bytes(to_end), desc = "ndp-options";
         },
@@ -202,7 +202,7 @@ pub fn ndp_redirect() -> ProtocolDef {
         name: "NDP Redirect",
         layer: L3,
         fields: {
-            reserved: uint(32) = 0;
+            reserved: uint(32) = 0, desc = "field-reserved";
             target: ipv6 = [0xfe80u16, 0, 0, 0, 0, 0, 0, 1], desc = "ndp-target";
             destination: ipv6 = [0x2001u16, 0xdb8, 0, 0, 0, 0, 0, 1], desc = "ndp-destination";
             options: bytes(to_end), desc = "ndp-options";

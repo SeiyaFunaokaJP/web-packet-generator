@@ -18,7 +18,7 @@
 | `r` | `uint(1)` | `0` |   | Router flag (R). |
 | `s` | `uint(1)` | `1` |   | Solicited flag (S). |
 | `o` | `uint(1)` | `1` |   | Override flag (O). |
-| `reserved` | `uint(29)` | `0` |   |   |
+| `reserved` | `uint(29)` | `0` |   | Reserved, 0. |
 | `target` | `ipv6` | `fe80::1` |   | Target address. |
 | `options` | `bytes` — rest of the PDU |   |   | Raw NDP options (TLV). |
 

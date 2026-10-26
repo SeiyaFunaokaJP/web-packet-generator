@@ -51,15 +51,15 @@ pub fn ipv4() -> ProtocolDef {
         name: "IPv4",
         layer: L3,
         fields: {
-            version: uint(4) = 4;
-            ihl: uint(4), auto = length(header, unit = words32);
-            dscp: uint(6) = 0;
-            ecn: uint(2) = 0;
-            total_length: uint(16), auto = length(total);
-            identification: uint(16) = 0;
-            flags: flags(3) { 2 => reserved, 1 => df, 0 => mf } = 0;
-            frag_offset: uint(13) = 0;
-            ttl: uint(8) = 64;
+            version: uint(4) = 4, desc = "ipv4-version";
+            ihl: uint(4), auto = length(header, unit = words32), desc = "ipv4-ihl";
+            dscp: uint(6) = 0, desc = "ip-dscp";
+            ecn: uint(2) = 0, desc = "ip-ecn";
+            total_length: uint(16), auto = length(total), desc = "ipv4-total-length";
+            identification: uint(16) = 0, desc = "ipv4-identification";
+            flags: flags(3) { 2 => reserved, 1 => df, 0 => mf } = 0, desc = "ipv4-flags";
+            frag_offset: uint(13) = 0, desc = "ipv4-frag-offset";
+            ttl: uint(8) = 64, desc = "ipv4-ttl";
             protocol: enum(8) {
                 1 => icmp,
                 2 => igmp,
@@ -79,12 +79,12 @@ pub fn ipv4() -> ProtocolDef {
                 115 => l2tp,
                 132 => sctp,
                 253 => experimental,
-            } = 253, auto = next_protocol;
-            header_checksum: uint(16), auto = checksum(internet, header);
-            src: ipv4 = [192, 0, 2, 1];
-            dst: ipv4 = [192, 0, 2, 2];
-            options: ty(ipv4_options());
-            padding: padding(4);
+            } = 253, auto = next_protocol, desc = "ipv4-protocol";
+            header_checksum: uint(16), auto = checksum(internet, header), desc = "ipv4-header-checksum";
+            src: ipv4 = [192, 0, 2, 1], desc = "ipv4-src";
+            dst: ipv4 = [192, 0, 2, 2], desc = "ipv4-dst";
+            options: ty(ipv4_options()), desc = "ipv4-options";
+            padding: padding(4), desc = "ipv4-padding";
         },
         next: protocol {
             1 => "icmpv4",

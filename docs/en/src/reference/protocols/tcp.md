@@ -22,18 +22,18 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `src_port` | `uint(16)` | `49152` |   |   |
-| `dst_port` | `uint(16)` | `80` |   |   |
-| `seq` | `uint(32)` | `0` |   |   |
-| `ack` | `uint(32)` | `0` |   |   |
-| `data_offset` | `uint(4)` |   | Length of the header in 32-bit words |   |
-| `reserved` | `uint(4)` | `0` |   |   |
-| `flags` | `flags(8)` | `0x2` |   |   |
-| `window` | `uint(16)` | `65535` |   |   |
-| `checksum` | `uint(16)` |   | Internet checksum with pseudo header over the header and everything after it |   |
-| `urgent_ptr` | `uint(16)` | `0` |   |   |
-| `options` | `tlv` — `data_offset * 4 - 20` octets |   |   |   |
-| `padding` | `padding(4)` |   |   |   |
+| `src_port` | `uint(16)` | `49152` |   | Source port. |
+| `dst_port` | `uint(16)` | `80` |   | Destination port; selects the next layer (179 = BGP, 646 = LDP, 3868 = Diameter, 5060 = SIP). |
+| `seq` | `uint(32)` | `0` |   | Sequence number of the first data octet (the initial sequence number with SYN). |
+| `ack` | `uint(32)` | `0` |   | Acknowledgement number, valid when the ACK flag is set. |
+| `data_offset` | `uint(4)` |   | Length of the header in 32-bit words | Header length in 32-bit words, 5 to 15 (Auto, includes the options). |
+| `reserved` | `uint(4)` | `0` |   | Reserved bits, 0. |
+| `flags` | `flags(8)` | `0x2` |   | Control flags: CWR, ECE, URG, ACK, PSH, RST, SYN, FIN (default SYN). |
+| `window` | `uint(16)` | `65535` |   | Receive window in octets (scaled by the window scale option). |
+| `checksum` | `uint(16)` |   | Internet checksum with pseudo header over the header and everything after it | Internet checksum with the IPv4 / IPv6 pseudo header (Auto). |
+| `urgent_ptr` | `uint(16)` | `0` |   | Urgent pointer, valid when the URG flag is set. |
+| `options` | `tlv` — `data_offset * 4 - 20` octets |   |   | TCP options as TLVs: EOL, NOP, MSS, window scale, SACK permitted, SACK, timestamps. |
+| `padding` | `padding(4)` |   |   | Zero padding of the options to a 32-bit boundary (Auto). |
 
 ### `flags`
 

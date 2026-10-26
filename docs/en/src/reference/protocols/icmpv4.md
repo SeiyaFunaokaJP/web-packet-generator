@@ -17,7 +17,7 @@
 |---|---|---|---|---|
 | `type` | `enum(8)` | `8` (echo_request) |   | Message type. |
 | `code` | `uint(8)` | `0` |   | Message code, meaning depends on the type. |
-| `checksum` | `uint(16)` |   | Internet checksum over the header and everything after it |   |
+| `checksum` | `uint(16)` |   | Internet checksum over the header and everything after it | Internet checksum over header and payload (Auto). |
 | `rest` | `bytes(4)` | `00 00 00 00` |   | Type-specific 4-byte "rest of header" field. |
 
 ### `type`

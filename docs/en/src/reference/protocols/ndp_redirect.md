@@ -15,7 +15,7 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `reserved` | `uint(32)` | `0` |   |   |
+| `reserved` | `uint(32)` | `0` |   | Reserved, 0. |
 | `target` | `ipv6` | `fe80::1` |   | Target address. |
 | `destination` | `ipv6` | `2001:db8::1` |   | Destination address of a redirect. |
 | `options` | `bytes` — rest of the PDU |   |   | Raw NDP options (TLV). |

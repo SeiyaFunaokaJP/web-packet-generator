@@ -26,13 +26,13 @@ pub fn payload() -> ProtocolDef {
                 1 => pattern,
                 2 => random,
                 3 => counter,
-            } = 0;
-            data: bytes(to_end) = [];
-            length: uint(32) = 0;
-            seed: uint(64) = 0;
-            counter_offset: uint(32) = 0;
-            counter_width: enum(8) { 4 => u32, 8 => u64 } = 4;
-            counter_value: uint(64) = 0;
+            } = 0, desc = "payload-mode";
+            data: bytes(to_end) = [], desc = "payload-data";
+            length: uint(32) = 0, desc = "payload-length";
+            seed: uint(64) = 0, desc = "payload-seed";
+            counter_offset: uint(32) = 0, desc = "payload-counter-offset";
+            counter_width: enum(8) { 4 => u32, 8 => u64 } = 4, desc = "payload-counter-width";
+            counter_value: uint(64) = 0, desc = "payload-counter-value";
         },
     };
     d.synth = Some(Synthesizer::Payload);
@@ -48,7 +48,7 @@ pub fn raw() -> ProtocolDef {
         name: "Raw payload",
         layer: Payload,
         fields: {
-            data: bytes(to_end) = [];
+            data: bytes(to_end) = [], desc = "raw-data";
         },
     }
 }

@@ -73,6 +73,79 @@ ndp-other = 其他配置标志 (O)。
 ndp-override-flag = 覆盖标志 (O)。
 ndp-router-flag = 路由器标志 (R)。
 ndp-solicited-flag = 请求标志 (S)。
+
+# --- P0 协议字段说明 (Ethernet、VLAN、IPv4 / IPv6、TCP / UDP、载荷) ---
+eth-dst = 目的 MAC 地址。
+eth-src = 源 MAC 地址。
+eth-ethertype = 下一层的 EtherType (由上层自动确定；未知下一层时为 0x88b5 = 本地实验用)。不超过 0x05ff 的值表示 IEEE 802.3 长度。
+dot3-length = LLC 数据长度 (字节，Auto，最大 1500)。
+llc-dsap = 目的服务访问点 (Auto: 0xaa = SNAP，0xfe = OSI，0x42 = 生成树)。
+llc-ssap = 源服务访问点 (Auto，通常与 DSAP 相同)。
+llc-control = 控制字段；0x03 = 无编号信息 (UI)。
+snap-oui = 组织唯一标识符 (OUI)；为 0 时协议 ID 即 EtherType。
+snap-pid = 协议 ID (OUI 为 0 时即 EtherType；由下一层自动确定)。
+vlan-pcp = 优先级代码点 (802.1p 服务类别，0 到 7)。
+vlan-dei = 可丢弃指示 (DEI)。
+vlan-vid = VLAN 标识符 (1 到 4094；0 = 仅优先级标签，4095 保留)。
+vlan-ethertype = 标签之后那一层的 EtherType (Auto；再加一个 802.1Q 标签时为 0x8100)。
+dot1ad-ethertype = S 标签之后那一层的 EtherType (Auto；通常为表示 802.1Q C 标签的 0x8100)。
+ipv4-version = IP 版本，始终为 4。
+ipv4-ihl = 首部长度 (32 位字，5 到 15。Auto，含选项)。
+ip-dscp = 区分服务代码点 (QoS 类别，0 到 63)。
+ip-ecn = 显式拥塞通知 (0 = 非 ECT，1 / 2 = ECT，3 = CE)。
+ipv4-total-length = 首部与载荷的总长度 (字节，Auto)。
+ipv4-identification = 同一数据报的各分片共用的标识。
+ipv4-flags = 标志：DF (禁止分片) 和 MF (还有分片)；最高位保留。
+ipv4-frag-offset = 本分片的偏移 (8 字节单位)。
+ipv4-ttl = 生存时间；每经过一台路由器减 1，0 不会被发送。
+ipv4-protocol = 下一层的协议号 (Auto；未知下一层时为 253 = 实验用)。
+ipv4-header-checksum = 首部的 Internet 校验和 (Auto)。
+ipv4-src = 源 IPv4 地址。
+ipv4-dst = 目的 IPv4 地址。
+ipv4-options = IPv4 选项 (TLV：EOL、NOP、安全、记录路由、时间戳等)。
+ipv4-padding = 将选项对齐到 32 位边界的零填充 (Auto)。
+udp-src-port = 源端口。
+udp-dst-port = 目的端口；为 Auto 时选择下一层 (53 = DNS，67 / 68 = DHCP，4789 = VXLAN 等)。
+udp-length = 首部与载荷的长度 (字节，Auto)。
+udp-checksum = 含 IPv4 / IPv6 伪首部的 Internet 校验和 (Auto；0 会变为 0xffff)。
+tcp-src-port = 源端口。
+tcp-dst-port = 目的端口；选择下一层 (179 = BGP，646 = LDP，3868 = Diameter，5060 = SIP)。
+tcp-seq = 第一个数据字节的序号 (带 SYN 时为初始序号)。
+tcp-ack = 确认号，ACK 标志置位时有效。
+tcp-data-offset = 首部长度 (32 位字，5 到 15。Auto，含选项)。
+tcp-reserved = 保留位，0。
+tcp-flags = 控制标志：CWR、ECE、URG、ACK、PSH、RST、SYN、FIN (默认 SYN)。
+tcp-window = 接收窗口 (字节；按窗口缩放选项放大)。
+tcp-checksum = 含 IPv4 / IPv6 伪首部的 Internet 校验和 (Auto)。
+tcp-urgent-ptr = 紧急指针，URG 标志置位时有效。
+tcp-options = TCP 选项 (TLV：EOL、NOP、MSS、窗口缩放、SACK 允许、SACK、时间戳)。
+tcp-padding = 将选项对齐到 32 位边界的零填充 (Auto)。
+payload-mode = 载荷生成方式：fixed (按 data 原样)、pattern (将 data 重复到 length)、random (由 seed 生成 length 字节)、counter (在 data 中嵌入逐包计数器)。
+payload-data = 载荷字节；fixed 模式下 length 非 0 时截断或补零，pattern 模式下为重复单元 (为空时为 00 01 02 ...)。
+payload-length = 载荷长度 (字节)；0 表示保持 data 的长度 (fixed / counter 模式)。
+payload-seed = random 模式的伪随机数种子。
+payload-counter-offset = counter 模式中嵌入计数器的字节偏移。
+payload-counter-width = 嵌入计数器的宽度：4 或 8 字节，大端序。
+payload-counter-value = 流展开为每个数据包写入的计数器值 (counter 模式)。
+raw-data = 直到帧末尾的原始字节。
+ipv6-version = IP 版本，始终为 6。
+ipv6-flow-label = 流标签 (20 位)，供路由器识别流；0 = 无。
+ipv6-payload-length = 本首部之后全部内容的长度 (含扩展首部，Auto)。
+ipv6-next-header = 下一首部的协议号 (Auto；未知下一层时为 253 = 实验用)。
+ipv6-hop-limit = 跳数限制；每经过一台路由器减 1，0 不会被发送。
+ipv6-src = 源 IPv6 地址。
+ipv6-dst = 目的 IPv6 地址。
+ipv6-ext-next-header = 紧随本扩展首部之后的首部的协议号 (Auto)。
+ipv6-hdr-ext-len = 本扩展首部的长度 (8 字节单位，不含前 8 字节。Auto)。
+ipv6-ext-padding = 将扩展首部对齐到 8 字节倍数的零填充 (Pad1，Auto)。
+field-reserved = 保留，0。
+ipv6-frag-identification = 同一数据包的各分片共用的标识。
+icmp-checksum = 首部与载荷的 Internet 校验和 (Auto)。
+icmpv6-checksum = 含 IPv6 伪首部的首部与载荷的 Internet 校验和 (Auto)。
+ndp-cur-hop-limit = 主机应使用的跳数限制 (0 = 未指定)。
+ndp-router-lifetime = 作为默认路由器的生存时间 (秒；0 = 不是默认路由器)。
+ndp-reachable-time = 可达时间 (毫秒；0 = 未指定)。
+ndp-retrans-timer = 重传计时器 (毫秒；0 = 未指定)。
 ndp-target = 目标地址。
 
 ## wpg ifaces

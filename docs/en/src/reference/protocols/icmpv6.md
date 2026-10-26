@@ -23,7 +23,7 @@
 |---|---|---|---|---|
 | `type` | `enum(8)` | `128` (echo_request) | Protocol number of the next layer (see Next layer) | Message type. |
 | `code` | `uint(8)` | `0` |   | Message code, meaning depends on the type. |
-| `checksum` | `uint(16)` |   | Internet checksum with pseudo header over the header and everything after it |   |
+| `checksum` | `uint(16)` |   | Internet checksum with pseudo header over the header and everything after it | Internet checksum with the IPv6 pseudo header over header and payload (Auto). |
 
 ### `type`
 

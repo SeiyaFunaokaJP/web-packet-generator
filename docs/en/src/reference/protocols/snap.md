@@ -16,8 +16,8 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `oui` | `uint(24)` | `0` |   |   |
-| `pid` | `enum(16)` | `34997` (local_experimental) | Protocol number of the next layer (see Next layer) |   |
+| `oui` | `uint(24)` | `0` |   | Organisationally unique identifier; 0 means the protocol id is an EtherType. |
+| `pid` | `enum(16)` | `34997` (local_experimental) | Protocol number of the next layer (see Next layer) | Protocol id (an EtherType when the OUI is 0; Auto from the next layer). |
 
 ### `pid`
 

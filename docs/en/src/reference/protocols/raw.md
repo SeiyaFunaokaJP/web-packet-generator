@@ -14,7 +14,7 @@ No protocol of the catalog leads here: use it as the first layer or stack it exp
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `data` | `bytes` — rest of the PDU | `""` |   |   |
+| `data` | `bytes` — rest of the PDU | `""` |   | Raw octets up to the end of the frame. |
 
 ## Sample templates
 

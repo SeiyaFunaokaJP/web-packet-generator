@@ -17,9 +17,9 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `dst` | `mac` | `ff:ff:ff:ff:ff:ff` |   |   |
-| `src` | `mac` | `02:00:00:00:00:01` |   |   |
-| `length` | `uint(16)` |   | Length of the payload in octets |   |
+| `dst` | `mac` | `ff:ff:ff:ff:ff:ff` |   | Destination MAC address. |
+| `src` | `mac` | `02:00:00:00:00:01` |   | Source MAC address. |
+| `length` | `uint(16)` |   | Length of the payload in octets | Length of the LLC data in octets (Auto; at most 1500). |
 
 ## Next layer
 

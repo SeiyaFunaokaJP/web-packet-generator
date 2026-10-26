@@ -261,11 +261,22 @@ fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
     let fd_manual = fd.clone();
     let fd_gen = fd.clone();
     let name_auto = name.clone();
+    // Localised field description (`desc = "..."` in the protocol definition) as a
+    // tooltip on the field name; `None` for fields without one.
+    let i18n = use_i18n();
+    let desc_key = fd.description_key.clone();
+    let has_desc = desc_key.is_some();
+    let description = move || desc_key.as_deref().map(|k| i18n.t(k));
+    let name_class = if has_desc {
+        "min-w-0 flex-1 truncate text-sm font-medium underline decoration-dotted decoration-slate-400 underline-offset-2 cursor-help"
+    } else {
+        "min-w-0 flex-1 truncate text-sm font-medium"
+    };
 
     view! {
         <div class="rounded-md border border-slate-200 p-2 dark:border-slate-800" role="group" aria-label=name_group on:click=select_field>
             <div class="flex items-center gap-2">
-                <span class="min-w-0 flex-1 truncate text-sm font-medium">{name_h}</span>
+                <span class=name_class title=description>{name_h}</span>
                 <code class="shrink-0 rounded bg-slate-100 px-1 font-mono text-[10px] text-slate-500 dark:bg-slate-800">{tybadge}</code>
                 <div class="flex shrink-0 gap-0.5" on:click=|ev| ev.stop_propagation()>
                     {has_auto.then(|| {
