@@ -18,11 +18,10 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
 ignore = [
     # Add entries as { id = "RUSTSEC-YYYY-NNNN", reason = "..." } with a justification.
-    # Both are compile-time-only proc-macro helpers pulled in by leptos 0.8 (wpg-web);
-    # "unmaintained" only, no known vulnerability. Revisit when leptos drops them.
+    # Compile-time-only proc-macro helper pulled in by leptos 0.8 (wpg-web);
+    # "unmaintained" only, no known vulnerability. Revisit when leptos drops it.
     # Mirrored in .cargo/audit.toml for the cargo-audit workflow.
     { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained, transitive via leptos (build-time only)" },
-    { id = "RUSTSEC-2026-0173", reason = "proc-macro-error2: unmaintained, transitive via leptos (build-time only)" },
 ]
 
 [licenses]

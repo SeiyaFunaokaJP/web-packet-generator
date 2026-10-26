@@ -24,6 +24,7 @@
         non_upper_case_globals,
         unreachable_pub,
         unused_qualifications,
+        unnecessary_transmutes,
         missing_debug_implementations,
         clippy::all,
         clippy::pedantic,

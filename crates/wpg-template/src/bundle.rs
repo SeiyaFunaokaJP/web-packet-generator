@@ -279,7 +279,10 @@ pub fn import_bundle<R: Read + Seek>(
     catalog: &dyn Resolve,
 ) -> Result<ImportedBundle, BundleError> {
     let mut zip = ZipArchive::new(reader)?;
-    let names: Vec<String> = zip.file_names().map(str::to_owned).collect();
+    let names: Vec<String> = zip
+        .file_names()
+        .map(|n| n.map(std::borrow::Cow::into_owned))
+        .collect::<Result<_, _>>()?;
     for n in &names {
         if !safe_name(n.trim_end_matches('/')) {
             return Err(BundleError::UnsafePath(n.clone()));

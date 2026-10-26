@@ -256,7 +256,10 @@ impl Db {
     /// # Errors
     /// `SQLite` errors.
     pub fn user_count(&self) -> Result<u64, DbError> {
-        self.with(|c| Ok(c.query_row("SELECT COUNT(*) FROM users", [], |r| r.get(0))?))
+        self.with(|c| {
+            let n: i64 = c.query_row("SELECT COUNT(*) FROM users", [], |r| r.get(0))?;
+            Ok(n.try_into().unwrap_or(0))
+        })
     }
 
     /// A user by name.
@@ -468,11 +471,12 @@ impl Db {
     /// `SQLite` errors.
     pub fn failed_attempts_since(&self, ip: &str, since: i64) -> Result<u64, DbError> {
         self.with(|c| {
-            Ok(c.query_row(
+            let n: i64 = c.query_row(
                 "SELECT COUNT(*) FROM login_attempts WHERE ip = ?1 AND ts >= ?2 AND ok = 0",
                 params![ip, since],
                 |r| r.get(0),
-            )?)
+            )?;
+            Ok(n.try_into().unwrap_or(0))
         })
     }
 
