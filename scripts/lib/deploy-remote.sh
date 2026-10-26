@@ -61,7 +61,7 @@ if [ "$rollback" -eq 1 ]; then
     [ ! -e "$exe" ] || mv -f "$exe" "$exe.prev"
     mv -f "$exe.swap" "$exe"
 else
-    [ -n "$binary" ] && [ -f "$binary" ] || die "uploaded binary missing"
+    if [ -z "$binary" ] || [ ! -f "$binary" ]; then die "uploaded binary missing"; fi
     "$binary" --version >/dev/null 2>&1 || die "the uploaded binary does not run on this host (wrong architecture or libc?)"
     if [ -x "$exe" ]; then
         info "keeping the current binary as $exe.prev ($("$exe" --version 2>/dev/null || echo unknown))"

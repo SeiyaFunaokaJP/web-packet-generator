@@ -35,7 +35,7 @@ tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["json", "registry"] }
 # `wpg.toml` + `WPG_*` environment + CLI overrides (spec §1.2 "設定").
 figment = { version = "0.10", features = ["toml", "env"] }
-toml = "0.9"
+toml = "1.1"
 # JSON Schema of `Config` (the generated configuration reference).
 schemars = "1"
 # `wpg config set-password` edits wpg.toml keeping its comments.
@@ -54,9 +54,9 @@ utoipa-swagger-ui = { version = "10", features = ["axum", "vendored"] }
 # Authentication / TLS (spec §2.6, ADR-0003): SQLite for users / sessions / history,
 # argon2id password hashes, rustls (ring provider: no C toolchain beyond cc) with
 # self-signed certificates from rcgen.
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 argon2 = { version = "0.5", features = ["std"] }
-sha2 = "0.10"
+sha2 = "0.11"
 base64 = "0.23"
 getrandom = "0.4"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
@@ -66,7 +66,7 @@ axum-server = { version = "0.8", features = ["tls-rustls-no-provider"] }
 [dev-dependencies]
 tempfile = "3"
 figment = { version = "0.10", features = ["toml", "env", "test"] }
-tokio-tungstenite = "0.28"
+tokio-tungstenite = "0.29"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "cookies"] }
 

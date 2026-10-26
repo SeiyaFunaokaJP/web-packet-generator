@@ -119,6 +119,9 @@ Everything below is the initial development towards 1.0. No version has been tag
 
 - `cargo audit` and `cargo deny` run in CI; the deprecated `serde_yaml` was replaced with the maintained
   `serde_norway` fork (RUSTSEC-2024-0449) (M12).
+- Dependency updates: `zip` 9 (RUSTSEC-2026-0367 / 0368 / 0369, also via `utoipa-swagger-ui` 10.0.2), `rustls` 0.23.46,
+  `rustls-webpki` 0.103.16 and `webpki-roots` 1.0.11 (RUSTSEC-2026-0346 to 0349, 0381, 0382), `tokio` 1.54
+  (RUSTSEC-2026-0386), plus `toml` 1, `rusqlite` 0.40, `sha2` 0.11, `tokio-tungstenite` 0.29 and `bindgen` 0.73.
 
 ### Known limitations
 

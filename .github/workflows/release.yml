@@ -77,7 +77,7 @@ jobs:
           else
             ./scripts/smoke-archive.sh "$archive"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wpg-${{ matrix.target }}
           path: dist/*
@@ -91,7 +91,7 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: wpg-aarch64-apple-darwin
           path: dist
@@ -148,7 +148,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: wpg-x86_64-pc-windows-msvc
           path: dist
@@ -235,12 +235,13 @@ jobs:
   docker:
     name: Docker (compose)
     runs-on: ubuntu-latest
+    # Every compose command interpolates docker-compose.yml, which requires WPG_PASSWORD.
+    env:
+      WPG_PASSWORD: ci-smoke-test-password
+      WPG_BIND: 127.0.0.1:8080
     steps:
       - uses: actions/checkout@v7
       - name: docker compose up
-        env:
-          WPG_PASSWORD: ci-smoke-test-password
-          WPG_BIND: 127.0.0.1:8080
         run: docker compose up -d --build --wait --wait-timeout 120
       - name: Check the container
         run: |
@@ -252,8 +253,6 @@ jobs:
         run: docker compose logs
       - name: docker compose down
         if: always()
-        env:
-          WPG_PASSWORD: unused
         run: docker compose down -v
 
   publish:
@@ -265,7 +264,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true

@@ -22,7 +22,7 @@ doctest = false
 link = ["dep:bindgen", "dep:cc", "dep:pkg-config"]
 
 [build-dependencies]
-bindgen = { version = "0.72", optional = true }
+bindgen = { version = "0.73", optional = true }
 cc = { version = "1.2", optional = true }
 pkg-config = { version = "0.3.32", optional = true }
 
