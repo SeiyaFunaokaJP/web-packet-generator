@@ -8,7 +8,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-/// Severity of a [`Diagnostic`] (TODO §2.1 "制約検査").
+/// Severity of a [`Diagnostic`] (spec §2.1 "制約検査").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DiagLevel {

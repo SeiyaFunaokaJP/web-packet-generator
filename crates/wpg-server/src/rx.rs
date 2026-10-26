@@ -1,4 +1,4 @@
-//! Capture manager (TODO M9 "受信 / 検証").
+//! Capture manager (ROADMAP M9 "受信 / 検証").
 //!
 //! A capture is a [`CaptureSpec`]: a receive backend on an interface, a filter, an
 //! optional packet / time limit, how many matching frames to keep for display, an

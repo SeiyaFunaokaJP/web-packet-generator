@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-主要な設計判断を [MADR](https://adr.github.io/madr/) 風に記録する。TODO.md §3「決定事項 (2026-09-29 確定)」の各行を 0001〜0009 として ADR 化した。決定を変える場合は既存 ADR を書き換えず、新しい ADR を追加して `Superseded by` を記載する。
+主要な設計判断を [MADR](https://adr.github.io/madr/) 風に記録する。プロジェクト開始時 (2026-09-29) の決定事項を 0001〜0009 として ADR 化した。決定を変える場合は既存 ADR を書き換えず、新しい ADR を追加して `Superseded by` を記載する。
 
 ## 一覧
 

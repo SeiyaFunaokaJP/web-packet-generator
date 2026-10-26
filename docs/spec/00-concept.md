@@ -1,6 +1,6 @@
 # 00. コンセプト / ゴール
 
-Status: draft / 元: TODO.md §0
+Status: draft / 仕様 §0
 
 ## 目的
 
@@ -35,7 +35,7 @@ NW 機器・NW 構成の検証用に、任意のパケットを GUI で組み立
 
 ## 成功指標 (Proposal)
 
-TODO.md §4 M12 のリリース判定を成功指標として流用する: P0+P1 の golden pcap / tshark 突合が緑、3 OS で起動と pcap 送出、afpacket で 1 Mpps/core 以上 (参考値)。
+ROADMAP.md M12 のリリース判定を成功指標として流用する: P0+P1 の golden pcap / tshark 突合が緑、3 OS で起動と pcap 送出、afpacket で 1 Mpps/core 以上 (参考値)。
 
 ## 未決事項 (Open questions)
 

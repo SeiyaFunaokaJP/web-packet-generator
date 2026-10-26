@@ -1,4 +1,4 @@
-//! Packet builder (TODO §2.5 画面構成 2, M4 phase 2).
+//! Packet builder (spec §2.5 画面構成 2, M4 phase 2).
 //!
 //! | module | role |
 //! |---|---|

@@ -78,7 +78,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     /// Every `"ui-..."` literal in the sources exists in every locale file (the
-    /// "Fluent キー未定義検出" of TODO §5, for the web UI).
+    /// "Fluent キー未定義検出" of spec §5, for the web UI).
     #[test]
     fn ui_keys_exist() {
         const SOURCES: &[&str] = &[

@@ -1,4 +1,4 @@
-# Release builds (TODO §2.8 / M10): one archive per target via scripts/release.sh,
+# Release builds (spec §2.8 / M10): one archive per target via scripts/release.sh,
 # smoke-tested on its own OS (scripts/smoke-archive.sh, the launchd daemon on macOS, the
 # Windows scheduled task, build.ps1, the Docker image), then a GitHub Release with
 # SHA256SUMS. Publishing runs on a version tag (vX.Y.Z, matching the workspace version)

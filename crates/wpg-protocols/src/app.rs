@@ -1,4 +1,4 @@
-//! Application protocols over UDP (TODO §2.1 P1): `DHCPv4` (incl. relay agent
+//! Application protocols over UDP (spec §2.1 P1): `DHCPv4` (incl. relay agent
 //! information), `DHCPv6` (incl. Relay-Forward / Relay-Reply), DNS, NTP, SNMP v1 /
 //! v2c (`GetRequest` family and Trap), Syslog, RADIUS and TFTP.
 //!

@@ -1,4 +1,4 @@
-//! `/rx`: receive / verification screen (TODO M9 "GUI 受信画面"): start a capture
+//! `/rx`: receive / verification screen (ROADMAP M9 "GUI 受信画面"): start a capture
 //! (backend, interface or capture file, live-validated filter, limits, pcapng
 //! file, signature verification), the list of captures, and the selected
 //! capture's live counters, per-stream verification table, first N frames and a

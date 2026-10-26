@@ -1,6 +1,6 @@
 //! # wpg-template
 //!
-//! The `.wpg.yaml` template format (TODO §2.4): metadata, variables, a layer stack
+//! The `.wpg.yaml` template format (spec §2.4): metadata, variables, a layer stack
 //! with per-field values and generators, stream / packet options and a transmit
 //! profile. This crate loads and saves templates ([`Template::from_yaml_str`],
 //! [`Template::from_path`], ...), **lints** them ([`lint()`]), **compiles** them into

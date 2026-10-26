@@ -1,6 +1,6 @@
 //! # wpg-rx
 //!
-//! Receive-side counters and verification (TODO §2.3, M9):
+//! Receive-side counters and verification (spec §2.3, M9):
 //!
 //! * [`backend`]: the [`RxBackend`] trait and its implementations — `null`,
 //!   `pcapfile` (replays a capture file), `afpacket` (Linux) and `pcap` (feature

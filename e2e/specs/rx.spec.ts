@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { login, unique } from './helpers';
 
-// Receive / verification screen (TODO M9): a job writes signed frames to a
+// Receive / verification screen (ROADMAP M9): a job writes signed frames to a
 // dry-run pcapng file, a `pcapfile` capture replays it with verification on.
 test('verify a signed dry run on the receive page', async ({ page }) => {
   const name = unique('e2e-sig');

@@ -1,4 +1,4 @@
-//! GTPv2-C (3GPP TS 29.274) messages and information elements (TODO §2.1 P2, M7).
+//! GTPv2-C (3GPP TS 29.274) messages and information elements (spec §2.1 P2, M7).
 //!
 //! One [`gtpv2`] layer holds one message: the header (version 2, piggybacking,
 //! TEID presence and message priority flags, message type, length, optional TEID,

@@ -1,4 +1,4 @@
-//! `MACsec` (IEEE 802.1AE) frame structure (TODO §2.1 P2, M7).
+//! `MACsec` (IEEE 802.1AE) frame structure (spec §2.1 P2, M7).
 //!
 //! One [`macsec`] layer, reached through EtherType `0x88e5`, holds the `SecTAG`
 //! (TCI / AN, short length, packet number and the optional SCI), the secure data

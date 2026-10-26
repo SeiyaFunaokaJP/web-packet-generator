@@ -1,4 +1,4 @@
-//! Encapsulation / tunnelling protocols (TODO §2.1 P1): VXLAN, GRE, NVGRE, MPLS,
+//! Encapsulation / tunnelling protocols (spec §2.1 P1): VXLAN, GRE, NVGRE, MPLS,
 //! MPLS-over-UDP, `L2TPv2` / v3, GTP-U and Geneve. (IP-in-IP needs no new protocol:
 //! IPv4 protocol 4 → [`crate::l3::ipv4`] and 41 → [`crate::ipv6::ipv6`] are already
 //! bound.)

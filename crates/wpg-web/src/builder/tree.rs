@@ -1,4 +1,4 @@
-//! Protocol tree from the built layout (TODO §2.5): layer → field (value, Auto
+//! Protocol tree from the built layout (spec §2.5): layer → field (value, Auto
 //! marker, bit offset / length), expandable and bidirectionally linked with the hex
 //! view and the field editor. Builder diagnostics are shown inline below the tree.
 

@@ -1,6 +1,6 @@
 # 11. 想定リスクと対策
 
-Status: draft / 元: TODO.md §5
+Status: draft / 仕様 §5
 
 | リスク | 対策 | 関連 |
 |---|---|---|

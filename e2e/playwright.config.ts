@@ -1,4 +1,4 @@
-// End-to-end tests of the web UI against a real `wpg serve` (TODO §4 M4).
+// End-to-end tests of the web UI against a real `wpg serve` (ROADMAP M4).
 //
 // Prerequisites (see README.md): `trunk build` in crates/wpg-web, then
 // `cargo build -p wpg-cli` so the server embeds the freshly built UI.

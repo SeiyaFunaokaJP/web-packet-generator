@@ -1,4 +1,4 @@
-//! Declarative constraints on protocol fields (TODO §2.1 "制約検査").
+//! Declarative constraints on protocol fields (spec §2.1 "制約検査").
 //!
 //! Constraints are data (serialisable, usable from YAML); there is deliberately no
 //! "custom function" escape hatch. They are evaluated by the builder on the final

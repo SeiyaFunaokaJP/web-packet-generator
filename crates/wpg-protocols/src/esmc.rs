@@ -1,4 +1,4 @@
-//! `SyncE` ESMC, ITU-T G.8264 (TODO §2.1 P2, M7).
+//! `SyncE` ESMC, ITU-T G.8264 (spec §2.1 P2, M7).
 //!
 //! The Ethernet Synchronization Messaging Channel is an organization specific
 //! Slow Protocol (EtherType `0x8809`, subtype `0x0a`, ITU-T OUI `00-19-a7`, ITU

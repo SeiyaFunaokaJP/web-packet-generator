@@ -1,4 +1,4 @@
-//! Virtualised hex dump (TODO §5 "Hex 9000B"): only the visible 16-byte rows are in
+//! Virtualised hex dump (spec §5 "Hex 9000B"): only the visible 16-byte rows are in
 //! the DOM (fixed row height + top / bottom spacers), so a 9000-byte frame scrolls
 //! smoothly. Hovering / clicking a byte highlights the owning field (and selects it
 //! in the tree + editor); typing hex over a byte reverse-applies as a Manual override.

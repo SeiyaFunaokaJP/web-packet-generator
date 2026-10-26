@@ -1,6 +1,6 @@
 # 07. 認証 / セキュリティ
 
-Status: draft / 元: TODO.md §2.6
+Status: draft / 仕様 §2.6
 
 ## 認証
 

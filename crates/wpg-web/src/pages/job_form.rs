@@ -586,7 +586,7 @@ pub(crate) fn JobForm(
                     </div>
                 </fieldset>
 
-                // Receive verification (TODO M9)
+                // Receive verification (ROADMAP M9)
                 <fieldset class="grid gap-4 sm:grid-cols-3">
                     <legend class="mb-2 text-sm font-semibold sm:col-span-3">{tr("ui-jobs-verification")}</legend>
                     <div class="sm:col-span-2">

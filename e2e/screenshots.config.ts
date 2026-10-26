@@ -1,4 +1,4 @@
-// Documentation screenshots and the builder GIF (TODO §4 M11), taken from a real
+// Documentation screenshots and the builder GIF (ROADMAP M11), taken from a real
 // `wpg serve` with the same server setup as the end-to-end tests.
 //
 //   npx playwright test -c screenshots.config.ts      # or: just screenshots

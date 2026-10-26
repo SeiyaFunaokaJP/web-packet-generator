@@ -25,3 +25,6 @@ Thumbs.db
 
 # mdBook output (docs/build.sh)
 /docs/book/
+
+# Private planning notes of the maintainer (not part of the public repository; see ROADMAP.md)
+/TODO.md

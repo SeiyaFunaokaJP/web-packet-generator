@@ -11,7 +11,7 @@ WASM フロントエンドまですべて Rust で実装しています。GUI �
 
 > **ステータス: リリース前（0.x）。** マイルストーン M0〜M11（エンジン、送出と受信、サーバ、GUI、テンプレート、
 > P0〜P2 プロトコル、デプロイ、ドキュメント）は実装済みで、v1.0 のリリース判定（M12）を進めています。
-> 一部の経路（物理 NIC での AF_XDP zero-copy と DPDK、CML2）は実機で未確認です。ロードマップは [TODO.md](TODO.md)、
+> 一部の経路（物理 NIC での AF_XDP zero-copy と DPDK、CML2）は実機で未確認です。ロードマップは [ROADMAP.ja.md](ROADMAP.ja.md)、
 > 変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
 
 ## wpg とは
@@ -118,7 +118,8 @@ mdBook です。3 OS へのインストール、チュートリアル、自動�
 
 ## ロードマップ
 
-M0〜M12 のマイルストーンと詳細仕様は [TODO.md](TODO.md) にあります。変更履歴は [CHANGELOG.md](CHANGELOG.md) にあります。
+M0〜M12 のマイルストーンと進捗は [ROADMAP.ja.md](ROADMAP.ja.md) にあります。詳細仕様は [`docs/spec/`](docs/spec/README.md)、
+設計上の決定事項は [`docs/adr/`](docs/adr/README.md) にあります。変更履歴は [CHANGELOG.md](CHANGELOG.md) にあります。
 
 ## 法的注意・利用上の責任
 

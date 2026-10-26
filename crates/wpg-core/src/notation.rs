@@ -1,4 +1,4 @@
-//! Human notation for field input (TODO §2.5).
+//! Human notation for field input (spec §2.5).
 //!
 //! [`parse_value`] turns text such as `192.168.1.1`, `0x8100`, `0011.2233.4455` or
 //! `49.0001.1921.6800.1001.00` into a [`FieldValue`] given the target [`FieldType`];

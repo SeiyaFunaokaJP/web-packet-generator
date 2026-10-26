@@ -7,7 +7,7 @@
 //!
 //! The same IR is produced by Rust protocol definitions (`wpg-protocols`) and, later,
 //! by user YAML definitions, and drives build / parse / GUI / docs generation
-//! (TODO §2.1, §3 "プロトコル定義方式").
+//! (spec §2.1, ADR-0007).
 //!
 //! This crate must keep building for `wasm32-unknown-unknown`.
 

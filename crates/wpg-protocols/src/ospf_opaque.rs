@@ -1,4 +1,4 @@
-//! OSPFv2 Opaque LSAs (RFC 5250) and their main contents (TODO §2.1 P2, M7): the
+//! OSPFv2 Opaque LSAs (RFC 5250) and their main contents (spec §2.1 P2, M7): the
 //! Traffic Engineering LSA (RFC 3630), the Router Information LSA (RFC 7770), the
 //! Extended Prefix / Extended Link LSAs (RFC 7684) and the Segment Routing
 //! extensions carried in them (RFC 8665).

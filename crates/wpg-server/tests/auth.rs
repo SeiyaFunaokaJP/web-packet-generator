@@ -1,5 +1,5 @@
 //! Authentication, CSRF, rate limiting, security headers, the localhost rule and
-//! TLS (TODO §2.6).
+//! TLS (spec §2.6).
 
 mod common;
 

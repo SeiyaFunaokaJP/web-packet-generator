@@ -202,7 +202,7 @@ pub struct Layer {
     #[serde(default)]
     pub fields: BTreeMap<String, FieldValue>,
     /// Cut this layer (header + everything after it) to at most this many octets
-    /// after all lengths / checksums were computed (TODO §2.1 "末尾切詰め").
+    /// after all lengths / checksums were computed (spec §2.1 "末尾切詰め").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub truncate: Option<usize>,
 }

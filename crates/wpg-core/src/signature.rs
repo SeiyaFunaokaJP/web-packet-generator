@@ -1,4 +1,4 @@
-//! Transmit signatures for receive-side verification (TODO §2.3, M9).
+//! Transmit signatures for receive-side verification (spec §2.3, M9).
 //!
 //! A signature is a fixed 24-octet trailer written over the **last** octets of a
 //! frame just before it is sent:

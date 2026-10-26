@@ -1,4 +1,4 @@
-//! CLNP (ISO 8473-1) and ES-IS (ISO 9542) over the OSI encapsulation (TODO §2.1
+//! CLNP (ISO 8473-1) and ES-IS (ISO 9542) over the OSI encapsulation (spec §2.1
 //! P2, M7).
 //!
 //! Both are announced by their NLPID like any OSI network-layer PDU

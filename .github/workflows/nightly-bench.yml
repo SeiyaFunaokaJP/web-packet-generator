@@ -1,4 +1,4 @@
-# Performance regression test (TODO M8): `wpg bench` and the pacer precision
+# Performance regression test (ROADMAP M8): `wpg bench` and the pacer precision
 # example every night, compared with scripts/bench-thresholds.json. The thresholds
 # are deliberately loose (shared GitHub runners vary by 10-30 % from run to run);
 # they catch order-of-magnitude regressions, not small ones. Raw JSON is kept as

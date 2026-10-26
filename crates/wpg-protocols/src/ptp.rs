@@ -1,4 +1,4 @@
-//! PTP, IEEE 1588-2008 (version 2) (TODO §2.1 P2, M7).
+//! PTP, IEEE 1588-2008 (version 2) (spec §2.1 P2, M7).
 //!
 //! Every message is one layer: the 34-octet common header, the message body and
 //! the TLVs that follow it (suffix TLVs, the Signaling TLVs and the Management

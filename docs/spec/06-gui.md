@@ -1,6 +1,6 @@
 # 06. GUI (wpg-web)
 
-Status: draft / 元: TODO.md §2.5 / 技術: Leptos (CSR) + Tailwind ([ADR-0002](../adr/0002-frontend.md))
+Status: draft / 仕様 §2.5 / 技術: Leptos (CSR) + Tailwind ([ADR-0002](../adr/0002-frontend.md))
 
 ## 画面構成
 

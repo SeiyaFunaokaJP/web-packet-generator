@@ -2,8 +2,8 @@
 
 **English** | [日本語](CONTRIBUTING.ja.md)
 
-Thank you for your interest! Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first. The roadmap and
-specification are in [TODO.md](TODO.md).
+Thank you for your interest! Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first. The roadmap is in
+[ROADMAP.md](ROADMAP.md) and the specification in [`docs/spec/`](docs/spec/README.md) (Japanese).
 
 ## Development setup
 
@@ -37,11 +37,11 @@ Before opening a PR, run `just fmt lint test check-wasm`. CI runs the same check
 
 - Use [Conventional Commits](https://www.conventionalcommits.org): `feat(core): ...`, `fix(tx): ...`,
   `docs: ...`, `ci: ...`, `chore: ...`. The scope is the crate name without the `wpg-` prefix.
-- Keep PRs focused and small; one logical change per PR. Reference the TODO.md milestone or issue.
+- Keep PRs focused and small; one logical change per PR. Reference the ROADMAP.md milestone or the issue.
 - Add tests. Protocol work needs a golden pcap and, where possible, a `tshark -V` cross-check.
-- Update docs, and update TODO.md checkboxes only when the item is fully done.
+- Update docs, and tick a ROADMAP.md item only when it is fully done.
 - Do not force-push over review comments; squash happens on merge.
-- Changes to a decision recorded in TODO.md section 3 need an ADR in `docs/adr/`.
+- Changes to a decision recorded in `docs/adr/` need a new ADR.
 
 ## Adding a protocol
 

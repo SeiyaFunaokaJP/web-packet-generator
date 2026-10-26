@@ -3,7 +3,7 @@
 All notable changes to wpg are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/). Entries are written in English; the milestone numbers
-(M0 to M12) refer to the roadmap in [TODO.md](TODO.md).
+(M0 to M12) refer to [ROADMAP.md](ROADMAP.md).
 
 When you cut a release, move the entries under **Unreleased** into a new version section, add the upgrade
 notes (template schema, database, configuration; see the "Upgrading" page of the manual) and follow the
@@ -21,7 +21,7 @@ Everything below is the initial development towards 1.0. No version has been tag
   checks, the GUI field editors and the generated documentation (M1).
 - Automatic lengths, checksums and next-header fields with Auto / Manual per field, and deliberate
   malformed packets (wrong checksums and lengths, truncation, bad FCS) (M1).
-- User-defined protocols (`protocols.d/`, TODO §2.1 P3): YAML files with new protocol definitions and
+- User-defined protocols (`protocols.d/`, spec §2.1 P3): YAML files with new protocol definitions and
   bindings under existing protocols (`bind: [{under: udp, value: 47000, protocol: ...}]`), loaded by
   `[protocols] dirs` in `wpg.toml`, the global `--protocols-dir` option or `WPG_PROTOCOLS_DIR`, served to the
   web UI by `GET /api/protocols/extensions`, with an example in `examples/protocols.d/`.

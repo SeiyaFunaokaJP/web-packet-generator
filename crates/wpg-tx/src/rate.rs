@@ -1,4 +1,4 @@
-//! Rate control (TODO §2.1 "送出制御", §2.2 "レート制御").
+//! Rate control (spec §2.1 "送出制御", §2.2 "レート制御").
 //!
 //! * [`Rate`]: what the user asked for (`1000pps`, `1.5Mpps`, `10Gbps`, `50%`,
 //!   `ifg=10us`, `unlimited`) with [`Rate::parse`] and the conversion to the
@@ -540,7 +540,7 @@ pub struct PacerConfig {
     /// sending a catch-up burst). Default 10 ms.
     pub max_backlog: Duration,
     /// Ramp-up: the rate grows linearly from 0 to the target over this much
-    /// active time (TODO §2.1 "ランプアップ"). `None` = full rate from the start.
+    /// active time (spec §2.1 "ランプアップ"). `None` = full rate from the start.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ramp_up: Option<Duration>,
     /// Clock the pacer reads (TSC where invariant by default).

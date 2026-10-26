@@ -1,4 +1,4 @@
-//! Screens (TODO §2.5 "画面構成"). The builder lives in [`crate::builder`].
+//! Screens (spec §2.5 "画面構成"). The builder lives in [`crate::builder`].
 
 pub(crate) mod auth;
 pub(crate) mod dashboard;

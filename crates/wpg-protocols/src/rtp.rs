@@ -1,4 +1,4 @@
-//! RTP and RTCP (RFC 3550) (TODO §2.1 P2, M7).
+//! RTP and RTCP (RFC 3550) (spec §2.1 P2, M7).
 //!
 //! * [`rtp`]: the fixed header, the CSRC list (count Auto) and the optional header
 //!   extension (X bit and length Auto). The media payload is the next layer

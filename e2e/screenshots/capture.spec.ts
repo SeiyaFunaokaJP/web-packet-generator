@@ -1,4 +1,4 @@
-// Documentation screenshots (PNG) and the builder walkthrough (GIF), TODO §4 M11.
+// Documentation screenshots (PNG) and the builder walkthrough (GIF), ROADMAP M11.
 //
 // Each screen is set up once in the English UI, shot, then the language is
 // switched in place (the UI re-renders without losing state) and shot again:

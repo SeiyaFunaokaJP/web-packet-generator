@@ -1,4 +1,4 @@
-//! Diameter (RFC 6733) messages and AVPs (TODO §2.1 P2, M7).
+//! Diameter (RFC 6733) messages and AVPs (spec §2.1 P2, M7).
 //!
 //! One [`diameter`] layer holds one message: the header (version, message length,
 //! the R / P / E / T flags, command code, Application-ID, Hop-by-Hop and

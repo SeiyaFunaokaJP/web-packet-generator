@@ -13,7 +13,7 @@ high rates to test network devices and topologies.
 > **Status: pre-release (0.x).** Milestones M0 to M11 (engine, transmit and receive, server, GUI, templates,
 > P0 to P2 protocols, deployment, documentation) are in place; the v1.0 release gate (M12) is in progress, and
 > some paths (AF_XDP zero-copy and DPDK on physical NICs, CML2) are not yet verified on real hardware. See
-> [TODO.md](TODO.md) for the roadmap and [CHANGELOG.md](CHANGELOG.md) for what has changed.
+> [ROADMAP.md](ROADMAP.md) for the roadmap and [CHANGELOG.md](CHANGELOG.md) for what has changed.
 
 ## What is wpg?
 
@@ -122,8 +122,9 @@ developer guide. Build it with `just docs` (needs `cargo install mdbook --locked
 
 ## Roadmap
 
-Milestones M0 to M12 and the full specification live in [TODO.md](TODO.md) (written in Japanese). Changes are
-listed in [CHANGELOG.md](CHANGELOG.md).
+Milestones M0 to M12 and their status are in [ROADMAP.md](ROADMAP.md). The detailed specification is in
+[`docs/spec/`](docs/spec/README.md) and the design decisions in [`docs/adr/`](docs/adr/README.md) (both written in
+Japanese). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Legal notice and responsible use
 

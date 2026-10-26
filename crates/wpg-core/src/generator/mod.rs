@@ -1,4 +1,4 @@
-//! Field value generators (TODO §2.1 "変数・インクリメント・大量生成").
+//! Field value generators (spec §2.1 "変数・インクリメント・大量生成").
 //!
 //! A [`Generator`] is the serialisable description (values in human notation, see
 //! [`crate::notation`]). [`Generator::compile`] binds it to a [`FieldType`] and

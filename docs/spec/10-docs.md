@@ -1,6 +1,6 @@
 # 10. ドキュメント方針
 
-Status: draft / 元: TODO.md §2.9
+Status: draft / 仕様 §2.9
 
 mdBook を使い、日本語と英語を別ブックで提供する (`docs/ja/`, `docs/en/`。ビルドは `bash docs/build.sh`)。
 

@@ -1,5 +1,5 @@
 //! Server configuration: `wpg.toml` → `WPG_*` environment → command line
-//! (TODO §2.8 "設定ファイル `wpg.toml` のフル例と `wpg config init`").
+//! (spec §2.8 "設定ファイル `wpg.toml` のフル例と `wpg config init`").
 //!
 //! Precedence, lowest first:
 //!
@@ -173,7 +173,7 @@ pub struct ProtocolsConfig {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct TxConfig {
-    /// Interfaces jobs may transmit on; empty = all (TODO §2.6 "送出先インタフェース
+    /// Interfaces jobs may transmit on; empty = all (spec §2.6 "送出先インタフェース
     /// 許可リスト"). The `null` backend and dry runs are not restricted.
     pub allowed_ifaces: Vec<String>,
     /// Highest rate a job may request (`10kpps`, `1Gbps`); `None` = no limit. Jobs

@@ -313,7 +313,7 @@ mod tests {
             .collect()
     }
 
-    /// The "i18n 抜け漏れ lint" (TODO §5): every locale has exactly the same keys.
+    /// The "i18n 抜け漏れ lint" (spec §5): every locale has exactly the same keys.
     #[test]
     fn all_locales_have_identical_key_sets() {
         let en = message_ids(EN_FTL);

@@ -1,6 +1,6 @@
 # 08. CLI (wpg-cli)
 
-Status: draft / 元: TODO.md §2.7
+Status: draft / 仕様 §2.7
 
 サーバと同一バイナリ `wpg` のサブコマンドとして提供する。CI や ssh 先でのヘッドレス実行に利用する。
 

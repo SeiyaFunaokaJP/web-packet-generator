@@ -1,4 +1,4 @@
-//! Global keyboard shortcuts (TODO §2.5 "全操作にキーボードショートカット"):
+//! Global keyboard shortcuts (spec §2.5 "全操作にキーボードショートカット"):
 //! `g` + letter chords for navigation, `?` for help, `l` for the logs drawer,
 //! `Escape` to close overlays. The parser is pure; the listener lives in `app`.
 

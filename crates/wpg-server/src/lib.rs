@@ -1,6 +1,6 @@
 //! # wpg-server
 //!
-//! axum + tokio HTTP server (TODO §1, M3): the JSON API under `/api` ([`api`]),
+//! axum + tokio HTTP server (spec §1, M3): the JSON API under `/api` ([`api`]),
 //! a WebSocket event stream (`/api/ws`), the OpenAPI document
 //! (`/api/openapi.json`, Swagger UI at `/api/docs/`) and the Leptos web UI (built
 //! by Trunk into `crates/wpg-web/dist`) embedded with `rust-embed` and served at
@@ -162,7 +162,7 @@ impl Server {
     ///
     /// Without any password (none configured, no user created on the setup
     /// screen) only loopback addresses are accepted unless
-    /// [`ServeOptions::allow_insecure`] is set (TODO §2.6 "未設定なら localhost
+    /// [`ServeOptions::allow_insecure`] is set (spec §2.6 "未設定なら localhost
     /// のみ bind").
     ///
     /// # Errors

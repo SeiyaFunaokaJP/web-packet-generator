@@ -1,7 +1,7 @@
 # Web UI end-to-end tests
 
 [Playwright](https://playwright.dev) tests that drive the real web UI against a
-real `wpg serve` (TODO.md M4). They cover login / logout, the packet builder
+real `wpg serve` (ROADMAP.md M4). They cover login / logout, the packet builder
 (layer stack, hex / tree preview, browser-vs-server parity, generators, the
 stream and send-time estimates, undo / redo, saving and loading templates), job
 creation on the `null` backend, the receive page (a signed dry-run job replayed

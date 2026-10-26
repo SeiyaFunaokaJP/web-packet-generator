@@ -1,4 +1,4 @@
-//! Editable document model of the builder (TODO §2.5).
+//! Editable document model of the builder (spec §2.5).
 //!
 //! The single source of truth is a [`wpg_template::Template`] held in a Leptos
 //! signal. Every mutation goes through [`Builder::edit`], which snapshots the

@@ -1,4 +1,4 @@
-//! Layer-2 control / encapsulation protocols (TODO §2.1 P1): LLDP, CDP, STP,
+//! Layer-2 control / encapsulation protocols (spec §2.1 P1): LLDP, CDP, STP,
 //! LACP / Marker (Slow Protocols, demultiplexed by subtype together with 802.3ah
 //! OAM and ESMC: [`slow_protocols_peek`]), EAPOL, `PPPoE` Discovery / Session and PPP
 //! (LCP / IPCP).

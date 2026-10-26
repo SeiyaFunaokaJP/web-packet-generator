@@ -1,4 +1,4 @@
-//! Ethernet in the First Mile OAM, IEEE 802.3 clause 57 (802.3ah) (TODO §2.1 P2,
+//! Ethernet in the First Mile OAM, IEEE 802.3 clause 57 (802.3ah) (spec §2.1 P2,
 //! M7).
 //!
 //! OAMPDUs are Slow Protocols frames (EtherType `0x8809`, subtype `0x03`) sent to

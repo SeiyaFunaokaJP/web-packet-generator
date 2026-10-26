@@ -1,4 +1,4 @@
-//! BGP multiprotocol extensions (TODO §2.1 P2, M7): typed NLRI for IPv4 / IPv6
+//! BGP multiprotocol extensions (spec §2.1 P2, M7): typed NLRI for IPv4 / IPv6
 //! unicast (RFC 4760), VPN-IPv4 / VPN-IPv6 (RFC 4364 / RFC 4659) and EVPN (RFC
 //! 7432, RFC 9136) inside `MP_REACH_NLRI` / `MP_UNREACH_NLRI`, the prefix lists of
 //! the UPDATE itself and the PMSI Tunnel attribute (RFC 6514).

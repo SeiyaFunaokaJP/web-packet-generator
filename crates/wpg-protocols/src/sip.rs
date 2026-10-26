@@ -1,4 +1,4 @@
-//! SIP (RFC 3261) messages (TODO §2.1 P2, M7).
+//! SIP (RFC 3261) messages (spec §2.1 P2, M7).
 //!
 //! SIP is text: one [`sip`] layer holds the start line (request line or status
 //! line), the header lines and the message body. Lines are CRLF-terminated text

@@ -1,7 +1,7 @@
 {
   "name": "wpg-e2e",
   "private": true,
-  "description": "Playwright end-to-end tests of the wpg web UI (TODO M4)",
+  "description": "Playwright end-to-end tests of the wpg web UI (ROADMAP M4)",
   "scripts": {
     "test": "playwright test"
   },

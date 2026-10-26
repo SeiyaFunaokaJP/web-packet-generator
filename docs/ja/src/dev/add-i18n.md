@@ -42,7 +42,7 @@
 cargo test -p wpg-i18n
 ```
 
-これが TODO.md §5 の「i18n 抜け漏れ 0 (lint)」にあたります。
+これが仕様 (`docs/spec/11-risks.md`) の「i18n 抜け漏れ 0 (lint)」にあたります。
 
 ## プロトコル名・フィールド説明
 

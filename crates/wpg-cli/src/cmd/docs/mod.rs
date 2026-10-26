@@ -1,5 +1,5 @@
 //! `wpg docs gen`: generates the reference chapters of the mdBook documentation
-//! from the code (TODO M11 "プロトコルリファレンス自動生成", "API / CLI / 設定 /
+//! from the code (ROADMAP M11 "プロトコルリファレンス自動生成", "API / CLI / 設定 /
 //! テンプレスキーマ リファレンス").
 //!
 //! Every page is produced in each [`Locale`] (`docs/<lang>/src/`), with the fixed

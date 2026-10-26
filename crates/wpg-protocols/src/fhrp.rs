@@ -1,4 +1,4 @@
-//! First-hop redundancy protocols (TODO §2.1 P1): `VRRPv2` / v3, `HSRPv1` / v2 and
+//! First-hop redundancy protocols (spec §2.1 P1): `VRRPv2` / v3, `HSRPv1` / v2 and
 //! GLBP (basic).
 //!
 //! ## Engine limitations exercised here

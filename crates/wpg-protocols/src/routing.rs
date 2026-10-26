@@ -1,4 +1,4 @@
-//! Routing protocols (TODO §2.1 P1): OSPFv2 / OSPFv3 (Hello, DBD, LSR, LSU, `LSAck`
+//! Routing protocols (spec §2.1 P1): OSPFv2 / OSPFv3 (Hello, DBD, LSR, LSU, `LSAck`
 //! and the main LSAs; OSPFv2 opaque LSAs are in [`crate::ospf_opaque`]), BGP-4
 //! (OPEN, UPDATE, KEEPALIVE, NOTIFICATION, ROUTE-REFRESH with the main path
 //! attributes and capabilities), `RIPv1` / v2, `RIPng` and EIGRP (basic TLVs).

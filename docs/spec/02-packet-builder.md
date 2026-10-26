@@ -1,6 +1,6 @@
 # 02. パケットビルダー (コア)
 
-Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
+Status: draft / 仕様 §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 
 ## 2.1.1 プロトコル定義エンジン
 
@@ -123,5 +123,5 @@ Status: draft / 元: TODO.md §2.1 / 担当 crate: `wpg-core`, `wpg-protocols`
 - pre-render / on-the-fly 自動選択のしきい値 (メモリ上限の既定値)。
 - malformed 指定と制約検査 (警告/エラー) の関係、FCS 誤りに対応するバックエンドの一覧。
 - Lua / WASM プラグインの要否とサンドボックス方針 (P3)。
-- 802.11 を P2 と P3 のどちらに置くか (TODO 内で P2 一覧にあるが P3 相当と注記)。
+- 802.11 を P2 と P3 のどちらに置くか (P2 一覧にあるが P3 相当と注記)。
 - 解析器のベストエフォート復元で、未知の TLV / 拡張ヘッダをどう保持するか (`raw` として保存するか)。

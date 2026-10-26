@@ -1,7 +1,7 @@
 //! # wpg-sys
 //!
 //! Operating-system facts needed by the transmit engine and the `wpg ifaces` /
-//! `wpg doctor` commands (TODO §2.2, §2.7):
+//! `wpg doctor` commands (spec §2.2, §2.7):
 //!
 //! * [`ifaces`] — enumerate network interfaces (Linux / macOS `getifaddrs`, Windows
 //!   `GetAdaptersAddresses`) with MAC, addresses, MTU, link state, speed and driver.

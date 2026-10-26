@@ -52,7 +52,7 @@ impl fmt::Display for KernelVersion {
     }
 }
 
-/// Minimum kernel for AF_XDP zero-copy usable from `wpg` (TODO §3).
+/// Minimum kernel for AF_XDP zero-copy usable from `wpg` (ADR-0005).
 pub const AF_XDP_MIN: KernelVersion = KernelVersion::new(5, 10, 0);
 /// Minimum kernel for `TPACKET_V3` (3.2).
 pub const TPACKET_V3_MIN: KernelVersion = KernelVersion::new(3, 2, 0);

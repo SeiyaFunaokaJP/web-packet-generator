@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# wpg in a container (TODO §2.8). Multi-stage: the web UI (Trunk, WASM) and the server
+# wpg in a container (spec §2.8). Multi-stage: the web UI (Trunk, WASM) and the server
 # are built in a Rust image, the runtime image only holds the binary and the sample
 # templates.
 #

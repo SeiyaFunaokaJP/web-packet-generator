@@ -1,4 +1,4 @@
-//! BFD control packets (RFC 5880) and Micro-BFD (RFC 7130) (TODO §2.1 P2, M7).
+//! BFD control packets (RFC 5880) and Micro-BFD (RFC 7130) (spec §2.1 P2, M7).
 //!
 //! One [`bfd`] layer holds the mandatory section and the optional authentication
 //! section. It is reached through UDP 3784 (single hop, RFC 5881), 4784 (multihop,

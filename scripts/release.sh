@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and package a wpg release archive for one target (TODO §2.8). Used by
+# Build and package a wpg release archive for one target (spec §2.8). Used by
 # .github/workflows/release.yml on Linux, macOS and Windows (Git Bash), and locally.
 #
 # Usage: scripts/release.sh [options]
