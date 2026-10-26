@@ -1,4 +1,4 @@
-//! Job manager (TODO M3 "ジョブマネージャ (複数ストリーム混合、スケジュール、キャンセル
+//! Job manager (ROADMAP M3 "ジョブマネージャ (複数ストリーム混合、スケジュール、キャンセル
 //! 安全性)", "送出制限ポリシー").
 //!
 //! A job is a [`JobSpec`]: one or more template streams (by id from the

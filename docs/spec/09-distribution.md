@@ -1,6 +1,6 @@
 # 09. スクリプト / 配布 / 運用
 
-Status: draft / 元: TODO.md §2.8
+Status: draft / 仕様 §2.8
 
 ## スクリプト
 

@@ -1,5 +1,5 @@
 //! HTML5 drag & drop for the layer stack, plus the keyboard equivalents that make
-//! it operable without a pointer (TODO §2.5 a11y): select a row, `Alt`+`↑`/`↓` to
+//! it operable without a pointer (spec §2.5 a11y): select a row, `Alt`+`↑`/`↓` to
 //! move it, `Delete` to remove it, `Enter` on a palette item to append. A shared
 //! [`DragCtx`] carries what is being dragged and where; the stack draws a drop
 //! indicator and announces moves through an `aria-live` region.

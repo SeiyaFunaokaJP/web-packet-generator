@@ -2,8 +2,8 @@
 
 [English](CONTRIBUTING.md) | **日本語**
 
-ご関心をありがとうございます。まず [行動規範](CODE_OF_CONDUCT.md) をお読みください。ロードマップと仕様は
-[TODO.md](TODO.md) にあります。
+ご関心をありがとうございます。まず [行動規範](CODE_OF_CONDUCT.md) をお読みください。ロードマップは [ROADMAP.ja.md](ROADMAP.ja.md)、仕様は
+[`docs/spec/`](docs/spec/README.md) にあります。
 
 ## 開発環境
 
@@ -24,10 +24,10 @@ PR 前に `just fmt lint test check-wasm` を実行してください。CI で�
 
 - [Conventional Commits](https://www.conventionalcommits.org) を使用（例: `feat(core): ...`）。
   scope は `wpg-` を除いた crate 名。
-- PR は小さく、1 PR 1 論理変更。TODO.md のマイルストーンや issue を参照してください。
+- PR は小さく、1 PR 1 論理変更。ROADMAP.ja.md のマイルストーンや issue を参照してください。
 - テストを追加してください。プロトコルは golden pcap と、可能なら `tshark -V` での突合が必要です。
-- TODO.md のチェックは項目が完全に完了したときのみ更新します。TODO.md §3 の決定事項を変える場合は
-  `docs/adr/` に ADR を追加します。
+- ROADMAP.ja.md のチェックは項目が完全に完了したときのみ更新します。`docs/adr/` の決定事項を変える場合は
+  新しい ADR を追加します。
 
 ## プロトコルの追加
 

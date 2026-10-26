@@ -1,4 +1,4 @@
-//! SCTP (RFC 9260) with its CRC-32C checksum (TODO §2.1 P2, M7).
+//! SCTP (RFC 9260) with its CRC-32C checksum (spec §2.1 P2, M7).
 //!
 //! One [`sctp`] layer holds the common header and every chunk of the packet.
 //! Chunks are TLV items (8-bit type, 8-bit flags, 16-bit length counting the

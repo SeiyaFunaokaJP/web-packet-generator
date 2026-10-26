@@ -450,7 +450,7 @@ pub enum PlanReason {
 pub struct PlanConfig {
     /// Pre-render only if `count * frame_len` is at most this (default 256 MiB).
     pub threshold_bytes: u64,
-    /// Hard packet limit for pre-rendering (default 100M, TODO §2.1).
+    /// Hard packet limit for pre-rendering (default 100M, spec §2.1).
     pub max_prerender_packets: u64,
     /// User override.
     pub hint: PlanHint,

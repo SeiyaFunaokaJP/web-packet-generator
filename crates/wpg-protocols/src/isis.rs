@@ -1,4 +1,4 @@
-//! IS-IS (ISO/IEC 10589, RFC 1195) over the OSI encapsulation (TODO §2.1 P2, M7):
+//! IS-IS (ISO/IEC 10589, RFC 1195) over the OSI encapsulation (spec §2.1 P2, M7):
 //! LAN / point-to-point Hellos, LSPs and CSNP / PSNP, with the main TLVs and
 //! sub-TLVs.
 //!

@@ -1,4 +1,4 @@
-//! Multicast control protocols (TODO §2.1 P1): `IGMPv1` / v2 / v3 (IP protocol 2),
+//! Multicast control protocols (spec §2.1 P1): `IGMPv1` / v2 / v3 (IP protocol 2),
 //! `MLDv1` / v2 (ICMPv6 types 130 / 131 / 132 / 143) and PIM-SM v2 Hello /
 //! Join-Prune / Register (IP protocol 103).
 //!

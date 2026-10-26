@@ -1,4 +1,4 @@
-//! Authentication (TODO §2.6, M3 "認証: パスワード (argon2id)、セッション、レート制限、
+//! Authentication (spec §2.6, M3 "認証: パスワード (argon2id)、セッション、レート制限、
 //! 未設定時 localhost 限定").
 //!
 //! * One admin account for now (the `users` table keeps a role for the P1

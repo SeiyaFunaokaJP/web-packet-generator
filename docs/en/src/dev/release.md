@@ -24,7 +24,7 @@ cargo audit
 cargo deny check
 ```
 
-The v1.0 release gate (TODO.md §4, M12) additionally requires:
+The v1.0 release gate ([ROADMAP.md](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/ROADMAP.md), M12) additionally requires:
 
 - All P0 + P1 protocol golden pcaps and tshark cross-checks green.
 - Build, start and pcap-backend transmission confirmed on all three OSes.

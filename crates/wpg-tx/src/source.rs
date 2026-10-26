@@ -3,7 +3,7 @@
 //! * [`PreRendered`]: frames rendered up front, replayed (optionally cycled);
 //! * [`OnTheFly`]: a base [`Packet`] plus a stream [`Expansion`]; the packet is built
 //!   once ([`Prebuilt`]) and each frame patches the generated fields in place;
-//! * [`Rendered`]: picks one of the two from a [`Plan`] (TODO §2.1 "事前展開と
+//! * [`Rendered`]: picks one of the two from a [`Plan`] (spec §2.1 "事前展開と
 //!   オンザフライ生成の自動選択");
 //! * [`Mixer`]: several sources mixed weighted / sequentially / round-robin (TODO
 //!   §2.1 "ジョブは複数ストリームを重み付き・順次・ラウンドロビンで混合").

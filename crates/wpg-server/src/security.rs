@@ -1,4 +1,4 @@
-//! Security response headers (TODO §2.6 "CSP ヘッダ").
+//! Security response headers (spec §2.6 "CSP ヘッダ").
 //!
 //! Every response gets `X-Content-Type-Options`, `Referrer-Policy`,
 //! `X-Frame-Options`, `Permissions-Policy` and a Content Security Policy:

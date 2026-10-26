@@ -149,7 +149,7 @@ pub(crate) fn Stat(
     }
 }
 
-/// Note shown on narrow screens where editing is disabled (TODO §2.5
+/// Note shown on narrow screens where editing is disabled (spec §2.5
 /// "モバイル/狭幅は最低限の閲覧のみ").
 #[component]
 pub(crate) fn ViewOnlyNote() -> impl IntoView {

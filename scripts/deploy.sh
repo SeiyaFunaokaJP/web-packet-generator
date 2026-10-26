@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy a wpg build to a Linux host over SSH (TODO §2.8; first target: Ubuntu on CML2).
+# Deploy a wpg build to a Linux host over SSH (spec §2.8; first target: Ubuntu on CML2).
 #
 # Usage: scripts/deploy.sh <user@host> [options]
 #   --iface <name>          interface jobs may send on (repeatable; tx.allowed_ifaces)

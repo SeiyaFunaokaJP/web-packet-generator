@@ -1,4 +1,4 @@
-//! Per-field editor (TODO §2.5): one row per `FieldType` with an Auto / Manual
+//! Per-field editor (spec §2.5): one row per `FieldType` with an Auto / Manual
 //! toggle and a generator editor. Manual values are parsed live through
 //! `wpg_core::notation` (out-of-spec values are accepted so malformed packets can be
 //! built, with the constraint diagnostics shown inline). Generators show a live

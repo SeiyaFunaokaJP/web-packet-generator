@@ -1,4 +1,4 @@
-//! LDP (RFC 5036) PDUs, messages and TLVs (TODO §2.1 P2, M7).
+//! LDP (RFC 5036) PDUs, messages and TLVs (spec §2.1 P2, M7).
 //!
 //! One [`ldp`] layer holds the PDU header and its messages. Messages and TLVs
 //! share one shape: a 16-bit type (the U bit, and for TLVs the F bit, are the top

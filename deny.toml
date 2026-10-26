@@ -60,7 +60,7 @@ wildcards = "deny"
 allow-wildcard-paths = true
 highlight = "all"
 deny = [
-    # Keep the TLS story on rustls (TODO §2.6); OpenSSL complicates static 3-OS builds.
+    # Keep the TLS story on rustls (spec §2.6); OpenSSL complicates static 3-OS builds.
     { crate = "openssl-sys", reason = "use rustls instead" },
 ]
 

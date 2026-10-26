@@ -24,7 +24,7 @@ cargo audit
 cargo deny check
 ```
 
-TODO.md §4 の v1.0 リリース判定 (M12) では、これに加えて次を満たします。
+[ROADMAP.ja.md](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/ROADMAP.ja.md) の v1.0 リリース判定 (M12) では、これに加えて次を満たします。
 
 - P0 + P1 プロトコルの golden pcap と tshark 突合がすべて緑。
 - 3 OS でビルド・起動・pcap バックエンド送出が確認できている。

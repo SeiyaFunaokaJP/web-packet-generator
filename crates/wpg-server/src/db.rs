@@ -1,4 +1,4 @@
-//! The `SQLite` database `<data_dir>/wpg.sqlite` (TODO §3 "DB ハイブリッド":
+//! The `SQLite` database `<data_dir>/wpg.sqlite` (ADR-0003 "DB ハイブリッド":
 //! templates stay YAML files; users, sessions, login attempts and the job history
 //! live here).
 //!

@@ -1,6 +1,6 @@
 //! # wpg-log
 //!
-//! Logging setup shared by the wpg binaries (TODO §2.8): a serialisable
+//! Logging setup shared by the wpg binaries (spec §2.8): a serialisable
 //! [`LogConfig`] (level, pretty / JSON format, optional rolling log file, ANSI
 //! colours), [`init()`] which installs the global `tracing` subscriber, and
 //! [`layer_with_sink`], a `tracing` layer that forwards every event to a

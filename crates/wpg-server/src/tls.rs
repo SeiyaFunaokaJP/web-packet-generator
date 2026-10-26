@@ -1,4 +1,4 @@
-//! HTTPS (TODO §2.6 "TLS: 自己署名自動生成 or 証明書指定 (`rustls`)").
+//! HTTPS (spec §2.6 "TLS: 自己署名自動生成 or 証明書指定 (`rustls`)").
 //!
 //! * `[server.tls] cert/key`: PEM files given by the operator.
 //! * `server.self_signed_tls` / `wpg serve --tls`: a self-signed ECDSA P-256

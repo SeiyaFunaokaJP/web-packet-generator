@@ -76,4 +76,4 @@ locales have the same keys).
 | `/login`, `/setup` | Authentication | |
 
 `l` toggles the server log, `?` shows the shortcuts, `Esc` closes dialogs.
-Narrow screens (< 768 px) are view-only (TODO §2.5).
+Narrow screens (< 768 px) are view-only (spec §2.5).

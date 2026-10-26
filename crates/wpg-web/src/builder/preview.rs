@@ -1,4 +1,4 @@
-//! In-browser packet build (TODO §2.5 "ブラウザ WASM プレビュー").
+//! In-browser packet build (spec §2.5 "ブラウザ WASM プレビュー").
 //!
 //! [`build_preview`] compiles the template and builds one packet with **the very same
 //! crates the server uses** (`wpg-core` + `wpg-protocols` + `wpg-template`, compiled

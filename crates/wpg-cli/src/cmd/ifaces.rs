@@ -1,4 +1,4 @@
-//! `wpg ifaces`: list network interfaces (TODO §2.7).
+//! `wpg ifaces`: list network interfaces (spec §2.7).
 
 use std::process::ExitCode;
 

@@ -1,4 +1,4 @@
-//! Declarative protocol definition IR (TODO §2.1 "プロトコル定義エンジン").
+//! Declarative protocol definition IR (spec §2.1 "プロトコル定義エンジン").
 //!
 //! A [`ProtocolDef`] is a list of [`FieldDef`]s in wire order (bit-packed, MSB first)
 //! plus the rules the builder / parser need:
@@ -678,7 +678,7 @@ impl LengthUnit {
     }
 }
 
-/// How an "Auto" field is computed when the user leaves it on Auto (TODO §2.1).
+/// How an "Auto" field is computed when the user leaves it on Auto (spec §2.1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum AutoCompute {

@@ -1,5 +1,5 @@
 //! Login rate limit: a token bucket per client address with exponential
-//! lock-out (TODO §2.6 "ログイン失敗レート制限").
+//! lock-out (spec §2.6 "ログイン失敗レート制限").
 //!
 //! Every failed login takes a token from the client's bucket ([`CAPACITY`]
 //! tokens, refilled at [`CAPACITY`] per minute). When the bucket runs dry the

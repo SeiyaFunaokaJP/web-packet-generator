@@ -1,5 +1,5 @@
 //! Signature verification: loss, reordering, duplicates and latency per stream
-//! (TODO §2.3, M9). The sender stamps frames with [`wpg_core::signature`]
+//! (spec §2.3, M9). The sender stamps frames with [`wpg_core::signature`]
 //! (`wpg send --signature`, job option `signature`).
 //!
 //! Per stream id the [`Verifier`] tracks the lowest and highest sequence number

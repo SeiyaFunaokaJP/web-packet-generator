@@ -33,7 +33,7 @@ tokio = { workspace = true, features = ["sync", "time", "fs"] }
 tower.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["json", "registry"] }
-# `wpg.toml` + `WPG_*` environment + CLI overrides (TODO §1.2 "設定").
+# `wpg.toml` + `WPG_*` environment + CLI overrides (spec §1.2 "設定").
 figment = { version = "0.10", features = ["toml", "env"] }
 toml = "0.9"
 # JSON Schema of `Config` (the generated configuration reference).
@@ -42,7 +42,7 @@ schemars = "1"
 toml_edit = "0.25"
 # Default data directory (`~/.local/share/wpg` etc.).
 directories = "6"
-# Template library hot reload (TODO §2.4).
+# Template library hot reload (spec §2.4).
 notify = "8"
 notify-debouncer-mini = "0.7"
 tower-http = { version = "0.7", features = ["compression-gzip", "compression-br", "trace", "cors", "request-id", "util"] }
@@ -51,7 +51,7 @@ uuid = { version = "1", features = ["v4"] }
 utoipa = { version = "6", features = ["axum_extras"] }
 utoipa-axum = "0.3"
 utoipa-swagger-ui = { version = "10", features = ["axum", "vendored"] }
-# Authentication / TLS (TODO §2.6, §3): SQLite for users / sessions / history,
+# Authentication / TLS (spec §2.6, ADR-0003): SQLite for users / sessions / history,
 # argon2id password hashes, rustls (ring provider: no C toolchain beyond cc) with
 # self-signed certificates from rcgen.
 rusqlite = { version = "0.37", features = ["bundled"] }

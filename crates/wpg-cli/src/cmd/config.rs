@@ -1,4 +1,4 @@
-//! `wpg config init|show|validate|set-password` (TODO §2.8 "`wpg config init`",
+//! `wpg config init|show|validate|set-password` (spec §2.8 "`wpg config init`",
 //! §2.6 password).
 
 use std::path::Path;

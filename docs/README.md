@@ -6,7 +6,7 @@ Documentation is split into three parts.
 |---|---|
 | `docs/en/` | mdBook (English user/developer docs) |
 | `docs/ja/` | mdBook (Japanese user/developer docs) |
-| `docs/spec/` | Detailed specification split out of `TODO.md` (Japanese primary) |
+| `docs/spec/` | Detailed specification (Japanese primary; milestones in `ROADMAP.md`) |
 | `docs/adr/` | Architecture Decision Records (MADR style, Japanese) |
 
 ## Building the books

@@ -1,4 +1,4 @@
-//! Protocol palette (TODO §2.5): the catalog from `GET /api/protocols`, searchable
+//! Protocol palette (spec §2.5): the catalog from `GET /api/protocols`, searchable
 //! and grouped by layer, with favourites. Each entry is a focusable button that adds
 //! a layer on `Enter` / click and is also draggable onto the stack.
 

@@ -1,4 +1,4 @@
-//! OSI network-layer encapsulation (TODO §2.1 P2, M7): the common entry point of
+//! OSI network-layer encapsulation (spec §2.1 P2, M7): the common entry point of
 //! CLNP / ES-IS / IS-IS.
 //!
 //! OSI network-layer PDUs travel over 802.3 + LLC with DSAP / SSAP `0xfe` (and

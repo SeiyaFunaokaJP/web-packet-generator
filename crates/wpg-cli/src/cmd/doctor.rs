@@ -1,4 +1,4 @@
-//! `wpg doctor`: diagnose privileges, drivers, hugepages and Npcap (TODO §2.7).
+//! `wpg doctor`: diagnose privileges, drivers, hugepages and Npcap (spec §2.7).
 
 use std::process::ExitCode;
 

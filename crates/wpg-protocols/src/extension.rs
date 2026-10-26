@@ -1,4 +1,4 @@
-//! User-defined protocols (`protocols.d/`, TODO §2.1 P3).
+//! User-defined protocols (`protocols.d/`, spec §2.1 P3).
 //!
 //! An extension file is YAML with two lists:
 //!

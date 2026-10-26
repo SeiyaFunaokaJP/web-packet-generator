@@ -1,4 +1,4 @@
-//! argon2id password hashing and the password sources (TODO §2.6).
+//! argon2id password hashing and the password sources (spec §2.6).
 //!
 //! Hashes are PHC strings (`$argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>`) with
 //! the argon2 crate's defaults, which follow the OWASP recommendation (19 MiB,

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smoke-test a release archive made by scripts/release.sh (TODO §2.8 / M10). Used by
+# Smoke-test a release archive made by scripts/release.sh (spec §2.8 / M10). Used by
 # .github/workflows/packaging.yml on Linux, macOS and Windows (Git Bash), and locally.
 #
 # Usage: scripts/smoke-archive.sh [options] <archive>

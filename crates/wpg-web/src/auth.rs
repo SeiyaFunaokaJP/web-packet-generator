@@ -1,4 +1,4 @@
-//! Session state and the route guard (TODO M4 "認証画面・セッション処理").
+//! Session state and the route guard (ROADMAP M4 "認証画面・セッション処理").
 //!
 //! Server contract: `GET /api/auth/status → {configured, authenticated,
 //! setup_required, user, csrf_token}`. A server without auth endpoints (404) is

@@ -42,7 +42,7 @@ The `.ftl` files of all languages must hold the **same set of keys**. A `wpg-i18
 cargo test -p wpg-i18n
 ```
 
-This is the "i18n parity lint" of TODO.md §5.
+This is the "i18n parity lint" of the specification (`docs/spec/11-risks.md`).
 
 ## Protocol names and field descriptions
 

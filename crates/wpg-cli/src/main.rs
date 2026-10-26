@@ -1,4 +1,4 @@
-//! `wpg` — Web Packet Generator command line (TODO §2.7).
+//! `wpg` — Web Packet Generator command line (spec §2.7).
 //!
 //! Every subcommand lives in [`cmd`] (`serve`: the HTTP server, `config`:
 //! `wpg.toml` tools, ...). Ones that are not implemented yet exit with status 2.

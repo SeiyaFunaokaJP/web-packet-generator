@@ -1,4 +1,4 @@
-//! Send-time estimate for the builder (TODO §4 M4 "所要時間の見積表示").
+//! Send-time estimate for the builder (ROADMAP M4 "所要時間の見積表示").
 //!
 //! `wpg-tx` (which owns `Rate`) is not compiled to WASM, so this is a small mirror
 //! of its rate notation and layer-1 arithmetic: `1000pps`, `1.5Mpps`, `10Gbps`,

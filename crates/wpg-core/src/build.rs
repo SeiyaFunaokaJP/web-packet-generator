@@ -1,4 +1,4 @@
-//! Packet builder: [`Packet`] + protocol definitions → wire bytes (TODO §2.1).
+//! Packet builder: [`Packet`] + protocol definitions → wire bytes (spec §2.1).
 //!
 //! Two passes:
 //!

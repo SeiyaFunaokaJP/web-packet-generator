@@ -1,4 +1,4 @@
-//! Layer stack panel (TODO §2.5): add / remove / reorder / duplicate layers by
+//! Layer stack panel (spec §2.5): add / remove / reorder / duplicate layers by
 //! drag & drop or keyboard, select a layer to drive the field editor and hex/tree
 //! highlight, and next-layer suggestions from the binding table (with a one-click
 //! "fix parent next-protocol").

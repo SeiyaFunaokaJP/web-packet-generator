@@ -1,5 +1,5 @@
 //! Ethernet CFM / OAM: IEEE 802.1ag (802.1Q clause 21), ITU-T Y.1731 and the
-//! ERPS R-APS messages of ITU-T G.8032 (TODO §2.1 P2, M7).
+//! ERPS R-APS messages of ITU-T G.8032 (spec §2.1 P2, M7).
 //!
 //! Every CFM PDU is one layer: the 4-octet common header (MD / MEG level,
 //! version, opcode, flags, First TLV Offset), the opcode-specific fields and the

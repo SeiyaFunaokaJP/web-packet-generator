@@ -1,5 +1,5 @@
 //! `/api/captures`: receive counters, the first N frames, pcapng download and
-//! signature verification (TODO M9).
+//! signature verification (ROADMAP M9).
 
 // utoipa's generated code spells out paths the lint considers redundant.
 #![allow(unused_qualifications)]

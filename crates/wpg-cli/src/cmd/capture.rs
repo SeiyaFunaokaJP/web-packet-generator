@@ -1,5 +1,5 @@
 //! `wpg capture` subcommand: receive counters, the first N frames, pcapng output
-//! and signature verification (TODO §2.3, M9).
+//! and signature verification (spec §2.3, M9).
 //!
 //! Progress goes to stderr once per second; the first `--show` matching frames and
 //! the summary go to stdout (or a JSON [`CaptureReport`] plus the frames with

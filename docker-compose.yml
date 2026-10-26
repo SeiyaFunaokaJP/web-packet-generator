@@ -1,4 +1,4 @@
-# wpg with Docker Compose (TODO §2.8). Usage:
+# wpg with Docker Compose (spec §2.8). Usage:
 #
 #   WPG_PASSWORD='change me' docker compose up -d --build
 #   docker compose logs -f wpg

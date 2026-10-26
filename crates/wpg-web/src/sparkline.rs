@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 use leptos::prelude::*;
 
-/// Samples kept per series (TODO §2.5 "直近の統計グラフ").
+/// Samples kept per series (spec §2.5 "直近の統計グラフ").
 pub(crate) const SPARK_SAMPLES: usize = 60;
 
 /// Appends `v`, dropping the oldest samples beyond `cap`.

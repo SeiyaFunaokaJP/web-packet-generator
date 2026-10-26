@@ -1,4 +1,4 @@
-//! Packet parser: wire bytes → [`Packet`] (TODO §2.1 "逆生成 (import)").
+//! Packet parser: wire bytes → [`Packet`] (spec §2.1 "逆生成 (import)").
 //!
 //! The parser decodes one header at a time, follows each protocol's [`Binding`] to
 //! pick the next protocol and bounds inner PDUs by their total / payload length

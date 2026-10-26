@@ -1,4 +1,4 @@
-//! RSVP (RFC 2205) with the RSVP-TE objects (RFC 3209) (TODO §2.1 P2, M7).
+//! RSVP (RFC 2205) with the RSVP-TE objects (RFC 3209) (spec §2.1 P2, M7).
 //!
 //! One [`rsvp`] layer holds the common header and the objects of the message.
 //! An object is a 16-bit length (counting the 4-octet header, a multiple of 4),

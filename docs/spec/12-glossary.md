@@ -1,6 +1,6 @@
 # 12. 用語
 
-Status: draft / 元: TODO.md §6
+Status: draft / 仕様 §6
 
 | 用語 | 定義 |
 |---|---|

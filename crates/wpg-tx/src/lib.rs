@@ -1,6 +1,6 @@
 //! # wpg-tx
 //!
-//! Transmit engine abstraction (TODO §2.2). Every backend implements [`TxBackend`];
+//! Transmit engine abstraction (spec §2.2). Every backend implements [`TxBackend`];
 //! the job manager only talks to the trait.
 //!
 //! Pieces:

@@ -1,6 +1,6 @@
 # 05. テンプレート (wpg-template)
 
-Status: M5 (実装済み: wpg-template) / 元: TODO.md §2.4
+Status: M5 (実装済み: wpg-template) / 仕様 §2.4
 
 ## 概要
 

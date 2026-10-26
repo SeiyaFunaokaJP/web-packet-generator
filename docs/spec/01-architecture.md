@@ -1,6 +1,6 @@
 # 01. 全体アーキテクチャ
 
-Status: draft / 元: TODO.md §1
+Status: draft / 仕様 §1
 
 ## 構成図
 

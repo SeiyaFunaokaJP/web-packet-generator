@@ -1,6 +1,6 @@
 # 03. 送出エンジン (wpg-tx)
 
-Status: draft / 元: TODO.md §2.2
+Status: draft / 仕様 §2.2
 
 ## バックエンド一覧
 
@@ -24,7 +24,7 @@ trait TxBackend {
 }
 ```
 
-上記は TODO.md の `TxBackend { open(iface, opts) ; send_batch(&[Frame]) ; stats() ; close() }` を Rust 風に書いた Proposal であり、シグネチャは M2 で確定する。
+上記は 旧仕様書の `TxBackend { open(iface, opts) ; send_batch(&[Frame]) ; stats() ; close() }` を Rust 風に書いた Proposal であり、シグネチャは M2 で確定する。
 
 ## 送信スレッド
 

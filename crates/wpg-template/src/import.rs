@@ -1,4 +1,4 @@
-//! Reverse generation (TODO §2.1 "逆生成"): captures / hex dumps → templates.
+//! Reverse generation (spec §2.1 "逆生成"): captures / hex dumps → templates.
 //!
 //! * [`import_capture`] reads pcap / pcapng ([`crate::pcapread`]), parses every frame
 //!   with [`wpg_core::parse()`] and either merges them into **one** template
