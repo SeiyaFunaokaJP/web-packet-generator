@@ -11,9 +11,11 @@ fields:
   - name: dst
     type: { kind: mac }
     default: { mac: [255, 255, 255, 255, 255, 255] }
+    description_key: eth-dst
   - name: src
     type: { kind: mac }
     default: { mac: [2, 0, 0, 0, 0, 1] }
+    description_key: eth-src
   - name: ethertype
     type:
       kind: enum
@@ -37,6 +39,7 @@ fields:
         - { value: 0x8902, name: cfm }
     default: { uint: 0x88b5 }
     auto: { kind: next_protocol }
+    description_key: eth-ethertype
 next:
   field: ethertype
   table:

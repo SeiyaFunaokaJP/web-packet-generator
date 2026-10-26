@@ -33,15 +33,15 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `version` | `uint(4)` | `6` |   |   |
-| `dscp` | `uint(6)` | `0` |   |   |
-| `ecn` | `uint(2)` | `0` |   |   |
-| `flow_label` | `uint(20)` | `0` |   |   |
-| `payload_length` | `uint(16)` |   | Length of the payload in octets |   |
-| `next_header` | `enum(8)` | `253` (experimental) | Protocol number of the next layer (see Next layer) |   |
-| `hop_limit` | `uint(8)` | `64` |   |   |
-| `src` | `ipv6` | `2001:db8::1` |   |   |
-| `dst` | `ipv6` | `2001:db8::2` |   |   |
+| `version` | `uint(4)` | `6` |   | IP version, always 6. |
+| `dscp` | `uint(6)` | `0` |   | Differentiated services code point (QoS class, 0 to 63). |
+| `ecn` | `uint(2)` | `0` |   | Explicit congestion notification (0 = not ECT, 1 / 2 = ECT, 3 = CE). |
+| `flow_label` | `uint(20)` | `0` |   | Flow label (20 bits) identifying a flow for routers; 0 = none. |
+| `payload_length` | `uint(16)` |   | Length of the payload in octets | Length of everything after this header, including extension headers (Auto). |
+| `next_header` | `enum(8)` | `253` (experimental) | Protocol number of the next layer (see Next layer) | Protocol number of the next header (Auto; 253 = experimental when none is known). |
+| `hop_limit` | `uint(8)` | `64` |   | Hop limit; decremented at every router, 0 is never sent. |
+| `src` | `ipv6` | `2001:db8::1` |   | Source IPv6 address. |
+| `dst` | `ipv6` | `2001:db8::2` |   | Destination IPv6 address. |
 
 ### `next_header`
 

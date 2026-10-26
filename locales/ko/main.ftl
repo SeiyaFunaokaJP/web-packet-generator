@@ -73,6 +73,79 @@ ndp-other = Other 구성 플래그(O).
 ndp-override-flag = Override 플래그(O).
 ndp-router-flag = Router 플래그(R).
 ndp-solicited-flag = Solicited 플래그(S).
+
+# --- P0 프로토콜 필드 설명 (Ethernet, VLAN, IPv4 / IPv6, TCP / UDP, 페이로드) ---
+eth-dst = 목적지 MAC 주소.
+eth-src = 출발지 MAC 주소.
+eth-ethertype = 다음 계층의 EtherType(상위 계층에서 Auto. 다음 계층을 알 수 없으면 0x88b5 = 로컬 실험용). 0x05ff 이하의 값은 IEEE 802.3 길이.
+dot3-length = LLC 데이터 길이(옥텟, Auto, 최대 1500).
+llc-dsap = 목적지 서비스 접근점(Auto: 0xaa = SNAP, 0xfe = OSI, 0x42 = 스패닝 트리).
+llc-ssap = 출발지 서비스 접근점(Auto, 보통 DSAP와 같음).
+llc-control = 제어 필드. 0x03 = 비번호 정보(UI).
+snap-oui = 조직 고유 식별자(OUI). 0이면 프로토콜 ID는 EtherType.
+snap-pid = 프로토콜 ID(OUI가 0이면 EtherType. 다음 계층에서 Auto).
+vlan-pcp = 우선순위 코드 포인트(802.1p 서비스 클래스, 0~7).
+vlan-dei = 폐기 가능 표시(DEI).
+vlan-vid = VLAN 식별자(1~4094. 0 = 우선순위 태그만, 4095는 예약).
+vlan-ethertype = 태그 다음 계층의 EtherType(Auto. 또 다른 802.1Q 태그면 0x8100).
+dot1ad-ethertype = S 태그 다음 계층의 EtherType(Auto. 보통 802.1Q C 태그를 뜻하는 0x8100).
+ipv4-version = IP 버전. 항상 4.
+ipv4-ihl = 헤더 길이(32비트 워드 단위, 5~15. Auto, 옵션 포함).
+ip-dscp = DSCP(QoS 클래스, 0~63).
+ip-ecn = 명시적 혼잡 통지(0 = 비 ECT, 1 / 2 = ECT, 3 = CE).
+ipv4-total-length = 헤더와 페이로드의 전체 길이(옥텟, Auto).
+ipv4-identification = 같은 데이터그램의 단편들이 공유하는 식별자.
+ipv4-flags = 플래그: DF(단편화 금지)와 MF(추가 단편 있음). 최상위 비트는 예약.
+ipv4-frag-offset = 이 단편의 오프셋(8옥텟 단위).
+ipv4-ttl = 생존 시간. 라우터마다 감소하며 0은 전송되지 않음.
+ipv4-protocol = 다음 계층의 프로토콜 번호(Auto. 다음 계층을 알 수 없으면 253 = 실험용).
+ipv4-header-checksum = 헤더의 인터넷 체크섬(Auto).
+ipv4-src = 출발지 IPv4 주소.
+ipv4-dst = 목적지 IPv4 주소.
+ipv4-options = IPv4 옵션(TLV: EOL, NOP, 보안, 경로 기록, 타임스탬프 등).
+ipv4-padding = 옵션을 32비트 경계에 맞추는 0 패딩(Auto).
+udp-src-port = 출발지 포트.
+udp-dst-port = 목적지 포트. Auto이면 다음 계층을 선택함(53 = DNS, 67 / 68 = DHCP, 4789 = VXLAN 등).
+udp-length = 헤더와 페이로드의 길이(옥텟, Auto).
+udp-checksum = IPv4 / IPv6 의사 헤더를 포함한 인터넷 체크섬(Auto. 0은 0xffff가 됨).
+tcp-src-port = 출발지 포트.
+tcp-dst-port = 목적지 포트. 다음 계층을 선택함(179 = BGP, 646 = LDP, 3868 = Diameter, 5060 = SIP).
+tcp-seq = 첫 데이터 옥텟의 순서 번호(SYN에서는 초기 순서 번호).
+tcp-ack = 확인 응답 번호. ACK 플래그가 설정된 경우 유효.
+tcp-data-offset = 헤더 길이(32비트 워드 단위, 5~15. Auto, 옵션 포함).
+tcp-reserved = 예약 비트. 0.
+tcp-flags = 제어 플래그: CWR, ECE, URG, ACK, PSH, RST, SYN, FIN(기본값 SYN).
+tcp-window = 수신 윈도(옥텟. 윈도 스케일 옵션으로 확대).
+tcp-checksum = IPv4 / IPv6 의사 헤더를 포함한 인터넷 체크섬(Auto).
+tcp-urgent-ptr = 긴급 포인터. URG 플래그가 설정된 경우 유효.
+tcp-options = TCP 옵션(TLV: EOL, NOP, MSS, 윈도 스케일, SACK 허용, SACK, 타임스탬프).
+tcp-padding = 옵션을 32비트 경계에 맞추는 0 패딩(Auto).
+payload-mode = 페이로드 생성 방식: fixed(data 그대로), pattern(data를 length까지 반복), random(seed로 length 옥텟 생성), counter(data에 패킷별 카운터 삽입).
+payload-data = 페이로드 옥텟. fixed 모드에서는 length가 0이 아니면 잘라내거나 0으로 확장, pattern 모드에서는 반복 단위(비어 있으면 00 01 02 ...).
+payload-length = 페이로드 길이(옥텟). 0이면 data의 길이를 유지(fixed / counter 모드).
+payload-seed = random 모드의 의사 난수 생성기 시드.
+payload-counter-offset = counter 모드에서 삽입하는 카운터의 옥텟 오프셋.
+payload-counter-width = 삽입하는 카운터의 폭: 4 또는 8옥텟, 빅 엔디안.
+payload-counter-value = 스트림 전개가 패킷마다 기록하는 카운터 값(counter 모드).
+raw-data = 프레임 끝까지의 원시 옥텟.
+ipv6-version = IP 버전. 항상 6.
+ipv6-flow-label = 플로 레이블(20비트). 라우터가 플로를 식별함. 0 = 없음.
+ipv6-payload-length = 이 헤더 이후 전체의 길이(확장 헤더 포함, Auto).
+ipv6-next-header = 다음 헤더의 프로토콜 번호(Auto. 다음 계층을 알 수 없으면 253 = 실험용).
+ipv6-hop-limit = 홉 제한. 라우터마다 감소하며 0은 전송되지 않음.
+ipv6-src = 출발지 IPv6 주소.
+ipv6-dst = 목적지 IPv6 주소.
+ipv6-ext-next-header = 이 확장 헤더 다음에 오는 헤더의 프로토콜 번호(Auto).
+ipv6-hdr-ext-len = 이 확장 헤더의 길이(8옥텟 단위, 처음 8옥텟 제외. Auto).
+ipv6-ext-padding = 확장 헤더를 8옥텟의 배수로 맞추는 0 패딩(Pad1, Auto).
+field-reserved = 예약. 0.
+ipv6-frag-identification = 같은 패킷의 단편들이 공유하는 식별자.
+icmp-checksum = 헤더와 페이로드의 인터넷 체크섬(Auto).
+icmpv6-checksum = IPv6 의사 헤더를 포함한 헤더와 페이로드의 인터넷 체크섬(Auto).
+ndp-cur-hop-limit = 호스트가 사용해야 하는 홉 제한(0 = 미지정).
+ndp-router-lifetime = 기본 라우터로서의 수명(초. 0 = 기본 라우터 아님).
+ndp-reachable-time = 도달 가능 시간(밀리초. 0 = 미지정).
+ndp-retrans-timer = 재전송 타이머(밀리초. 0 = 미지정).
 ndp-target = 대상 주소.
 
 ## wpg ifaces

@@ -17,10 +17,10 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `pcp` | `uint(3)` | `0` |   |   |
-| `dei` | `uint(1)` | `0` |   |   |
-| `vid` | `uint(12)` | `1` |   |   |
-| `ethertype` | `enum(16)` | `33024` (vlan) | Protocol number of the next layer (see Next layer) |   |
+| `pcp` | `uint(3)` | `0` |   | Priority code point (802.1p class of service, 0 to 7). |
+| `dei` | `uint(1)` | `0` |   | Drop eligible indicator. |
+| `vid` | `uint(12)` | `1` |   | VLAN identifier (1 to 4094; 0 = priority tag only, 4095 is reserved). |
+| `ethertype` | `enum(16)` | `33024` (vlan) | Protocol number of the next layer (see Next layer) | EtherType of the layer after the S-tag (Auto; normally 0x8100 for the 802.1Q C-tag). |
 
 ### `ethertype`
 

@@ -20,10 +20,10 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) |   |
-| `hdr_ext_len` | `uint(8)` |   | Length of the header in 64-bit words (`-1`) |   |
+| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) | Protocol number of the header following this extension header (Auto). |
+| `hdr_ext_len` | `uint(8)` |   | Length of the header in 64-bit words (`-1`) | Length of this extension header in 8-octet units, not counting the first 8 octets (Auto). |
 | `options` | `bytes` — `hdr_ext_len * 8 + 6` octets | `01 04 00 00 00 00` |   | Raw TLV options, padded to a multiple of 8 bytes. |
-| `padding` | `padding(8)` |   |   |   |
+| `padding` | `padding(8)` |   |   | Zero padding (Pad1) of the extension header to a multiple of 8 octets (Auto). |
 
 ## Next layer
 

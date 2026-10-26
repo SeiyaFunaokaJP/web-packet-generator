@@ -73,6 +73,79 @@ ndp-other = Indicateur d'autre configuration (O).
 ndp-override-flag = Indicateur Override (O).
 ndp-router-flag = Indicateur Router (R).
 ndp-solicited-flag = Indicateur Solicited (S).
+
+# --- Descriptions des champs des protocoles P0 (Ethernet, VLAN, IPv4 / IPv6, TCP / UDP, charge utile) ---
+eth-dst = Adresse MAC de destination.
+eth-src = Adresse MAC source.
+eth-ethertype = EtherType de la couche suivante (Auto depuis la couche au-dessus ; 0x88b5 = expérimental local si aucune n'est connue). Une valeur jusqu'à 0x05ff est une longueur IEEE 802.3.
+dot3-length = Longueur des données LLC en octets (Auto ; au plus 1500).
+llc-dsap = Point d'accès au service de destination (Auto : 0xaa = SNAP, 0xfe = OSI, 0x42 = spanning tree).
+llc-ssap = Point d'accès au service source (Auto, normalement égal au DSAP).
+llc-control = Champ de contrôle ; 0x03 = information non numérotée (UI).
+snap-oui = Identifiant unique d'organisation (OUI) ; 0 signifie que l'identifiant de protocole est un EtherType.
+snap-pid = Identifiant de protocole (un EtherType quand l'OUI vaut 0 ; Auto depuis la couche suivante).
+vlan-pcp = Priority code point (classe de service 802.1p, 0 à 7).
+vlan-dei = Indicateur d'éligibilité à l'abandon (DEI).
+vlan-vid = Identifiant de VLAN (1 à 4094 ; 0 = étiquette de priorité seule, 4095 est réservé).
+vlan-ethertype = EtherType de la couche après l'étiquette (Auto ; 0x8100 pour une autre étiquette 802.1Q).
+dot1ad-ethertype = EtherType de la couche après l'étiquette S (Auto ; normalement 0x8100 pour l'étiquette C 802.1Q).
+ipv4-version = Version IP, toujours 4.
+ipv4-ihl = Longueur de l'en-tête en mots de 32 bits, 5 à 15 (Auto, options comprises).
+ip-dscp = Differentiated services code point (classe QoS, 0 à 63).
+ip-ecn = Notification explicite de congestion (0 = non ECT, 1 / 2 = ECT, 3 = CE).
+ipv4-total-length = Longueur totale de l'en-tête et de la charge utile en octets (Auto).
+ipv4-identification = Identification partagée par les fragments d'un même datagramme.
+ipv4-flags = Drapeaux : DF (ne pas fragmenter) et MF (fragments suivants) ; le bit de poids fort est réservé.
+ipv4-frag-offset = Décalage de ce fragment en unités de 8 octets.
+ipv4-ttl = Durée de vie ; décrémentée à chaque routeur, 0 n'est jamais envoyé.
+ipv4-protocol = Numéro de protocole de la couche suivante (Auto ; 253 = expérimental si aucune n'est connue).
+ipv4-header-checksum = Somme de contrôle Internet de l'en-tête (Auto).
+ipv4-src = Adresse IPv4 source.
+ipv4-dst = Adresse IPv4 de destination.
+ipv4-options = Options IPv4 en TLV (EOL, NOP, sécurité, enregistrement de route, horodatage...).
+ipv4-padding = Remplissage à zéro des options jusqu'à une frontière de 32 bits (Auto).
+udp-src-port = Port source.
+udp-dst-port = Port de destination ; sélectionne la couche suivante quand il est Auto (53 = DNS, 67 / 68 = DHCP, 4789 = VXLAN...).
+udp-length = Longueur de l'en-tête et de la charge utile en octets (Auto).
+udp-checksum = Somme de contrôle Internet avec le pseudo-en-tête IPv4 / IPv6 (Auto ; 0 devient 0xffff).
+tcp-src-port = Port source.
+tcp-dst-port = Port de destination ; sélectionne la couche suivante (179 = BGP, 646 = LDP, 3868 = Diameter, 5060 = SIP).
+tcp-seq = Numéro de séquence du premier octet de données (numéro de séquence initial avec SYN).
+tcp-ack = Numéro d'acquittement, valide quand le drapeau ACK est levé.
+tcp-data-offset = Longueur de l'en-tête en mots de 32 bits, 5 à 15 (Auto, options comprises).
+tcp-reserved = Bits réservés, 0.
+tcp-flags = Drapeaux de contrôle : CWR, ECE, URG, ACK, PSH, RST, SYN, FIN (SYN par défaut).
+tcp-window = Fenêtre de réception en octets (multipliée par l'option window scale).
+tcp-checksum = Somme de contrôle Internet avec le pseudo-en-tête IPv4 / IPv6 (Auto).
+tcp-urgent-ptr = Pointeur urgent, valide quand le drapeau URG est levé.
+tcp-options = Options TCP en TLV : EOL, NOP, MSS, window scale, SACK permitted, SACK, timestamps.
+tcp-padding = Remplissage à zéro des options jusqu'à une frontière de 32 bits (Auto).
+payload-mode = Génération de la charge utile : fixed (données telles quelles), pattern (données répétées jusqu'à la longueur), random (longueur octets depuis la graine) ou counter (données avec un compteur par paquet intégré).
+payload-data = Octets de la charge utile ; en mode fixed tronqués ou complétés par des zéros jusqu'à la longueur si elle est non nulle, en mode pattern l'unité répétée (vide = 00 01 02 ...).
+payload-length = Longueur de la charge utile en octets ; 0 conserve la longueur des données (mode fixed / counter).
+payload-seed = Graine du générateur pseudo-aléatoire en mode random.
+payload-counter-offset = Décalage en octets du compteur intégré en mode counter.
+payload-counter-width = Largeur du compteur intégré : 4 ou 8 octets, gros-boutiste.
+payload-counter-value = Valeur du compteur écrite par paquet par l'expansion de flux (mode counter).
+raw-data = Octets bruts jusqu'à la fin de la trame.
+ipv6-version = Version IP, toujours 6.
+ipv6-flow-label = Étiquette de flux (20 bits) identifiant un flux pour les routeurs ; 0 = aucune.
+ipv6-payload-length = Longueur de tout ce qui suit cet en-tête, en-têtes d'extension compris (Auto).
+ipv6-next-header = Numéro de protocole de l'en-tête suivant (Auto ; 253 = expérimental si aucun n'est connu).
+ipv6-hop-limit = Limite de sauts ; décrémentée à chaque routeur, 0 n'est jamais envoyé.
+ipv6-src = Adresse IPv6 source.
+ipv6-dst = Adresse IPv6 de destination.
+ipv6-ext-next-header = Numéro de protocole de l'en-tête qui suit cet en-tête d'extension (Auto).
+ipv6-hdr-ext-len = Longueur de cet en-tête d'extension en unités de 8 octets, sans les 8 premiers octets (Auto).
+ipv6-ext-padding = Remplissage à zéro (Pad1) de l'en-tête d'extension jusqu'à un multiple de 8 octets (Auto).
+field-reserved = Réservé, 0.
+ipv6-frag-identification = Identification partagée par les fragments d'un même paquet.
+icmp-checksum = Somme de contrôle Internet de l'en-tête et de la charge utile (Auto).
+icmpv6-checksum = Somme de contrôle Internet avec le pseudo-en-tête IPv6 sur l'en-tête et la charge utile (Auto).
+ndp-cur-hop-limit = Limite de sauts que les hôtes doivent utiliser (0 = non spécifiée).
+ndp-router-lifetime = Durée de vie comme routeur par défaut en secondes (0 = pas un routeur par défaut).
+ndp-reachable-time = Temps d'accessibilité en millisecondes (0 = non spécifié).
+ndp-retrans-timer = Temporisateur de retransmission en millisecondes (0 = non spécifié).
 ndp-target = Adresse cible.
 
 ## wpg ifaces

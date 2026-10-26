@@ -16,9 +16,9 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `dsap` | `enum(8)` | `170` (snap) | Protocol number of the next layer (see Next layer) |   |
-| `ssap` | `enum(8)` | `170` (snap) | Protocol number of the next layer (see Next layer) |   |
-| `control` | `enum(8)` | `3` (ui) |   |   |
+| `dsap` | `enum(8)` | `170` (snap) | Protocol number of the next layer (see Next layer) | Destination service access point (Auto: 0xaa = SNAP, 0xfe = OSI, 0x42 = spanning tree). |
+| `ssap` | `enum(8)` | `170` (snap) | Protocol number of the next layer (see Next layer) | Source service access point (Auto, normally equal to DSAP). |
+| `control` | `enum(8)` | `3` (ui) |   | Control field; 0x03 = unnumbered information (UI). |
 
 ### `dsap`
 

@@ -16,8 +16,8 @@
 
 | フィールド | 型 | 既定値 | Auto | 説明 |
 |---|---|---|---|---|
-| `oui` | `uint(24)` | `0` |   |   |
-| `pid` | `enum(16)` | `34997` (local_experimental) | 次レイヤのプロトコル番号 (「次レイヤ」参照) |   |
+| `oui` | `uint(24)` | `0` |   | 組織固有識別子 (OUI)。0 ならプロトコル ID は EtherType。 |
+| `pid` | `enum(16)` | `34997` (local_experimental) | 次レイヤのプロトコル番号 (「次レイヤ」参照) | プロトコル ID (OUI が 0 のとき EtherType。次レイヤから Auto)。 |
 
 ### `pid`
 

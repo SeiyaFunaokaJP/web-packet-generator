@@ -15,13 +15,13 @@ No protocol of the catalog leads here: use it as the first layer or stack it exp
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `mode` | `enum(8)` | `0` (fixed) |   |   |
-| `data` | `bytes` — rest of the PDU | `""` |   |   |
-| `length` | `uint(32)` | `0` |   |   |
-| `seed` | `uint(64)` | `0` |   |   |
-| `counter_offset` | `uint(32)` | `0` |   |   |
-| `counter_width` | `enum(8)` | `4` (u32) |   |   |
-| `counter_value` | `uint(64)` | `0` |   |   |
+| `mode` | `enum(8)` | `0` (fixed) |   | How the payload is generated: fixed (data as given), pattern (data repeated to length), random (length octets from seed) or counter (data with a per-packet counter embedded). |
+| `data` | `bytes` — rest of the PDU | `""` |   | Payload octets; in fixed mode cut or zero-extended to length when length is non-zero, in pattern mode the repeated unit (empty = 00 01 02 ...). |
+| `length` | `uint(32)` | `0` |   | Payload length in octets; 0 keeps the length of data (fixed / counter mode). |
+| `seed` | `uint(64)` | `0` |   | Seed of the pseudo-random generator in random mode. |
+| `counter_offset` | `uint(32)` | `0` |   | Octet offset of the embedded counter in counter mode. |
+| `counter_width` | `enum(8)` | `4` (u32) |   | Width of the embedded counter: 4 or 8 octets, big endian. |
+| `counter_value` | `uint(64)` | `0` |   | Counter value written per packet by the stream expander (counter mode). |
 
 ### `mode`
 

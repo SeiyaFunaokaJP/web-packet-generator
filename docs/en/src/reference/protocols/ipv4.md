@@ -33,21 +33,21 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `version` | `uint(4)` | `4` |   |   |
-| `ihl` | `uint(4)` |   | Length of the header in 32-bit words |   |
-| `dscp` | `uint(6)` | `0` |   |   |
-| `ecn` | `uint(2)` | `0` |   |   |
-| `total_length` | `uint(16)` |   | Length of the header and payload in octets |   |
-| `identification` | `uint(16)` | `0` |   |   |
-| `flags` | `flags(3)` | `0x0` |   |   |
-| `frag_offset` | `uint(13)` | `0` |   |   |
-| `ttl` | `uint(8)` | `64` |   |   |
-| `protocol` | `enum(8)` | `253` (experimental) | Protocol number of the next layer (see Next layer) |   |
-| `header_checksum` | `uint(16)` |   | Internet checksum over the header |   |
-| `src` | `ipv4` | `192.0.2.1` |   |   |
-| `dst` | `ipv4` | `192.0.2.2` |   |   |
-| `options` | `tlv` — `ihl * 4 - 20` octets |   |   |   |
-| `padding` | `padding(4)` |   |   |   |
+| `version` | `uint(4)` | `4` |   | IP version, always 4. |
+| `ihl` | `uint(4)` |   | Length of the header in 32-bit words | Header length in 32-bit words, 5 to 15 (Auto, includes the options). |
+| `dscp` | `uint(6)` | `0` |   | Differentiated services code point (QoS class, 0 to 63). |
+| `ecn` | `uint(2)` | `0` |   | Explicit congestion notification (0 = not ECT, 1 / 2 = ECT, 3 = CE). |
+| `total_length` | `uint(16)` |   | Length of the header and payload in octets | Total length of header and payload in octets (Auto). |
+| `identification` | `uint(16)` | `0` |   | Identification shared by the fragments of one datagram. |
+| `flags` | `flags(3)` | `0x0` |   | Flags: DF (don't fragment) and MF (more fragments); the top bit is reserved. |
+| `frag_offset` | `uint(13)` | `0` |   | Offset of this fragment in 8-octet units. |
+| `ttl` | `uint(8)` | `64` |   | Time to live; decremented at every router, 0 is never sent. |
+| `protocol` | `enum(8)` | `253` (experimental) | Protocol number of the next layer (see Next layer) | Protocol number of the next layer (Auto; 253 = experimental when none is known). |
+| `header_checksum` | `uint(16)` |   | Internet checksum over the header | Internet checksum over the header (Auto). |
+| `src` | `ipv4` | `192.0.2.1` |   | Source IPv4 address. |
+| `dst` | `ipv4` | `192.0.2.2` |   | Destination IPv4 address. |
+| `options` | `tlv` — `ihl * 4 - 20` octets |   |   | IPv4 options as TLVs (EOL, NOP, security, record route, timestamp...). |
+| `padding` | `padding(4)` |   |   | Zero padding of the options to a 32-bit boundary (Auto). |
 
 ### `flags`
 

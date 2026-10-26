@@ -15,7 +15,7 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `reserved` | `uint(32)` | `0` |   |   |
+| `reserved` | `uint(32)` | `0` |   | Reserved, 0. |
 | `options` | `bytes` — rest of the PDU |   |   | Raw NDP options (TLV). |
 
 ## Sample templates

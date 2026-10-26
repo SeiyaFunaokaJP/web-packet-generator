@@ -22,8 +22,8 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) |   |
-| `hdr_ext_len` | `uint(8)` |   | Length of the header in 64-bit words (`-1`) |   |
+| `next_header` | `uint(8)` | `253` | Protocol number of the next layer (see Next layer) | Protocol number of the header following this extension header (Auto). |
+| `hdr_ext_len` | `uint(8)` |   | Length of the header in 64-bit words (`-1`) | Length of this extension header in 8-octet units, not counting the first 8 octets (Auto). |
 | `routing_type` | `enum(8)` | `4` (segment_routing) |   | Routing header type (e.g. 2 = Mobile IPv6, 4 = SRH). |
 | `segments_left` | `uint(8)` | `1` |   | Segments Left: index (in the segment list) of the next segment to visit; 0 at the last one. |
 | `last_entry` | `uint(8)` |   | Number of items of `segment_list` (`-1`) | Last Entry: index of the last element of the segment list, i.e. number of segments - 1 (Auto). |
@@ -31,7 +31,7 @@
 | `tag` | `uint(16)` | `0` |   | Tag: marks packets as part of a class or group (0 = unused). |
 | `segment_list` | `list<ipv6>` — `last_entry * 16 + 16` octets | 2 items |   | Segment list (SIDs) in reverse path order: element 0 is the last segment, the last element the first. While Segments Left is non-zero, upper-layer checksums use element 0 as the destination. |
 | `tlvs` | `tlv` — up to offset `hdr_ext_len * 8 + 8` of the group |   |   | Optional TLVs (8-bit type, 8-bit length): Pad1, PadN, HMAC (the HMAC value is Manual). The header is then padded with Pad1 octets to a multiple of 8 (Auto). |
-| `padding` | `padding(8)` |   |   |   |
+| `padding` | `padding(8)` |   |   | Zero padding (Pad1) of the extension header to a multiple of 8 octets (Auto). |
 
 ### `routing_type`
 

@@ -73,6 +73,79 @@ ndp-other = Other configuration flag (O).
 ndp-override-flag = Override flag (O).
 ndp-router-flag = Router flag (R).
 ndp-solicited-flag = Solicited flag (S).
+
+# --- P0 protocol field descriptions (Ethernet, VLAN, IPv4 / IPv6, TCP / UDP, payload) ---
+eth-dst = Destination MAC address.
+eth-src = Source MAC address.
+eth-ethertype = EtherType of the next layer (Auto from the layer above; 0x88b5 = local experimental with no known next layer). A value up to 0x05ff is an IEEE 802.3 length.
+dot3-length = Length of the LLC data in octets (Auto; at most 1500).
+llc-dsap = Destination service access point (Auto: 0xaa = SNAP, 0xfe = OSI, 0x42 = spanning tree).
+llc-ssap = Source service access point (Auto, normally equal to DSAP).
+llc-control = Control field; 0x03 = unnumbered information (UI).
+snap-oui = Organisationally unique identifier; 0 means the protocol id is an EtherType.
+snap-pid = Protocol id (an EtherType when the OUI is 0; Auto from the next layer).
+vlan-pcp = Priority code point (802.1p class of service, 0 to 7).
+vlan-dei = Drop eligible indicator.
+vlan-vid = VLAN identifier (1 to 4094; 0 = priority tag only, 4095 is reserved).
+vlan-ethertype = EtherType of the layer after the tag (Auto; 0x8100 for another 802.1Q tag).
+dot1ad-ethertype = EtherType of the layer after the S-tag (Auto; normally 0x8100 for the 802.1Q C-tag).
+ipv4-version = IP version, always 4.
+ipv4-ihl = Header length in 32-bit words, 5 to 15 (Auto, includes the options).
+ip-dscp = Differentiated services code point (QoS class, 0 to 63).
+ip-ecn = Explicit congestion notification (0 = not ECT, 1 / 2 = ECT, 3 = CE).
+ipv4-total-length = Total length of header and payload in octets (Auto).
+ipv4-identification = Identification shared by the fragments of one datagram.
+ipv4-flags = Flags: DF (don't fragment) and MF (more fragments); the top bit is reserved.
+ipv4-frag-offset = Offset of this fragment in 8-octet units.
+ipv4-ttl = Time to live; decremented at every router, 0 is never sent.
+ipv4-protocol = Protocol number of the next layer (Auto; 253 = experimental when none is known).
+ipv4-header-checksum = Internet checksum over the header (Auto).
+ipv4-src = Source IPv4 address.
+ipv4-dst = Destination IPv4 address.
+ipv4-options = IPv4 options as TLVs (EOL, NOP, security, record route, timestamp...).
+ipv4-padding = Zero padding of the options to a 32-bit boundary (Auto).
+udp-src-port = Source port.
+udp-dst-port = Destination port; selects the next layer when it is Auto (53 = DNS, 67 / 68 = DHCP, 4789 = VXLAN...).
+udp-length = Length of header and payload in octets (Auto).
+udp-checksum = Internet checksum with the IPv4 / IPv6 pseudo header (Auto; 0 becomes 0xffff).
+tcp-src-port = Source port.
+tcp-dst-port = Destination port; selects the next layer (179 = BGP, 646 = LDP, 3868 = Diameter, 5060 = SIP).
+tcp-seq = Sequence number of the first data octet (the initial sequence number with SYN).
+tcp-ack = Acknowledgement number, valid when the ACK flag is set.
+tcp-data-offset = Header length in 32-bit words, 5 to 15 (Auto, includes the options).
+tcp-reserved = Reserved bits, 0.
+tcp-flags = Control flags: CWR, ECE, URG, ACK, PSH, RST, SYN, FIN (default SYN).
+tcp-window = Receive window in octets (scaled by the window scale option).
+tcp-checksum = Internet checksum with the IPv4 / IPv6 pseudo header (Auto).
+tcp-urgent-ptr = Urgent pointer, valid when the URG flag is set.
+tcp-options = TCP options as TLVs: EOL, NOP, MSS, window scale, SACK permitted, SACK, timestamps.
+tcp-padding = Zero padding of the options to a 32-bit boundary (Auto).
+payload-mode = How the payload is generated: fixed (data as given), pattern (data repeated to length), random (length octets from seed) or counter (data with a per-packet counter embedded).
+payload-data = Payload octets; in fixed mode cut or zero-extended to length when length is non-zero, in pattern mode the repeated unit (empty = 00 01 02 ...).
+payload-length = Payload length in octets; 0 keeps the length of data (fixed / counter mode).
+payload-seed = Seed of the pseudo-random generator in random mode.
+payload-counter-offset = Octet offset of the embedded counter in counter mode.
+payload-counter-width = Width of the embedded counter: 4 or 8 octets, big endian.
+payload-counter-value = Counter value written per packet by the stream expander (counter mode).
+raw-data = Raw octets up to the end of the frame.
+ipv6-version = IP version, always 6.
+ipv6-flow-label = Flow label (20 bits) identifying a flow for routers; 0 = none.
+ipv6-payload-length = Length of everything after this header, including extension headers (Auto).
+ipv6-next-header = Protocol number of the next header (Auto; 253 = experimental when none is known).
+ipv6-hop-limit = Hop limit; decremented at every router, 0 is never sent.
+ipv6-src = Source IPv6 address.
+ipv6-dst = Destination IPv6 address.
+ipv6-ext-next-header = Protocol number of the header following this extension header (Auto).
+ipv6-hdr-ext-len = Length of this extension header in 8-octet units, not counting the first 8 octets (Auto).
+ipv6-ext-padding = Zero padding (Pad1) of the extension header to a multiple of 8 octets (Auto).
+field-reserved = Reserved, 0.
+ipv6-frag-identification = Identification shared by the fragments of one packet.
+icmp-checksum = Internet checksum over header and payload (Auto).
+icmpv6-checksum = Internet checksum with the IPv6 pseudo header over header and payload (Auto).
+ndp-cur-hop-limit = Hop limit that hosts should use (0 = unspecified).
+ndp-router-lifetime = Lifetime of the default router in seconds (0 = not a default router).
+ndp-reachable-time = Reachable time in milliseconds (0 = unspecified).
+ndp-retrans-timer = Retransmission timer in milliseconds (0 = unspecified).
 ndp-target = Target address.
 
 ## wpg ifaces

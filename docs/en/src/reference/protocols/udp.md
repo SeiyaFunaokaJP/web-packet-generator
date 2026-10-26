@@ -22,10 +22,10 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `src_port` | `uint(16)` | `49152` |   |   |
-| `dst_port` | `uint(16)` | `9` |   |   |
-| `length` | `uint(16)` |   | Length of the header and payload in octets |   |
-| `checksum` | `uint(16)` |   | Internet checksum with pseudo header over the header and everything after it; a computed 0 is sent as all ones |   |
+| `src_port` | `uint(16)` | `49152` |   | Source port. |
+| `dst_port` | `uint(16)` | `9` |   | Destination port; selects the next layer when it is Auto (53 = DNS, 67 / 68 = DHCP, 4789 = VXLAN...). |
+| `length` | `uint(16)` |   | Length of the header and payload in octets | Length of header and payload in octets (Auto). |
+| `checksum` | `uint(16)` |   | Internet checksum with pseudo header over the header and everything after it; a computed 0 is sent as all ones | Internet checksum with the IPv4 / IPv6 pseudo header (Auto; 0 becomes 0xffff). |
 
 ## Next layer
 

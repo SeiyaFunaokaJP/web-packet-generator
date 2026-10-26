@@ -15,13 +15,13 @@
 
 | Field | Type | Default | Auto | Description |
 |---|---|---|---|---|
-| `cur_hop_limit` | `uint(8)` | `64` |   |   |
+| `cur_hop_limit` | `uint(8)` | `64` |   | Hop limit that hosts should use (0 = unspecified). |
 | `m` | `uint(1)` | `0` |   | Managed address configuration flag (M). |
 | `o` | `uint(1)` | `0` |   | Other configuration flag (O). |
-| `reserved` | `uint(6)` | `0` |   |   |
-| `router_lifetime` | `uint(16)` | `1800` |   |   |
-| `reachable_time` | `uint(32)` | `0` |   |   |
-| `retrans_timer` | `uint(32)` | `0` |   |   |
+| `reserved` | `uint(6)` | `0` |   | Reserved, 0. |
+| `router_lifetime` | `uint(16)` | `1800` |   | Lifetime of the default router in seconds (0 = not a default router). |
+| `reachable_time` | `uint(32)` | `0` |   | Reachable time in milliseconds (0 = unspecified). |
+| `retrans_timer` | `uint(32)` | `0` |   | Retransmission timer in milliseconds (0 = unspecified). |
 | `options` | `bytes` — rest of the PDU |   |   | Raw NDP options (TLV). |
 
 ## Sample templates

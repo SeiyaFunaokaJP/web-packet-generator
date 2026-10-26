@@ -32,8 +32,8 @@ pub fn ethernet2() -> ProtocolDef {
         name: "Ethernet II",
         layer: L2,
         fields: {
-            dst: mac = [0xff; 6];
-            src: mac = [0x02, 0x00, 0x00, 0x00, 0x00, 0x01];
+            dst: mac = [0xff; 6], desc = "eth-dst";
+            src: mac = [0x02, 0x00, 0x00, 0x00, 0x00, 0x01], desc = "eth-src";
             ethertype: enum(16) {
                 0x0800 => ipv4,
                 0x0806 => arp,
@@ -51,7 +51,7 @@ pub fn ethernet2() -> ProtocolDef {
                 0x88e5 => macsec,
                 0x88f7 => ptp,
                 0x8902 => cfm,
-            } = 0x88b5, auto = next_protocol;
+            } = 0x88b5, auto = next_protocol, desc = "eth-ethertype";
         },
         next: ethertype {
             0x0800 => "ipv4",
@@ -89,9 +89,9 @@ pub fn dot3() -> ProtocolDef {
         name: "IEEE 802.3",
         layer: L2,
         fields: {
-            dst: mac = [0xff; 6];
-            src: mac = [0x02, 0x00, 0x00, 0x00, 0x00, 0x01];
-            length: uint(16), auto = length(payload);
+            dst: mac = [0xff; 6], desc = "eth-dst";
+            src: mac = [0x02, 0x00, 0x00, 0x00, 0x00, 0x01], desc = "eth-src";
+            length: uint(16), auto = length(payload), desc = "dot3-length";
         },
         next: length {},
         constraints: {
@@ -124,19 +124,19 @@ pub fn llc() -> ProtocolDef {
                 0xf0 => netbios,
                 0xfe => osi,
                 0xff => global,
-            } = 0xaa, auto = next_protocol;
+            } = 0xaa, auto = next_protocol, desc = "llc-dsap";
             ssap: enum(8) {
                 0x42 => stp,
                 0xaa => snap,
                 0xe0 => ipx,
                 0xf0 => netbios,
                 0xfe => osi,
-            } = 0xaa, auto = next_protocol;
+            } = 0xaa, auto = next_protocol, desc = "llc-ssap";
             control: enum(8) {
                 0x03 => ui,
                 0xaf => xid,
                 0xe3 => test,
-            } = 0x03;
+            } = 0x03, desc = "llc-control";
         },
         next: dsap {
             0xaa => "snap",
@@ -158,7 +158,7 @@ pub fn snap() -> ProtocolDef {
         name: "SNAP",
         layer: L2,
         fields: {
-            oui: uint(24) = 0;
+            oui: uint(24) = 0, desc = "snap-oui";
             pid: enum(16) {
                 0x0800 => ipv4,
                 0x0806 => arp,
@@ -166,7 +166,7 @@ pub fn snap() -> ProtocolDef {
                 0x8100 => vlan,
                 0x86dd => ipv6,
                 0x88b5 => local_experimental,
-            } = 0x88b5, auto = next_protocol;
+            } = 0x88b5, auto = next_protocol, desc = "snap-pid";
         },
         next: pid {
             0x0800 => "ipv4",
@@ -187,9 +187,9 @@ pub fn dot1ad() -> ProtocolDef {
         name: "802.1ad S-VLAN",
         layer: L2,
         fields: {
-            pcp: uint(3) = 0;
-            dei: uint(1) = 0;
-            vid: uint(12) = 1;
+            pcp: uint(3) = 0, desc = "vlan-pcp";
+            dei: uint(1) = 0, desc = "vlan-dei";
+            vid: uint(12) = 1, desc = "vlan-vid";
             ethertype: enum(16) {
                 0x0800 => ipv4,
                 0x0806 => arp,
@@ -199,7 +199,7 @@ pub fn dot1ad() -> ProtocolDef {
                 0x88b5 => local_experimental,
                 0x88f7 => ptp,
                 0x8902 => cfm,
-            } = 0x8100, auto = next_protocol;
+            } = 0x8100, auto = next_protocol, desc = "dot1ad-ethertype";
         },
         next: ethertype {
             0x8100 => "dot1q",
@@ -228,9 +228,9 @@ pub fn dot1q() -> ProtocolDef {
         name: "802.1Q VLAN",
         layer: L2,
         fields: {
-            pcp: uint(3) = 0;
-            dei: uint(1) = 0;
-            vid: uint(12) = 1;
+            pcp: uint(3) = 0, desc = "vlan-pcp";
+            dei: uint(1) = 0, desc = "vlan-dei";
+            vid: uint(12) = 1, desc = "vlan-vid";
             ethertype: enum(16) {
                 0x0800 => ipv4,
                 0x0806 => arp,
@@ -240,7 +240,7 @@ pub fn dot1q() -> ProtocolDef {
                 0x88e5 => macsec,
                 0x88f7 => ptp,
                 0x8902 => cfm,
-            } = 0x88b5, auto = next_protocol;
+            } = 0x88b5, auto = next_protocol, desc = "vlan-ethertype";
         },
         next: ethertype {
             0x0800 => "ipv4",

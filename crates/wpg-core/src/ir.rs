@@ -1113,7 +1113,8 @@ pub fn raw_protocol() -> ProtocolDef {
     let mut def = ProtocolDef::new(RAW_PROTOCOL_ID, "Raw payload", ProtocolLayer::Payload);
     def.fields.push(
         FieldDef::new("data", FieldType::Bytes { len: Length::ToEnd })
-            .with_default(FieldValue::Bytes(Vec::new())),
+            .with_default(FieldValue::Bytes(Vec::new()))
+            .with_description("raw-data"),
     );
     def
 }

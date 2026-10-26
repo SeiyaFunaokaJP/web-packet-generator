@@ -69,11 +69,11 @@ pub fn ipv6() -> ProtocolDef {
         name: "IPv6",
         layer: L3,
         fields: {
-            version: uint(4) = 6;
-            dscp: uint(6) = 0;
-            ecn: uint(2) = 0;
-            flow_label: uint(20) = 0;
-            payload_length: uint(16), auto = length(payload);
+            version: uint(4) = 6, desc = "ipv6-version";
+            dscp: uint(6) = 0, desc = "ip-dscp";
+            ecn: uint(2) = 0, desc = "ip-ecn";
+            flow_label: uint(20) = 0, desc = "ipv6-flow-label";
+            payload_length: uint(16), auto = length(payload), desc = "ipv6-payload-length";
             next_header: enum(8) {
                 0 => hop_by_hop,
                 4 => ipv4,
@@ -94,10 +94,10 @@ pub fn ipv6() -> ProtocolDef {
                 132 => sctp,
                 143 => ethernet,
                 253 => experimental,
-            } = 253, auto = next_protocol;
-            hop_limit: uint(8) = 64;
-            src: ipv6 = [0x2001u16, 0xdb8, 0, 0, 0, 0, 0, 1];
-            dst: ipv6 = [0x2001u16, 0xdb8, 0, 0, 0, 0, 0, 2];
+            } = 253, auto = next_protocol, desc = "ipv6-next-header";
+            hop_limit: uint(8) = 64, desc = "ipv6-hop-limit";
+            src: ipv6 = [0x2001u16, 0xdb8, 0, 0, 0, 0, 0, 1], desc = "ipv6-src";
+            dst: ipv6 = [0x2001u16, 0xdb8, 0, 0, 0, 0, 0, 2], desc = "ipv6-dst";
         },
         pseudo_header: (src, dst),
         constraints: {
@@ -119,10 +119,10 @@ pub fn ipv6_hopopts() -> ProtocolDef {
         name: "IPv6 Hop-by-Hop Options",
         layer: L3,
         fields: {
-            next_header: uint(8) = 253, auto = next_protocol;
-            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1);
+            next_header: uint(8) = 253, auto = next_protocol, desc = "ipv6-ext-next-header";
+            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1), desc = "ipv6-hdr-ext-len";
             options: bytes(from = hdr_ext_len, unit = 8, adjust = 6) = [1, 4, 0, 0, 0, 0], desc = "ipv6-options";
-            padding: padding(8);
+            padding: padding(8), desc = "ipv6-ext-padding";
         },
     };
     d.next = Some(next_header_binding());
@@ -137,10 +137,10 @@ pub fn ipv6_dstopts() -> ProtocolDef {
         name: "IPv6 Destination Options",
         layer: L3,
         fields: {
-            next_header: uint(8) = 253, auto = next_protocol;
-            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1);
+            next_header: uint(8) = 253, auto = next_protocol, desc = "ipv6-ext-next-header";
+            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1), desc = "ipv6-hdr-ext-len";
             options: bytes(from = hdr_ext_len, unit = 8, adjust = 6) = [1, 4, 0, 0, 0, 0], desc = "ipv6-options";
-            padding: padding(8);
+            padding: padding(8), desc = "ipv6-ext-padding";
         },
     };
     d.next = Some(next_header_binding());
@@ -158,8 +158,8 @@ pub fn ipv6_route() -> ProtocolDef {
         name: "IPv6 Routing",
         layer: L3,
         fields: {
-            next_header: uint(8) = 253, auto = next_protocol;
-            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1);
+            next_header: uint(8) = 253, auto = next_protocol, desc = "ipv6-ext-next-header";
+            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1), desc = "ipv6-hdr-ext-len";
             routing_type: enum(8) {
                 0 => source_route_deprecated,
                 2 => mobile_ipv6,
@@ -168,7 +168,7 @@ pub fn ipv6_route() -> ProtocolDef {
             } = 2, desc = "ipv6-routing-type";
             segments_left: uint(8) = 1, desc = "ipv6-segments-left";
             data: bytes(from = hdr_ext_len, unit = 8, adjust = 4) = [0; 20], desc = "ipv6-routing-data";
-            padding: padding(8);
+            padding: padding(8), desc = "ipv6-ext-padding";
         },
         constraints: {
             warning: not_equals(routing_type, 0);
@@ -253,8 +253,8 @@ pub fn ipv6_srh() -> ProtocolDef {
         name: "IPv6 Segment Routing Header",
         layer: L3,
         fields: {
-            next_header: uint(8) = 253, auto = next_protocol;
-            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1);
+            next_header: uint(8) = 253, auto = next_protocol, desc = "ipv6-ext-next-header";
+            hdr_ext_len: uint(8), auto = length(header, unit = words64, adjust = -1), desc = "ipv6-hdr-ext-len";
             routing_type: enum(8) { 4 => segment_routing } = 4, desc = "ipv6-routing-type";
             segments_left: uint(8) = 1, desc = "srh-segments-left";
             last_entry: uint(8), auto = count(segment_list, adjust = -1), desc = "srh-last-entry";
@@ -265,7 +265,7 @@ pub fn ipv6_srh() -> ProtocolDef {
                 seg([0x2001, 0xdb8, 0, 2, 0, 0, 0, 1]),
             ], desc = "srh-segment-list";
             tlvs: ty(srh_tlvs()), desc = "srh-tlvs";
-            padding: padding(8);
+            padding: padding(8), desc = "ipv6-ext-padding";
         },
         constraints: {
             warning: equals(routing_type, 4);
@@ -287,12 +287,12 @@ pub fn ipv6_frag() -> ProtocolDef {
         name: "IPv6 Fragment",
         layer: L3,
         fields: {
-            next_header: uint(8) = 253, auto = next_protocol;
-            reserved: uint(8) = 0;
+            next_header: uint(8) = 253, auto = next_protocol, desc = "ipv6-ext-next-header";
+            reserved: uint(8) = 0, desc = "field-reserved";
             fragment_offset: uint(13) = 0, desc = "ipv6-fragment-offset";
-            res: uint(2) = 0;
+            res: uint(2) = 0, desc = "field-reserved";
             m: uint(1) = 0, desc = "ipv6-more-fragments";
-            identification: uint(32) = 0;
+            identification: uint(32) = 0, desc = "ipv6-frag-identification";
         },
     };
     d.next = Some(next_header_binding());
