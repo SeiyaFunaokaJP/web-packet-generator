@@ -4299,7 +4299,7 @@ dependencies = [
  "url",
  "utoipa",
  "utoipa-swagger-ui-vendored",
- "zip",
+ "zip 8.6.0",
 ]
 
 [[package]]
@@ -4928,7 +4928,7 @@ dependencies = [
  "wpg-core",
  "wpg-protocols",
  "wpg-testutil",
- "zip",
+ "zip 9.0.5",
 ]
 
 [[package]]
@@ -5136,6 +5136,21 @@ dependencies = [
  "flate2",
  "indexmap",
  "memchr",
+ "typed-path",
+ "zopfli",
+]
+
+[[package]]
+name = "zip"
+version = "9.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e04976da629d3b04204ba8105b396a193af8ad2583b2c79bfb3ab8af580a11e"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "indexmap",
+ "memchr",
+ "nix",
  "typed-path",
  "zopfli",
 ]
