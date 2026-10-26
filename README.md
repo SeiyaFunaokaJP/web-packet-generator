@@ -118,7 +118,8 @@ Npcap only and is positioned as "GUI plus low-to-medium rate".
 The user and developer manual is an mdBook in English ([`docs/en`](docs/en/src/SUMMARY.md)) and Japanese
 ([`docs/ja`](docs/ja/src/SUMMARY.md)): installation on the three OSes, tutorials, the generated protocol, CLI,
 API and configuration references, operations (deployment, services, DPDK / AF_XDP, CML2, tuning) and the
-developer guide. Build it with `just docs` (needs `cargo install mdbook --locked`).
+developer guide. It is published at <https://seiyafunaokajp.github.io/web-packet-generator/> and built locally with
+`just docs` (needs `cargo install mdbook --locked`).
 
 ## Roadmap
 

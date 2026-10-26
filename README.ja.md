@@ -113,7 +113,8 @@ workspace の crate: `wpg-core`, `wpg-protocols`, `wpg-tx`, `wpg-rx`, `wpg-templ
 
 利用者・開発者向けのマニュアルは日本語（[`docs/ja`](docs/ja/src/SUMMARY.md)）と英語（[`docs/en`](docs/en/src/SUMMARY.md)）の
 mdBook です。3 OS へのインストール、チュートリアル、自動生成のプロトコル / CLI / API / 設定リファレンス、運用（デプロイ、
-サービス化、DPDK / AF_XDP、CML2、性能チューニング）、開発者ガイドを収録しています。`just docs` でビルドします
+サービス化、DPDK / AF_XDP、CML2、性能チューニング）、開発者ガイドを収録しています。
+<https://seiyafunaokajp.github.io/web-packet-generator/> で公開しており、ローカルでは `just docs` でビルドします
 （`cargo install mdbook --locked` が必要）。
 
 ## ロードマップ
