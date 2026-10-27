@@ -14,6 +14,7 @@
 //! * [`auth`], [`i18n`], [`prefs`]: session, translations (Fluent), theme / locale;
 //! * [`components`]: icons, dialogs, badges, toasts, logs panel, sparkline;
 //! * [`pages`]: dashboard, jobs, templates, settings, login / setup, placeholders;
+//! * [`term`]: the web terminal (xterm.js tabs over `/api/terminal/ws`);
 //! * [`builder`]: the packet builder (phase 2; placeholder route for now);
 //! * [`fmt`], [`validate`], [`shortcuts`], [`sparkline`], [`dom`]: helpers.
 
@@ -35,6 +36,7 @@ mod pages;
 mod prefs;
 mod shortcuts;
 mod sparkline;
+mod term;
 mod validate;
 mod ws;
 

@@ -48,6 +48,13 @@ web-sys = { workspace = true, features = [
     "MediaQueryList",
     "Storage",
     "Url",
+    # web terminal (src/term)
+    "BinaryType",
+    "HtmlTextAreaElement",
+    "MessageEvent",
+    "MouseEvent",
+    "ResizeObserver",
+    "WebSocket",
 ] }
 
 [lints]

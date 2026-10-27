@@ -48,6 +48,8 @@ pub(crate) fn App() -> impl IntoView {
     provide_context(auth);
     provide_context(live);
     provide_context(Toasts::new());
+    // Terminal tabs outlive the terminal page.
+    provide_context(crate::term::TermStore::new());
 
     // Language: <html lang>, Accept-Language of API calls, persistence.
     Effect::new(move |_| {
@@ -103,6 +105,7 @@ pub(crate) fn App() -> impl IntoView {
                     <Route path=path!("jobs") view=pages::jobs::JobsPage />
                     <Route path=path!("templates") view=pages::templates::TemplatesPage />
                     <Route path=path!("rx") view=pages::RxPage />
+                    <Route path=path!("terminal") view=pages::terminal::TerminalPage />
                     <Route path=path!("settings") view=pages::settings::SettingsPage />
                     <Route path=path!("*any") view=pages::NotFound />
                 </ParentRoute>
@@ -207,7 +210,7 @@ struct NavItem {
     chord: &'static str,
 }
 
-const NAV: [NavItem; 6] = [
+const NAV: [NavItem; 7] = [
     NavItem {
         screen: Screen::Dashboard,
         key: "ui-nav-dashboard",
@@ -237,6 +240,12 @@ const NAV: [NavItem; 6] = [
         key: "ui-nav-rx",
         icon: IconName::Rx,
         chord: "g r",
+    },
+    NavItem {
+        screen: Screen::Terminal,
+        key: "ui-nav-terminal",
+        icon: IconName::Terminal,
+        chord: "g c",
     },
     NavItem {
         screen: Screen::Settings,

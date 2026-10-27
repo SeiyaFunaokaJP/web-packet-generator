@@ -64,6 +64,7 @@ pub(crate) enum IconName {
     External,
     Check,
     Warning,
+    Terminal,
 }
 
 impl IconName {
@@ -96,6 +97,7 @@ impl IconName {
             IconName::External => "M14 4h6v6M20 4l-9 9M18 14v6H4V6h6",
             IconName::Check => "M5 12.5l4.5 4.5L19 7.5",
             IconName::Warning => "M12 3.5 2.5 20h19L12 3.5zM12 10v4.5M12 17.5h.01",
+            IconName::Terminal => "M3 4.5h18v15H3zM3 8h18M7 12l2.5 2L7 16M12 16h5",
         }
     }
 }

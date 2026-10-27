@@ -15,9 +15,13 @@ tailwindcss = "4.1.13"
 addresses = ["127.0.0.1"]
 port = 8081
 
-# The WebSocket first: Trunk matches proxies in order.
+# The WebSockets first: Trunk matches proxies in order.
 [[proxy]]
 backend = "ws://127.0.0.1:8080/api/ws"
+ws = true
+
+[[proxy]]
+backend = "ws://127.0.0.1:8080/api/terminal/ws"
 ws = true
 
 [[proxy]]
