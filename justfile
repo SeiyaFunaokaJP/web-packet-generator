@@ -107,6 +107,10 @@ deploy host *args:
     h='{{host}}'
     ./scripts/deploy.sh "${h#host=}" {{args}}
 
+# Deploy wizard: asks host, user, passwords, interfaces... (Windows: scripts\deploy.bat).
+deploy-wizard:
+    ./scripts/deploy.sh --interactive
+
 # Release archive for the host target in dist/ (see docs: Release process).
 dist *args:
     ./scripts/release.sh {{args}}

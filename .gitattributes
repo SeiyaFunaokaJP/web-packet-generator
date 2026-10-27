@@ -1,0 +1,5 @@
+# Line endings that must not depend on core.autocrlf (e.g. a checkout on Windows that
+# scripts/deploy.ps1 uploads to a Linux host, or cmd.exe reading a .bat file).
+*.sh text eol=lf
+packaging/systemd/* text eol=lf
+*.bat text eol=crlf

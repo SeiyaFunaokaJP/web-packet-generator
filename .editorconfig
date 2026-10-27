@@ -19,3 +19,8 @@ end_of_line = crlf
 
 [{justfile,Makefile}]
 indent_style = tab
+
+# Windows PowerShell 5.1 reads a script without a BOM in the ANSI code page, which breaks
+# the Japanese prompts of the deploy wizard.
+[scripts/deploy.ps1]
+charset = utf-8-bom
