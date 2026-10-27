@@ -2,6 +2,8 @@
 
 Supported: Windows 10 21H2 or later. Release binaries are not published yet, so you build from source. Transmission uses Npcap only and is intended for GUI use at low to medium rates; use Linux for high rates. Commands below are for PowerShell.
 
+> **Installing wpg on a Linux lab host from Windows?** You do not need to build anything on Windows. Get the repository (`git clone`, or "Download ZIP" on GitHub and unpack it), then double-click **`scripts\deploy.bat`**. A wizard asks for the host, the SSH user and password, the sudo password, the admin password of the web UI and the interfaces to send on, builds wpg on the host and installs it as a service. Only the OpenSSH client that ships with Windows 10 / 11 is needed. See [Deploying](../operations/deploy.md).
+
 ## 1. Install the prerequisites
 
 1. Install [rustup](https://rustup.rs) (choose the default MSVC toolchain; it asks for the Visual Studio Build Tools "Desktop development with C++" workload if it is missing).
