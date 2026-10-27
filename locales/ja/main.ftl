@@ -2,11 +2,9 @@
 # (wpg-i18n のユニットテストで検査される)。
 
 app-name = Web Packet Generator
-app-tagline = ブラウザから操作できる、ネットワーク検証向け高性能パケットジェネレータ
 
 ## Server / API
 health-ok = サービスは正常です
-server-listening = { $addr } で待ち受け中
 server-placeholder-ui = Web UI はまだビルドされていません。crates/wpg-web で `trunk build` を実行してください。
 
 ## Errors
@@ -16,7 +14,6 @@ error-internal = サーバ内部エラー
 
 ## UI
 ui-language = 言語
-ui-protocols = プロトコル
 
 ## 診断 (wpg-core の `diag::keys`。引数名は契約の一部)
 diag-field-out-of-range = フィールド `{ $field }` = { $value } は範囲 { $min }..{ $max } の外です。
@@ -676,8 +673,6 @@ ui-set-platform = プラットフォーム
 ui-set-features = オプション機能
 ui-set-locales = 言語
 ui-set-license = wpg は MIT または Apache-2.0 のデュアルライセンスです。
-ui-builder-placeholder = パケットビルダー (プロトコルパレット、レイヤスタック、フィールドエディタ、Hex / ツリー表示) は次のステップで提供します。
-ui-builder-placeholder-template = パケットビルダーは次のステップで提供します。テンプレート「{ $id }」はここで開けるようになります。
 ui-reason-end-of-input = キャプチャファイルの終端
 ui-valid-stream-id = 0〜4294967295 の整数を入力してください。
 ui-jobs-verification = 受信検証

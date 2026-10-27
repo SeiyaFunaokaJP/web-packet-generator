@@ -623,4 +623,35 @@ mod tests {
             }
         }
     }
+
+    fn collect_rs(dir: &std::path::Path, out: &mut String) {
+        for entry in std::fs::read_dir(dir).unwrap().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                collect_rs(&path, out);
+            } else if path.extension().is_some_and(|e| e == "rs") {
+                out.push_str(&std::fs::read_to_string(&path).unwrap_or_default());
+            }
+        }
+    }
+
+    /// The other half of the lint: a key that no source file mentions is dead and is removed.
+    /// Keys built at run time from a prefix (`docgen-config-<section>-<key>`, `rtcp-<field>`)
+    /// are covered by their prefix.
+    #[test]
+    fn no_unused_keys() {
+        const DYNAMIC_PREFIXES: &[&str] = &["docgen-", "rtcp-"];
+        let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let mut sources = String::new();
+        collect_rs(&crates, &mut sources);
+        let unused: Vec<_> = message_ids(EN_FTL)
+            .into_iter()
+            .filter(|k| !DYNAMIC_PREFIXES.iter().any(|p| k.starts_with(p)))
+            .filter(|k| !sources.contains(k.as_str()))
+            .collect();
+        assert!(
+            unused.is_empty(),
+            "keys not referenced by any crate: {unused:?}"
+        );
+    }
 }

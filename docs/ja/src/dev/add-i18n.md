@@ -42,7 +42,7 @@
 cargo test -p wpg-i18n
 ```
 
-これが仕様 (`docs/spec/11-risks.md`) の「i18n 抜け漏れ 0 (lint)」にあたります。
+これが仕様 (`docs/spec/11-risks.md`) の「i18n 抜け漏れ 0 (lint)」にあたります。専用の `wpg` サブコマンドはありません。同じテストで、プロトコルカタログのフィールド説明キーがすべて存在すること、使われていないキーが無いこと (`no_unused_keys`: どのソースからも参照されないキーは削除します。実行時に接頭辞から組み立てる `docgen-*` と `rtcp-*` は対象外) も検査します。CI では `cargo test --workspace` の一部として走ります。GUI の E2E (`just e2e`、[e2e/README.md](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/e2e/README.md)) はブラウザ上での言語切替も確認します。
 
 ## プロトコル名・フィールド説明
 

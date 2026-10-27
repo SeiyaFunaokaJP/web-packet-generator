@@ -2,11 +2,9 @@
 # (wpg-i18n 단위 테스트로 검사합니다).
 
 app-name = Web Packet Generator
-app-tagline = 브라우저에서 조작하는 네트워크 테스트용 고성능 패킷 생성기입니다.
 
 ## 서버 / API
 health-ok = 서비스가 정상입니다
-server-listening = { $addr }에서 수신 대기 중
 server-placeholder-ui = 웹 UI가 아직 빌드되지 않았습니다. crates/wpg-web에서 `trunk build`를 실행하십시오.
 
 ## 오류
@@ -16,7 +14,6 @@ error-internal = 내부 서버 오류
 
 ## UI
 ui-language = 언어
-ui-protocols = 프로토콜
 
 ## 진단 (wpg-core `diag::keys`, 인수 이름은 계약의 일부)
 diag-field-out-of-range = 필드 `{ $field }` = { $value } 값이 범위 { $min }..{ $max }를 벗어났습니다.
@@ -676,8 +673,6 @@ ui-set-platform = 플랫폼
 ui-set-features = 선택적 기능
 ui-set-locales = 언어
 ui-set-license = wpg는 MIT 또는 Apache-2.0 이중 라이선스로 제공됩니다.
-ui-builder-placeholder = 패킷 빌더(프로토콜 팔레트, 계층 스택, 필드 편집기, 16진 / 트리 보기)는 다음 마일스톤 단계에서 제공됩니다.
-ui-builder-placeholder-template = 패킷 빌더는 다음 마일스톤 단계에서 제공됩니다. 템플릿 “{ $id }”은(는) 여기에서 열립니다.
 ui-reason-end-of-input = 캡처 파일 끝
 ui-valid-stream-id = 0에서 4294967295 사이의 정수를 입력하십시오.
 ui-jobs-verification = 수신 검증

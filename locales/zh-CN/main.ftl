@@ -2,11 +2,9 @@
 # (由 wpg-i18n 单元测试强制检查)。
 
 app-name = Web Packet Generator
-app-tagline = 面向网络测试的高性能数据包生成器，可直接在浏览器中操作。
 
 ## 服务器 / API
 health-ok = 服务运行正常
-server-listening = 正在监听 { $addr }
 server-placeholder-ui = Web UI 尚未构建。请在 crates/wpg-web 中运行 `trunk build`。
 
 ## 错误
@@ -16,7 +14,6 @@ error-internal = 服务器内部错误
 
 ## UI
 ui-language = 语言
-ui-protocols = 协议
 
 ## 诊断 (wpg-core `diag::keys`；参数名属于接口约定的一部分)
 diag-field-out-of-range = 字段 `{ $field }` = { $value } 超出范围 { $min }..{ $max }。
@@ -676,8 +673,6 @@ ui-set-platform = 平台
 ui-set-features = 可选功能
 ui-set-locales = 语言
 ui-set-license = wpg 采用 MIT 或 Apache-2.0 双重许可。
-ui-builder-placeholder = 数据包构建器 (协议面板、层堆栈、字段编辑器、十六进制 / 树视图) 将在下一个里程碑步骤中提供。
-ui-builder-placeholder-template = 数据包构建器将在下一个里程碑步骤中提供。模板 “{ $id }” 将在此处打开。
 ui-reason-end-of-input = 已到达捕获文件末尾
 ui-valid-stream-id = 请输入 0 到 4294967295 之间的整数。
 ui-jobs-verification = 接收验证
