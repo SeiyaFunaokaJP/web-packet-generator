@@ -130,8 +130,8 @@ DPDK、実機の CML2) は仮想環境以外で未確認です。M10 のリリ�
 ## M10: デプロイ・配布・運用
 
 - [x] `scripts/deploy.sh` (scp + setcap + systemd + ヘルスチェック)、`--dpdk` オプション
-- [ ] `scripts/release.sh` と 3 OS 向け GitHub Release (CI でビルドとスモークテスト済み。リリースワークフローに未完了項目あり)
-- [ ] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順 (すべて作成済み。launchd / Windows / compose の CI ジョブが通ることが残り)
+- [x] `scripts/release.sh` と 3 OS 向け GitHub Release (CI でビルドとスモークテスト済み。最初の公開は M12 で行う)
+- [x] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順 (CI で確認済み)
 - [ ] Windows: Npcap の検出とインストール案内、`build.ps1` の動作確認
 - [x] macOS: Gatekeeper / quarantine の回避手順を記載 (署名・公証は見送り)
 - [x] アップグレード手順とテンプレートの移行 (`wpg template migrate`)

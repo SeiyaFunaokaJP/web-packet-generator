@@ -62,7 +62,7 @@ tail -f /usr/local/var/log/wpg.log
 .\packaging\windows\wpg-service.ps1 -Action Uninstall
 ```
 
-`C:\ProgramData\wpg\wpg.toml` が無ければ (`wpg config init` で) 作り、データは `C:\ProgramData\wpg\data` に置きます。ループバック以外のアドレスで待ち受ける前に `& "C:\Program Files\wpg\wpg.exe" config set-password --config C:\ProgramData\wpg\wpg.toml` でパスワードを設定してください。Npcap が無いときはスクリプトが警告します。
+`C:\ProgramData\wpg\wpg.toml` が無ければ (`wpg config init` で) 作り、データは `C:\ProgramData\wpg\data` に置きます。スクリプトが作るディレクトリは `SYSTEM` と Administrators だけが開けます。`C:\ProgramData` の下に新しく作ったフォルダはすべてのユーザが読めますが、ここにはパスワードのハッシュ、データベース、TLS 鍵が入るためです (既存のディレクトリの権限は変えません)。ループバック以外のアドレスで待ち受ける前に、管理者として開いた PowerShell で `& "C:\Program Files\wpg\wpg.exe" config set-password --config C:\ProgramData\wpg\wpg.toml` でパスワードを設定してください。Npcap が無いときはスクリプトが警告します。
 
 ### ラッパーで本物のサービスにする
 
@@ -80,4 +80,4 @@ sc.exe query wpg
 
 ## 確認状況
 
-systemd unit は、systemd が動く Ubuntu 24.04 コンテナで `scripts/deploy.sh` から起動しました (サーバは `CAP_NET_RAW` と `CAP_NET_ADMIN` だけを持つユーザ `wpg` で動き、`/api/health` に応答しました)。`systemd-analyze verify` も通ります。launchd の plist はパースできることだけ、PowerShell スクリプトはパースと PSScriptAnalyzer のみ確認しました。**実際の macOS と Windows ではまだ確認していません。** リリースのワークフローに、macOS 14 ランナーで launchd デーモンを、Windows ランナーでタスクスケジューラのタスクを登録して `/api/health` を確認するジョブを追加しました ([リリース手順](../dev/release.md) の「CI で確認していること」)。これが緑になった時点でこのページを更新します。
+systemd unit は、systemd が動く Ubuntu 24.04 コンテナで `scripts/deploy.sh` から起動しました (サーバは `CAP_NET_RAW` と `CAP_NET_ADMIN` だけを持つユーザ `wpg` で動き、`/api/health` に応答しました)。`systemd-analyze verify` も通ります。リリースのワークフローは、macOS 14 ランナーで Apple silicon 向けアーカイブから launchd デーモンを、Windows Server ランナーで Windows 向けアーカイブからタスクスケジューラのタスクを上記の手順どおりに登録し、`/api/health` を確認してから停止・削除します。Windows では設定ディレクトリを `BUILTIN\Users` が読めないことも確認します ([リリース手順](../dev/release.md) の「CI で確認していること」)。どちらのジョブも通っています。再起動 (起動時トリガーと `RunAtLoad` そのもの)、NSSM / WinSW によるラップ、Windows での Npcap 経由の送信は確認していません。
