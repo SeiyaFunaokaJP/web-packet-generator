@@ -11,7 +11,7 @@ use crate::cmd::cli_locale;
 /// Runs `wpg doctor`. Exit status 1 if any check failed.
 pub(crate) fn run(args: &crate::DoctorArgs) -> ExitCode {
     let locale = cli_locale();
-    let report = doctor::run();
+    let report = doctor::run(cfg!(feature = "pcap"));
     if args.json {
         match serde_json::to_string_pretty(&to_json(locale, &report)) {
             Ok(s) => println!("{s}"),
@@ -105,7 +105,7 @@ mod tests {
     fn every_summary_and_fix_key_is_translated() {
         // Enumerate keys by running the real checks plus the fixed key lists that depend
         // on the host (the ftl parity test covers en/ja equality).
-        let report = doctor::run();
+        let report = doctor::run(cfg!(feature = "pcap"));
         for c in &report.checks {
             for locale in Locale::ALL {
                 assert_ne!(t(locale, c.summary_key), c.summary_key, "{}", c.summary_key);
@@ -135,6 +135,8 @@ mod tests {
             "doctor-npcap-ok",
             "doctor-npcap-missing",
             "doctor-npcap-no-dll",
+            "doctor-pcap-backend-ok",
+            "doctor-pcap-backend-missing",
             "doctor-pcaplib-ok",
             "doctor-pcaplib-missing",
             "doctor-skip",
@@ -142,6 +144,7 @@ mod tests {
             "doctor-fix-iface",
             "doctor-fix-hugepages",
             "doctor-fix-npcap",
+            "doctor-fix-pcap-backend",
             "doctor-fix-pcaplib",
         ] {
             for locale in Locale::ALL {
@@ -152,7 +155,7 @@ mod tests {
 
     #[test]
     fn render_and_json() {
-        let report = doctor::run();
+        let report = doctor::run(cfg!(feature = "pcap"));
         let text = render(Locale::En, &report);
         assert!(text.contains("[caps.raw_socket]"));
         let j = to_json(Locale::Ja, &report);

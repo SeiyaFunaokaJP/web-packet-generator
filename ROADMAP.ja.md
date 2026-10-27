@@ -10,7 +10,7 @@ wpg 1.0 に向けたマイルストーンです。チェック済みの項目は
 ## 現状
 
 M0〜M11 は完了しています。v1.0 のリリース判定 (M12) を進めており、一部の送出経路 (物理 NIC での AF_XDP zero-copy と
-DPDK、実機の CML2) は仮想環境以外で未確認です。M10 のリリースパッケージングにも未完了の項目があります。
+DPDK、実機の CML2) は仮想環境以外で未確認で、macOS での pcap バックエンド送出と最初のリリース公開が残っています。
 
 ## M0: プロジェクト基盤
 
@@ -132,7 +132,7 @@ DPDK、実機の CML2) は仮想環境以外で未確認です。M10 のリリ�
 - [x] `scripts/deploy.sh` (scp + setcap + systemd + ヘルスチェック)、`--dpdk` オプション
 - [x] `scripts/release.sh` と 3 OS 向け GitHub Release (CI でビルドとスモークテスト済み。最初の公開は M12 で行う)
 - [x] Dockerfile / compose、systemd unit、launchd plist、Windows サービス手順 (CI で確認済み)
-- [ ] Windows: Npcap の検出とインストール案内、`build.ps1` の動作確認
+- [x] Windows: Npcap の検出とインストール案内、`build.ps1` の動作確認
 - [x] macOS: Gatekeeper / quarantine の回避手順を記載 (署名・公証は見送り)
 - [x] アップグレード手順とテンプレートの移行 (`wpg template migrate`)
 

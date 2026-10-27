@@ -24,7 +24,7 @@ Needs read/write access to `/dev/bpf*`. Run with `sudo`, or make the devices acc
 
 ## Windows
 
-Needs Npcap (either install mode; wpg finds `wpcap.dll` in `System32\Npcap` itself) and, only when Npcap was installed in administrator-only mode, an Administrator terminal. `wpg doctor` reads that setting (the `AdminOnly` value under `HKLM\SYSTEM\CurrentControlSet\Services\npcap\Parameters`): unelevated with the default install, `caps.raw_socket` is ok (`npcap_admin_only=no`); with administrator-only mode it fails with the hint `Run from an elevated (Administrator) terminal`; when the setting cannot be read it is a warning. A missing Npcap points to `https://npcap.com/#download`.
+Needs Npcap (either install mode; wpg finds `wpcap.dll` in `System32\Npcap` itself) and, only when Npcap was installed in administrator-only mode, an Administrator terminal. `wpg doctor` reads that setting (the `AdminOnly` value under `HKLM\SYSTEM\CurrentControlSet\Services\npcap\Parameters`): unelevated with the default install, `caps.raw_socket` is ok (`npcap_admin_only=no`); with administrator-only mode it fails with the hint `Run from an elevated (Administrator) terminal, or reinstall Npcap ... without "Restrict Npcap driver's access to Administrators only"`; when the setting cannot be read it is a warning. A missing Npcap points to `https://npcap.com/#download`.
 
 ## Checking with `wpg doctor`
 

@@ -81,6 +81,7 @@ wpg doctor: environment check
     0 x 2048 kB (0 free), 0 x 1048576 kB (0 free)
     → Reserve hugepages and bind the NIC to DPDK: echo 1024 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages ; sudo dpdk-devbind.py --status (then: --bind=vfio-pci <PCI address>)
 - Not applicable on this operating system  [npcap]
+- Not applicable on this operating system  [backend.pcap]
 ✓ libpcap is available  [pcap_lib]
     /usr/lib/x86_64-linux-gnu/libpcap.so
 

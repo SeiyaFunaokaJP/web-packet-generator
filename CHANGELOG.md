@@ -112,6 +112,9 @@ Everything below is the initial development towards 1.0. No version has been tag
   without Npcap, works without the WinPcap-compatible mode, and reports a missing Npcap instead of
   crashing. `scripts/build.sh` adds the backend on macOS, `scripts/build.ps1` when the Npcap SDK is found,
   and `scripts/release.sh` fetches a pinned Npcap SDK for Windows targets (M10).
+- Windows: `wpg doctor` fails the new `backend.pcap` check when `wpg.exe` was built without the Npcap
+  backend, and the administrator-only hint also suggests reinstalling Npcap without that option;
+  `scripts/build.ps1` also finds the Npcap SDK in `C:\npcap-sdk-<version>` or `NPCAP_SDK` (M10).
 - `scripts/smoke-archive.sh` (`just smoke-archive`) and release-workflow jobs, also run on pull requests
   touching the packaging, that test each archive, the launchd daemon with pcap send / receive on macOS,
   the Windows scheduled task and the no-Npcap path, `build.ps1`, and the Docker compose setup (M10).

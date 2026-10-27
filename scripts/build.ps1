@@ -6,7 +6,8 @@
 .PARAMETER Features
   Extra cargo features for the workspace. "pcap" (the Npcap backend, the only way to send
   on Windows) is added automatically when the Npcap SDK is found; it needs the SDK at build
-  time, and wpg.exe then delay-loads wpcap.dll at run time.
+  time (C:\Npcap-SDK, C:\npcap-sdk-<version>, NPCAP_SDK or LIBPCAP_LIBDIR), and wpg.exe
+  then delay-loads wpcap.dll at run time.
 .PARAMETER Dpdk
   Shorthand for -Features dpdk.
 .PARAMETER NoPcap
@@ -64,14 +65,26 @@ if ($env:SystemRoot) {
 }
 
 # Npcap SDK: wpcap.lib is needed to link the pcap feature. scripts/release.sh downloads a
-# pinned SDK by itself; here it is looked up in LIBPCAP_LIBDIR, C:\Npcap-SDK\Lib\x64 or the
-# LIB directories.
+# pinned SDK by itself; here it is looked up in LIBPCAP_LIBDIR, then in Lib\x64 (Lib\ARM64 on
+# ARM64) below NPCAP_SDK, C:\Npcap-SDK and C:\npcap-sdk-<version> (the name of the
+# downloaded zip; the newest version wins), then in the LIB directories.
 # The pcap backend is the only way to send on Windows, so it is added whenever the SDK is
 # found (unless -NoPcap); without the SDK the build still works but cannot send.
 $wantPcap = $Features -match "(^|,)\s*pcap\s*(,|$)"
 $sdkLib = $env:LIBPCAP_LIBDIR
 if (-not $sdkLib) {
-    $candidates = @("C:\Npcap-SDK\Lib\x64") + @(($env:LIB -split ";") | Where-Object { $_ })
+    $sdkArch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "ARM64" } else { "x64" }
+    $sdkRoots = @()
+    if ($env:NPCAP_SDK) { $sdkRoots += $env:NPCAP_SDK }
+    if ($env:SystemRoot) {
+        $sdkRoots += "C:\Npcap-SDK"
+        $sdkRoots += @(Get-ChildItem -Path "C:\" -Directory -Filter "npcap-sdk-*" -ErrorAction SilentlyContinue |
+            Sort-Object -Descending {
+                $v = $null
+                if ([version]::TryParse(($_.Name -replace '^npcap-sdk-', ''), [ref]$v)) { $v } else { [version]"0.0" }
+            } | ForEach-Object { $_.FullName })
+    }
+    $candidates = @($sdkRoots | ForEach-Object { Join-Path $_ "Lib\$sdkArch" }) + @(($env:LIB -split ";") | Where-Object { $_ })
     $sdkLib = $candidates | Where-Object { Test-Path (Join-Path $_ "wpcap.lib") } | Select-Object -First 1
 }
 if (-not $wantPcap -and -not $NoPcap -and $env:SystemRoot) {
@@ -79,12 +92,12 @@ if (-not $wantPcap -and -not $NoPcap -and $env:SystemRoot) {
         if ($Features) { $Features = "$Features,pcap" } else { $Features = "pcap" }
         $wantPcap = $true
     } else {
-        Write-Warning "Npcap SDK not found: building without the pcap backend, so this wpg.exe cannot send. Unpack the SDK (https://npcap.com/#download) to C:\Npcap-SDK, or set LIBPCAP_LIBDIR to its Lib\x64 directory, and build again."
+        Write-Warning "Npcap SDK not found: building without the pcap backend, so this wpg.exe cannot send. Unpack the SDK (https://npcap.com/#download) to C:\Npcap-SDK (or set NPCAP_SDK to the directory you unpacked it to) and build again."
     }
 }
 if ($wantPcap) {
     if (-not $sdkLib) {
-        throw "the pcap feature needs the Npcap SDK (https://npcap.com/#download): unpack it to C:\Npcap-SDK or set LIBPCAP_LIBDIR to its Lib\x64 directory"
+        throw "the pcap feature needs the Npcap SDK (https://npcap.com/#download): unpack it to C:\Npcap-SDK, or set NPCAP_SDK to the directory you unpacked it to (or LIBPCAP_LIBDIR to its Lib\x64 directory)"
     }
     $env:LIBPCAP_LIBDIR = $sdkLib
     # The pcap crate cannot read the libpcap version from the SDK; Npcap 1.x is libpcap 1.10.

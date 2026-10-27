@@ -11,8 +11,8 @@ developer guide and code comments.
 ## Status
 
 M0 to M11 are complete. The v1.0 release gate (M12) is in progress: some transmit paths (AF_XDP zero-copy
-and DPDK on physical NICs, CML2 on real hardware) are not yet verified outside virtual environments, and the
-release packaging of M10 still has open items.
+and DPDK on physical NICs, CML2 on real hardware) are not yet verified outside virtual environments, the pcap
+backend is not yet confirmed on macOS, and the first release has not been published.
 
 ## M0: Project foundation
 
@@ -134,7 +134,7 @@ release packaging of M10 still has open items.
 - [x] `scripts/deploy.sh` (scp + setcap + systemd + health check), `--dpdk` option
 - [x] `scripts/release.sh` and GitHub Releases for the three OSes (built and smoke-tested in CI; the first published release is part of M12)
 - [x] Dockerfile / compose, systemd unit, launchd plist, Windows service procedure (checked in CI)
-- [ ] Windows: Npcap detection and installation guidance, `build.ps1` verification
+- [x] Windows: Npcap detection and installation guidance, `build.ps1` verification
 - [x] macOS: Gatekeeper / quarantine workaround documented (signing and notarisation deferred)
 - [x] Upgrade procedure and template migration (`wpg template migrate`)
 
