@@ -32,7 +32,7 @@ wpg serve --bind 0.0.0.0:8080 --tls        # 以後は任意のアドレスで�
 - ログイン後は `wpg_session` Cookie でセッションを識別します。値はランダムな 256 ビットのトークンで、`HttpOnly; SameSite=Strict` (HTTPS では `Secure` も) を付けて発行します。データベースにはトークンの SHA-256 だけを保存します。
 - セッションの有効期間は `auth.session_ttl_secs` (既定 24 時間) で、リクエストのたびに延長されます。
 - POST、PUT、DELETE のリクエストは、セッションの CSRF トークンを `X-CSRF-Token` ヘッダで送る必要があります。トークンは `GET /api/auth/status` と、スクリプトから読める `wpg_csrf` Cookie で受け取れます。ログインとセットアップには CSRF トークンは不要ですが、`Content-Type: application/json` のリクエストしか受け付けません。
-- WebSocket (`/api/ws`) の接続にもセッション Cookie が必要です。`Origin` が別ホストを指す接続は拒否します。
+- WebSocket (`/api/ws`、Web ターミナルの `/api/terminal/ws`) の接続にもセッション Cookie が必要です。`Origin` が別ホストを指す接続は拒否します。Web ターミナルの安全策は [Web ターミナル](terminal.md#セキュリティ) を参照してください。
 
 API: `GET /api/auth/status`、`POST /api/auth/setup {password, confirm}`、`POST /api/auth/login {password, username?}`、`POST /api/auth/logout`。詳しくは [API リファレンス](../reference/api.md) を参照してください。
 

@@ -8,6 +8,7 @@ pub(crate) mod jobs;
 pub(crate) mod rx;
 pub(crate) mod settings;
 pub(crate) mod templates;
+pub(crate) mod terminal;
 
 use leptos::prelude::*;
 

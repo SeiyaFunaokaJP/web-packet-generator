@@ -246,6 +246,7 @@
 - [Interop checks](operations/interop.md)
 - [Performance tuning](operations/tuning.md)
 - [Authentication and TLS](operations/security.md)
+- [Web terminal (SSH / Telnet)](operations/terminal.md)
 - [Receive and verification](operations/rx-verify.md)
 
 # Developer Guide

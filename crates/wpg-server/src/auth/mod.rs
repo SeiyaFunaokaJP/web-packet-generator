@@ -554,7 +554,7 @@ pub async fn require(State(st): State<AppState>, mut req: Request, next: Next) -
             return e.into_response();
         }
     }
-    if path == "/api/ws"
+    if (path == "/api/ws" || path == "/api/terminal/ws")
         && !st.dev
         && !same_origin(req.headers(), st.config.server.base_url.as_deref())
     {

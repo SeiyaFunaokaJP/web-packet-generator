@@ -32,7 +32,7 @@ wpg serve --bind 0.0.0.0:8080 --tls        # now any address is fine
 - After a login, the `wpg_session` cookie identifies the session. It holds a random 256-bit token and is set with `HttpOnly; SameSite=Strict`, plus `Secure` over HTTPS. The database stores only the token's SHA-256.
 - Sessions last `auth.session_ttl_secs` (default 24 h). Every request extends the session.
 - POST, PUT and DELETE requests must send the session's CSRF token in `X-CSRF-Token`. The server returns the token in `GET /api/auth/status` and in the readable `wpg_csrf` cookie. Login and setup take no CSRF token, but they accept only `Content-Type: application/json`.
-- WebSocket connections (`/api/ws`) need the session cookie. The server rejects them when their `Origin` names another host.
+- WebSocket connections (`/api/ws`, and `/api/terminal/ws` of the web terminal) need the session cookie. The server rejects them when their `Origin` names another host. See [Web terminal](terminal.md#security) for the terminal's safeguards.
 
 API: `GET /api/auth/status`, `POST /api/auth/setup {password, confirm}`, `POST /api/auth/login {password, username?}`, `POST /api/auth/logout`. See the [API reference](../reference/api.md).
 

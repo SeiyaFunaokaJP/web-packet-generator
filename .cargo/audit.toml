@@ -6,4 +6,6 @@ ignore = [
     # paste: unmaintained, compile-time proc-macro helper pulled in by leptos 0.8 (wpg-web).
     # Still a dependency of the newest leptos 0.8; revisit with leptos 0.9.
     "RUSTSEC-2024-0436",
+    # rsa (Marvin attack): only via russh's SSH client in the web terminal; see deny.toml.
+    "RUSTSEC-2023-0071",
 ]

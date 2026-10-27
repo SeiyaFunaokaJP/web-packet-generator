@@ -186,7 +186,7 @@ pub fn subject_alt_names(bind: SocketAddr) -> Vec<String> {
 }
 
 /// Civil date (UTC) of Unix `secs`.
-fn ymd(secs: u64) -> (i32, u8, u8) {
+pub(crate) fn ymd(secs: u64) -> (i32, u8, u8) {
     // Howard Hinnant's days-to-civil algorithm.
     let z = i64::try_from(secs / 86_400).unwrap_or(0) + 719_468;
     let era = z.div_euclid(146_097);

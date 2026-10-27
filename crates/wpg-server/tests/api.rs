@@ -863,6 +863,12 @@ async fn openapi_lists_every_route() {
         ("/api/captures/{id}/packets", &["get"]),
         ("/api/captures/{id}/pcapng", &["get"]),
         ("/api/ws", &["get"]),
+        ("/api/terminal/status", &["get"]),
+        ("/api/terminal/ws", &["get"]),
+        ("/api/terminal/logs", &["get"]),
+        ("/api/terminal/logs/{name}", &["get", "delete"]),
+        ("/api/terminal/known-hosts", &["get"]),
+        ("/api/terminal/known-hosts/{host}/{port}", &["delete"]),
     ];
     for (path, methods) in expected {
         let item = paths

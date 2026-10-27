@@ -1,6 +1,55 @@
 {
   "components": {
     "schemas": {
+      "ActiveSession": {
+        "description": "A running session (`GET /api/terminal/status`).",
+        "properties": {
+          "host": {
+            "description": "Target host as entered.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Session id.",
+            "type": "string"
+          },
+          "log": {
+            "description": "Log file being written, if recording.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "port": {
+            "description": "Target port.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/Protocol",
+            "description": "Protocol."
+          },
+          "started": {
+            "description": "Start (Unix seconds).",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "user": {
+            "description": "wpg user who opened it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "protocol",
+          "host",
+          "port",
+          "started"
+        ],
+        "type": "object"
+      },
       "AuthStatus": {
         "description": "`GET /api/auth/status`.",
         "properties": {
@@ -365,7 +414,7 @@
         "description": "Error object.",
         "properties": {
           "code": {
-            "description": "Stable machine code: `not_found`, `bad_request`, `invalid_template`,\n`policy_violation`, `read_only`, `invalid_state`, `backend_error`,\n`unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`,\n`forbidden`, `already_configured`, `internal`.",
+            "description": "Stable machine code: `not_found`, `bad_request`, `invalid_template`,\n`policy_violation`, `read_only`, `invalid_state`, `backend_error`,\n`unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`,\n`forbidden`, `already_configured`, `terminal_disabled`, `internal`.",
             "type": "string"
           },
           "details": {
@@ -1018,6 +1067,41 @@
         ],
         "type": "object"
       },
+      "KnownHost": {
+        "description": "A stored host key (`GET /api/terminal/known-hosts`).",
+        "properties": {
+          "algorithm": {
+            "description": "Key algorithm (`ssh-ed25519`, `rsa-sha2-512`, ...).",
+            "type": "string"
+          },
+          "comment": {
+            "description": "The entry's comment (who accepted it and when).",
+            "type": "string"
+          },
+          "fingerprint": {
+            "description": "`SHA256:...` fingerprint.",
+            "type": "string"
+          },
+          "host": {
+            "description": "Host as typed by the user who accepted the key (lower case).",
+            "type": "string"
+          },
+          "port": {
+            "description": "TCP port.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "algorithm",
+          "fingerprint",
+          "comment"
+        ],
+        "type": "object"
+      },
       "LintRequest": {
         "description": "`POST /api/lint` request.",
         "properties": {
@@ -1061,6 +1145,38 @@
           "errors",
           "warnings",
           "issues"
+        ],
+        "type": "object"
+      },
+      "LogInfo": {
+        "description": "A past or running session log (`GET /api/terminal/logs`).",
+        "properties": {
+          "active": {
+            "description": "Still being written by a live session.",
+            "type": "boolean"
+          },
+          "modified": {
+            "description": "Last modification (Unix seconds).",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "description": "File name (the id in `/api/terminal/logs/{name}`).",
+            "type": "string"
+          },
+          "size": {
+            "description": "Size in bytes.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "size",
+          "modified",
+          "active"
         ],
         "type": "object"
       },
@@ -1212,6 +1328,32 @@
           "bytes_hex"
         ],
         "type": "object"
+      },
+      "PromptItem": {
+        "description": "One keyboard-interactive prompt.",
+        "properties": {
+          "echo": {
+            "description": "Whether the answer may be shown while typed.",
+            "type": "boolean"
+          },
+          "prompt": {
+            "description": "Prompt text from the server.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "echo"
+        ],
+        "type": "object"
+      },
+      "Protocol": {
+        "description": "Remote protocol.",
+        "enum": [
+          "ssh",
+          "telnet"
+        ],
+        "type": "string"
       },
       "ProtocolSummary": {
         "description": "Catalog entry.",
@@ -1712,6 +1854,551 @@
           "root",
           "writable",
           "favorite"
+        ],
+        "type": "object"
+      },
+      "TerminalClientMessage": {
+        "description": "Client → server message on `/api/terminal/ws`. Keystrokes may also arrive\nas binary frames (raw bytes).",
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TerminalConnectRequest",
+                "description": "First message: opens the session."
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "connect"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "First message: opens the session."
+          },
+          {
+            "description": "Keystrokes / pasted text (UTF-8).",
+            "properties": {
+              "data": {
+                "description": "The text.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "input"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The terminal was resized.",
+            "properties": {
+              "cols": {
+                "description": "Columns.",
+                "format": "int32",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "rows": {
+                "description": "Rows.",
+                "format": "int32",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "resize"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "cols",
+              "rows",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Answer to a `host_key` prompt.",
+            "properties": {
+              "accept": {
+                "description": "Trust the key.",
+                "type": "boolean"
+              },
+              "save": {
+                "description": "Store it in the known hosts (otherwise trust it for this session).",
+                "type": "boolean"
+              },
+              "type": {
+                "enum": [
+                  "host_key"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "accept",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Answers to an `auth_prompt` (one per prompt).",
+            "properties": {
+              "responses": {
+                "description": "The answers.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": {
+                "enum": [
+                  "auth_response"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "responses",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Starts / stops the session log.",
+            "properties": {
+              "enabled": {
+                "description": "Record from now on.",
+                "type": "boolean"
+              },
+              "strip_ansi": {
+                "description": "Remove escape sequences (default true).",
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "record"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "enabled",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Ends the session.",
+            "properties": {
+              "type": {
+                "enum": [
+                  "disconnect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "TerminalConnectRequest": {
+        "description": "`connect`: where to and how to log in.",
+        "properties": {
+          "cols": {
+            "description": "Terminal width.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "host": {
+            "description": "Host name or address.",
+            "type": "string"
+          },
+          "passphrase": {
+            "description": "Passphrase of `private_key`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "password": {
+            "description": "SSH password (also answers a single keyboard-interactive password prompt).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "port": {
+            "description": "Port (default 22 / 23).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "private_key": {
+            "description": "SSH private key (OpenSSH / PEM / `PuTTY` `.ppk` text).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/Protocol",
+            "description": "`ssh` or `telnet`."
+          },
+          "record": {
+            "description": "Record a session log (default: `terminal.record_sessions`).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "rows": {
+            "description": "Terminal height.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "strip_ansi": {
+            "description": "Remove escape sequences from the log (default true).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "username": {
+            "description": "SSH user name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "protocol",
+          "host"
+        ],
+        "type": "object"
+      },
+      "TerminalServerMessage": {
+        "description": "Server → client message on `/api/terminal/ws`. Remote output travels as\nbinary frames.",
+        "oneOf": [
+          {
+            "description": "Progress: `resolving`, `connecting`, `authenticating`.",
+            "properties": {
+              "state": {
+                "description": "The phase.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "state"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An unknown SSH host key: confirm the fingerprint (`host_key` message).",
+            "properties": {
+              "algorithm": {
+                "description": "Key algorithm.",
+                "type": "string"
+              },
+              "fingerprint": {
+                "description": "`SHA256:...`.",
+                "type": "string"
+              },
+              "host": {
+                "description": "Host.",
+                "type": "string"
+              },
+              "port": {
+                "description": "Port.",
+                "format": "int32",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "host_key"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "host",
+              "port",
+              "algorithm",
+              "fingerprint",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The server asks questions (keyboard-interactive, or the password when\nnone was given): answer with `auth_response`.",
+            "properties": {
+              "instructions": {
+                "description": "Instructions from the server.",
+                "type": "string"
+              },
+              "name": {
+                "description": "Request name from the server.",
+                "type": "string"
+              },
+              "prompts": {
+                "description": "The prompts.",
+                "items": {
+                  "$ref": "#/components/schemas/PromptItem"
+                },
+                "type": "array"
+              },
+              "type": {
+                "enum": [
+                  "auth_prompt"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "instructions",
+              "prompts",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The session is up.",
+            "properties": {
+              "address": {
+                "description": "Address actually connected to.",
+                "type": "string"
+              },
+              "fingerprint": {
+                "description": "SSH host key fingerprint.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "host": {
+                "description": "Host.",
+                "type": "string"
+              },
+              "port": {
+                "description": "Port.",
+                "format": "int32",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "protocol": {
+                "$ref": "#/components/schemas/Protocol",
+                "description": "Protocol."
+              },
+              "session_id": {
+                "description": "Session id.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "connected"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_id",
+              "protocol",
+              "host",
+              "port",
+              "address",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Log state after `connected` / `record`.",
+            "properties": {
+              "enabled": {
+                "description": "Recording.",
+                "type": "boolean"
+              },
+              "file": {
+                "description": "The log file (`GET /api/terminal/logs/{name}`).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "record"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "enabled",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A failure; `fatal` ones are followed by `closed`.",
+            "properties": {
+              "code": {
+                "description": "`target_not_allowed`, `too_many_sessions`, `resolve_failed`,\n`connect_failed`, `host_key_changed`, `host_key_rejected`,\n`auth_failed`, `key_invalid`, `ssh_error`, `timeout`, `bad_request`,\n`recording_disabled`, `log_failed`.",
+                "type": "string"
+              },
+              "detail": {
+                "description": "Untranslated detail (an OS / protocol error).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fatal": {
+                "description": "The session ends.",
+                "type": "boolean"
+              },
+              "info": {
+                "description": "`host_key_changed`: `{algorithm, fingerprint, known_algorithm,\nknown_fingerprint}`.",
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "error"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "fatal",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The session ended.",
+            "properties": {
+              "bytes_in": {
+                "description": "Bytes received from the host.",
+                "format": "int64",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "bytes_out": {
+                "description": "Bytes sent to the host.",
+                "format": "int64",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "duration_secs": {
+                "description": "Session length in seconds.",
+                "format": "int64",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "reason": {
+                "description": "`remote` (the host closed it), `client`, `idle`, `shutdown`, `error`.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "closed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "reason",
+              "bytes_in",
+              "bytes_out",
+              "duration_secs",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "TerminalStatus": {
+        "description": "`GET /api/terminal/status`.",
+        "properties": {
+          "allowed_targets": {
+            "description": "`terminal.allowed_targets` (empty = any target).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "enabled": {
+            "description": "`terminal.enabled`.",
+            "type": "boolean"
+          },
+          "idle_timeout_secs": {
+            "description": "`terminal.idle_timeout_secs`.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_sessions": {
+            "description": "`terminal.max_sessions`.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "record_sessions": {
+            "description": "`terminal.record_sessions`.",
+            "type": "boolean"
+          },
+          "sessions": {
+            "description": "Running sessions (all users).",
+            "items": {
+              "$ref": "#/components/schemas/ActiveSession"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "record_sessions",
+          "idle_timeout_secs",
+          "max_sessions",
+          "allowed_targets",
+          "sessions"
         ],
         "type": "object"
       },
@@ -3625,6 +4312,233 @@
         ]
       }
     },
+    "/api/terminal/known-hosts": {
+      "get": {
+        "operationId": "known_hosts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KnownHost"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Host keys"
+          }
+        },
+        "summary": "Trusted SSH host keys (`<data_dir>/terminal/known_hosts`).",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
+    "/api/terminal/known-hosts/{host}/{port}": {
+      "delete": {
+        "operationId": "delete_known_host",
+        "parameters": [
+          {
+            "description": "Host as stored",
+            "in": "path",
+            "name": "host",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Port",
+            "in": "path",
+            "name": "port",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No key stored"
+          }
+        },
+        "summary": "Forgets the host key(s) of `host`:`port` (after a legitimate key change).",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
+    "/api/terminal/logs": {
+      "get": {
+        "operationId": "logs",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LogInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Logs"
+          }
+        },
+        "summary": "Session logs, newest first.",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
+    "/api/terminal/logs/{name}": {
+      "delete": {
+        "operationId": "delete_log",
+        "parameters": [
+          {
+            "description": "Log file name",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown log"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`invalid_state`: the session is still recording"
+          }
+        },
+        "summary": "Deletes a session log (not one that is being written).",
+        "tags": [
+          "terminal"
+        ]
+      },
+      "get": {
+        "operationId": "get_log",
+        "parameters": [
+          {
+            "description": "Log file name",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {}
+            },
+            "description": "The log"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown log"
+          }
+        },
+        "summary": "Downloads a session log (`text/plain`, also while it is being written).",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
+    "/api/terminal/status": {
+      "get": {
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalStatus"
+                }
+              }
+            },
+            "description": "Terminal status"
+          }
+        },
+        "summary": "Configuration and running sessions (also when the terminal is disabled, so\nthe UI can explain how to enable it).",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
+    "/api/terminal/ws": {
+      "get": {
+        "operationId": "ws",
+        "responses": {
+          "101": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalServerMessage"
+                }
+              }
+            },
+            "description": "WebSocket: `TerminalServerMessage` JSON + binary output"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`terminal_disabled` (`terminal.enabled = false`) or `forbidden` (viewer role)"
+          }
+        },
+        "summary": "Opens a terminal session (WebSocket). Send `connect` first; see\n`TerminalClientMessage` / `TerminalServerMessage`. Remote output arrives as\nbinary frames, keystrokes may be sent as binary frames or `input` messages.",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
     "/api/version": {
       "get": {
         "operationId": "version",
@@ -3708,6 +4622,10 @@
     {
       "description": "WebSocket event stream",
       "name": "events"
+    },
+    {
+      "description": "Web terminal: SSH / Telnet sessions, session logs, host keys",
+      "name": "terminal"
     }
   ]
 }
