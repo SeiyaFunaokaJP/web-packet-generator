@@ -1565,3 +1565,21 @@ rtcp-ssrcs = 离开会话的 SSRC / CSRC 标识符。
 rtcp-reason = 可选的离开原因：长度 (Auto)、文本、填充至 32 位。
 rtcp-app-name = 名称 (4 个 ASCII 字符)。
 rtcp-app-data = 与应用相关的数据 (4 个八位组的整数倍)。
+
+## SNMP tool
+
+# wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).
+api-error-snmp-disabled = 此服务器已禁用 SNMP 工具（snmp.enabled = false）。
+api-error-snmp-target = SNMP 目标无效：{ $error }
+api-error-snmp-oid = 对象 / OID 无效：{ $error }
+api-error-snmp-value = 值无效：{ $error }
+api-error-snmp-usm = SNMPv3 设置无效：{ $error }
+api-error-snmp-request = SNMP 请求失败：{ $error }
+api-error-snmp-report = 代理返回了 Report：{ $error }（请检查用户、口令和安全级别）。
+api-error-snmp-timeout = { $target } 无响应（已尝试 { $count } 次）。请检查地址、端口、团体名 / 用户和防火墙。
+api-error-snmp-bind = 无法在 { $addr } 上监听：{ $error }
+api-error-snmp-bind-permission = 无法在 { $addr } 上监听：权限不足。1024 以下的端口（如 162）需要 root 或 CAP_NET_BIND_SERVICE（sudo setcap cap_net_bind_service=+ep /path/to/wpg），或改用 1162 等端口。
+api-error-snmp-mib = MIB 文件 { $file }：{ $error }
+api-error-snmp-mib-bundled = { $what } 随 wpg 内置，无法删除（上传新版本即可替换）。
+config-issue-snmp-listen = 监听地址无效（应为 address:port，例如 0.0.0.0:162）
+config-issue-snmp-privileged-port = 1024 以下的端口需要 root 或 CAP_NET_BIND_SERVICE

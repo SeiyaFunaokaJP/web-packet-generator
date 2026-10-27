@@ -1565,3 +1565,21 @@ rtcp-ssrcs = SSRC / CSRC identifiers leaving the session.
 rtcp-reason = Optional reason for leaving: length (Auto), text, padding to 32 bits.
 rtcp-app-name = Name (4 ASCII characters).
 rtcp-app-data = Application-dependent data (a multiple of 4 octets).
+
+## SNMP tool
+
+# wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).
+api-error-snmp-disabled = The SNMP tool is disabled on this server (snmp.enabled = false).
+api-error-snmp-target = Invalid SNMP target: { $error }
+api-error-snmp-oid = Invalid object / OID: { $error }
+api-error-snmp-value = Invalid value: { $error }
+api-error-snmp-usm = Invalid SNMPv3 settings: { $error }
+api-error-snmp-request = SNMP request failed: { $error }
+api-error-snmp-report = The agent answered with a Report: { $error } (check the user, pass phrases and security level).
+api-error-snmp-timeout = No response from { $target } after { $count } attempt(s). Check the address, port, community / user and firewalls.
+api-error-snmp-bind = Cannot listen on { $addr }: { $error }
+api-error-snmp-bind-permission = Cannot listen on { $addr }: permission denied. Ports below 1024 (such as 162) need root or CAP_NET_BIND_SERVICE (sudo setcap cap_net_bind_service=+ep /path/to/wpg); or use a port such as 1162.
+api-error-snmp-mib = MIB file { $file }: { $error }
+api-error-snmp-mib-bundled = { $what } is bundled with wpg and cannot be deleted (upload a newer version to replace it).
+config-issue-snmp-listen = invalid listen address (expected address:port, e.g. 0.0.0.0:162)
+config-issue-snmp-privileged-port = ports below 1024 need root or CAP_NET_BIND_SERVICE

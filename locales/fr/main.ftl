@@ -1565,3 +1565,21 @@ rtcp-ssrcs = Identifiants SSRC / CSRC quittant la session.
 rtcp-reason = Motif de départ facultatif : longueur (Auto), texte, bourrage à 32 bits.
 rtcp-app-name = Nom (4 caractères ASCII).
 rtcp-app-data = Données dépendantes de l'application (multiple de 4 octets).
+
+## SNMP tool
+
+# wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).
+api-error-snmp-disabled = L’outil SNMP est désactivé sur ce serveur (snmp.enabled = false).
+api-error-snmp-target = Cible SNMP invalide : { $error }
+api-error-snmp-oid = Objet / OID invalide : { $error }
+api-error-snmp-value = Valeur invalide : { $error }
+api-error-snmp-usm = Paramètres SNMPv3 invalides : { $error }
+api-error-snmp-request = Échec de la requête SNMP : { $error }
+api-error-snmp-report = L’agent a répondu par un Report : { $error } (vérifiez l’utilisateur, les phrases secrètes et le niveau de sécurité).
+api-error-snmp-timeout = Aucune réponse de { $target } après { $count } tentative(s). Vérifiez l’adresse, le port, la communauté / l’utilisateur et les pare-feu.
+api-error-snmp-bind = Impossible d’écouter sur { $addr } : { $error }
+api-error-snmp-bind-permission = Impossible d’écouter sur { $addr } : permission refusée. Les ports inférieurs à 1024 (comme 162) exigent root ou CAP_NET_BIND_SERVICE (sudo setcap cap_net_bind_service=+ep /path/to/wpg) ; ou utilisez un port comme 1162.
+api-error-snmp-mib = Fichier MIB { $file } : { $error }
+api-error-snmp-mib-bundled = { $what } est fourni avec wpg et ne peut pas être supprimé (téléversez une version plus récente pour le remplacer).
+config-issue-snmp-listen = adresse d’écoute invalide (attendu adresse:port, p. ex. 0.0.0.0:162)
+config-issue-snmp-privileged-port = les ports inférieurs à 1024 exigent root ou CAP_NET_BIND_SERVICE

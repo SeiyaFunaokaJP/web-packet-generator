@@ -1565,3 +1565,21 @@ rtcp-ssrcs = 세션을 떠나는 SSRC / CSRC 식별자.
 rtcp-reason = 선택적 이탈 사유: 길이(Auto), 텍스트, 32비트 단위 패딩.
 rtcp-app-name = 이름(ASCII 4문자).
 rtcp-app-data = 애플리케이션 종속 데이터(4옥텟의 배수).
+
+## SNMP tool
+
+# wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).
+api-error-snmp-disabled = 이 서버에서는 SNMP 도구가 비활성화되어 있습니다(snmp.enabled = false).
+api-error-snmp-target = SNMP 대상이 올바르지 않습니다: { $error }
+api-error-snmp-oid = 객체 / OID가 올바르지 않습니다: { $error }
+api-error-snmp-value = 값이 올바르지 않습니다: { $error }
+api-error-snmp-usm = SNMPv3 설정이 올바르지 않습니다: { $error }
+api-error-snmp-request = SNMP 요청이 실패했습니다: { $error }
+api-error-snmp-report = 에이전트가 Report로 응답했습니다: { $error }(사용자, 암호 문구, 보안 수준을 확인하세요).
+api-error-snmp-timeout = { $target }에서 응답이 없습니다({ $count }회 시도). 주소, 포트, 커뮤니티 / 사용자, 방화벽을 확인하세요.
+api-error-snmp-bind = { $addr }에서 수신 대기할 수 없습니다: { $error }
+api-error-snmp-bind-permission = { $addr }에서 수신 대기할 수 없습니다: 권한이 없습니다. 1024 미만 포트(162 등)에는 root 또는 CAP_NET_BIND_SERVICE가 필요합니다(sudo setcap cap_net_bind_service=+ep /path/to/wpg). 또는 1162 같은 포트를 사용하세요.
+api-error-snmp-mib = MIB 파일 { $file }: { $error }
+api-error-snmp-mib-bundled = { $what }은(는) wpg에 포함되어 있어 삭제할 수 없습니다(새 버전을 업로드하면 대체됩니다).
+config-issue-snmp-listen = 수신 주소가 올바르지 않습니다(address:port 형식, 예: 0.0.0.0:162)
+config-issue-snmp-privileged-port = 1024 미만 포트에는 root 또는 CAP_NET_BIND_SERVICE가 필요합니다

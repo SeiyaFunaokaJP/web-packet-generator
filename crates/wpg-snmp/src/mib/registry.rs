@@ -181,6 +181,25 @@ pub struct Node {
 }
 
 impl Node {
+    fn implicit(oid: Oid, name: String, module: String) -> Self {
+        Self {
+            oid,
+            name,
+            module,
+            kind: DefKind::ObjectIdentifier,
+            syntax: None,
+            access: None,
+            status: None,
+            description: None,
+            units: None,
+            reference: None,
+            defval: None,
+            index: Vec::new(),
+            augments: None,
+            objects: Vec::new(),
+        }
+    }
+
     /// `MODULE::name`.
     #[must_use]
     pub fn qualified(&self) -> String {
@@ -482,6 +501,49 @@ impl Registry {
                 errors.extend(w.iter().cloned());
             }
             status.insert(mname.clone(), (missing, errors, count));
+        }
+        // `name(n)` components of OID values (`{ iso org(3) dod(6) 1 }`) and
+        // the ASN.1 roots name intermediate nodes nobody defines explicitly.
+        let mut implicit: Vec<(Oid, String, String)> = ROOTS
+            .iter()
+            .map(|(n, v)| (Oid::from([*v]), (*n).to_owned(), "SNMPv2-SMI".to_owned()))
+            .collect();
+        for (mname, l) in &self.modules {
+            for d in &l.parsed.defs {
+                let Some(oid) = r
+                    .oid_cache
+                    .get(&(mname.clone(), d.name.clone()))
+                    .cloned()
+                    .flatten()
+                else {
+                    continue;
+                };
+                let Some(tail) = d.oid.len().checked_sub(1) else {
+                    continue;
+                };
+                for (i, c) in d.oid.iter().enumerate() {
+                    if let OidComp::NamedNum(n, _) = c {
+                        let keep = oid.len().saturating_sub(tail - i);
+                        if keep > 0 {
+                            implicit.push((
+                                Oid::from(&oid.arcs()[..keep]),
+                                n.clone(),
+                                mname.clone(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        for (oid, name, module) in implicit {
+            if nodes.contains_key(&oid) {
+                continue;
+            }
+            by_name.entry(name.clone()).or_default().push(oid.clone());
+            by_qualified
+                .entry((module.clone(), name.clone()))
+                .or_insert_with(|| oid.clone());
+            nodes.insert(oid.clone(), Node::implicit(oid, name, module));
         }
         self.nodes = nodes;
         self.by_name = by_name;

@@ -4968,6 +4968,7 @@ dependencies = [
  "wpg-log",
  "wpg-protocols",
  "wpg-rx",
+ "wpg-snmp",
  "wpg-sys",
  "wpg-template",
  "wpg-tx",

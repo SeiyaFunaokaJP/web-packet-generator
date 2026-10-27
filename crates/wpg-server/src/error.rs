@@ -49,6 +49,9 @@ pub mod codes {
     pub const FORBIDDEN: &str = "forbidden";
     /// The setup screen was already completed.
     pub const ALREADY_CONFIGURED: &str = "already_configured";
+    /// An SNMP request failed (no response, Report PDU, authentication);
+    /// `details.kind` = `timeout`, `report` or `error`.
+    pub const SNMP: &str = "snmp_error";
     /// Anything else.
     pub const INTERNAL: &str = "internal";
 }
@@ -90,7 +93,7 @@ pub struct ErrorInfo {
     /// Stable machine code: `not_found`, `bad_request`, `invalid_template`,
     /// `policy_violation`, `read_only`, `invalid_state`, `backend_error`,
     /// `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`,
-    /// `forbidden`, `already_configured`, `internal`.
+    /// `forbidden`, `already_configured`, `snmp_error`, `internal`.
     pub code: String,
     /// Human readable message in the language of `Accept-Language`.
     pub message: String,

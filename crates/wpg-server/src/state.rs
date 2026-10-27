@@ -13,6 +13,7 @@ use crate::db::{Db, DbError};
 use crate::events::{bus, EventBus, ServerEvent};
 use crate::jobs::JobManager;
 use crate::rx::RxManager;
+use crate::snmp::SnmpManager;
 use crate::store::{StoreError, TemplateStore};
 
 /// How long the interface list is cached.
@@ -69,6 +70,8 @@ pub struct AppState {
     pub jobs: JobManager,
     /// Capture manager.
     pub rx: RxManager,
+    /// SNMP manager tool.
+    pub snmp: SnmpManager,
     /// The `SQLite` database.
     pub db: Db,
     /// Authentication.
@@ -135,6 +138,7 @@ impl AppState {
             db.clone(),
         );
         let rx = RxManager::new(Arc::clone(&config), events.clone());
+        let snmp = SnmpManager::new(&config, events.clone());
         let (shutdown_tx, shutdown) = watch::channel(false);
         Ok(Self {
             config,
@@ -142,6 +146,7 @@ impl AppState {
             templates,
             jobs,
             rx,
+            snmp,
             db,
             auth,
             started_at: Instant::now(),

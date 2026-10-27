@@ -1565,3 +1565,21 @@ rtcp-ssrcs = SSRC- / CSRC-Kennungen, die die Sitzung verlassen.
 rtcp-reason = Optionaler Grund für das Verlassen: Länge (Auto), Text, Padding auf 32 Bit.
 rtcp-app-name = Name (4 ASCII-Zeichen).
 rtcp-app-data = Anwendungsabhängige Daten (ein Vielfaches von 4 Oktetten).
+
+## SNMP tool
+
+# wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).
+api-error-snmp-disabled = Das SNMP-Werkzeug ist auf diesem Server deaktiviert (snmp.enabled = false).
+api-error-snmp-target = Ungültiges SNMP-Ziel: { $error }
+api-error-snmp-oid = Ungültiges Objekt / OID: { $error }
+api-error-snmp-value = Ungültiger Wert: { $error }
+api-error-snmp-usm = Ungültige SNMPv3-Einstellungen: { $error }
+api-error-snmp-request = SNMP-Anfrage fehlgeschlagen: { $error }
+api-error-snmp-report = Der Agent antwortete mit einem Report: { $error } (Benutzer, Passphrasen und Sicherheitsstufe prüfen).
+api-error-snmp-timeout = Keine Antwort von { $target } nach { $count } Versuch(en). Adresse, Port, Community / Benutzer und Firewalls prüfen.
+api-error-snmp-bind = Kann nicht auf { $addr } lauschen: { $error }
+api-error-snmp-bind-permission = Kann nicht auf { $addr } lauschen: Zugriff verweigert. Ports unter 1024 (z. B. 162) erfordern root oder CAP_NET_BIND_SERVICE (sudo setcap cap_net_bind_service=+ep /path/to/wpg); oder einen Port wie 1162 verwenden.
+api-error-snmp-mib = MIB-Datei { $file }: { $error }
+api-error-snmp-mib-bundled = { $what } ist in wpg enthalten und kann nicht gelöscht werden (eine neuere Version hochladen, um es zu ersetzen).
+config-issue-snmp-listen = ungültige Lauschadresse (erwartet Adresse:Port, z. B. 0.0.0.0:162)
+config-issue-snmp-privileged-port = Ports unter 1024 erfordern root oder CAP_NET_BIND_SERVICE
