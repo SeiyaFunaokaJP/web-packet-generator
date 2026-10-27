@@ -2,7 +2,7 @@
 
 Status: draft
 
-まず `wpg bench` で計測し、`docs/perf.md` のベースライン (`lo` と `null` のみで計測) と比較します。特記しない限り、以下のフラグは `wpg send` と `wpg bench` の両方にあります。[CLI リファレンス](../reference/cli.md)を参照してください。
+まず `wpg bench` で計測し、`docs/perf.md` のベースライン (`lo`、`null`、WSL2 上の veth / dummy で計測。実 NIC は未計測。WSL2 では afpacket が 1 コア 2–3 Mpps) と比較します。特記しない限り、以下のフラグは `wpg send` と `wpg bench` の両方にあります。[CLI リファレンス](../reference/cli.md)を参照してください。
 
 ## 進め方
 

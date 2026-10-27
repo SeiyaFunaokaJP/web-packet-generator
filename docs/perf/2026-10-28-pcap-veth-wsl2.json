@@ -1,0 +1,17 @@
+{
+  "backend": "pcap",
+  "detail": null,
+  "iface": "wpgv0",
+  "frame_size": 64,
+  "batch_size": 256,
+  "workers": 1,
+  "packets": 12196608,
+  "dropped": 0,
+  "pps": 2439299.675574516,
+  "bps": 1248921433.8941522,
+  "l1_bps": 1717266971.604459,
+  "elapsed": {
+    "secs": 5,
+    "nanos": 44940
+  }
+}

@@ -151,8 +151,8 @@ release packaging of M10 still has open items.
 ## M12: v1.0 release gate
 
 - [x] All P0 + P1 golden pcaps and tshark cross-checks green
-- [ ] Build, start and pcap-backend transmission confirmed on the three OSes (Windows done; macOS and Linux pcap backend open)
-- [ ] Linux `afpacket` at 1 Mpps/core or more (reference value); DPDK recorded as reference only
+- [ ] Build, start and pcap-backend transmission confirmed on the three OSes (Windows and Linux done; macOS open)
+- [x] Linux `afpacket` at 1 Mpps/core or more (reference value); DPDK recorded as reference only
 - [x] GUI end-to-end tests green, zero i18n gaps (lint)
 - [x] `cargo audit` / `cargo deny` clean
 - [x] Documentation complete in ja / en, CHANGELOG
