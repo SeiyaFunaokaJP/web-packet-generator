@@ -53,6 +53,7 @@ const ENV_SECTIONS: &[&str] = &[
     "tx",
     "log",
     "terminal",
+    "snmp",
 ];
 
 /// The whole configuration (`wpg.toml`).
@@ -79,6 +80,8 @@ pub struct Config {
     pub log: LogConfig,
     /// Web terminal (SSH / Telnet in the browser).
     pub terminal: TerminalConfig,
+    /// SNMP manager tool (ADR-0010).
+    pub snmp: SnmpConfig,
 }
 
 /// `[server]`.
@@ -225,6 +228,30 @@ impl Default for TerminalConfig {
     }
 }
 
+/// `[snmp]`: the SNMP manager tool (Get / Walk / Set / traps, MIBs).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct SnmpConfig {
+    /// Enables the SNMP tool screen and the `/api/snmp` endpoints.
+    pub enabled: bool,
+    /// Address the trap / inform receiver listens on from startup, e.g.
+    /// `0.0.0.0:162` (ports below 1024 need root or `CAP_NET_BIND_SERVICE`).
+    /// Empty: not started at boot (it can be started from the UI).
+    pub trap_listen: String,
+    /// Directory of uploaded MIB files. Empty: `<data_dir>/mibs`.
+    pub mib_dir: PathBuf,
+}
+
+impl Default for SnmpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            trap_listen: String::new(),
+            mib_dir: PathBuf::new(),
+        }
+    }
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
@@ -267,6 +294,7 @@ impl Default for Config {
             tx: TxConfig::default(),
             log: LogConfig::default(),
             terminal: TerminalConfig::default(),
+            snmp: SnmpConfig::default(),
         }
     }
 }
@@ -462,6 +490,16 @@ impl Config {
         self.data_dir.join("wpg.sqlite")
     }
 
+    /// Directory of uploaded MIB files: `snmp.mib_dir` or `<data_dir>/mibs`.
+    #[must_use]
+    pub fn mib_dir(&self) -> PathBuf {
+        if self.snmp.mib_dir.as_os_str().is_empty() {
+            self.data_dir.join("mibs")
+        } else {
+            self.snmp.mib_dir.clone()
+        }
+    }
+
     /// Directory of the generated self-signed certificate.
     #[must_use]
     pub fn tls_dir(&self) -> PathBuf {
@@ -643,6 +681,25 @@ impl Config {
             }
         }
         self.validate_terminal(&mut out);
+        let listen = self.snmp.trap_listen.trim();
+        if !listen.is_empty() {
+            match listen.parse::<SocketAddr>() {
+                Err(e) => out.push(ConfigIssue::new(
+                    Error,
+                    "snmp.trap_listen",
+                    "config-issue-snmp-listen",
+                    format!("{listen}: {e}"),
+                )),
+                Ok(a) if a.port() < 1024 && cfg!(unix) && !self.snmp.enabled => {}
+                Ok(a) if a.port() < 1024 && cfg!(unix) => out.push(ConfigIssue::new(
+                    Warning,
+                    "snmp.trap_listen",
+                    "config-issue-snmp-privileged-port",
+                    a.to_string(),
+                )),
+                Ok(_) => {}
+            }
+        }
         if let Err(e) = tracing_subscriber::EnvFilter::try_new(&self.log.level) {
             out.push(ConfigIssue::new(
                 Error,
@@ -845,6 +902,16 @@ allowed_ifaces = []
 # "--in-memory" unless given). EAL starts with the first dpdk job; changing them
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
+
+[snmp]
+# SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).
+enabled = true
+# Trap / inform receiver started at boot, e.g. "0.0.0.0:162" (ports below 1024
+# need root or CAP_NET_BIND_SERVICE). Empty: not started at boot (it can be
+# started from the UI).
+trap_listen = ""
+# Directory of uploaded MIB files. Empty: <data_dir>/mibs
+mib_dir = ""
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".
@@ -1073,6 +1140,33 @@ mod tests {
             "terminal.max_sessions".into(),
             "config-issue-zero".into()
         )));
+    }
+
+    #[test]
+    fn snmp_section() {
+        let c = Config::from_toml_str(
+            "data_dir = \"/d\"\n[snmp]\nenabled = false\ntrap_listen = \"0.0.0.0:1162\"\n",
+        )
+        .unwrap();
+        assert!(!c.snmp.enabled);
+        assert_eq!(c.mib_dir(), PathBuf::from("/d/mibs"));
+        let mut c = Config::default();
+        c.templates.library_paths = vec![];
+        c.snmp.trap_listen = "nonsense".into();
+        let issues = c.validate();
+        assert!(issues
+            .iter()
+            .any(|i| i.key == "snmp.trap_listen" && i.level == IssueLevel::Error));
+        c.snmp.trap_listen = "0.0.0.0:162".into();
+        c.snmp.mib_dir = "/m".into();
+        assert_eq!(c.mib_dir(), PathBuf::from("/m"));
+        if cfg!(unix) {
+            assert!(c
+                .validate()
+                .iter()
+                .any(|i| i.message_key == "config-issue-snmp-privileged-port"));
+        }
+        assert!(Config::from_toml_str("[snmp]\nbogus = 1\n").is_err());
     }
 }
 

@@ -62,6 +62,16 @@ HTTPS で使う証明書チェーンと秘密鍵 (PEM)。`self_signed_tls` よ�
 | `cert` | `string` |   | `WPG_SERVER__TLS__CERT` | PEM 形式の証明書チェーン。 |
 | `key` | `string` |   | `WPG_SERVER__TLS__KEY` | PEM 形式の秘密鍵。 |
 
+### `[snmp]`
+
+SNMP マネージャツール（Get / Walk / Set / トラップ、MIB アップロード）。
+
+| キー | 型 | 既定値 | 環境変数 | 説明 |
+|---|---|---|---|---|
+| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | SNMP ツール画面と `/api/snmp` を有効にします。 |
+| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | アップロードした MIB ファイルのディレクトリ。空なら `<data_dir>/mibs`。 |
+| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | 起動時からトラップ / インフォーム受信を待ち受けるアドレス（例 `0.0.0.0:162`。1024 未満のポートには root か `CAP_NET_BIND_SERVICE` が必要）。空なら起動時は受信しません（画面から開始できます）。 |
+
 ### `[templates]`
 
 テンプレートライブラリ。
@@ -164,6 +174,16 @@ allowed_ifaces = []
 # "--in-memory" unless given). EAL starts with the first dpdk job; changing them
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
+
+[snmp]
+# SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).
+enabled = true
+# Trap / inform receiver started at boot, e.g. "0.0.0.0:162" (ports below 1024
+# need root or CAP_NET_BIND_SERVICE). Empty: not started at boot (it can be
+# started from the UI).
+trap_listen = ""
+# Directory of uploaded MIB files. Empty: <data_dir>/mibs
+mib_dir = ""
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".

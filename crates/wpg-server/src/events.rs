@@ -56,6 +56,13 @@ pub enum ServerEvent {
         #[schema(value_type = Object)]
         state: CaptureState,
     },
+    /// The SNMP trap receiver got a notification (also listed by
+    /// `GET /api/snmp/traps`).
+    SnmpTrap {
+        /// The rendered notification.
+        #[schema(value_type = crate::snmp::TrapOut)]
+        trap: Box<crate::snmp::TrapOut>,
+    },
 }
 
 impl ServerEvent {

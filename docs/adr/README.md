@@ -15,6 +15,7 @@
 | [0007](0007-protocol-definition.md) | プロトコル定義方式: Rust マクロ + YAML (同一 IR) | Accepted | 2026-09-29 |
 | [0008](0008-naming.md) | 名称: wpg / wpg.toml / .wpg.yaml / .wpgbundle | Accepted | 2026-09-29 |
 | [0009](0009-minimum-os.md) | 最低対応 OS | Accepted | 2026-09-29 |
+| [0010](0010-snmp-manager.md) | SNMP マネージャ機能 (wpg-snmp) | Accepted | 2026-10-27 |
 | [0011](0011-web-terminal.md) | Web ターミナル (ブラウザからの SSH / Telnet) | Accepted | 2026-10-27 |
 
 ## 追加手順

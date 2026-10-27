@@ -13,6 +13,7 @@ use crate::db::{Db, DbError};
 use crate::events::{bus, EventBus, ServerEvent};
 use crate::jobs::JobManager;
 use crate::rx::RxManager;
+use crate::snmp::SnmpManager;
 use crate::store::{StoreError, TemplateStore};
 use crate::terminal::Terminal;
 
@@ -72,6 +73,8 @@ pub struct AppState {
     pub rx: RxManager,
     /// Web terminal.
     pub terminal: Terminal,
+    /// SNMP manager tool.
+    pub snmp: SnmpManager,
     /// The `SQLite` database.
     pub db: Db,
     /// Authentication.
@@ -139,6 +142,7 @@ impl AppState {
         );
         let rx = RxManager::new(Arc::clone(&config), events.clone());
         let terminal = Terminal::new(&config);
+        let snmp = SnmpManager::new(&config, events.clone());
         let (shutdown_tx, shutdown) = watch::channel(false);
         Ok(Self {
             config,
@@ -147,6 +151,7 @@ impl AppState {
             jobs,
             rx,
             terminal,
+            snmp,
             db,
             auth,
             started_at: Instant::now(),

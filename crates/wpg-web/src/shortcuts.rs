@@ -11,6 +11,7 @@ pub(crate) enum Screen {
     Templates,
     Rx,
     Terminal,
+    Snmp,
     Settings,
 }
 
@@ -24,6 +25,7 @@ impl Screen {
             Screen::Templates => "/templates",
             Screen::Rx => "/rx",
             Screen::Terminal => "/terminal",
+            Screen::Snmp => "/snmp",
             Screen::Settings => "/settings",
         }
     }
@@ -50,6 +52,7 @@ pub(crate) const HELP: &[(&str, &str)] = &[
     ("g t", "ui-shortcut-templates"),
     ("g r", "ui-shortcut-rx"),
     ("g c", "ui-shortcut-terminal"),
+    ("g m", "ui-shortcut-snmp"),
     ("g s", "ui-shortcut-settings"),
     ("n", "ui-shortcut-new-job"),
     ("l", "ui-shortcut-logs"),
@@ -93,6 +96,7 @@ impl Parser {
                 "t" | "T" => Screen::Templates,
                 "r" | "R" => Screen::Rx,
                 "c" | "C" => Screen::Terminal,
+                "m" | "M" => Screen::Snmp,
                 "s" | "S" => Screen::Settings,
                 _ => return None,
             };
@@ -138,6 +142,7 @@ mod tests {
             ("t", Screen::Templates),
             ("r", Screen::Rx),
             ("c", Screen::Terminal),
+            ("m", Screen::Snmp),
             ("s", Screen::Settings),
         ] {
             assert_eq!(p.feed("g", false, 1000.0), None);

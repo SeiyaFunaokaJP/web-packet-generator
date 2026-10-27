@@ -1,0 +1,126 @@
+-- *****************************************************************
+-- WPG-EXAMPLE-VENDOR-MIB.my:  a made-up "vendor" MIB for the wpg tests.
+--
+-- It deliberately carries the quirks of real vendor MIBs: banner
+-- comments, tabs, an import from a module nobody has, a symbol used
+-- without importing it, an identifier with an underscore, a macro the
+-- parser does not know, an SMIv1 TRAP-TYPE inside an SMIv2 module and one
+-- definition that is simply broken.
+-- *****************************************************************
+
+WPG-EXAMPLE-VENDOR-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
+	enterprises, Integer32		FROM SNMPv2-SMI
+	TEXTUAL-CONVENTION		FROM SNMPv2-TC
+	TRAP-TYPE			FROM RFC-1215
+	AcmeOpaqueThing			FROM ACME-SMI-MISSING;   -- nobody has this one
+
+wpgExample MODULE-IDENTITY
+	LAST-UPDATED	"202610270000Z"
+	ORGANIZATION	"wpg contributors"
+	CONTACT-INFO	"https://example.invalid/"
+	DESCRIPTION
+		"Example vendor MIB used by the wpg-snmp tests."
+	::= { enterprises 99999 }
+
+-------------------------------------------------------------------
+-- Textual conventions
+-------------------------------------------------------------------
+
+WpgCentiDegrees ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"d-2"
+	STATUS		current
+	DESCRIPTION	"Temperature in hundredths of a degree."
+	SYNTAX		Integer32 (-10000..20000)
+
+wpgObjects	OBJECT IDENTIFIER ::= { wpgExample 1 }
+wpgNotifications OBJECT IDENTIFIER ::= { wpgExample 0 }
+
+wpgFanTable OBJECT-TYPE
+	SYNTAX	SEQUENCE OF WpgFanEntry
+	MAX-ACCESS	not-accessible
+	STATUS	current
+	DESCRIPTION	"Fans."
+	::= { wpgObjects 1 }
+
+wpgFanEntry OBJECT-TYPE
+	SYNTAX	WpgFanEntry
+	MAX-ACCESS	not-accessible
+	STATUS	current
+	DESCRIPTION	"One fan."
+	INDEX	{ wpgFanIndex }
+	::= { wpgFanTable 1 }
+
+WpgFanEntry ::= SEQUENCE {
+	wpgFanIndex	Integer32,
+	wpgFanName	DisplayString,
+	wpgFanState	INTEGER,
+	wpgFanTemp	WpgCentiDegrees,
+	wpgFan_Vendor	AcmeOpaqueThing
+}
+
+wpgFanIndex OBJECT-TYPE
+	SYNTAX      Integer32 (1..64)
+	MAX-ACCESS  not-accessible
+	STATUS      current
+	DESCRIPTION "Fan number."
+	::= { wpgFanEntry 1 }
+
+-- DisplayString is used without being imported (a classic).
+wpgFanName OBJECT-TYPE
+	SYNTAX      DisplayString (SIZE (0..32))
+	MAX-ACCESS  read-only
+	STATUS      current
+	DESCRIPTION "Fan name."
+	::= { wpgFanEntry 2 }
+
+wpgFanState OBJECT-TYPE
+	SYNTAX      INTEGER { ok(1),   -- spinning
+	                      degraded(2),
+	                      failed(3) }
+	MAX-ACCESS  read-only
+	STATUS      current
+	DESCRIPTION "Fan state."
+	::= { wpgFanEntry 3 }
+
+wpgFanTemp OBJECT-TYPE
+	SYNTAX      WpgCentiDegrees
+	UNITS       "degC"
+	MAX-ACCESS  read-only
+	STATUS      current
+	DESCRIPTION "Air temperature at the fan."
+	::= { wpgFanEntry 4 }
+
+wpgFan_Vendor OBJECT-TYPE
+	SYNTAX      AcmeOpaqueThing
+	MAX-ACCESS  read-only
+	STATUS      current
+	DESCRIPTION "Vendor data."
+	::= { wpgFanEntry 5 }
+
+-- A macro this parser has never heard of.
+wpgCapabilityThing WPG-PRIVATE-MACRO
+	FLAVOUR	strawberry
+	COUNT	{ 1, 2, 3 }
+	::= { wpgExample 7 }
+
+-- Broken: the SYNTAX is missing its type.
+wpgBroken OBJECT-TYPE
+	SYNTAX
+	::= }
+
+wpgFanFailure NOTIFICATION-TYPE
+	OBJECTS { wpgFanName, wpgFanState }
+	STATUS  current
+	DESCRIPTION "A fan failed."
+	::= { wpgNotifications 1 }
+
+wpgLegacyTrap TRAP-TYPE
+	ENTERPRISE  wpgExample
+	VARIABLES   { wpgFanName }
+	DESCRIPTION "The same in SMIv1 style."
+	::= 5
+
+END

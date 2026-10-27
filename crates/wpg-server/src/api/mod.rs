@@ -16,6 +16,7 @@ pub mod captures;
 pub mod jobs;
 pub mod packets;
 pub mod protocols;
+pub mod snmp;
 pub mod system;
 pub mod templates;
 pub mod terminal;
@@ -49,6 +50,7 @@ pub mod ws;
         (name = "captures", description = "Receive counters, captured frames and signature verification"),
         (name = "events", description = "WebSocket event stream"),
         (name = "terminal", description = "Web terminal: SSH / Telnet sessions, session logs, host keys"),
+        (name = "snmp", description = "SNMP manager tool: Get / Walk / Set / traps, MIBs, trap receiver, pcap recording"),
     ),
     components(schemas(
         crate::auth::AuthStatus,
@@ -67,6 +69,7 @@ pub mod ws;
         crate::terminal::ClientMsg,
         crate::terminal::ConnectRequest,
         crate::terminal::ServerMsg,
+        crate::snmp::TrapOut,
     ))
 )]
 struct ApiDoc;
@@ -140,6 +143,25 @@ fn parts() -> (Router<AppState>, utoipa::openapi::OpenApi) {
         .routes(routes!(captures::stop))
         .routes(routes!(captures::packets))
         .routes(routes!(captures::pcapng))
+        .routes(routes!(snmp::status))
+        .routes(routes!(snmp::get))
+        .routes(routes!(snmp::getnext))
+        .routes(routes!(snmp::getbulk))
+        .routes(routes!(snmp::walk))
+        .routes(routes!(snmp::set))
+        .routes(routes!(snmp::trap))
+        .routes(routes!(snmp::inform))
+        .routes(routes!(snmp::mibs, snmp::upload_mibs))
+        .routes(routes!(snmp::delete_mib))
+        .routes(routes!(snmp::tree))
+        .routes(routes!(snmp::node))
+        .routes(routes!(snmp::search))
+        .routes(routes!(snmp::receiver))
+        .routes(routes!(snmp::receiver_start))
+        .routes(routes!(snmp::receiver_stop))
+        .routes(routes!(snmp::traps, snmp::clear_traps))
+        .routes(routes!(snmp::capture, snmp::capture_control))
+        .routes(routes!(snmp::capture_download))
         .routes(routes!(ws::ws))
         .routes(routes!(terminal::status))
         .routes(routes!(terminal::ws))

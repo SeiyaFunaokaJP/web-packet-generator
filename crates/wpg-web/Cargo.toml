@@ -31,6 +31,7 @@ wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 web-sys = { workspace = true, features = [
     "Blob",
+    "DataTransfer",
     "BlobPropertyBag",
     "Document",
     "DomTokenList",

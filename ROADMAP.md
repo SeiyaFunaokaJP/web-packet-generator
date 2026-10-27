@@ -157,6 +157,12 @@ release packaging of M10 still has open items.
 - [x] `cargo audit` / `cargo deny` clean
 - [ ] Documentation complete in ja / en, CHANGELOG
 
+## Added beyond the 1.0 plan
+
+- [x] SNMP manager (Get / Walk / Set / traps, v1 / v2c / v3, MIB upload, pcap recording; ADR-0010)
+- [x] Web terminal (SSH / Telnet; ADR-0011)
+- [x] Interactive deploy wizard (Windows `deploy.bat` / `deploy.ps1`, `deploy.sh`)
+
 ## After 1.0
 
 Candidates, not commitments: stateful sessions (TCP handshakes, HTTP clients), 802.11, further P3

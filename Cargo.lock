@@ -2616,6 +2616,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
+name = "md-5"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69b6441f590336821bb897fb28fc622898ccceb1d6cea3fde5ea86b090c4de98"
+dependencies = [
+ "cfg-if",
+ "digest 0.11.3",
+]
+
+[[package]]
 name = "md5"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6030,9 +6040,29 @@ dependencies = [
  "wpg-log",
  "wpg-protocols",
  "wpg-rx",
+ "wpg-snmp",
  "wpg-sys",
  "wpg-template",
  "wpg-tx",
+]
+
+[[package]]
+name = "wpg-snmp"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "des",
+ "getrandom 0.4.3",
+ "md-5",
+ "serde",
+ "serde_json",
+ "sha1 0.11.0",
+ "sha2 0.11.1",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "wpg-core",
+ "wpg-protocols",
 ]
 
 [[package]]

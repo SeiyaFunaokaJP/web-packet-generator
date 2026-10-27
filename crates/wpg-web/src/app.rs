@@ -106,6 +106,7 @@ pub(crate) fn App() -> impl IntoView {
                     <Route path=path!("templates") view=pages::templates::TemplatesPage />
                     <Route path=path!("rx") view=pages::RxPage />
                     <Route path=path!("terminal") view=pages::terminal::TerminalPage />
+                    <Route path=path!("snmp") view=pages::snmp::SnmpPage />
                     <Route path=path!("settings") view=pages::settings::SettingsPage />
                     <Route path=path!("*any") view=pages::NotFound />
                 </ParentRoute>
@@ -210,7 +211,7 @@ struct NavItem {
     chord: &'static str,
 }
 
-const NAV: [NavItem; 7] = [
+const NAV: [NavItem; 8] = [
     NavItem {
         screen: Screen::Dashboard,
         key: "ui-nav-dashboard",
@@ -246,6 +247,12 @@ const NAV: [NavItem; 7] = [
         key: "ui-nav-terminal",
         icon: IconName::Terminal,
         chord: "g c",
+    },
+    NavItem {
+        screen: Screen::Snmp,
+        key: "ui-nav-snmp",
+        icon: IconName::Snmp,
+        chord: "g m",
     },
     NavItem {
         screen: Screen::Settings,

@@ -155,6 +155,12 @@ DPDK、実機の CML2) は仮想環境以外で未確認です。M10 のリリ�
 - [x] `cargo audit` / `cargo deny` クリーン
 - [ ] ドキュメントが ja / en そろっている、CHANGELOG
 
+## 1.0 の計画外で追加した機能
+
+- [x] SNMP マネージャ (Get / Walk / Set / Trap、v1 / v2c / v3、MIB アップロード、pcap 保存。ADR-0010)
+- [x] Web ターミナル (SSH / Telnet。ADR-0011)
+- [x] 対話式デプロイウィザード (Windows の `deploy.bat` / `deploy.ps1`、`deploy.sh`)
+
 ## 1.0 以降
 
 候補であり確約ではありません: ステートフルなセッション (TCP ハンドシェイク、HTTP クライアント)、802.11、

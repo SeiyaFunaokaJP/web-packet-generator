@@ -10,6 +10,7 @@ members = [
     "crates/wpg-sys",
     "crates/wpg-server",
     "crates/wpg-log",
+    "crates/wpg-snmp",
     "crates/wpg-cli",
     "crates/wpg-web",
     "crates/wpg-testutil",
@@ -31,6 +32,7 @@ default-members = [
     "crates/wpg-sys",
     "crates/wpg-server",
     "crates/wpg-log",
+    "crates/wpg-snmp",
     "crates/wpg-cli",
 ]
 
@@ -57,6 +59,7 @@ wpg-sys = { path = "crates/wpg-sys", version = "0.1.0" }
 wpg-server = { path = "crates/wpg-server", version = "0.1.0" }
 wpg-testutil = { path = "crates/wpg-testutil", version = "0.1.0" }
 wpg-log = { path = "crates/wpg-log", version = "0.1.0" }
+wpg-snmp = { path = "crates/wpg-snmp", version = "0.1.0" }
 dpdk-sys = { path = "crates/dpdk-sys", version = "0.1.0" }
 
 # --- shared third-party crates ---
@@ -109,6 +112,13 @@ todo = "warn"
 [profile.dev.package.argon2]
 opt-level = 3
 [profile.dev.package.blake2]
+opt-level = 3
+# SNMPv3 key derivation (wpg-snmp) hashes 1 MiB per pass phrase.
+[profile.dev.package.md-5]
+opt-level = 3
+[profile.dev.package.sha1]
+opt-level = 3
+[profile.dev.package.sha2]
 opt-level = 3
 
 [profile.release]

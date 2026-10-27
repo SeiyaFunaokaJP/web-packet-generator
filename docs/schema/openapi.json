@@ -142,6 +142,23 @@
         ],
         "type": "object"
       },
+      "CaptureControl": {
+        "description": "`POST /api/snmp/capture` body.",
+        "properties": {
+          "clear": {
+            "description": "Discard the recorded frames first.",
+            "type": "boolean"
+          },
+          "enabled": {
+            "description": "Start (`true`) / stop (`false`) recording.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "CaptureInfo": {
         "description": "A capture as returned by the API.",
         "properties": {
@@ -298,6 +315,32 @@
         },
         "type": "object"
       },
+      "CaptureStatus": {
+        "description": "pcap recording state.",
+        "properties": {
+          "dropped": {
+            "description": "Frames dropped because the buffer was full.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "enabled": {
+            "description": "Recording.",
+            "type": "boolean"
+          },
+          "frames": {
+            "description": "Kept frames.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "frames",
+          "dropped"
+        ],
+        "type": "object"
+      },
       "CapturedFrame": {
         "description": "One kept frame.",
         "properties": {
@@ -414,7 +457,7 @@
         "description": "Error object.",
         "properties": {
           "code": {
-            "description": "Stable machine code: `not_found`, `bad_request`, `invalid_template`,\n`policy_violation`, `read_only`, `invalid_state`, `backend_error`,\n`unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`,\n`forbidden`, `already_configured`, `terminal_disabled`, `internal`.",
+            "description": "Stable machine code: `not_found`, `bad_request`, `invalid_template`,\n`policy_violation`, `read_only`, `invalid_state`, `backend_error`,\n`unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`,\n`forbidden`, `already_configured`, `terminal_disabled`, `snmp_error`, `internal`.",
             "type": "string"
           },
           "details": {
@@ -1200,6 +1243,132 @@
         ],
         "type": "object"
       },
+      "MibDeleted": {
+        "description": "Removed modules.",
+        "properties": {
+          "removed": {
+            "description": "Modules removed with the file.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "removed"
+        ],
+        "type": "object"
+      },
+      "MibFileIn": {
+        "description": "One file of an upload.",
+        "properties": {
+          "content": {
+            "description": "File content (text).",
+            "type": "string"
+          },
+          "name": {
+            "description": "File name (`CISCO-SMI.my`; `.mib`, `.txt`, `.my`, `.smi`, `.asn`,\n`.asn1` or none).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "content"
+        ],
+        "type": "object"
+      },
+      "MibModuleOut": {
+        "description": "A loaded MIB module.",
+        "properties": {
+          "bundled": {
+            "description": "Bundled with wpg (cannot be deleted).",
+            "type": "boolean"
+          },
+          "errors": {
+            "description": "Problems: parse warnings, unresolved definitions.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "file": {
+            "description": "Uploaded file it came from.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "missing_imports": {
+            "description": "Modules named in IMPORTS that are not loaded (upload them).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "Module name.",
+            "type": "string"
+          },
+          "nodes": {
+            "description": "Resolved definitions.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "status": {
+            "description": "`ok`, `partial` (loaded with problems) or `error`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "bundled",
+          "status",
+          "missing_imports",
+          "errors",
+          "nodes"
+        ],
+        "type": "object"
+      },
+      "MibUpload": {
+        "description": "`POST /api/snmp/mibs` body.",
+        "properties": {
+          "files": {
+            "description": "Files.",
+            "items": {
+              "$ref": "#/components/schemas/MibFileIn"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "type": "object"
+      },
+      "MibUploadResult": {
+        "description": "`POST /api/snmp/mibs` result.",
+        "properties": {
+          "files": {
+            "description": "Per file.",
+            "items": {
+              "$ref": "#/components/schemas/UploadedFile"
+            },
+            "type": "array"
+          },
+          "modules": {
+            "description": "The state of the uploaded modules after loading (missing imports are\nnamed here).",
+            "items": {
+              "$ref": "#/components/schemas/MibModuleOut"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "files",
+          "modules"
+        ],
+        "type": "object"
+      },
       "Mix": {
         "description": "How several streams are interleaved.",
         "enum": [
@@ -1208,6 +1377,174 @@
           "round_robin"
         ],
         "type": "string"
+      },
+      "NamedNumber": {
+        "description": "An enumeration value / BITS position.",
+        "properties": {
+          "label": {
+            "description": "Label.",
+            "type": "string"
+          },
+          "value": {
+            "description": "Number.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "type": "object"
+      },
+      "NodeOut": {
+        "description": "MIB node details.",
+        "properties": {
+          "access": {
+            "description": "MAX-ACCESS.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "augments": {
+            "description": "AUGMENTS.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "base_type": {
+            "description": "Base type.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "defval": {
+            "description": "DEFVAL.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "description": "DESCRIPTION.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_hint": {
+            "description": "DISPLAY-HINT.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enums": {
+            "description": "Enumeration / BITS names.",
+            "items": {
+              "$ref": "#/components/schemas/NamedNumber"
+            },
+            "type": "array"
+          },
+          "index": {
+            "description": "INDEX (of a row; AUGMENTS followed).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "instance": {
+            "description": "Instance part of the requested id (`3` of `ifDescr.3`).",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`object_type`, `object_identifier`, ...",
+            "type": "string"
+          },
+          "module": {
+            "description": "Module.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Descriptor.",
+            "type": "string"
+          },
+          "objects": {
+            "description": "OBJECTS / VARIABLES (notifications).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "oid": {
+            "description": "OID of the definition.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Path from the root.",
+            "items": {
+              "$ref": "#/components/schemas/PathElem"
+            },
+            "type": "array"
+          },
+          "reference": {
+            "description": "REFERENCE.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "description": "Table / row / column / scalar.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "STATUS.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "syntax": {
+            "description": "SYNTAX text.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type_name": {
+            "description": "Textual convention.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "units": {
+            "description": "UNITS.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "oid",
+          "instance",
+          "name",
+          "module",
+          "kind",
+          "enums",
+          "index",
+          "objects",
+          "path"
+        ],
+        "type": "object"
       },
       "Overview": {
         "description": "`GET /api/stats/overview` response.",
@@ -1329,6 +1666,24 @@
         ],
         "type": "object"
       },
+      "PathElem": {
+        "description": "Breadcrumb element.",
+        "properties": {
+          "name": {
+            "description": "Name (or the number).",
+            "type": "string"
+          },
+          "oid": {
+            "description": "OID.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "oid",
+          "name"
+        ],
+        "type": "object"
+      },
       "PromptItem": {
         "description": "One keyboard-interactive prompt.",
         "properties": {
@@ -1396,6 +1751,127 @@
           "fields",
           "next",
           "synth"
+        ],
+        "type": "object"
+      },
+      "ReceiverStart": {
+        "description": "`POST /api/snmp/receiver/start` body.",
+        "properties": {
+          "communities": {
+            "description": "Accepted communities (empty = any; others are listed with an error).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "listen": {
+            "description": "Listen address (`0.0.0.0:162`, `[::]:1162`).",
+            "type": "string"
+          },
+          "users": {
+            "description": "v3 users (kept in memory while the receiver runs).",
+            "items": {
+              "$ref": "#/components/schemas/ReceiverUserIn"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "listen"
+        ],
+        "type": "object"
+      },
+      "ReceiverStatus": {
+        "description": "Trap receiver state.",
+        "properties": {
+          "communities": {
+            "description": "Accepted communities (empty = any).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "engine_id": {
+            "description": "This receiver's engine id (hex), for v3 informs.",
+            "type": "string"
+          },
+          "from_config": {
+            "description": "Started at boot from `snmp.trap_listen`.",
+            "type": "boolean"
+          },
+          "listen": {
+            "description": "Bound address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "received": {
+            "description": "Notifications received since the start.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "running": {
+            "description": "Listening.",
+            "type": "boolean"
+          },
+          "users": {
+            "description": "Configured v3 user names.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "running",
+          "communities",
+          "users",
+          "engine_id",
+          "received",
+          "from_config"
+        ],
+        "type": "object"
+      },
+      "ReceiverUserIn": {
+        "description": "A v3 user of the receiver.",
+        "properties": {
+          "auth_password": {
+            "description": "Authentication pass phrase.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "auth_protocol": {
+            "description": "Authentication protocol (default `SHA`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priv_password": {
+            "description": "Privacy pass phrase.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priv_protocol": {
+            "description": "Privacy protocol (default `AES`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user": {
+            "description": "User name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user"
         ],
         "type": "object"
       },
@@ -1528,6 +2004,48 @@
           "viewer"
         ],
         "type": "string"
+      },
+      "SearchHit": {
+        "description": "A search hit.",
+        "properties": {
+          "kind": {
+            "description": "Kind.",
+            "type": "string"
+          },
+          "module": {
+            "description": "Module.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Descriptor.",
+            "type": "string"
+          },
+          "oid": {
+            "description": "OID.",
+            "type": "string"
+          },
+          "role": {
+            "description": "Table / row / column / scalar.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "syntax": {
+            "description": "SYNTAX text.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "module",
+          "oid",
+          "kind"
+        ],
+        "type": "object"
       },
       "ServerEvent": {
         "description": "One message from the server to WebSocket clients.",
@@ -1670,6 +2188,26 @@
               "type"
             ],
             "type": "object"
+          },
+          {
+            "description": "The SNMP trap receiver got a notification (also listed by\n`GET /api/snmp/traps`).",
+            "properties": {
+              "trap": {
+                "$ref": "#/components/schemas/TrapOut",
+                "description": "The rendered notification."
+              },
+              "type": {
+                "enum": [
+                  "snmp_trap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "trap",
+              "type"
+            ],
+            "type": "object"
           }
         ]
       },
@@ -1688,6 +2226,474 @@
         "required": [
           "password",
           "confirm"
+        ],
+        "type": "object"
+      },
+      "SnmpBulkRequest": {
+        "description": "GetBulk request body.",
+        "properties": {
+          "max_repetitions": {
+            "description": "`max-repetitions` (default 10).",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "non_repeaters": {
+            "description": "`non-repeaters` (default 0).",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "oids": {
+            "description": "Objects (the first `non_repeaters` are fetched once).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "target": {
+            "$ref": "#/components/schemas/SnmpTarget",
+            "description": "The agent."
+          }
+        },
+        "required": [
+          "target",
+          "oids"
+        ],
+        "type": "object"
+      },
+      "SnmpNotifyRequest": {
+        "description": "Trap / Inform request body.",
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/SnmpTarget",
+            "description": "The receiver (port default 162)."
+          },
+          "trap_oid": {
+            "description": "`snmpTrapOID` (`linkDown`, `IF-MIB::linkUp`, `1.3.6.1.6.3.1.1.5.1`).\nv1 traps are converted per RFC 3584.",
+            "type": "string"
+          },
+          "uptime": {
+            "description": "`sysUpTime` in hundredths of a second (default: the server's uptime).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "varbinds": {
+            "description": "Extra bindings.",
+            "items": {
+              "$ref": "#/components/schemas/VarBindIn"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "target",
+          "trap_oid"
+        ],
+        "type": "object"
+      },
+      "SnmpOidsRequest": {
+        "description": "Get / GetNext request body.",
+        "properties": {
+          "oids": {
+            "description": "Objects: names (`sysDescr.0`, `IF-MIB::ifDescr.1`) or dotted OIDs.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "target": {
+            "$ref": "#/components/schemas/SnmpTarget",
+            "description": "The agent."
+          }
+        },
+        "required": [
+          "target",
+          "oids"
+        ],
+        "type": "object"
+      },
+      "SnmpResult": {
+        "description": "Result of an operation.",
+        "properties": {
+          "elapsed_ms": {
+            "description": "Round trip(s) in milliseconds.",
+            "format": "double",
+            "type": "number"
+          },
+          "engine_id": {
+            "description": "The agent's engine id (v3, hex).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_index": {
+            "description": "`error-index` (1-based binding, 0 = none).",
+            "format": "int32",
+            "type": "integer"
+          },
+          "error_status": {
+            "description": "`error-status` of the response (0 = noError).",
+            "format": "int32",
+            "type": "integer"
+          },
+          "error_status_name": {
+            "description": "Its name (`noSuchName`, `notWritable`, ...), when not 0.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "op": {
+            "description": "`get`, `getnext`, `getbulk`, `walk`, `set`, `trap`, `inform`.",
+            "type": "string"
+          },
+          "requests": {
+            "description": "Requests sent.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "tables": {
+            "description": "Conceptual tables found among the bindings (walks).",
+            "items": {
+              "$ref": "#/components/schemas/TableOut"
+            },
+            "type": "array"
+          },
+          "target": {
+            "description": "The agent / receiver address.",
+            "type": "string"
+          },
+          "truncated": {
+            "description": "The walk stopped at its limit.",
+            "type": "boolean"
+          },
+          "varbinds": {
+            "description": "The bindings (response, walk results, or the notification sent).",
+            "items": {
+              "$ref": "#/components/schemas/VarBindOut"
+            },
+            "type": "array"
+          },
+          "version": {
+            "description": "`v1`, `v2c`, `v3`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "target",
+          "version",
+          "elapsed_ms",
+          "error_status",
+          "error_index",
+          "varbinds",
+          "requests"
+        ],
+        "type": "object"
+      },
+      "SnmpSetRequest": {
+        "description": "Set request body.",
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/SnmpTarget",
+            "description": "The agent."
+          },
+          "varbinds": {
+            "description": "Bindings to set.",
+            "items": {
+              "$ref": "#/components/schemas/VarBindIn"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "target",
+          "varbinds"
+        ],
+        "type": "object"
+      },
+      "SnmpStatus": {
+        "description": "`GET /api/snmp/status`.",
+        "properties": {
+          "capture": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CaptureStatus",
+                "description": "Recording state."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "description": "`snmp.enabled`.",
+            "type": "boolean"
+          },
+          "mib_dir": {
+            "description": "Directory of uploaded MIBs.",
+            "type": "string"
+          },
+          "modules": {
+            "description": "Loaded modules.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "nodes": {
+            "description": "Resolved MIB nodes.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "receiver": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReceiverStatus",
+                "description": "Receiver state."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "mib_dir",
+          "modules",
+          "nodes"
+        ],
+        "type": "object"
+      },
+      "SnmpTarget": {
+        "description": "Where to send a request.",
+        "properties": {
+          "community": {
+            "description": "Community for v1 / v2c (default `public`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "host": {
+            "description": "Host name or address.",
+            "type": "string"
+          },
+          "port": {
+            "description": "UDP port (default 161 for requests, 162 for notifications).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "retries": {
+            "description": "Extra attempts (default 1, at most 10).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "timeout_ms": {
+            "description": "Wait per attempt in milliseconds (default 2000, at most 60000).",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "v3": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/V3In",
+                "description": "SNMPv3 parameters."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/SnmpVersion",
+            "description": "Version (default `v2c`)."
+          }
+        },
+        "required": [
+          "host"
+        ],
+        "type": "object"
+      },
+      "SnmpVersion": {
+        "description": "SNMP protocol version.",
+        "enum": [
+          "v1",
+          "v2c",
+          "v3"
+        ],
+        "type": "string"
+      },
+      "SnmpWalkRequest": {
+        "description": "Walk request body.",
+        "properties": {
+          "limit": {
+            "description": "Most bindings returned (default 10000, at most 100000).",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "max_repetitions": {
+            "description": "`max-repetitions` per GetBulk (default 20; v1 walks with GetNext).",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "oid": {
+            "description": "Subtree root: name (`ifTable`, `system`) or dotted OID.",
+            "type": "string"
+          },
+          "target": {
+            "$ref": "#/components/schemas/SnmpTarget",
+            "description": "The agent."
+          }
+        },
+        "required": [
+          "target",
+          "oid"
+        ],
+        "type": "object"
+      },
+      "TableColumnOut": {
+        "description": "A table column.",
+        "properties": {
+          "counter": {
+            "description": "Counter column (rates make sense).",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Descriptor.",
+            "type": "string"
+          },
+          "oid": {
+            "description": "Column OID.",
+            "type": "string"
+          },
+          "syntax": {
+            "description": "Syntax text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "oid",
+          "syntax",
+          "counter"
+        ],
+        "type": "object"
+      },
+      "TableOut": {
+        "description": "A conceptual table assembled from walk results.",
+        "properties": {
+          "columns": {
+            "description": "Columns present, in OID order.",
+            "items": {
+              "$ref": "#/components/schemas/TableColumnOut"
+            },
+            "type": "array"
+          },
+          "entry": {
+            "description": "`IF-MIB::ifEntry`.",
+            "type": "string"
+          },
+          "index_names": {
+            "description": "INDEX objects.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "rows": {
+            "description": "Rows in instance order.",
+            "items": {
+              "$ref": "#/components/schemas/TableRowOut"
+            },
+            "type": "array"
+          },
+          "table": {
+            "description": "`IF-MIB::ifTable`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "entry",
+          "index_names",
+          "columns",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "TableRowOut": {
+        "description": "A table row.",
+        "properties": {
+          "cells": {
+            "description": "Readable cells (one per column; `null` = absent).",
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": "array"
+          },
+          "index": {
+            "description": "Decoded INDEX values (empty when not decodable).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "instance": {
+            "description": "Instance sub-identifiers.",
+            "type": "string"
+          },
+          "numeric": {
+            "description": "Numeric cells (integer types).",
+            "items": {
+              "format": "int64",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "instance",
+          "index",
+          "cells",
+          "numeric"
         ],
         "type": "object"
       },
@@ -2402,6 +3408,214 @@
         ],
         "type": "object"
       },
+      "TrapOut": {
+        "description": "A received notification.",
+        "properties": {
+          "acknowledged": {
+            "description": "An inform that was acknowledged.",
+            "type": "boolean"
+          },
+          "community": {
+            "description": "Community (v1 / v2c).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "description": "Why the message was not accepted (wrong community, digest, ...).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Sequence number (increasing).",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "level": {
+            "description": "v3 security level.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pdu_type": {
+            "description": "`trap_v1`, `trap_v2`, `inform` (absent when undecodable).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "received_ms": {
+            "description": "Arrival, milliseconds since the Unix epoch.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "source": {
+            "description": "Sender `address:port`.",
+            "type": "string"
+          },
+          "trap_name": {
+            "description": "The trap OID's name (`IF-MIB::linkDown`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trap_oid": {
+            "description": "`snmpTrapOID.0` (dotted).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uptime": {
+            "description": "`sysUpTime.0` / v1 time-stamp (hundredths of a second).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "uptime_text": {
+            "description": "Uptime as `1d 02:03:04.56`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user": {
+            "description": "User (v3).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "v1": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/V1Out",
+                "description": "v1 `enterprise` / `agent-addr` / generic / specific."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "varbinds": {
+            "description": "Bindings (without `sysUpTime.0` / `snmpTrapOID.0`).",
+            "items": {
+              "$ref": "#/components/schemas/VarBindOut"
+            },
+            "type": "array"
+          },
+          "version": {
+            "description": "`v1`, `v2c`, `v3`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "received_ms",
+          "source",
+          "version",
+          "varbinds",
+          "acknowledged"
+        ],
+        "type": "object"
+      },
+      "TreeChildOut": {
+        "description": "A tree entry.",
+        "properties": {
+          "arc": {
+            "description": "Last sub-identifier.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "has_children": {
+            "description": "Something is defined below.",
+            "type": "boolean"
+          },
+          "kind": {
+            "description": "`object_type`, `object_identifier`, `notification_type`, ...",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "module": {
+            "description": "Module.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "Descriptor (absent for an undefined intermediate OID).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "oid": {
+            "description": "OID.",
+            "type": "string"
+          },
+          "role": {
+            "description": "Table / row / column / scalar for OBJECT-TYPEs.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "oid",
+          "arc",
+          "has_children"
+        ],
+        "type": "object"
+      },
+      "UploadedFile": {
+        "description": "Result of one uploaded file.",
+        "properties": {
+          "errors": {
+            "description": "Problems (no module found: the file was not stored).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "file": {
+            "description": "Stored file name.",
+            "type": "string"
+          },
+          "modules": {
+            "description": "Modules found in it.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "stored": {
+            "description": "Whether the file was stored.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "file",
+          "modules",
+          "errors",
+          "stored"
+        ],
+        "type": "object"
+      },
       "UserInfo": {
         "description": "`user` of [`AuthStatus`].",
         "properties": {
@@ -2417,6 +3631,190 @@
         "required": [
           "name",
           "role"
+        ],
+        "type": "object"
+      },
+      "V1Out": {
+        "description": "SNMPv1 trap header.",
+        "properties": {
+          "agent_addr": {
+            "description": "`agent-addr`.",
+            "type": "string"
+          },
+          "enterprise": {
+            "description": "`enterprise` (name or dotted).",
+            "type": "string"
+          },
+          "generic": {
+            "description": "`generic-trap`.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "specific": {
+            "description": "`specific-trap`.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enterprise",
+          "agent_addr",
+          "generic",
+          "specific"
+        ],
+        "type": "object"
+      },
+      "V3In": {
+        "description": "SNMPv3 parameters. The level follows from the pass phrases given:\nnone = noAuthNoPriv, `auth_password` = authNoPriv, both = authPriv.",
+        "properties": {
+          "auth_password": {
+            "description": "Authentication pass phrase (at least 8 characters).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "auth_protocol": {
+            "description": "`MD5`, `SHA` (SHA-1), `SHA-224`, `SHA-256`, `SHA-384`, `SHA-512`\n(default `SHA`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "context_engine_id": {
+            "description": "`contextEngineID` (hex; default: the agent's engine id).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "context_name": {
+            "description": "`contextName`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priv_password": {
+            "description": "Privacy pass phrase (at least 8 characters).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priv_protocol": {
+            "description": "`DES`, `AES` (AES-128), `AES-192`, `AES-256` (default `AES`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user": {
+            "description": "User name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "type": "object"
+      },
+      "VarBindIn": {
+        "description": "A variable binding to send (Set, notifications).",
+        "properties": {
+          "oid": {
+            "description": "Object instance: name (`sysName.0`, `IF-MIB::ifAdminStatus.2`) or\ndotted OID.",
+            "type": "string"
+          },
+          "type": {
+            "description": "`auto` (default: from the MIB), or `i` / `integer`, `u` / `unsigned`,\n`c` / `counter32`, `C` / `counter64`, `t` / `timeticks`, `a` /\n`ipaddress`, `o` / `oid`, `s` / `string`, `x` / `hex`, `d` / `decimal`,\n`n` / `null`, `opaque`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "value": {
+            "description": "Value text (enum labels such as `down` and object names are accepted).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "oid"
+        ],
+        "type": "object"
+      },
+      "VarBindOut": {
+        "description": "A rendered variable binding.",
+        "properties": {
+          "instance": {
+            "description": "Instance sub-identifiers (`3`).",
+            "type": "string"
+          },
+          "module": {
+            "description": "Defining module.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "`IF-MIB::ifDescr.3` (numeric when no MIB knows it).",
+            "type": "string"
+          },
+          "numeric": {
+            "description": "Numeric value of integer types (rates, charts).",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "Object descriptor (`ifDescr`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "oid": {
+            "description": "OID (dotted decimal).",
+            "type": "string"
+          },
+          "raw": {
+            "description": "The value without MIB knowledge.",
+            "type": "string"
+          },
+          "syntax": {
+            "description": "Textual convention of the object (`DisplayString`, `InterfaceIndex`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "description": "Wire type (`Counter32`, `OCTET STRING`, `noSuchInstance`, ...).",
+            "type": "string"
+          },
+          "units": {
+            "description": "UNITS of the object.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "value": {
+            "description": "Readable value (enum labels, display hints, units, names).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "oid",
+          "name",
+          "instance",
+          "type",
+          "value",
+          "raw"
         ],
         "type": "object"
       },
@@ -3754,6 +5152,932 @@
         ]
       }
     },
+    "/api/snmp/capture": {
+      "get": {
+        "operationId": "capture",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureStatus"
+                }
+              }
+            },
+            "description": "State"
+          }
+        },
+        "summary": "Recording state.",
+        "tags": [
+          "snmp"
+        ]
+      },
+      "post": {
+        "operationId": "capture_control",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureControl"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureStatus"
+                }
+              }
+            },
+            "description": "State"
+          }
+        },
+        "summary": "Starts / stops the recording of every SNMP datagram this server sends or\nreceives (requests, responses, traps), or clears it.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/capture/download": {
+      "get": {
+        "operationId": "capture_download",
+        "parameters": [
+          {
+            "description": "`pcap` (default) or `pcapng`.",
+            "in": "path",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "pcap / pcapng file"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown format"
+          }
+        },
+        "summary": "The recorded frames as a pcap / pcapng file (Ethernet / IP / UDP\nsynthesised around the real datagrams; placeholder MAC addresses).",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/get": {
+      "post": {
+        "operationId": "get",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnmpOidsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpResult"
+                }
+              }
+            },
+            "description": "Response (check `error_status`)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad target / OID / v3 settings"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`: Report PDU, authentication or decoding failure"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`: no response"
+          }
+        },
+        "summary": "`GetRequest`.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/getbulk": {
+      "post": {
+        "operationId": "getbulk",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnmpBulkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpResult"
+                }
+              }
+            },
+            "description": "Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request (also: GetBulk on v1)"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`: no response"
+          }
+        },
+        "summary": "`GetBulkRequest` (v2c / v3).",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/getnext": {
+      "post": {
+        "operationId": "getnext",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnmpOidsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpResult"
+                }
+              }
+            },
+            "description": "Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`: no response"
+          }
+        },
+        "summary": "`GetNextRequest`.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/inform": {
+      "post": {
+        "operationId": "inform",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnmpNotifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpResult"
+                }
+              }
+            },
+            "description": "Acknowledged (the Response's bindings)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request (also: inform on v1)"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`: not acknowledged"
+          }
+        },
+        "summary": "Sends an `InformRequest` (v2c / v3) and waits for the acknowledgement.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/mibs": {
+      "get": {
+        "operationId": "mibs",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MibModuleOut"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Modules"
+          }
+        },
+        "summary": "Loaded MIB modules with their load state.",
+        "tags": [
+          "snmp"
+        ]
+      },
+      "post": {
+        "operationId": "upload_mibs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MibUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MibUploadResult"
+                }
+              }
+            },
+            "description": "Per-file result and module state"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad file name / too large"
+          }
+        },
+        "summary": "Uploads MIB files (stored under `<data_dir>/mibs`, loaded at once).",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/mibs/node": {
+      "get": {
+        "operationId": "node",
+        "parameters": [
+          {
+            "description": "Name (`ifOperStatus`, `IF-MIB::ifOperStatus`, `ifOperStatus.3`) or\ndotted OID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeOut"
+                }
+              }
+            },
+            "description": "Node"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unparsable id"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No MIB defines it"
+          }
+        },
+        "summary": "Details of a MIB node (longest-prefix match for instances).",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/mibs/search": {
+      "get": {
+        "operationId": "search",
+        "parameters": [
+          {
+            "description": "Part of a descriptor (`ifOper`, `IF-MIB::ifH`).",
+            "in": "path",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Most hits (default 20, at most 200).",
+            "in": "path",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Hits, prefix matches first"
+          }
+        },
+        "summary": "Finds MIB objects by name (for OID autocompletion).",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/mibs/tree": {
+      "get": {
+        "operationId": "tree",
+        "parameters": [
+          {
+            "description": "Parent (name or dotted OID; empty = the roots).",
+            "in": "path",
+            "name": "oid",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TreeChildOut"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Children"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown name"
+          }
+        },
+        "summary": "One level of the MIB tree.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/mibs/{module}": {
+      "delete": {
+        "operationId": "delete_mib",
+        "parameters": [
+          {
+            "description": "Module name",
+            "in": "path",
+            "name": "module",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MibDeleted"
+                }
+              }
+            },
+            "description": "Deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown module"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`read_only`: bundled module"
+          }
+        },
+        "summary": "Deletes an uploaded module (its whole file). Bundled modules cannot be\ndeleted.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/receiver": {
+      "get": {
+        "operationId": "receiver",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiverStatus"
+                }
+              }
+            },
+            "description": "State"
+          }
+        },
+        "summary": "Receiver state.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/receiver/start": {
+      "post": {
+        "operationId": "receiver_start",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiverStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiverStatus"
+                }
+              }
+            },
+            "description": "Listening"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad address / users"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`backend_error`: cannot bind (privileged port, in use)"
+          }
+        },
+        "summary": "Starts (or restarts) the trap / inform receiver.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/receiver/stop": {
+      "post": {
+        "operationId": "receiver_stop",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiverStatus"
+                }
+              }
+            },
+            "description": "Stopped"
+          }
+        },
+        "summary": "Stops the receiver.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/set": {
+      "post": {
+        "operationId": "set",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnmpSetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpResult"
+                }
+              }
+            },
+            "description": "Response (check `error_status`: notWritable, wrongType, ...)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad target / OID / value"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`: no response"
+          }
+        },
+        "summary": "`SetRequest`.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/status": {
+      "get": {
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpStatus"
+                }
+              }
+            },
+            "description": "Status"
+          }
+        },
+        "summary": "Whether the SNMP tool is enabled, with MIB / receiver / recording summaries.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/trap": {
+      "post": {
+        "operationId": "trap",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnmpNotifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpResult"
+                }
+              }
+            },
+            "description": "Sent"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          }
+        },
+        "summary": "Sends a trap (v1 Trap-PDU, SNMPv2-Trap, or a v3 trap with this server as\nthe authoritative engine). The result lists the bindings sent.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/traps": {
+      "delete": {
+        "operationId": "clear_traps",
+        "responses": {
+          "204": {
+            "description": "Cleared"
+          }
+        },
+        "summary": "Forgets the received notifications.",
+        "tags": [
+          "snmp"
+        ]
+      },
+      "get": {
+        "operationId": "traps",
+        "parameters": [
+          {
+            "description": "Most notifications (default 200, at most 1000).",
+            "in": "path",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrapOut"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Notifications"
+          }
+        },
+        "summary": "Received notifications, newest first (also pushed as `snmp_trap` events on\nthe WebSocket).",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
+    "/api/snmp/walk": {
+      "post": {
+        "operationId": "walk",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnmpWalkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnmpResult"
+                }
+              }
+            },
+            "description": "Bindings and tables"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`snmp_error`: no response"
+          }
+        },
+        "summary": "Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in\nthe result are also returned as rows × columns.",
+        "tags": [
+          "snmp"
+        ]
+      }
+    },
     "/api/stats/overview": {
       "get": {
         "operationId": "overview",
@@ -4626,6 +6950,10 @@
     {
       "description": "Web terminal: SSH / Telnet sessions, session logs, host keys",
       "name": "terminal"
+    },
+    {
+      "description": "SNMP manager tool: Get / Walk / Set / traps, MIBs, trap receiver, pcap recording",
+      "name": "snmp"
     }
   ]
 }

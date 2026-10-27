@@ -611,6 +611,11 @@ pub(crate) enum ServerEvent {
         capture_id: String,
         state: JobStatus,
     },
+    /// The SNMP trap receiver got a notification (the list is refetched).
+    SnmpTrap {
+        #[serde(default)]
+        trap: Value,
+    },
     #[serde(other)]
     Unknown,
 }

@@ -7,6 +7,7 @@ pub(crate) mod job_form;
 pub(crate) mod jobs;
 pub(crate) mod rx;
 pub(crate) mod settings;
+pub(crate) mod snmp;
 pub(crate) mod templates;
 pub(crate) mod terminal;
 

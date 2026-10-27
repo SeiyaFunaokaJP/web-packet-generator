@@ -19,6 +19,7 @@ Status: draft (M0 で分割開始)
 | [10-docs.md](10-docs.md) | §2.9 | ドキュメント方針 |
 | [11-risks.md](11-risks.md) | §5 | 想定リスクと対策 |
 | [12-glossary.md](12-glossary.md) | §6 | 用語 |
+| [13-snmp.md](13-snmp.md) | §2.10 | SNMP マネージャ (wpg-snmp) |
 
 ## 記述ルール
 
