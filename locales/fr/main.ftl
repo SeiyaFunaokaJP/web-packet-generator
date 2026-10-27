@@ -1583,6 +1583,10 @@ api-error-snmp-mib = Fichier MIB { $file } : { $error }
 api-error-snmp-mib-bundled = { $what } est fourni avec wpg et ne peut pas être supprimé (téléversez une version plus récente pour le remplacer).
 config-issue-snmp-listen = adresse d’écoute invalide (attendu adresse:port, p. ex. 0.0.0.0:162)
 config-issue-snmp-privileged-port = les ports inférieurs à 1024 exigent root ou CAP_NET_BIND_SERVICE
+docgen-config-snmp = Outil de gestion SNMP (Get / Walk / Set / traps, téléversement de MIB).
+docgen-config-snmp-enabled = Active l’écran SNMP et les points d’accès `/api/snmp`.
+docgen-config-snmp-trap-listen = Adresse d’écoute du récepteur de traps / informs dès le démarrage, p. ex. `0.0.0.0:162` (les ports sous 1024 exigent root ou `CAP_NET_BIND_SERVICE`). Vide : non démarré au lancement (démarrable depuis l’interface).
+docgen-config-snmp-mib-dir = Répertoire des fichiers MIB téléversés. Vide : `<data_dir>/mibs`.
 ui-nav-snmp = SNMP
 ui-shortcut-snmp = Aller à l’outil SNMP
 ui-snmp-disabled = L’outil SNMP est désactivé sur ce serveur (snmp.enabled = false dans wpg.toml).

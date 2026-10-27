@@ -64,13 +64,13 @@ TLS certificate chain and private key (PEM) to serve HTTPS with; takes precedenc
 
 ### `[snmp]`
 
-docgen-config-snmp
+SNMP manager tool (Get / Walk / Set / traps, MIB upload).
 
 | Key | Type | Default | Environment variable | Description |
 |---|---|---|---|---|
-| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | docgen-config-snmp-enabled |
-| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | docgen-config-snmp-mib-dir |
-| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | docgen-config-snmp-trap-listen |
+| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | Enables the SNMP tool screen and the `/api/snmp` endpoints. |
+| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | Directory of uploaded MIB files. Empty: `<data_dir>/mibs`. |
+| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | Address the trap / inform receiver listens on from startup, e.g. `0.0.0.0:162` (ports below 1024 need root or `CAP_NET_BIND_SERVICE`). Empty: not started at boot (it can be started from the UI). |
 
 ### `[templates]`
 

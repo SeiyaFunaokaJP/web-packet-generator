@@ -1583,6 +1583,10 @@ api-error-snmp-mib = MIB 파일 { $file }: { $error }
 api-error-snmp-mib-bundled = { $what }은(는) wpg에 포함되어 있어 삭제할 수 없습니다(새 버전을 업로드하면 대체됩니다).
 config-issue-snmp-listen = 수신 주소가 올바르지 않습니다(address:port 형식, 예: 0.0.0.0:162)
 config-issue-snmp-privileged-port = 1024 미만 포트에는 root 또는 CAP_NET_BIND_SERVICE가 필요합니다
+docgen-config-snmp = SNMP 관리 도구(Get / Walk / Set / 트랩, MIB 업로드).
+docgen-config-snmp-enabled = SNMP 도구 화면과 `/api/snmp` 엔드포인트를 활성화합니다.
+docgen-config-snmp-trap-listen = 시작 시 트랩 / 인폼 수신기가 수신 대기할 주소. 예: `0.0.0.0:162`(1024 미만 포트에는 root 또는 `CAP_NET_BIND_SERVICE` 필요). 비우면 시작 시 수신하지 않습니다(화면에서 시작 가능).
+docgen-config-snmp-mib-dir = 업로드한 MIB 파일 디렉터리. 비우면 `<data_dir>/mibs`.
 ui-nav-snmp = SNMP
 ui-shortcut-snmp = SNMP 도구로 이동
 ui-snmp-disabled = 이 서버에서는 SNMP 도구가 비활성화되어 있습니다(wpg.toml의 snmp.enabled = false).

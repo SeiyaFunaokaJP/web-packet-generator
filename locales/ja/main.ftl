@@ -1583,6 +1583,10 @@ api-error-snmp-mib = MIB ファイル { $file }: { $error }
 api-error-snmp-mib-bundled = { $what } は wpg 同梱のため削除できません（新しい版をアップロードすると置き換わります）。
 config-issue-snmp-listen = 待ち受けアドレスが不正です（address:port 形式。例: 0.0.0.0:162）
 config-issue-snmp-privileged-port = 1024 未満のポートには root か CAP_NET_BIND_SERVICE が必要です
+docgen-config-snmp = SNMP マネージャツール（Get / Walk / Set / トラップ、MIB アップロード）。
+docgen-config-snmp-enabled = SNMP ツール画面と `/api/snmp` を有効にします。
+docgen-config-snmp-trap-listen = 起動時からトラップ / インフォーム受信を待ち受けるアドレス（例 `0.0.0.0:162`。1024 未満のポートには root か `CAP_NET_BIND_SERVICE` が必要）。空なら起動時は受信しません（画面から開始できます）。
+docgen-config-snmp-mib-dir = アップロードした MIB ファイルのディレクトリ。空なら `<data_dir>/mibs`。
 ui-nav-snmp = SNMP
 ui-shortcut-snmp = SNMP ツールへ移動
 ui-snmp-disabled = このサーバでは SNMP ツールが無効です（wpg.toml の snmp.enabled = false）。

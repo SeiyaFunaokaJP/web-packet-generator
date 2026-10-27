@@ -1583,6 +1583,10 @@ api-error-snmp-mib = MIB file { $file }: { $error }
 api-error-snmp-mib-bundled = { $what } is bundled with wpg and cannot be deleted (upload a newer version to replace it).
 config-issue-snmp-listen = invalid listen address (expected address:port, e.g. 0.0.0.0:162)
 config-issue-snmp-privileged-port = ports below 1024 need root or CAP_NET_BIND_SERVICE
+docgen-config-snmp = SNMP manager tool (Get / Walk / Set / traps, MIB upload).
+docgen-config-snmp-enabled = Enables the SNMP tool screen and the `/api/snmp` endpoints.
+docgen-config-snmp-trap-listen = Address the trap / inform receiver listens on from startup, e.g. `0.0.0.0:162` (ports below 1024 need root or `CAP_NET_BIND_SERVICE`). Empty: not started at boot (it can be started from the UI).
+docgen-config-snmp-mib-dir = Directory of uploaded MIB files. Empty: `<data_dir>/mibs`.
 ui-nav-snmp = SNMP
 ui-shortcut-snmp = Go to the SNMP tool
 ui-snmp-disabled = The SNMP tool is disabled on this server (snmp.enabled = false in wpg.toml).

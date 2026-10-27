@@ -1583,6 +1583,10 @@ api-error-snmp-mib = MIB-Datei { $file }: { $error }
 api-error-snmp-mib-bundled = { $what } ist in wpg enthalten und kann nicht gelöscht werden (eine neuere Version hochladen, um es zu ersetzen).
 config-issue-snmp-listen = ungültige Lauschadresse (erwartet Adresse:Port, z. B. 0.0.0.0:162)
 config-issue-snmp-privileged-port = Ports unter 1024 erfordern root oder CAP_NET_BIND_SERVICE
+docgen-config-snmp = SNMP-Manager-Werkzeug (Get / Walk / Set / Traps, MIB-Upload).
+docgen-config-snmp-enabled = Aktiviert die SNMP-Seite und die `/api/snmp`-Endpunkte.
+docgen-config-snmp-trap-listen = Adresse, auf der der Trap-/Inform-Empfänger ab dem Start lauscht, z. B. `0.0.0.0:162` (Ports unter 1024 brauchen root oder `CAP_NET_BIND_SERVICE`). Leer: beim Start nicht gestartet (in der Oberfläche startbar).
+docgen-config-snmp-mib-dir = Verzeichnis der hochgeladenen MIB-Dateien. Leer: `<data_dir>/mibs`.
 ui-nav-snmp = SNMP
 ui-shortcut-snmp = Zum SNMP-Werkzeug
 ui-snmp-disabled = Das SNMP-Werkzeug ist auf diesem Server deaktiviert (snmp.enabled = false in wpg.toml).

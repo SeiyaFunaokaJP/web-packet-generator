@@ -64,13 +64,13 @@ HTTPS で使う証明書チェーンと秘密鍵 (PEM)。`self_signed_tls` よ�
 
 ### `[snmp]`
 
-docgen-config-snmp
+SNMP マネージャツール（Get / Walk / Set / トラップ、MIB アップロード）。
 
 | キー | 型 | 既定値 | 環境変数 | 説明 |
 |---|---|---|---|---|
-| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | docgen-config-snmp-enabled |
-| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | docgen-config-snmp-mib-dir |
-| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | docgen-config-snmp-trap-listen |
+| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | SNMP ツール画面と `/api/snmp` を有効にします。 |
+| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | アップロードした MIB ファイルのディレクトリ。空なら `<data_dir>/mibs`。 |
+| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | 起動時からトラップ / インフォーム受信を待ち受けるアドレス（例 `0.0.0.0:162`。1024 未満のポートには root か `CAP_NET_BIND_SERVICE` が必要）。空なら起動時は受信しません（画面から開始できます）。 |
 
 ### `[templates]`
 

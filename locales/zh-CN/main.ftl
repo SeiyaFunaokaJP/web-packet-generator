@@ -1583,6 +1583,10 @@ api-error-snmp-mib = MIB 文件 { $file }：{ $error }
 api-error-snmp-mib-bundled = { $what } 随 wpg 内置，无法删除（上传新版本即可替换）。
 config-issue-snmp-listen = 监听地址无效（应为 address:port，例如 0.0.0.0:162）
 config-issue-snmp-privileged-port = 1024 以下的端口需要 root 或 CAP_NET_BIND_SERVICE
+docgen-config-snmp = SNMP 管理工具（Get / Walk / Set / Trap、MIB 上传）。
+docgen-config-snmp-enabled = 启用 SNMP 工具页面和 `/api/snmp` 接口。
+docgen-config-snmp-trap-listen = 启动时 Trap / Inform 接收器监听的地址，例如 `0.0.0.0:162`（1024 以下的端口需要 root 或 `CAP_NET_BIND_SERVICE`）。为空时启动时不接收（可在界面中启动）。
+docgen-config-snmp-mib-dir = 上传的 MIB 文件目录。为空时为 `<data_dir>/mibs`。
 ui-nav-snmp = SNMP
 ui-shortcut-snmp = 转到 SNMP 工具
 ui-snmp-disabled = 此服务器已禁用 SNMP 工具（wpg.toml 中 snmp.enabled = false）。
