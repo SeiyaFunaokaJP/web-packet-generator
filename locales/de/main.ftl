@@ -1713,6 +1713,20 @@ ui-term-known-hosts = Bekannte Hosts
 ui-term-known-hosts-empty = Noch keine Host-Schlüssel gespeichert.
 ui-term-known-host-forget = Host-Schlüssel entfernen
 ui-term-known-host-forget-body = Den gespeicherten Schlüssel von { $target } entfernen? Bei der nächsten Verbindung müssen Sie den Schlüssel erneut bestätigen.
+ui-term-jump = Jump-Hosts (ProxyJump)
+ui-term-jump-hint = Die Verbindung läuft über diese SSH-Jump-Hosts, der nächste zuerst. Für jede Station wird nacheinander der Host-Schlüssel geprüft und angemeldet; ein leeres Passwort wird an dieser Station abgefragt. Hosts hinter einem Jump-Host löst dieser selbst auf.
+ui-term-jump-add = Jump-Host hinzufügen
+ui-term-jump-remove = Entfernen
+ui-term-jump-n = Jump-Host { $n }
+ui-term-state-jumping = Tunnel vom Jump-Host zu { $target } wird geöffnet…
+ui-term-status-via = über { $via }
+ui-term-auth-host = Anmeldung bei { $host }
+ui-term-error-at-hop = (am Jump-Host { $hop })
+ui-term-err-jump-host = Geben Sie Name oder Adresse des Jump-Hosts ein (ohne Leerzeichen).
+ui-term-err-jump-user = Geben Sie den SSH-Benutzernamen des Jump-Hosts ein.
+ui-term-err-jump-key = Fügen Sie den privaten Schlüssel des Jump-Hosts ein.
+ui-term-err-jump-count = Höchstens 4 Jump-Hosts.
+
 ## SNMP tool
 
 # wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).

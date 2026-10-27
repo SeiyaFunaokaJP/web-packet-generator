@@ -478,6 +478,8 @@ fn fingerprint(seed: u8) -> String {
 #[derive(Clone)]
 struct SshServer {
     sizes: Arc<Mutex<Vec<(u32, u32)>>>,
+    /// `direct-tcpip` channels (not echoed: their data goes to the tunnel).
+    tunnels: Arc<Mutex<Vec<ChannelId>>>,
 }
 
 impl server::Server for SshServer {
@@ -580,7 +582,38 @@ impl server::Handler for SshServer {
         data: &[u8],
         session: &mut Session,
     ) -> Result<(), Self::Error> {
+        if self.tunnels.lock().unwrap().contains(&channel) {
+            return Ok(());
+        }
         session.data(channel, data.to_vec())
+    }
+
+    async fn channel_open_direct_tcpip(
+        &mut self,
+        channel: Channel<Msg>,
+        host_to_connect: &str,
+        port_to_connect: u32,
+        _originator_address: &str,
+        _originator_port: u32,
+        reply: server::ChannelOpenHandle,
+        _session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        // a jump host: tunnel to the requested address
+        let port = u16::try_from(port_to_connect).unwrap_or(0);
+        match tokio::net::TcpStream::connect((host_to_connect, port)).await {
+            Ok(mut tcp) => {
+                self.tunnels.lock().unwrap().push(channel.id());
+                reply.accept().await;
+                tokio::spawn(async move {
+                    let mut s = channel.into_stream();
+                    let _ = tokio::io::copy_bidirectional(&mut s, &mut tcp).await;
+                });
+            }
+            Err(_) => {
+                reply.reject(russh::ChannelOpenFailure::ConnectFailed).await;
+            }
+        }
+        Ok(())
     }
 
     async fn window_change_request(
@@ -610,6 +643,7 @@ async fn ssh_server(seed: u8, methods: &[MethodKind]) -> (u16, Arc<Mutex<Vec<(u3
     let sizes = Arc::new(Mutex::new(Vec::new()));
     let mut srv = SshServer {
         sizes: Arc::clone(&sizes),
+        tunnels: Arc::default(),
     };
     tokio::spawn(async move {
         let _ = srv.run_on_socket(config, &listener).await;
@@ -799,4 +833,156 @@ async fn ssh_public_key() {
     connect["private_key"] = json!("-----BEGIN OPENSSH PRIVATE KEY-----\nnope\n");
     let mut t = app.open(connect).await;
     assert_eq!(t.event().await["code"], "key_invalid");
+}
+
+// ------------------------------------------------------------------ jump hosts
+
+fn jump(port: u16, password: Option<&str>) -> Value {
+    json!({ "host": "127.0.0.1", "port": port, "username": "lab", "password": password })
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn ssh_through_a_jump_host() {
+    let (jump_port, _) = ssh_server(3, &[MethodKind::Password]).await;
+    let (port, sizes) = ssh_server(4, &[MethodKind::Password]).await;
+    let app = App::start(App::enabled()).await;
+
+    let mut req = ssh(port, Some("pw"));
+    req["jump"] = json!([jump(jump_port, Some("pw"))]);
+    let mut t = app.open(req.clone()).await;
+    // the jump host's key first, then the target's (reached through the tunnel)
+    let hk = t.event().await;
+    assert_eq!(hk["type"], "host_key", "{hk}");
+    assert_eq!(
+        (hk["port"].clone(), hk["fingerprint"].clone()),
+        (json!(jump_port), json!(fingerprint(3)))
+    );
+    t.send(json!({ "type": "host_key", "accept": true, "save": true }))
+        .await;
+    let mut jumping = None;
+    let hk = loop {
+        let v = t.json().await;
+        if v["type"] == "state" && v["state"] == "jumping" {
+            jumping = Some(v["host"].clone());
+        } else if v["type"] != "state" {
+            break v;
+        }
+    };
+    assert_eq!(jumping, Some(json!(format!("127.0.0.1:{port}"))));
+    assert_eq!(hk["type"], "host_key", "{hk}");
+    assert_eq!(
+        (hk["port"].clone(), hk["fingerprint"].clone()),
+        (json!(port), json!(fingerprint(4)))
+    );
+    t.send(json!({ "type": "host_key", "accept": true, "save": true }))
+        .await;
+    let c = t.event().await;
+    assert_eq!(c["type"], "connected", "{c}");
+    assert_eq!(c["address"], format!("127.0.0.1:{port}"));
+    assert_eq!(c["via"], json!([format!("lab@127.0.0.1:{jump_port}")]));
+    assert_eq!(c["fingerprint"], fingerprint(4));
+    t.expect_output("welcome\r\n$ ").await;
+    t.input("hi").await;
+    t.expect_output("hi").await;
+    let s: Value = app.get("/api/terminal/status").await.json().await.unwrap();
+    assert_eq!(s["sessions"][0]["via"], c["via"]);
+    assert_eq!(t.disconnect().await["reason"], "client");
+    assert_eq!(*sizes.lock().unwrap(), [(100, 30)]);
+
+    // both keys are stored now; a wrong jump password asks, naming the jump host
+    let keys: Value = app
+        .get("/api/terminal/known-hosts")
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(keys.as_array().unwrap().len(), 2);
+    req["jump"] = json!([jump(jump_port, Some("wrong"))]);
+    let mut t = app.open(req.clone()).await;
+    let p = t.event().await;
+    assert_eq!(p["type"], "auth_prompt", "{p}");
+    assert_eq!(p["host"], "127.0.0.1");
+    assert!(p["prompts"][0]["prompt"]
+        .as_str()
+        .unwrap()
+        .contains("lab@127.0.0.1"));
+    t.send(json!({ "type": "auth_response", "responses": ["pw"] }))
+        .await;
+    assert_eq!(t.event().await["type"], "connected");
+    t.expect_output("welcome").await;
+    t.disconnect().await;
+
+    // nothing listens behind the jump host: the failure names the hop
+    let dead = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let dead_port = dead.local_addr().unwrap().port();
+    drop(dead);
+    let mut bad = ssh(dead_port, Some("pw"));
+    bad["jump"] = json!([jump(jump_port, Some("pw"))]);
+    let mut t = app.open(bad).await;
+    let e = t.event().await;
+    assert_eq!(e["code"], "connect_failed", "{e}");
+    assert_eq!(e["info"]["hop"], format!("127.0.0.1:{jump_port}"));
+    assert_eq!(t.until("closed").await["reason"], "error");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn telnet_and_two_hops() {
+    let (jump1, _) = ssh_server(5, &[MethodKind::Password]).await;
+    let (jump2, _) = ssh_server(6, &[MethodKind::Password]).await;
+    let (port, mut rx) = telnet_server().await;
+    let app = App::start(App::enabled()).await;
+    let mut req = telnet(port);
+    req["jump"] = json!([jump(jump1, Some("pw")), jump(jump2, Some("pw"))]);
+    let mut t = app.open(req).await;
+    for fp in [fingerprint(5), fingerprint(6)] {
+        let hk = t.event().await;
+        assert_eq!(hk["fingerprint"], fp, "{hk}");
+        t.send(json!({ "type": "host_key", "accept": true, "save": false }))
+            .await;
+    }
+    let c = t.event().await;
+    assert_eq!(c["type"], "connected", "{c}");
+    assert_eq!(
+        c["via"],
+        json!([
+            format!("lab@127.0.0.1:{jump1}"),
+            format!("lab@127.0.0.1:{jump2}")
+        ])
+    );
+    t.expect_output("login:").await;
+    t.input("admin\r").await;
+    let mut seen = Vec::new();
+    server_saw(&mut rx, &mut seen, b"admin\r").await;
+    t.expect_output("admin\r\n").await;
+    assert_eq!(t.disconnect().await["reason"], "client");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn jump_host_policy() {
+    let (jump_port, _) = ssh_server(7, &[MethodKind::Password]).await;
+    let app = App::start(move |c: &mut Config| {
+        c.terminal.enabled = true;
+        c.terminal.allowed_targets = vec![format!("127.0.0.1:{jump_port}"), "r1.lab".into()];
+    })
+    .await;
+    // the target behind the jump host must be allowed too
+    let mut req = ssh(22, Some("pw"));
+    req["host"] = json!("10.9.9.9");
+    req["jump"] = json!([jump(jump_port, Some("pw"))]);
+    let mut t = app.open(req.clone()).await;
+    let e = t.event().await;
+    assert_eq!(e["code"], "target_not_allowed", "{e}");
+    assert_eq!(e["detail"], "10.9.9.9:22");
+    // and the jump host itself
+    req["host"] = json!("r1.lab");
+    req["jump"] = json!([jump(jump_port + 1, Some("pw"))]);
+    let mut t = app.open(req.clone()).await;
+    assert_eq!(t.event().await["code"], "target_not_allowed");
+    // jump hosts need a user, and at most four of them
+    req["jump"] = json!([{ "host": "127.0.0.1", "username": " " }]);
+    let mut t = app.open(req.clone()).await;
+    assert_eq!(t.event().await["code"], "bad_request");
+    req["jump"] = json!(vec![jump(jump_port, None); 5]);
+    let mut t = app.open(req).await;
+    assert_eq!(t.event().await["code"], "bad_request");
 }

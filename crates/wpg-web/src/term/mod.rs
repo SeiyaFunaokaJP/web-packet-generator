@@ -78,6 +78,31 @@ pub(crate) struct Profile {
     pub(crate) record: bool,
     /// Remove escape sequences from the log.
     pub(crate) strip_ansi: bool,
+    /// SSH jump hosts (`ProxyJump`), nearest first.
+    pub(crate) jumps: Vec<JumpProfile>,
+}
+
+/// Most jump hosts a session may use (the server's limit).
+pub(crate) const MAX_JUMPS: usize = 4;
+
+/// One saved SSH jump host (no secrets).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub(crate) struct JumpProfile {
+    pub(crate) host: String,
+    pub(crate) port: Option<u16>,
+    pub(crate) username: String,
+    /// Log in with a private key rather than a password.
+    pub(crate) use_key: bool,
+}
+
+/// The secrets of one jump host (memory only, aligned with
+/// [`Profile::jumps`]).
+#[derive(Clone, Default, PartialEq, Eq)]
+pub(crate) struct JumpSecret {
+    pub(crate) password: String,
+    pub(crate) private_key: String,
+    pub(crate) passphrase: String,
 }
 
 impl Profile {
@@ -201,6 +226,8 @@ pub(crate) struct ConnectParams {
     pub(crate) password: String,
     pub(crate) private_key: String,
     pub(crate) passphrase: String,
+    /// Secrets of `profile.jumps` (same order; missing entries are empty).
+    pub(crate) jump_secrets: Vec<JumpSecret>,
 }
 
 impl std::fmt::Debug for ConnectParams {
@@ -238,6 +265,31 @@ impl ConnectParams {
                 m["password"] = json!(self.password);
             }
         }
+        if !p.jumps.is_empty() {
+            let empty = JumpSecret::default();
+            let jumps: Vec<Value> = p
+                .jumps
+                .iter()
+                .enumerate()
+                .map(|(i, j)| {
+                    let s = self.jump_secrets.get(i).unwrap_or(&empty);
+                    let mut v = json!({ "host": j.host.trim(), "username": j.username.trim() });
+                    if let Some(port) = j.port {
+                        v["port"] = json!(port);
+                    }
+                    if j.use_key && !s.private_key.trim().is_empty() {
+                        v["private_key"] = json!(s.private_key);
+                        if !s.passphrase.is_empty() {
+                            v["passphrase"] = json!(s.passphrase);
+                        }
+                    } else if !s.password.is_empty() {
+                        v["password"] = json!(s.password);
+                    }
+                    v
+                })
+                .collect();
+            m["jump"] = Value::Array(jumps);
+        }
         m
     }
 
@@ -260,6 +312,30 @@ impl ConnectParams {
                 out.push("ui-term-err-key");
             }
         }
+        for (i, j) in p.jumps.iter().enumerate() {
+            let host = j.host.trim();
+            if host.is_empty() || host.contains(char::is_whitespace) {
+                out.push("ui-term-err-jump-host");
+            }
+            if j.port == Some(0) {
+                out.push("ui-term-err-port");
+            }
+            if j.username.trim().is_empty() {
+                out.push("ui-term-err-jump-user");
+            }
+            if j.use_key
+                && self
+                    .jump_secrets
+                    .get(i)
+                    .is_none_or(|s| s.private_key.trim().is_empty())
+            {
+                out.push("ui-term-err-jump-key");
+            }
+        }
+        if p.jumps.len() > MAX_JUMPS {
+            out.push("ui-term-err-jump-count");
+        }
+        out.dedup();
         out
     }
 }
@@ -278,6 +354,9 @@ pub(crate) struct Prompt {
 pub(crate) enum ServerMsg {
     State {
         state: String,
+        /// The host of this phase (sessions with jump hosts).
+        #[serde(default)]
+        host: Option<String>,
     },
     HostKey {
         host: String,
@@ -286,6 +365,9 @@ pub(crate) enum ServerMsg {
         fingerprint: String,
     },
     AuthPrompt {
+        /// The host asking (the target or a jump host).
+        #[serde(default)]
+        host: String,
         #[serde(default)]
         name: String,
         #[serde(default)]
@@ -297,6 +379,9 @@ pub(crate) enum ServerMsg {
         address: String,
         #[serde(default)]
         fingerprint: Option<String>,
+        /// Jump hosts (`user@host:port`).
+        #[serde(default)]
+        via: Vec<String>,
     },
     Record {
         enabled: bool,
@@ -337,6 +422,8 @@ pub(crate) struct HostKeyPrompt {
 /// Questions waiting for the user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AuthPrompt {
+    /// The host asking (empty from older servers).
+    pub(crate) host: String,
     pub(crate) name: String,
     pub(crate) instructions: String,
     pub(crate) prompts: Vec<Prompt>,
@@ -387,6 +474,10 @@ pub(crate) struct TabState {
     pub(crate) log_file: Option<String>,
     pub(crate) fingerprint: Option<String>,
     pub(crate) address: Option<String>,
+    /// The host the current progress step concerns (jump host sessions).
+    pub(crate) step_host: Option<String>,
+    /// Jump hosts of the connected session.
+    pub(crate) via: Vec<String>,
 }
 
 impl TabState {
@@ -401,13 +492,18 @@ impl TabState {
             log_file: None,
             fingerprint: None,
             address: None,
+            step_host: None,
+            via: Vec::new(),
         }
     }
 
     /// Applies a server message.
     pub(crate) fn apply(&mut self, msg: ServerMsg) {
         match msg {
-            ServerMsg::State { state } => self.phase = Phase::Progress(state),
+            ServerMsg::State { state, host } => {
+                self.phase = Phase::Progress(state);
+                self.step_host = host;
+            }
             ServerMsg::HostKey {
                 host,
                 port,
@@ -422,11 +518,13 @@ impl TabState {
                 });
             }
             ServerMsg::AuthPrompt {
+                host,
                 name,
                 instructions,
                 prompts,
             } => {
                 self.phase = Phase::Auth(AuthPrompt {
+                    host,
                     name,
                     instructions,
                     prompts,
@@ -435,9 +533,12 @@ impl TabState {
             ServerMsg::Connected {
                 address,
                 fingerprint,
+                via,
             } => {
                 self.phase = Phase::Connected;
                 self.error = None;
+                self.step_host = None;
+                self.via = via;
                 self.address = Some(address).filter(|a| !a.is_empty());
                 self.fingerprint = fingerprint;
             }
@@ -491,6 +592,7 @@ pub(crate) fn state_key(state: &str) -> &'static str {
         "resolving" => "ui-term-state-resolving",
         "connecting" => "ui-term-state-connecting",
         "authenticating" => "ui-term-state-authenticating",
+        "jumping" => "ui-term-state-jumping",
         _ => "ui-term-state-opening",
     }
 }
@@ -639,11 +741,78 @@ mod tests {
                 use_key: false,
                 record: true,
                 strip_ansi: true,
+                jumps: Vec::new(),
             },
             password: "pw".into(),
             private_key: "KEY".into(),
             passphrase: "pp".into(),
+            jump_secrets: Vec::new(),
         }
+    }
+
+    #[test]
+    fn jump_hosts() {
+        let mut p = params();
+        assert!(p.message(80, 24).get("jump").is_none());
+        p.profile.jumps = vec![
+            JumpProfile {
+                host: " bastion ".into(),
+                port: Some(2222),
+                username: "ops".into(),
+                use_key: false,
+            },
+            JumpProfile {
+                host: "inner".into(),
+                port: None,
+                username: "ops".into(),
+                use_key: true,
+            },
+        ];
+        p.jump_secrets = vec![JumpSecret {
+            password: "jpw".into(),
+            ..JumpSecret::default()
+        }];
+        // the second jump host has no key yet
+        assert_eq!(p.problems(), ["ui-term-err-jump-key"]);
+        p.jump_secrets.push(JumpSecret {
+            private_key: "JKEY".into(),
+            ..JumpSecret::default()
+        });
+        assert!(p.problems().is_empty());
+        let m = p.message(80, 24);
+        assert_eq!(
+            m["jump"],
+            json!([
+                { "host": "bastion", "port": 2222, "username": "ops", "password": "jpw" },
+                { "host": "inner", "username": "ops", "private_key": "JKEY" },
+            ])
+        );
+        assert!(!format!("{p:?}").contains("JKEY"));
+        let text = serde_json::to_string(&p.profile).unwrap();
+        assert!(!text.contains("jpw") && !text.contains("JKEY"), "{text}");
+        p.profile.jumps[0].host.clear();
+        p.profile.jumps[1].username.clear();
+        assert_eq!(
+            p.problems(),
+            ["ui-term-err-jump-host", "ui-term-err-jump-user"]
+        );
+        p.profile.jumps = vec![JumpProfile::default(); MAX_JUMPS + 1];
+        assert!(p.problems().contains(&"ui-term-err-jump-count"));
+        // the status follows the hops
+        let mut t = TabState::new(1, &params().profile);
+        let msg = |s: &str| serde_json::from_str::<ServerMsg>(s).unwrap();
+        t.apply(msg(r#"{"type":"state","state":"jumping","host":"r1:22"}"#));
+        assert_eq!(t.step_host.as_deref(), Some("r1:22"));
+        t.apply(msg(
+            r#"{"type":"auth_prompt","host":"bastion","prompts":[{"prompt":"Password: "}]}"#,
+        ));
+        assert!(matches!(&t.phase, Phase::Auth(a) if a.host == "bastion"));
+        t.apply(msg(
+            r#"{"type":"connected","address":"r1:22","via":["ops@bastion:2222"]}"#,
+        ));
+        assert_eq!(t.via, ["ops@bastion:2222"]);
+        assert_eq!(t.step_host, None);
+        assert_eq!(state_key("jumping"), "ui-term-state-jumping");
     }
 
     #[test]

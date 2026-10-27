@@ -1713,6 +1713,20 @@ ui-term-known-hosts = 已知主機
 ui-term-known-hosts-empty = 尚未儲存主機金鑰。
 ui-term-known-host-forget = 刪除主機金鑰
 ui-term-known-host-forget-body = 刪除 { $target } 已儲存的金鑰？下次連線時將再次要求確認金鑰。
+ui-term-jump = 跳板機 (ProxyJump)
+ui-term-jump-hint = 依由近到遠的順序經由這些 SSH 跳板機連線。依序確認每一跳的主機金鑰並登入；密碼為空時會在該跳要求輸入。跳板機之後的主機由該跳板機解析名稱。
+ui-term-jump-add = 新增跳板機
+ui-term-jump-remove = 刪除
+ui-term-jump-n = 跳板機 { $n }
+ui-term-state-jumping = 正在從跳板機開啟到 { $target } 的通道…
+ui-term-status-via = 經由: { $via }
+ui-term-auth-host = 登入 { $host }
+ui-term-error-at-hop = (發生於跳板機 { $hop })
+ui-term-err-jump-host = 請輸入跳板機的主機名稱或位址 (不可包含空白)。
+ui-term-err-jump-user = 請輸入跳板機的 SSH 使用者名稱。
+ui-term-err-jump-key = 請貼上跳板機的私密金鑰。
+ui-term-err-jump-count = 跳板機最多 4 台。
+
 ## SNMP tool
 
 # wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).

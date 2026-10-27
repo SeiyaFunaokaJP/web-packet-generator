@@ -83,7 +83,8 @@ Everything below is the initial development towards 1.0. No version has been tag
   counter rates), and pcap / pcapng recording of the exchanged messages.
 - Web terminal (ADR-0011, `/terminal` screen, `/api/terminal/*`, `[terminal]` in `wpg.toml`, off by
   default): SSH (password, private key, keyboard-interactive) and Telnet sessions in the browser with
-  xterm.js, tabs, trust-on-first-use host keys, a target allowlist, session logs and audit events.
+  xterm.js, tabs, SSH jump hosts (ProxyJump, up to 4 hops, SSH or Telnet behind them), trust-on-first-use
+  host keys, a target allowlist, session logs and audit events.
 
 #### Templates
 

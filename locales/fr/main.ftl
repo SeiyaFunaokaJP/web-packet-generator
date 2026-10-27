@@ -1713,6 +1713,20 @@ ui-term-known-hosts = Hôtes connus
 ui-term-known-hosts-empty = Aucune clé d’hôte enregistrée.
 ui-term-known-host-forget = Oublier la clé d’hôte
 ui-term-known-host-forget-body = Supprimer la clé enregistrée de { $target } ? La prochaine connexion vous demandera de confirmer à nouveau la clé.
+ui-term-jump = Hôtes de rebond (ProxyJump)
+ui-term-jump-hint = La connexion passe par ces hôtes de rebond SSH, du plus proche au plus lointain. La clé d'hôte et la connexion de chaque étape sont vérifiées tour à tour ; un mot de passe vide est demandé à cette étape. Les hôtes situés derrière un hôte de rebond sont résolus par celui-ci.
+ui-term-jump-add = Ajouter un hôte de rebond
+ui-term-jump-remove = Supprimer
+ui-term-jump-n = Hôte de rebond { $n }
+ui-term-state-jumping = Ouverture d'un tunnel depuis l'hôte de rebond vers { $target }…
+ui-term-status-via = via { $via }
+ui-term-auth-host = Connexion à { $host }
+ui-term-error-at-hop = (sur l'hôte de rebond { $hop })
+ui-term-err-jump-host = Saisissez le nom ou l'adresse de l'hôte de rebond (sans espaces).
+ui-term-err-jump-user = Saisissez le nom d'utilisateur SSH de l'hôte de rebond.
+ui-term-err-jump-key = Collez la clé privée de l'hôte de rebond.
+ui-term-err-jump-count = 4 hôtes de rebond au maximum.
+
 ## SNMP tool
 
 # wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).

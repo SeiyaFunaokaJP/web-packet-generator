@@ -1713,6 +1713,20 @@ ui-term-known-hosts = 既知のホスト
 ui-term-known-hosts-empty = 保存済みのホスト鍵はありません。
 ui-term-known-host-forget = ホスト鍵を削除
 ui-term-known-host-forget-body = { $target } の保存済みの鍵を削除しますか? 次回の接続時に、鍵の確認を再度求めます。
+ui-term-jump = 踏み台 (ProxyJump)
+ui-term-jump-hint = 踏み台の SSH サーバを近い順に経由して接続します。各段のホスト鍵確認とログインを順に行い、パスワードが空ならその段で入力を求めます。踏み台の奥のホストは踏み台側で名前解決されます。
+ui-term-jump-add = 踏み台を追加
+ui-term-jump-remove = 削除
+ui-term-jump-n = 踏み台 { $n }
+ui-term-state-jumping = 踏み台から { $target } へのトンネルを開いています…
+ui-term-status-via = 経由: { $via }
+ui-term-auth-host = { $host } へのログイン
+ui-term-error-at-hop = (踏み台 { $hop } で発生)
+ui-term-err-jump-host = 踏み台のホスト名またはアドレスを入力してください (空白は使えません)。
+ui-term-err-jump-user = 踏み台の SSH ユーザ名を入力してください。
+ui-term-err-jump-key = 踏み台の秘密鍵を貼り付けてください。
+ui-term-err-jump-count = 踏み台は 4 台までです。
+
 ## SNMP tool
 
 # wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).

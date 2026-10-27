@@ -96,6 +96,9 @@ pub struct ActiveSession {
     pub port: u16,
     /// Start (Unix seconds).
     pub started: u64,
+    /// SSH jump hosts in order (`user@host:port`), empty for a direct session.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub via: Vec<String>,
     /// Log file being written, if recording.
     pub log: Option<String>,
 }
@@ -353,6 +356,49 @@ pub struct ConnectRequest {
     /// Remove escape sequences from the log (default true).
     #[serde(default)]
     pub strip_ansi: Option<bool>,
+    /// SSH jump hosts (`ProxyJump`), nearest first: the server logs in to each in
+    /// turn and reaches the next one (and finally `host`) through a
+    /// `direct-tcpip` channel. Works for SSH and Telnet targets.
+    #[serde(default)]
+    pub jump: Vec<JumpHost>,
+}
+
+/// One SSH jump host of a [`ConnectRequest`].
+#[derive(Clone, Deserialize, ToSchema)]
+pub struct JumpHost {
+    /// Host name or address (resolved by the previous hop, or by the server for
+    /// the first one).
+    pub host: String,
+    /// SSH port (default 22).
+    #[serde(default)]
+    pub port: Option<u16>,
+    /// User name on the jump host.
+    pub username: String,
+    /// Password (also answers a single keyboard-interactive password prompt);
+    /// empty: the server's prompts are shown.
+    #[serde(default)]
+    pub password: Option<String>,
+    /// Private key (OpenSSH / PEM / `PuTTY` `.ppk` text).
+    #[serde(default)]
+    pub private_key: Option<String>,
+    /// Passphrase of `private_key`.
+    #[serde(default)]
+    pub passphrase: Option<String>,
+}
+
+impl std::fmt::Debug for JumpHost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JumpHost")
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("username", &self.username)
+            .field("password", &self.password.as_ref().map(|_| "<redacted>"))
+            .field(
+                "private_key",
+                &self.private_key.as_ref().map(|_| "<redacted>"),
+            )
+            .finish_non_exhaustive()
+    }
 }
 
 fn default_cols() -> u16 {
@@ -377,6 +423,7 @@ impl std::fmt::Debug for ConnectRequest {
             )
             .field("cols", &self.cols)
             .field("rows", &self.rows)
+            .field("jump", &self.jump)
             .finish_non_exhaustive()
     }
 }
@@ -396,10 +443,15 @@ pub struct PromptItem {
 #[schema(as = TerminalServerMessage)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerMsg {
-    /// Progress: `resolving`, `connecting`, `authenticating`.
+    /// Progress: `resolving`, `connecting`, `authenticating`; with jump hosts,
+    /// `jumping` (opening the tunnel from `host` onwards) and the other phases
+    /// carry the host they concern.
     State {
         /// The phase.
         state: String,
+        /// The host of this phase (sessions with jump hosts).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        host: Option<String>,
     },
     /// An unknown SSH host key: confirm the fingerprint (`host_key` message).
     HostKey {
@@ -415,6 +467,8 @@ pub enum ServerMsg {
     /// The server asks questions (keyboard-interactive, or the password when
     /// none was given): answer with `auth_response`.
     AuthPrompt {
+        /// The host asking (the target or a jump host).
+        host: String,
         /// Request name from the server.
         name: String,
         /// Instructions from the server.
@@ -437,6 +491,9 @@ pub enum ServerMsg {
         /// SSH host key fingerprint.
         #[serde(skip_serializing_if = "Option::is_none")]
         fingerprint: Option<String>,
+        /// Jump hosts the session goes through (`user@host:port`).
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        via: Vec<String>,
     },
     /// Log state after `connected` / `record`.
     Record {
@@ -459,7 +516,7 @@ pub enum ServerMsg {
         /// The session ends.
         fatal: bool,
         /// `host_key_changed`: `{algorithm, fingerprint, known_algorithm,
-        /// known_fingerprint}`.
+        /// known_fingerprint}`; a failure at a jump host adds `{hop: "host:port"}`.
         #[serde(skip_serializing_if = "Option::is_none")]
         #[schema(value_type = Option<Object>)]
         info: Option<serde_json::Value>,
@@ -522,6 +579,7 @@ mod tests {
             host: "h".into(),
             port: 23,
             started: 1,
+            via: Vec::new(),
             log: None,
         };
         let a = t.try_acquire(info("a")).unwrap();

@@ -27,6 +27,7 @@ wpg の利用者 (ネットワーク技術者) は、パケットを送りなが
 - **Telnet**: 自前の受動的なオプション交渉 (ECHO、SGA、NAWS、TTYPE、BINARY)。wpg からは交渉を始めないので、生 TCP のコンソールポートにも IAC が混ざらない。
 - **ホスト鍵**: Trust on first use。未知の鍵は SHA-256 フィンガープリントを利用者に示して確認を求め、「保存」すると `<data_dir>/terminal/known_hosts` (OpenSSH 形式) に記録する。保存済みと異なる鍵は拒否し、管理者が API / UI から古い鍵を消すまで接続できない。
 - **安全策**: `[terminal] enabled = false` が既定。`allowed_targets` (ホスト名 / host:port / CIDR) で接続先を制限し、名前解決した結果のうち許可されたアドレスにだけ接続する (検査したアドレスに接続するので DNS の再解決で迂回できない)。同時セッション数の上限、無操作タイムアウト、`wpg::audit` への開始・終了・拒否の記録 (利用者、接続先、バイト数、理由) を設ける。パスワード・秘密鍵・パスフレーズはサーバに保存せず、接続処理が終わるまでメモリ上にだけ置く。
+- **踏み台 (ProxyJump)**: 接続要求に SSH の踏み台を最大 4 段まで指定できる。サーバは 1 段目にだけ TCP で接続し、各段にログインしたうえで `direct-tcpip` チャネルを開いて次の段 (最後は宛先) に進む (OpenSSH の `-J` と同じ)。各段で TOFU のホスト鍵確認と認証を行い、失敗時は段 (`info.hop`) を示す。許可リストは全段に適用し、踏み台の奥は踏み台側で名前解決されるため名前か IP リテラルで照合する。宛先は SSH でも Telnet でもよい。
 - **セッションログ**: Tera Term のログ相当として、接続先からの出力だけを `<data_dir>/terminal-logs/` に記録する (キー入力は記録しない)。既定でエスケープシーケンスを除去し、REST で一覧・ダウンロード・削除できる。`record_sessions = false` で無効にできる。
 - **xterm.js の同梱**: xterm.js 6 と fit / web-links / search アドオン (MIT) を `crates/wpg-web/vendor/xterm/` に置き、Trunk の `copy-dir` で `/xterm/` に配置して wpg バイナリに埋め込む。ターミナル画面を開いたときに初めて読み込む。更新は `scripts/vendor-xterm.sh` で行う。
 

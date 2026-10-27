@@ -1713,6 +1713,20 @@ ui-term-known-hosts = Hosts conocidos
 ui-term-known-hosts-empty = Aún no hay claves de host guardadas.
 ui-term-known-host-forget = Olvidar la clave de host
 ui-term-known-host-forget-body = ¿Eliminar la clave guardada de { $target }? En la próxima conexión se le pedirá que confirme la clave de nuevo.
+ui-term-jump = Hosts de salto (ProxyJump)
+ui-term-jump-hint = La conexión pasa por estos hosts de salto SSH, del más cercano al más lejano. En cada salto se comprueba la clave del host y se inicia sesión por turno; si la contraseña está vacía, se pide en ese salto. Los hosts detrás de un host de salto los resuelve ese host.
+ui-term-jump-add = Añadir host de salto
+ui-term-jump-remove = Quitar
+ui-term-jump-n = Host de salto { $n }
+ui-term-state-jumping = Abriendo un túnel desde el host de salto hacia { $target }…
+ui-term-status-via = vía { $via }
+ui-term-auth-host = Inicio de sesión en { $host }
+ui-term-error-at-hop = (en el host de salto { $hop })
+ui-term-err-jump-host = Introduzca el nombre o la dirección del host de salto (sin espacios).
+ui-term-err-jump-user = Introduzca el nombre de usuario SSH del host de salto.
+ui-term-err-jump-key = Pegue la clave privada del host de salto.
+ui-term-err-jump-count = Como máximo 4 hosts de salto.
+
 ## SNMP tool
 
 # wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).

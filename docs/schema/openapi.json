@@ -38,6 +38,13 @@
           "user": {
             "description": "wpg user who opened it.",
             "type": "string"
+          },
+          "via": {
+            "description": "SSH jump hosts in order (`user@host:port`), empty for a direct session.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -1107,6 +1114,54 @@
           "pps",
           "bps",
           "l1_bps"
+        ],
+        "type": "object"
+      },
+      "JumpHost": {
+        "description": "One SSH jump host of a [`ConnectRequest`].",
+        "properties": {
+          "host": {
+            "description": "Host name or address (resolved by the previous hop, or by the server for\nthe first one).",
+            "type": "string"
+          },
+          "passphrase": {
+            "description": "Passphrase of `private_key`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "password": {
+            "description": "Password (also answers a single keyboard-interactive password prompt);\nempty: the server's prompts are shown.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "port": {
+            "description": "SSH port (default 22).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "private_key": {
+            "description": "Private key (OpenSSH / PEM / `PuTTY` `.ppk` text).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "username": {
+            "description": "User name on the jump host.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "host",
+          "username"
         ],
         "type": "object"
       },
@@ -3042,6 +3097,13 @@
             "description": "Host name or address.",
             "type": "string"
           },
+          "jump": {
+            "description": "SSH jump hosts (`ProxyJump`), nearest first: the server logs in to each in\nturn and reaches the next one (and finally `host`) through a\n`direct-tcpip` channel. Works for SSH and Telnet targets.",
+            "items": {
+              "$ref": "#/components/schemas/JumpHost"
+            },
+            "type": "array"
+          },
           "passphrase": {
             "description": "Passphrase of `private_key`.",
             "type": [
@@ -3114,8 +3176,15 @@
         "description": "Server → client message on `/api/terminal/ws`. Remote output travels as\nbinary frames.",
         "oneOf": [
           {
-            "description": "Progress: `resolving`, `connecting`, `authenticating`.",
+            "description": "Progress: `resolving`, `connecting`, `authenticating`; with jump hosts,\n`jumping` (opening the tunnel from `host` onwards) and the other phases\ncarry the host they concern.",
             "properties": {
+              "host": {
+                "description": "The host of this phase (sessions with jump hosts).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "state": {
                 "description": "The phase.",
                 "type": "string"
@@ -3173,6 +3242,10 @@
           {
             "description": "The server asks questions (keyboard-interactive, or the password when\nnone was given): answer with `auth_response`.",
             "properties": {
+              "host": {
+                "description": "The host asking (the target or a jump host).",
+                "type": "string"
+              },
               "instructions": {
                 "description": "Instructions from the server.",
                 "type": "string"
@@ -3196,6 +3269,7 @@
               }
             },
             "required": [
+              "host",
               "name",
               "instructions",
               "prompts",
@@ -3240,6 +3314,13 @@
                   "connected"
                 ],
                 "type": "string"
+              },
+              "via": {
+                "description": "Jump hosts the session goes through (`user@host:port`).",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               }
             },
             "required": [
@@ -3298,7 +3379,7 @@
                 "type": "boolean"
               },
               "info": {
-                "description": "`host_key_changed`: `{algorithm, fingerprint, known_algorithm,\nknown_fingerprint}`.",
+                "description": "`host_key_changed`: `{algorithm, fingerprint, known_algorithm,\nknown_fingerprint}`; a failure at a jump host adds `{hop: \"host:port\"}`.",
                 "type": [
                   "object",
                   "null"

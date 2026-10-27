@@ -1713,6 +1713,20 @@ ui-term-known-hosts = 알려진 호스트
 ui-term-known-hosts-empty = 저장된 호스트 키가 없습니다.
 ui-term-known-host-forget = 호스트 키 삭제
 ui-term-known-host-forget-body = { $target }의 저장된 키를 삭제할까요? 다음 연결 시 키를 다시 확인하도록 요청합니다.
+ui-term-jump = 점프 호스트 (ProxyJump)
+ui-term-jump-hint = 가까운 순서대로 이 SSH 점프 호스트를 거쳐 접속합니다. 각 단계의 호스트 키 확인과 로그인을 차례로 수행하며, 비밀번호가 비어 있으면 해당 단계에서 입력을 요청합니다. 점프 호스트 뒤의 호스트 이름은 그 점프 호스트가 확인합니다.
+ui-term-jump-add = 점프 호스트 추가
+ui-term-jump-remove = 삭제
+ui-term-jump-n = 점프 호스트 { $n }
+ui-term-state-jumping = 점프 호스트에서 { $target }(으)로 터널을 여는 중…
+ui-term-status-via = 경유: { $via }
+ui-term-auth-host = { $host } 로그인
+ui-term-error-at-hop = (점프 호스트 { $hop }에서 발생)
+ui-term-err-jump-host = 점프 호스트의 이름 또는 주소를 입력하세요 (공백 불가).
+ui-term-err-jump-user = 점프 호스트의 SSH 사용자 이름을 입력하세요.
+ui-term-err-jump-key = 점프 호스트의 개인 키를 붙여 넣으세요.
+ui-term-err-jump-count = 점프 호스트는 최대 4대입니다.
+
 ## SNMP tool
 
 # wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).

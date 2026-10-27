@@ -1713,6 +1713,20 @@ ui-term-known-hosts = 已知主机
 ui-term-known-hosts-empty = 尚未保存主机密钥。
 ui-term-known-host-forget = 删除主机密钥
 ui-term-known-host-forget-body = 删除 { $target } 已保存的密钥？下次连接时将再次要求确认密钥。
+ui-term-jump = 跳板机 (ProxyJump)
+ui-term-jump-hint = 按由近到远的顺序经由这些 SSH 跳板机连接。依次确认每一跳的主机密钥并登录；密码为空时在该跳提示输入。跳板机之后的主机由该跳板机解析名称。
+ui-term-jump-add = 添加跳板机
+ui-term-jump-remove = 删除
+ui-term-jump-n = 跳板机 { $n }
+ui-term-state-jumping = 正在从跳板机打开到 { $target } 的隧道…
+ui-term-status-via = 经由: { $via }
+ui-term-auth-host = 登录到 { $host }
+ui-term-error-at-hop = (发生在跳板机 { $hop })
+ui-term-err-jump-host = 请输入跳板机的主机名或地址 (不能包含空格)。
+ui-term-err-jump-user = 请输入跳板机的 SSH 用户名。
+ui-term-err-jump-key = 请粘贴跳板机的私钥。
+ui-term-err-jump-count = 跳板机最多 4 台。
+
 ## SNMP tool
 
 # wpg-snmp / /api/snmp / the SNMP screen of wpg-web (ADR-0010).

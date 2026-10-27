@@ -3,7 +3,11 @@
 //! 1. The browser sends [`ClientMsg::Connect`] (within 30 s).
 //! 2. The server checks the host, resolves it, keeps the addresses the allowlist
 //!    admits, takes a session slot and dials them in turn (`state` messages report
-//!    progress).
+//!    progress). With jump hosts (`ProxyJump`) the first jump host is resolved and
+//!    dialled instead; the server logs in to each jump host like to an SSH target
+//!    (host key check, authentication) and reaches the next hop through a
+//!    `direct-tcpip` channel. Hops behind a jump host are resolved by that host, so
+//!    the allowlist is applied to them by name (or IP literal).
 //! 3. SSH: key exchange (an unknown host key is shown as `host_key` and waits for
 //!    the user's answer; a changed one is refused), then authentication in the
 //!    order public key → password → keyboard-interactive (prompts go to the
@@ -23,8 +27,7 @@ use russh::client::{self, KeyboardInteractiveAuthResponse};
 use russh::keys::PrivateKeyWithHashAlg;
 use russh::{ChannelMsg, MethodKind, MethodSet};
 use serde_json::json;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, watch};
 
@@ -51,6 +54,14 @@ const SSH_STEP_TIMEOUT: Duration = Duration::from_secs(30);
 const PASSWORD_PROMPTS: usize = 3;
 /// Keyboard-interactive rounds before giving up.
 const KI_ROUNDS: usize = 10;
+/// Jump hosts per session.
+const MAX_JUMPS: usize = 4;
+
+/// A byte stream to the next hop: a TCP connection, or a `direct-tcpip`
+/// channel through a jump host.
+trait Io: AsyncRead + AsyncWrite + Unpin + Send {}
+impl<T: AsyncRead + AsyncWrite + Unpin + Send> Io for T {}
+type BoxIo = Box<dyn Io>;
 
 /// Why the session ended early.
 #[derive(Debug)]
@@ -115,11 +126,12 @@ async fn send_data(socket: &mut WebSocket, data: &[u8]) -> bool {
             .is_ok()
 }
 
-async fn state(socket: &mut WebSocket, s: &str) {
+async fn state(socket: &mut WebSocket, s: &str, host: Option<String>) {
     send(
         socket,
         &ServerMsg::State {
             state: s.to_owned(),
+            host,
         },
     )
     .await;
@@ -144,6 +156,29 @@ async fn shutting_down(rx: &mut watch::Receiver<bool>) {
     }
 }
 
+/// One SSH jump host of a validated request.
+struct Hop {
+    host: String,
+    port: u16,
+    user: String,
+}
+
+impl Hop {
+    /// `user@host:port` (audit, `connected.via`).
+    fn label(&self) -> String {
+        format!("{}@{}", self.user, host_port(&self.host, self.port))
+    }
+}
+
+/// `host:port`, `[v6]:port`.
+fn host_port(host: &str, port: u16) -> String {
+    if host.contains(':') {
+        format!("[{host}]:{port}")
+    } else {
+        format!("{host}:{port}")
+    }
+}
+
 /// The validated connection request.
 struct Target {
     protocol: Protocol,
@@ -151,16 +186,47 @@ struct Target {
     port: u16,
     cols: u16,
     rows: u16,
+    /// Jump hosts, nearest first.
+    jumps: Vec<Hop>,
 }
 
-fn validate(req: &ConnectRequest) -> Result<Target, Stop> {
-    let host = req
-        .host
+impl Target {
+    /// The first host the server dials itself.
+    fn first(&self) -> (&str, u16) {
+        self.jumps
+            .first()
+            .map_or((self.host.as_str(), self.port), |h| {
+                (h.host.as_str(), h.port)
+            })
+    }
+
+    fn via(&self) -> Vec<String> {
+        self.jumps.iter().map(Hop::label).collect()
+    }
+}
+
+/// Login secrets of one SSH hop (dropped once it is logged in).
+struct Creds {
+    user: String,
+    password: Option<String>,
+    private_key: Option<String>,
+    passphrase: Option<String>,
+}
+
+fn clean_host(host: &str) -> Result<String, Stop> {
+    let host = host
         .trim()
         .trim_start_matches('[')
         .trim_end_matches(']')
         .to_owned();
     target::check_host(&host).map_err(|e| fail("bad_request", e.to_string()))?;
+    Ok(host)
+}
+
+/// Checks the request and splits it into the target and the secrets of the
+/// target (`Creds`) and of each jump host.
+fn validate(req: ConnectRequest) -> Result<(Target, Creds, Vec<Creds>), Stop> {
+    let host = clean_host(&req.host)?;
     let port = req.port.unwrap_or(req.protocol.default_port());
     if port == 0 {
         return Err(fail("bad_request", "port 0".to_owned()));
@@ -169,24 +235,79 @@ fn validate(req: &ConnectRequest) -> Result<Target, Stop> {
     {
         return Err(fail("bad_request", "username".to_owned()));
     }
-    Ok(Target {
-        protocol: req.protocol,
-        host,
-        port,
-        cols: req.cols.clamp(10, 1000),
-        rows: req.rows.clamp(2, 500),
-    })
+    if req.jump.len() > MAX_JUMPS {
+        return Err(fail(
+            "bad_request",
+            format!("more than {MAX_JUMPS} jump hosts"),
+        ));
+    }
+    let mut jumps = Vec::with_capacity(req.jump.len());
+    let mut jump_creds = Vec::with_capacity(req.jump.len());
+    for j in req.jump {
+        let user = j.username.trim().to_owned();
+        if user.is_empty() {
+            return Err(fail("bad_request", "jump username".to_owned()));
+        }
+        let port = j.port.unwrap_or(22);
+        if port == 0 {
+            return Err(fail("bad_request", "jump port 0".to_owned()));
+        }
+        jumps.push(Hop {
+            host: clean_host(&j.host)?,
+            port,
+            user: user.clone(),
+        });
+        jump_creds.push(Creds {
+            user,
+            password: j.password,
+            private_key: j.private_key,
+            passphrase: j.passphrase,
+        });
+    }
+    let creds = Creds {
+        user: req.username.unwrap_or_default().trim().to_owned(),
+        password: req.password,
+        private_key: req.private_key,
+        passphrase: req.passphrase,
+    };
+    Ok((
+        Target {
+            protocol: req.protocol,
+            host,
+            port,
+            cols: req.cols.clamp(10, 1000),
+            rows: req.rows.clamp(2, 500),
+            jumps,
+        },
+        creds,
+        jump_creds,
+    ))
 }
 
-/// Resolves `t` and applies the allowlist.
-async fn permitted_addrs(term: &Terminal, t: &Target) -> Result<Vec<SocketAddr>, Stop> {
-    let lookup = tokio::time::timeout(
-        RESOLVE_TIMEOUT,
-        tokio::net::lookup_host((t.host.as_str(), t.port)),
-    )
-    .await
-    .map_err(|_| fail("resolve_failed", "timeout".to_owned()))?
-    .map_err(|e| fail("resolve_failed", e.to_string()))?;
+/// Applies the allowlist to every hop and resolves the first one (the only one
+/// the server dials itself).
+async fn permitted(term: &Terminal, t: &Target) -> Result<Vec<SocketAddr>, Stop> {
+    let behind = t
+        .jumps
+        .iter()
+        .skip(1)
+        .map(|h| (h.host.as_str(), h.port))
+        .chain((!t.jumps.is_empty()).then_some((t.host.as_str(), t.port)));
+    for (host, port) in behind {
+        if !term.allowlist().permit_remote(host, port) {
+            return Err(fail("target_not_allowed", host_port(host, port)));
+        }
+    }
+    let (host, port) = t.first();
+    permitted_addrs(term, host, port).await
+}
+
+/// Resolves `host` and applies the allowlist.
+async fn permitted_addrs(term: &Terminal, host: &str, port: u16) -> Result<Vec<SocketAddr>, Stop> {
+    let lookup = tokio::time::timeout(RESOLVE_TIMEOUT, tokio::net::lookup_host((host, port)))
+        .await
+        .map_err(|_| fail("resolve_failed", "timeout".to_owned()))?
+        .map_err(|e| fail("resolve_failed", e.to_string()))?;
     let mut addrs: Vec<SocketAddr> = Vec::new();
     for a in lookup {
         if !addrs.contains(&a) {
@@ -196,9 +317,9 @@ async fn permitted_addrs(term: &Terminal, t: &Target) -> Result<Vec<SocketAddr>,
     if addrs.is_empty() {
         return Err(fail("resolve_failed", None));
     }
-    let ok = term.allowlist().permit(&t.host, t.port, &addrs);
+    let ok = term.allowlist().permit(host, port, &addrs);
     if ok.is_empty() {
-        return Err(fail("target_not_allowed", None));
+        return Err(fail("target_not_allowed", host_port(host, port)));
     }
     Ok(ok)
 }
@@ -223,14 +344,18 @@ async fn dial(addrs: &[SocketAddr]) -> Result<TcpStream, Stop> {
 #[allow(clippy::large_enum_variant)]
 enum Remote {
     Telnet {
-        rd: OwnedReadHalf,
-        wr: OwnedWriteHalf,
+        rd: ReadHalf<BoxIo>,
+        wr: WriteHalf<BoxIo>,
         proto: Telnet,
         buf: Box<[u8]>,
+        /// Jump host connections carrying the stream.
+        jumps: Vec<client::Handle<ssh::Client>>,
     },
     Ssh {
         handle: client::Handle<ssh::Client>,
         channel: russh::Channel<client::Msg>,
+        /// Jump host connections carrying the session.
+        jumps: Vec<client::Handle<ssh::Client>>,
     },
 }
 
@@ -296,17 +421,28 @@ impl Remote {
     }
 
     async fn close(self) {
-        match self {
-            Remote::Telnet { mut wr, .. } => {
+        let jumps = match self {
+            Remote::Telnet { mut wr, jumps, .. } => {
                 let _ = wr.shutdown().await;
+                jumps
             }
-            Remote::Ssh { handle, channel } => {
+            Remote::Ssh {
+                handle,
+                channel,
+                jumps,
+            } => {
                 let _ = channel.eof().await;
                 let _ = channel.close().await;
                 let _ = handle
                     .disconnect(russh::Disconnect::ByApplication, "", "en")
                     .await;
+                jumps
             }
+        };
+        for j in jumps.into_iter().rev() {
+            let _ = j
+                .disconnect(russh::Disconnect::ByApplication, "", "en")
+                .await;
         }
     }
 }
@@ -352,21 +488,31 @@ pub async fn run(
             return;
         }
     };
-    let t = match validate(&req) {
-        Ok(t) => t,
+    let record = req.record.unwrap_or(true) && term.config().record_sessions;
+    let strip = req.strip_ansi.unwrap_or(true);
+    let (t, creds, jump_creds) = match validate(req) {
+        Ok(v) => v,
         Err(stop) => {
             report(&mut socket, stop, started, &Live::empty()).await;
             return;
         }
     };
     let id = uuid::Uuid::new_v4().simple().to_string();
-    let target = format!("{}:{}", t.host, t.port);
-    let login = req.username.clone().unwrap_or_default();
-    let record = req.record.unwrap_or(true) && term.config().record_sessions;
-    let strip = req.strip_ansi.unwrap_or(true);
+    let target = host_port(&t.host, t.port);
+    let login = creds.user.clone();
+    let via = t.via().join(",");
     let mut live = Live::empty();
 
-    let opened = open(&term, &mut shutdown, &mut socket, req, &t, &id, &who).await;
+    let opened = open(
+        &term,
+        &mut shutdown,
+        &mut socket,
+        (creds, jump_creds),
+        &t,
+        &id,
+        &who,
+    )
+    .await;
     let (remote, slot, address, fingerprint) = match opened {
         Ok(v) => v,
         Err(stop) => {
@@ -377,6 +523,7 @@ pub async fn run(
                     ip = %who.ip,
                     protocol = t.protocol.as_str(),
                     target = %target,
+                    via = %via,
                     login = %login,
                     code = f.code,
                     detail = f.detail.as_deref().unwrap_or(""),
@@ -395,6 +542,7 @@ pub async fn run(
         session = %id,
         protocol = t.protocol.as_str(),
         target = %target,
+        via = %via,
         address = %address,
         login = %login,
         "terminal session start"
@@ -406,8 +554,9 @@ pub async fn run(
             protocol: t.protocol,
             host: t.host.clone(),
             port: t.port,
-            address: address.to_string(),
+            address,
             fingerprint,
+            via: t.via(),
         },
     )
     .await;
@@ -435,6 +584,7 @@ pub async fn run(
         session = %id,
         protocol = t.protocol.as_str(),
         target = %target,
+        via = %via,
         reason,
         bytes_in = live.bytes_in,
         bytes_out = live.bytes_out,
@@ -487,21 +637,42 @@ async fn report(socket: &mut WebSocket, stop: Stop, started: Instant, live: &Liv
     let _ = socket.send(Message::Close(None)).await;
 }
 
-type Opened = (Remote, Slot, SocketAddr, Option<String>);
+/// The remote side, the slot, the address connected to (the target's, or
+/// `host:port` behind jump hosts) and the SSH host key fingerprint.
+type Opened = (Remote, Slot, String, Option<String>);
 
-/// Steps 2 and 3: resolve, check, take a slot, dial, log in.
+/// Adds the jump host a failure happened at to its `info`.
+fn at_hop(stop: Stop, hop: &Hop) -> Stop {
+    match stop {
+        Stop::Fail(mut f) => {
+            let label = host_port(&hop.host, hop.port);
+            match &mut f.info {
+                Some(serde_json::Value::Object(m)) => {
+                    m.insert("hop".into(), label.into());
+                }
+                _ => f.info = Some(json!({ "hop": label })),
+            }
+            Stop::Fail(f)
+        }
+        other => other,
+    }
+}
+
+/// Steps 2 and 3: resolve, check, take a slot, dial, (log in to the jump hosts
+/// and tunnel,) log in.
 async fn open(
     term: &Terminal,
     shutdown: &mut watch::Receiver<bool>,
     socket: &mut WebSocket,
-    req: ConnectRequest,
+    (creds, jump_creds): (Creds, Vec<Creds>),
     t: &Target,
     id: &str,
     who: &Principal,
 ) -> Result<Opened, Stop> {
-    state(socket, "resolving").await;
+    let first_host = (!t.jumps.is_empty()).then(|| t.first().0.to_owned());
+    state(socket, "resolving", first_host.clone()).await;
     let addrs = tokio::select! {
-        r = permitted_addrs(term, t) => r?,
+        r = permitted(term, t) => r?,
         () = shutting_down(shutdown) => return Err(Stop::Shutdown),
     };
     let slot = term
@@ -512,28 +683,67 @@ async fn open(
             host: t.host.clone(),
             port: t.port,
             started: u64::try_from(now_secs()).unwrap_or(0),
+            via: t.via(),
             log: None,
         })
         .ok_or_else(|| fail("too_many_sessions", term.config().max_sessions.to_string()))?;
-    state(socket, "connecting").await;
+    state(socket, "connecting", first_host).await;
     let tcp = tokio::select! {
         r = dial(&addrs) => r?,
         () = shutting_down(shutdown) => return Err(Stop::Shutdown),
     };
-    let address = tcp.peer_addr().unwrap_or(addrs[0]);
+    let mut address = tcp.peer_addr().unwrap_or(addrs[0]).to_string();
+    let mut stream: BoxIo = Box::new(tcp);
+    let mut jumps = Vec::with_capacity(t.jumps.len());
+    for (i, (hop, c)) in t.jumps.iter().zip(jump_creds).enumerate() {
+        let handle = ssh_login(term, shutdown, socket, stream, &hop.host, hop.port, c, who)
+            .await
+            .map_err(|s| at_hop(s, hop))?
+            .0;
+        let (next_host, next_port) = t
+            .jumps
+            .get(i + 1)
+            .map_or((t.host.as_str(), t.port), |h| (h.host.as_str(), h.port));
+        address = host_port(next_host, next_port);
+        state(socket, "jumping", Some(address.clone())).await;
+        let channel = tokio::select! {
+            r = tokio::time::timeout(
+                SSH_STEP_TIMEOUT,
+                handle.channel_open_direct_tcpip(next_host, u32::from(next_port), "127.0.0.1", 0),
+            ) => match r {
+                Ok(Ok(c)) => c,
+                Ok(Err(e)) => return Err(at_hop(fail("connect_failed", format!("{address}: {e}")), hop)),
+                Err(_) => return Err(at_hop(fail("timeout", address), hop)),
+            },
+            () = shutting_down(shutdown) => return Err(Stop::Shutdown),
+        };
+        stream = Box::new(channel.into_stream());
+        jumps.push(handle);
+    }
     match t.protocol {
         Protocol::Telnet => {
-            let (rd, wr) = tcp.into_split();
+            let (rd, wr) = tokio::io::split(stream);
             let remote = Remote::Telnet {
                 rd,
                 wr,
                 proto: Telnet::new(TERM, t.cols, t.rows),
                 buf: vec![0; 16 * 1024].into_boxed_slice(),
+                jumps,
             };
             Ok((remote, slot, address, None))
         }
         Protocol::Ssh => {
-            let (remote, fp) = ssh_open(term, shutdown, socket, req, t, tcp, who).await?;
+            let (handle, fp) =
+                ssh_login(term, shutdown, socket, stream, &t.host, t.port, creds, who).await?;
+            let channel = step(handle.channel_open_session()).await?;
+            step(channel.request_pty(false, TERM, u32::from(t.cols), u32::from(t.rows), 0, 0, &[]))
+                .await?;
+            step(channel.request_shell(false)).await?;
+            let remote = Remote::Ssh {
+                handle,
+                channel,
+                jumps,
+            };
             Ok((remote, slot, address, fp))
         }
     }
@@ -593,19 +803,22 @@ fn host_key_changed(
     })
 }
 
-/// SSH: handshake with host key confirmation, authentication, PTY + shell.
-async fn ssh_open(
+/// SSH to one hop (a jump host or the target) over `stream`: handshake with
+/// host key confirmation, authentication, the banners.
+#[allow(clippy::too_many_arguments)] // the session's pieces, borrowed separately
+async fn ssh_login(
     term: &Terminal,
     shutdown: &mut watch::Receiver<bool>,
     socket: &mut WebSocket,
-    req: ConnectRequest,
-    t: &Target,
-    tcp: TcpStream,
+    stream: BoxIo,
+    host: &str,
+    port: u16,
+    creds: Creds,
     who: &Principal,
-) -> Result<(Remote, Option<String>), Stop> {
+) -> Result<(client::Handle<ssh::Client>, Option<String>), Stop> {
     let (ev_tx, mut ev_rx) = mpsc::channel(8);
-    let handler = ssh::Client::new(term.clone(), &t.host, t.port, &who.user, ev_tx);
-    let connect = client::connect_stream(ssh::config(), tcp, handler);
+    let handler = ssh::Client::new(term.clone(), host, port, &who.user, ev_tx);
+    let connect = client::connect_stream(ssh::config(), stream, handler);
     tokio::pin!(connect);
     let mut reply: Option<tokio::sync::oneshot::Sender<HostKeyAnswer>> = None;
     let mut changed: Option<Stop> = None;
@@ -619,8 +832,8 @@ async fn ssh_open(
             Some(ev) = ev_rx.recv() => match ev {
                 SshEvent::Prompt { algorithm, fingerprint, reply: r } => {
                     send(socket, &ServerMsg::HostKey {
-                        host: t.host.clone(),
-                        port: t.port,
+                        host: host.to_owned(),
+                        port,
                         algorithm,
                         fingerprint,
                     }).await;
@@ -674,8 +887,8 @@ async fn ssh_open(
         }
     };
 
-    state(socket, "authenticating").await;
-    authenticate(&mut handle, shutdown, socket, req, t).await?;
+    state(socket, "authenticating", Some(host_port(host, port))).await;
+    authenticate(&mut handle, shutdown, socket, creds, host).await?;
     while let Ok(ev) = ev_rx.try_recv() {
         if let SshEvent::Banner(b) = ev {
             banners.push(b);
@@ -688,11 +901,7 @@ async fn ssh_open(
         )
         .await;
     }
-
-    let channel = step(handle.channel_open_session()).await?;
-    step(channel.request_pty(false, TERM, u32::from(t.cols), u32::from(t.rows), 0, 0, &[])).await?;
-    step(channel.request_shell(false)).await?;
-    Ok((Remote::Ssh { handle, channel }, fingerprint))
+    Ok((handle, fingerprint))
 }
 
 fn has(methods: &MethodSet, m: MethodKind) -> bool {
@@ -705,10 +914,10 @@ async fn authenticate(
     handle: &mut client::Handle<ssh::Client>,
     shutdown: &mut watch::Receiver<bool>,
     socket: &mut WebSocket,
-    req: ConnectRequest,
-    t: &Target,
+    req: Creds,
+    host: &str,
 ) -> Result<(), Stop> {
-    let user = req.username.clone().unwrap_or_default().trim().to_owned();
+    let user = req.user;
     let password = req.password.filter(|p| !p.is_empty());
     let mut methods = match step(handle.authenticate_none(user.clone())).await? {
         client::AuthResult::Success => return Ok(()),
@@ -765,16 +974,17 @@ async fn authenticate(
         } else {
             password.clone()
         };
-        if keyboard_interactive(handle, shutdown, socket, &user, auto).await? {
+        if keyboard_interactive(handle, shutdown, socket, &user, host, auto).await? {
             return Ok(());
         }
     } else if has(&methods, MethodKind::Password) {
         for _ in 0..PASSWORD_PROMPTS {
             let prompt = ServerMsg::AuthPrompt {
+                host: host.to_owned(),
                 name: String::new(),
                 instructions: String::new(),
                 prompts: vec![PromptItem {
-                    prompt: format!("{user}@{}'s password: ", t.host),
+                    prompt: format!("{user}@{host}'s password: "),
                     echo: false,
                 }],
             };
@@ -804,6 +1014,7 @@ async fn keyboard_interactive(
     shutdown: &mut watch::Receiver<bool>,
     socket: &mut WebSocket,
     user: &str,
+    host: &str,
     mut auto: Option<String>,
 ) -> Result<bool, Stop> {
     let mut resp =
@@ -825,6 +1036,7 @@ async fn keyboard_interactive(
         } else {
             let n = prompts.len();
             let msg = ServerMsg::AuthPrompt {
+                host: host.to_owned(),
                 name,
                 instructions,
                 prompts: prompts

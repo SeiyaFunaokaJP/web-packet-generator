@@ -1347,6 +1347,7 @@ A running session (`GET /api/terminal/status`).
 | `protocol` | [`Protocol`](#schema-protocol) | はい | Protocol. |
 | `started` | `integer` | はい | Start (Unix seconds). |
 | `user` | `string` | はい | wpg user who opened it. |
+| `via` | `string``[]` |   | SSH jump hosts in order (`user@host:port`), empty for a direct session. |
 
 <a id="schema-authstatus"></a>
 
@@ -1743,6 +1744,21 @@ Dashboard aggregate of the running jobs.
 | `l1_bps` | `number` | はい | Sum of the jobs' L1 bits per second. |
 | `pps` | `number` | はい | Sum of the jobs' packets per second. |
 | `running` | `integer` | はい | Jobs currently sending. |
+
+<a id="schema-jumphost"></a>
+
+### `JumpHost`
+
+One SSH jump host of a [`ConnectRequest`].
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `host` | `string` | はい | Host name or address (resolved by the previous hop, or by the server for the first one). |
+| `passphrase` | `string` \| `null` |   | Passphrase of `private_key`. |
+| `password` | `string` \| `null` |   | Password (also answers a single keyboard-interactive password prompt); empty: the server's prompts are shown. |
+| `port` | `integer` \| `null` |   | SSH port (default 22). |
+| `private_key` | `string` \| `null` |   | Private key (OpenSSH / PEM / `PuTTY` `.ppk` text). |
+| `username` | `string` | はい | User name on the jump host. |
 
 <a id="schema-knownhost"></a>
 
@@ -2485,6 +2501,7 @@ Ends the session.
 |---|---|---|---|
 | `cols` | `integer` |   | Terminal width. |
 | `host` | `string` | はい | Host name or address. |
+| `jump` | [`JumpHost`](#schema-jumphost)`[]` |   | SSH jump hosts (`ProxyJump`), nearest first: the server logs in to each in turn and reaches the next one (and finally `host`) through a `direct-tcpip` channel. Works for SSH and Telnet targets. |
 | `passphrase` | `string` \| `null` |   | Passphrase of `private_key`. |
 | `password` | `string` \| `null` |   | SSH password (also answers a single keyboard-interactive password prompt). |
 | `port` | `integer` \| `null` |   | Port (default 22 / 23). |
@@ -2504,10 +2521,13 @@ binary frames.
 
 #### `type: "state"`
 
-Progress: `resolving`, `connecting`, `authenticating`.
+Progress: `resolving`, `connecting`, `authenticating`; with jump hosts,
+`jumping` (opening the tunnel from `host` onwards) and the other phases
+carry the host they concern.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
+| `host` | `string` \| `null` |   | The host of this phase (sessions with jump hosts). |
 | `state` | `string` | はい | The phase. |
 | `type` | `"state"` | はい |   |
 
@@ -2530,6 +2550,7 @@ none was given): answer with `auth_response`.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
+| `host` | `string` | はい | The host asking (the target or a jump host). |
 | `instructions` | `string` | はい | Instructions from the server. |
 | `name` | `string` | はい | Request name from the server. |
 | `prompts` | [`PromptItem`](#schema-promptitem)`[]` | はい | The prompts. |
@@ -2548,6 +2569,7 @@ The session is up.
 | `protocol` | [`Protocol`](#schema-protocol) | はい | Protocol. |
 | `session_id` | `string` | はい | Session id. |
 | `type` | `"connected"` | はい |   |
+| `via` | `string``[]` |   | Jump hosts the session goes through (`user@host:port`). |
 
 #### `type: "record"`
 
@@ -2568,7 +2590,7 @@ A failure; `fatal` ones are followed by `closed`.
 | `code` | `string` | はい | `target_not_allowed`, `too_many_sessions`, `resolve_failed`, `connect_failed`, `host_key_changed`, `host_key_rejected`, `auth_failed`, `key_invalid`, `ssh_error`, `timeout`, `bad_request`, `recording_disabled`, `log_failed`. |
 | `detail` | `string` \| `null` |   | Untranslated detail (an OS / protocol error). |
 | `fatal` | `boolean` | はい | The session ends. |
-| `info` | `object` \| `null` |   | `host_key_changed`: `{algorithm, fingerprint, known_algorithm, known_fingerprint}`. |
+| `info` | `object` \| `null` |   | `host_key_changed`: `{algorithm, fingerprint, known_algorithm, known_fingerprint}`; a failure at a jump host adds `{hop: "host:port"}`. |
 | `type` | `"error"` | はい |   |
 
 #### `type: "closed"`

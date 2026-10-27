@@ -295,6 +295,25 @@ impl Allowlist {
             .filter(|a| self.rules.iter().any(|r| r.matches_addr(*a)))
             .collect()
     }
+
+    /// Whether `host:port` may be reached through an SSH jump host. The jump host
+    /// resolves the name, so only host name entries (for a name) or address /
+    /// CIDR entries (for an IP literal) can admit it.
+    #[must_use]
+    pub fn permit_remote(&self, host: &str, port: u16) -> bool {
+        if self.any {
+            return true;
+        }
+        match host.trim().parse::<IpAddr>() {
+            Ok(ip) => !self
+                .permit(host, port, &[SocketAddr::new(ip, port)])
+                .is_empty(),
+            Err(_) => {
+                let host = normalize_host(host);
+                self.rules.iter().any(|r| r.matches_name(&host, port))
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -410,6 +429,25 @@ mod tests {
         assert_eq!(a.permit("v6", 22, &[sa("[2001:db8::5]:22")]).len(), 1);
         assert!(a.permit("v6", 23, &[sa("[2001:db8::5]:23")]).is_empty());
         assert!(a.permit("unknown", 22, &far).is_empty());
+    }
+
+    #[test]
+    fn remote_targets_behind_a_jump_host() {
+        let a = Allowlist::new(&[
+            "r1".into(),
+            "sw1.lab:23".into(),
+            "*.cml.example".into(),
+            "10.10.0.0/16".into(),
+        ]);
+        assert!(a.permit_remote("R1", 22));
+        assert!(a.permit_remote("sw1.lab", 23));
+        assert!(!a.permit_remote("sw1.lab", 22));
+        assert!(a.permit_remote("xr.cml.example", 22));
+        assert!(a.permit_remote("10.10.3.4", 22));
+        assert!(!a.permit_remote("10.11.3.4", 22));
+        // a name the jump host resolves cannot be checked against a network
+        assert!(!a.permit_remote("inside-10-10", 22));
+        assert!(Allowlist::new(&[]).permit_remote("anything", 22));
     }
 
     #[test]

@@ -14,8 +14,8 @@ use crate::components::{
 };
 use crate::i18n::{tr, use_i18n, I18n};
 use crate::term::{
-    closed_key, error_key, session, split_lines, state_key, upsert_profile, ConnectParams, Phase,
-    Profile, Proto, TabState, TermSettings, TermStore,
+    closed_key, error_key, session, split_lines, state_key, upsert_profile, ConnectParams,
+    JumpProfile, JumpSecret, Phase, Profile, Proto, TabState, TermSettings, TermStore, MAX_JUMPS,
 };
 
 /// Tera Term-like default: the terminal fills the rest of the window.
@@ -235,6 +235,7 @@ fn ConnectForm(status: TerminalStatus) -> impl IntoView {
     let password = RwSignal::new(String::new());
     let private_key = RwSignal::new(String::new());
     let passphrase = RwSignal::new(String::new());
+    let jump_secrets = RwSignal::new(Vec::<JumpSecret>::new());
     let tried = RwSignal::new(false);
     let record_allowed = status.record_sessions;
     let allowed = status.allowed_targets.clone();
@@ -244,6 +245,7 @@ fn ConnectForm(status: TerminalStatus) -> impl IntoView {
         password: password.get(),
         private_key: private_key.get(),
         passphrase: passphrase.get(),
+        jump_secrets: jump_secrets.get(),
     };
     let problems = move || params().problems();
     let connect = move || {
@@ -259,6 +261,12 @@ fn ConnectForm(status: TerminalStatus) -> impl IntoView {
         // The tab keeps its own copy for reconnecting; the form forgets them.
         password.set(String::new());
         passphrase.set(String::new());
+        jump_secrets.update(|v| {
+            for s in v {
+                s.password.clear();
+                s.passphrase.clear();
+            }
+        });
         tried.set(false);
     };
     let save_profile = move |_| {
@@ -332,6 +340,7 @@ fn ConnectForm(status: TerminalStatus) -> impl IntoView {
                             on:change=move |ev| {
                                 let name = event_target_value(&ev);
                                 if let Some(p) = store.profiles.with(|l| l.iter().find(|p| p.name == name).cloned()) {
+                                    jump_secrets.set(vec![JumpSecret::default(); p.jumps.len()]);
                                     profile.set(p);
                                     private_key.set(String::new());
                                 }
@@ -476,6 +485,8 @@ fn ConnectForm(status: TerminalStatus) -> impl IntoView {
                 </Show>
             </div>
 
+            <JumpHosts profile=profile secrets=jump_secrets invalid=Signal::derive(move || tried.get() && !problems().is_empty()) />
+
             <fieldset class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 <legend class="sr-only">{tr("ui-term-log")}</legend>
                 <label class="flex items-center gap-1.5">
@@ -539,6 +550,184 @@ fn ConnectForm(status: TerminalStatus) -> impl IntoView {
                 </button>
             </div>
         </form>
+    }
+}
+
+/// The `ProxyJump` list of the connection form: jump hosts, nearest first, each
+/// with its own login (password, or a private key kept in memory only).
+#[component]
+fn JumpHosts(
+    profile: RwSignal<Profile>,
+    secrets: RwSignal<Vec<JumpSecret>>,
+    /// The form was submitted with problems (highlights empty fields).
+    invalid: Signal<bool>,
+) -> impl IntoView {
+    // A memo: typing in a row must not re-render (and unfocus) the rows.
+    let count = Memo::new(move |_| profile.with(|p| p.jumps.len()));
+    let add = move |_| {
+        profile.update(|p| {
+            if p.jumps.len() < MAX_JUMPS {
+                p.jumps.push(JumpProfile::default());
+            }
+        });
+        secrets.update(|v| v.push(JumpSecret::default()));
+    };
+    let edit = move |i: usize, f: fn(&mut JumpProfile, String)| {
+        move |ev: leptos::ev::Event| {
+            let v = event_target_value(&ev);
+            profile.update(|p| {
+                if let Some(j) = p.jumps.get_mut(i) {
+                    f(j, v);
+                }
+            });
+        }
+    };
+    let secret = move |i: usize, f: fn(&mut JumpSecret, String)| {
+        move |ev: leptos::ev::Event| {
+            let v = event_target_value(&ev);
+            secrets.update(|s| {
+                if s.len() <= i {
+                    s.resize(i + 1, JumpSecret::default());
+                }
+                f(&mut s[i], v);
+            });
+        }
+    };
+    let get = move |i: usize| profile.with(|p| p.jumps.get(i).cloned().unwrap_or_default());
+    let sec = move |i: usize| secrets.with(|s| s.get(i).cloned().unwrap_or_default());
+    let row = move |i: usize| {
+        let use_key = move || get(i).use_key;
+        let remove = move |_| {
+            profile.update(|p| {
+                if i < p.jumps.len() {
+                    p.jumps.remove(i);
+                }
+            });
+            secrets.update(|s| {
+                if i < s.len() {
+                    s.remove(i);
+                }
+            });
+        };
+        let name = format!("term-jump-auth-{i}");
+        view! {
+            <li class="rounded-md border border-slate-200 p-3 dark:border-slate-700">
+                <div class="mb-2 flex items-center justify-between gap-2">
+                    <span class="text-sm font-medium">{move || use_i18n().ta("ui-term-jump-n", &[("n", (i + 1).to_string())])}</span>
+                    <button type="button" class=BTN_GHOST on:click=remove>
+                        <Icon name=IconName::Trash class="h-4 w-4" />
+                        {tr("ui-term-jump-remove")}
+                    </button>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-6">
+                    <div class="sm:col-span-3">
+                        <label for=format!("term-jump-host-{i}") class=LABEL>{tr("ui-term-host")}</label>
+                        <input
+                            id=format!("term-jump-host-{i}")
+                            class=INPUT
+                            autocomplete="off"
+                            spellcheck="false"
+                            placeholder="bastion.example"
+                            aria-invalid=move || (invalid.get() && get(i).host.trim().is_empty()).to_string()
+                            prop:value=move || get(i).host
+                            on:input=edit(i, |j, v| j.host = v)
+                        />
+                    </div>
+                    <div class="sm:col-span-1">
+                        <label for=format!("term-jump-port-{i}") class=LABEL>{tr("ui-term-port")}</label>
+                        <input
+                            id=format!("term-jump-port-{i}")
+                            class=INPUT
+                            type="number"
+                            min="1"
+                            max="65535"
+                            placeholder="22"
+                            prop:value=move || get(i).port.map(|n| n.to_string()).unwrap_or_default()
+                            on:input=edit(i, |j, v| j.port = v.trim().parse().ok())
+                        />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for=format!("term-jump-user-{i}") class=LABEL>{tr("ui-term-username")}</label>
+                        <input
+                            id=format!("term-jump-user-{i}")
+                            class=INPUT
+                            autocomplete="off"
+                            spellcheck="false"
+                            aria-invalid=move || (invalid.get() && get(i).username.trim().is_empty()).to_string()
+                            prop:value=move || get(i).username
+                            on:input=edit(i, |j, v| j.username = v)
+                        />
+                    </div>
+                    <fieldset class="sm:col-span-6">
+                        <legend class="sr-only">{tr("ui-term-auth")}</legend>
+                        <div class="flex gap-4 text-sm">
+                            <label class="flex items-center gap-1.5">
+                                <input type="radio" name=name.clone() prop:checked=move || !use_key() on:change=move |_| profile.update(|p| if let Some(j) = p.jumps.get_mut(i) { j.use_key = false; }) />
+                                {tr("ui-term-auth-password")}
+                            </label>
+                            <label class="flex items-center gap-1.5">
+                                <input type="radio" name=name prop:checked=use_key on:change=move |_| profile.update(|p| if let Some(j) = p.jumps.get_mut(i) { j.use_key = true; }) />
+                                {tr("ui-term-auth-key")}
+                            </label>
+                        </div>
+                    </fieldset>
+                    <Show
+                        when=use_key
+                        fallback=move || view! {
+                            <div class="sm:col-span-3">
+                                <label for=format!("term-jump-pass-{i}") class=LABEL>{tr("ui-term-password")}</label>
+                                <input
+                                    id=format!("term-jump-pass-{i}")
+                                    class=INPUT
+                                    type="password"
+                                    autocomplete="off"
+                                    prop:value=move || sec(i).password
+                                    on:input=secret(i, |s, v| s.password = v)
+                                />
+                            </div>
+                        }
+                    >
+                        <div class="sm:col-span-4">
+                            <label for=format!("term-jump-key-{i}") class=LABEL>{tr("ui-term-key")}</label>
+                            <textarea
+                                id=format!("term-jump-key-{i}")
+                                class=format!("{INPUT} font-mono text-xs")
+                                rows="3"
+                                spellcheck="false"
+                                placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                                aria-invalid=move || (invalid.get() && sec(i).private_key.trim().is_empty()).to_string()
+                                prop:value=move || sec(i).private_key
+                                on:input=secret(i, |s, v| s.private_key = v)
+                            ></textarea>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for=format!("term-jump-passphrase-{i}") class=LABEL>{tr("ui-term-passphrase")}</label>
+                            <input
+                                id=format!("term-jump-passphrase-{i}")
+                                class=INPUT
+                                type="password"
+                                autocomplete="off"
+                                prop:value=move || sec(i).passphrase
+                                on:input=secret(i, |s, v| s.passphrase = v)
+                            />
+                        </div>
+                    </Show>
+                </div>
+            </li>
+        }
+    };
+    view! {
+        <fieldset class="space-y-2">
+            <legend class="text-sm font-semibold">{tr("ui-term-jump")}</legend>
+            <p class="text-xs text-slate-500">{tr("ui-term-jump-hint")}</p>
+            <ol class="space-y-2">
+                {move || (0..count.get()).map(row).collect_view()}
+            </ol>
+            <button type="button" class=BTN on:click=add disabled=move || { count.get() >= MAX_JUMPS }>
+                <Icon name=IconName::Plus class="h-4 w-4" />
+                {tr("ui-term-jump-add")}
+            </button>
+        </fieldset>
     }
 }
 
@@ -723,9 +912,15 @@ fn error_view(i18n: I18n, e: &crate::term::TermError) -> impl IntoView {
             <p class="mt-2 text-xs">{i18n.t("ui-term-hostkey-changed-help")}</p>
         }
     });
+    let hop = e
+        .info
+        .as_ref()
+        .and_then(|i| i.get("hop"))
+        .and_then(serde_json::Value::as_str)
+        .map(|h| i18n.ta("ui-term-error-at-hop", &[("hop", h.to_owned())]));
     view! {
         <div role="alert" class="mt-2 rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
-            <p>{text}</p>
+            <p>{text} {hop.map(|h| format!(" {h}"))}</p>
             {changed}
         </div>
     }
@@ -741,13 +936,21 @@ fn StatusLine() -> impl IntoView {
         let target = t.title.clone();
         Some(match &t.phase {
             Phase::Idle | Phase::Progress(_) | Phase::HostKey(_) | Phase::Auth(_) => {
-                let state = match &t.phase {
-                    Phase::Progress(s) => state_key(s),
-                    Phase::HostKey(_) => "ui-term-state-hostkey",
-                    Phase::Auth(_) => "ui-term-state-auth",
-                    _ => "ui-term-state-opening",
+                // With jump hosts, name the hop being worked on.
+                let (state, host) = match &t.phase {
+                    Phase::Progress(s) => (state_key(s), t.step_host.clone()),
+                    Phase::HostKey(h) => (
+                        "ui-term-state-hostkey",
+                        Some(format!("{}:{}", h.host, h.port)),
+                    ),
+                    Phase::Auth(a) => (
+                        "ui-term-state-auth",
+                        Some(a.host.clone()).filter(|h| !h.is_empty()),
+                    ),
+                    _ => ("ui-term-state-opening", None),
                 };
-                i18n.ta(state, &[("target", target)])
+                let target = host.unwrap_or(target);
+                i18n.ta(state, &[("target", target.clone()), ("host", target)])
             }
             Phase::Connected => {
                 let mut s = i18n.ta(
@@ -757,6 +960,10 @@ fn StatusLine() -> impl IntoView {
                         ("detail", t.address.clone().unwrap_or_default()),
                     ],
                 );
+                if !t.via.is_empty() {
+                    s.push_str(" · ");
+                    s.push_str(&i18n.ta("ui-term-status-via", &[("via", t.via.join(" → "))]));
+                }
                 if let Some(fp) = &t.fingerprint {
                     s.push_str(" · ");
                     s.push_str(&i18n.ta("ui-term-status-hostkey", &[("fingerprint", fp.clone())]));
@@ -897,11 +1104,15 @@ fn AuthDialog() -> impl IntoView {
                     }
                 >
                     {move || prompt.get().map(|(_, a)| {
+                        let host = (!a.host.is_empty()).then(|| view! {
+                            <p class="font-medium">{use_i18n().ta("ui-term-auth-host", &[("host", a.host.clone())])}</p>
+                        });
                         let header = [a.name.clone(), a.instructions.clone()]
                             .into_iter()
                             .filter(|s| !s.trim().is_empty())
                             .collect::<Vec<_>>();
                         view! {
+                            {host}
                             {header.into_iter().map(|s| view! { <p class="whitespace-pre-wrap">{s}</p> }).collect_view()}
                             {a.prompts.into_iter().enumerate().map(|(i, p)| view! {
                                 <div>

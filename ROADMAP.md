@@ -160,7 +160,7 @@ release packaging of M10 still has open items.
 ## Added beyond the 1.0 plan
 
 - [x] SNMP manager (Get / Walk / Set / traps, v1 / v2c / v3, MIB upload, pcap recording; ADR-0010)
-- [x] Web terminal (SSH / Telnet; ADR-0011)
+- [x] Web terminal (SSH / Telnet, jump hosts (ProxyJump); ADR-0011)
 - [x] Interactive deploy wizard (Windows `deploy.bat` / `deploy.ps1`, `deploy.sh`)
 
 ## After 1.0

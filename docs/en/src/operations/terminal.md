@@ -66,6 +66,23 @@ Then choose:
 
 When a host presents a key that differs from the stored one, the connection is refused (possible man-in-the-middle) and both keys are shown. If the change is expected (device replaced, keys regenerated), remove the stored key under **Known hosts** at the bottom of the page and connect again to confirm the new key. You can also pre-seed `known_hosts` with lines from `ssh-keyscan`.
 
+### Through jump hosts (ProxyJump)
+
+Under **Jump hosts (ProxyJump)** in the connection form, press **Add jump host** and enter the SSH servers to go through, nearest first (up to 4). It works like OpenSSH's `ssh -J ops@bastion,ops@inner admin@r1`: one click reaches the device behind them, without typing `ssh` on each hop.
+
+```
+browser ── wpg server ──SSH── jump 1 ──SSH── jump 2 ──SSH / Telnet── device
+```
+
+- The wpg server only connects to jump host 1 itself. Jump host 2 and the device are reached through a `direct-tcpip` channel opened on the previous jump host (the mechanism behind OpenSSH's `-W` / `ProxyJump`), so `AllowTcpForwarding` must be enabled in the jump hosts' `sshd`.
+- Each hop's host key is confirmed on first contact, exactly as for a direct connection. The dialog and the login prompts name the hop they belong to.
+- Each hop logs in with its own password or private key. An empty password is asked for at that hop. Keys and passwords are not stored in profiles (the jump hosts' host, port and user are).
+- The final target can be SSH or Telnet, so a terminal server's Telnet ports behind a bastion work too.
+- When something fails, the error names the jump host it happened at (for example "at jump host 10.0.0.1:22").
+- The audit log and `GET /api/terminal/status` record the jump hosts (`via`).
+
+**Allowlist**: `allowed_targets` applies to every hop, jump hosts included. The first jump host is resolved by the wpg server and checked like a direct target. Later hops and the final target are resolved by the jump host, so a host name is matched against name entries (`r1.lab`, `*.lab.example`) and an IP address against address / CIDR entries; a target given by name is not admitted by a CIDR entry.
+
 ### Telnet
 
 The Telnet client only answers the server's option requests (ECHO, SGA, NAWS window size, terminal type `XTERM-256COLOR`, BINARY); it never starts a negotiation, so raw TCP console ports of terminal servers (CML2, EVE-NG consoles) never see stray bytes. Enter is sent as CR NUL as the NVT rules require.
@@ -147,5 +164,6 @@ On the WebSocket, send `{"type":"connect","protocol":"ssh","host":"r1","username
 | "the host key has changed" | The device's key changed. If that is legitimate, remove the old key under **Known hosts** |
 | "SSH error: No common ... algorithm" | The device shares no algorithm with wpg; enable newer ones on the device (aes-ctr, ecdh, ed25519, ...) |
 | "Login failed" | Check user name, password or key; some devices disable public key authentication |
+| "The connection failed" at a jump host | The jump host cannot reach the next hop, or its `sshd` has `AllowTcpForwarding no` |
 | Right-click paste does nothing | You use plain HTTP from another host; use `Ctrl+V` / `Shift+Insert` or HTTPS |
 | Garbled layout | Resizing the window notifies the device; for Telnet devices without NAWS set the size on the device (`terminal length 0`, ...) |
