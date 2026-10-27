@@ -18,6 +18,7 @@ pub mod packets;
 pub mod protocols;
 pub mod system;
 pub mod templates;
+pub mod terminal;
 pub mod ws;
 
 /// Base OpenAPI document (paths are added by the router).
@@ -47,6 +48,7 @@ pub mod ws;
         (name = "jobs", description = "Transmit jobs and statistics"),
         (name = "captures", description = "Receive counters, captured frames and signature verification"),
         (name = "events", description = "WebSocket event stream"),
+        (name = "terminal", description = "Web terminal: SSH / Telnet sessions, session logs, host keys"),
     ),
     components(schemas(
         crate::auth::AuthStatus,
@@ -62,6 +64,9 @@ pub mod ws;
         crate::jobs::Mix,
         crate::rx::CaptureSpec,
         crate::rx::CaptureInfo,
+        crate::terminal::ClientMsg,
+        crate::terminal::ConnectRequest,
+        crate::terminal::ServerMsg,
     ))
 )]
 struct ApiDoc;
@@ -136,6 +141,12 @@ fn parts() -> (Router<AppState>, utoipa::openapi::OpenApi) {
         .routes(routes!(captures::packets))
         .routes(routes!(captures::pcapng))
         .routes(routes!(ws::ws))
+        .routes(routes!(terminal::status))
+        .routes(routes!(terminal::ws))
+        .routes(routes!(terminal::logs))
+        .routes(routes!(terminal::get_log, terminal::delete_log))
+        .routes(routes!(terminal::known_hosts))
+        .routes(routes!(terminal::delete_known_host))
         .split_for_parts()
 }
 

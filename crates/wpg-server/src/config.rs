@@ -52,6 +52,7 @@ const ENV_SECTIONS: &[&str] = &[
     "data_dir",
     "tx",
     "log",
+    "terminal",
 ];
 
 /// The whole configuration (`wpg.toml`).
@@ -76,6 +77,8 @@ pub struct Config {
     pub tx: TxConfig,
     /// Logging.
     pub log: LogConfig,
+    /// Web terminal (SSH / Telnet in the browser).
+    pub terminal: TerminalConfig,
 }
 
 /// `[server]`.
@@ -188,6 +191,40 @@ pub struct TxConfig {
     pub dpdk_eal_args: Vec<String>,
 }
 
+/// `[terminal]`: the web terminal (ADR-0011, spec §2.6 "Web ターミナル").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct TerminalConfig {
+    /// Enable the web terminal (SSH / Telnet sessions opened by the server on
+    /// behalf of logged-in users). Off by default.
+    pub enabled: bool,
+    /// Targets sessions may connect to: `"host"`, `"host:port"`, `"*.domain"`, an
+    /// IP address or a CIDR block (`"10.0.0.0/8"`, `"[2001:db8::1]:830"`); empty =
+    /// any target.
+    pub allowed_targets: Vec<String>,
+    /// Allow session logs (the received text, like Tera Term's log) under
+    /// `<data_dir>/terminal-logs`; sessions start recording unless the user
+    /// switches it off. `false` disables server-side logs.
+    pub record_sessions: bool,
+    /// Close a session after this many seconds without input or output
+    /// (`0` = never).
+    pub idle_timeout_secs: u64,
+    /// Maximum number of simultaneous sessions (all users).
+    pub max_sessions: usize,
+}
+
+impl Default for TerminalConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            allowed_targets: Vec::new(),
+            record_sessions: true,
+            idle_timeout_secs: 1800,
+            max_sessions: 8,
+        }
+    }
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
@@ -229,6 +266,7 @@ impl Default for Config {
             protocols: ProtocolsConfig::default(),
             tx: TxConfig::default(),
             log: LogConfig::default(),
+            terminal: TerminalConfig::default(),
         }
     }
 }
@@ -430,6 +468,18 @@ impl Config {
         self.data_dir.join("tls")
     }
 
+    /// Directory of the web terminal's session logs.
+    #[must_use]
+    pub fn terminal_log_dir(&self) -> PathBuf {
+        self.data_dir.join("terminal-logs")
+    }
+
+    /// The web terminal's SSH host keys (OpenSSH `known_hosts` format).
+    #[must_use]
+    pub fn known_hosts_path(&self) -> PathBuf {
+        self.data_dir.join("terminal").join("known_hosts")
+    }
+
     /// Default backend name (configured or the build's default).
     #[must_use]
     pub fn default_backend(&self) -> String {
@@ -592,6 +642,7 @@ impl Config {
                 Some(_) => {}
             }
         }
+        self.validate_terminal(&mut out);
         if let Err(e) = tracing_subscriber::EnvFilter::try_new(&self.log.level) {
             out.push(ConfigIssue::new(
                 Error,
@@ -601,6 +652,40 @@ impl Config {
             ));
         }
         out
+    }
+
+    fn validate_terminal(&self, out: &mut Vec<ConfigIssue>) {
+        use IssueLevel::{Error, Warning};
+        let t = &self.terminal;
+        for entry in &t.allowed_targets {
+            if let Err(e) = crate::terminal::target::Rule::parse(entry) {
+                out.push(ConfigIssue::new(
+                    Error,
+                    "terminal.allowed_targets",
+                    "config-issue-terminal-bad-target",
+                    format!("{entry}: {e}"),
+                ));
+            }
+        }
+        if !t.enabled {
+            return;
+        }
+        if t.max_sessions == 0 {
+            out.push(ConfigIssue::new(
+                Error,
+                "terminal.max_sessions",
+                "config-issue-zero",
+                "0",
+            ));
+        }
+        if t.allowed_targets.is_empty() && !self.server.bind.ip().is_loopback() {
+            out.push(ConfigIssue::new(
+                Warning,
+                "terminal.allowed_targets",
+                "config-issue-terminal-any-target",
+                self.server.bind.to_string(),
+            ));
+        }
     }
 
     /// A fully commented example `wpg.toml` (`wpg config init`). Every active
@@ -774,6 +859,13 @@ rotation = "never"
 # max_files = 7
 # Colour the console output when it is a terminal.
 ansi = true
+
+[terminal]
+enabled = false          # Web terminal (SSH / Telnet)
+allowed_targets = []     # "host", "host:port" or CIDR; empty = any target
+record_sessions = true   # keep session logs under <data_dir>/terminal-logs
+idle_timeout_secs = 1800
+max_sessions = 8
 "#;
 
 #[cfg(test)]
@@ -929,6 +1021,58 @@ mod tests {
         assert!(keys.contains(&(IssueLevel::Error, "tx.default_backend".into())));
         assert!(keys.contains(&(IssueLevel::Warning, "server.bind".into())));
         assert!(keys.contains(&(IssueLevel::Error, "log.level".into())));
+    }
+
+    #[test]
+    fn terminal_section() {
+        let c = Config::default();
+        assert!(!c.terminal.enabled, "off by default");
+        assert_eq!(c.terminal.max_sessions, 8);
+        let c = Config::from_toml_str(
+            "[terminal]\nenabled = true\nallowed_targets = [\"10.0.0.0/8\", \"r1:23\"]\n",
+        )
+        .unwrap();
+        assert!(c.terminal.enabled);
+        assert_eq!(c.terminal.allowed_targets.len(), 2);
+        let e = Config::from_toml_str("[terminal]\nenable = true\n").unwrap_err();
+        assert!(e.to_string().contains("enable"), "{e}");
+    }
+
+    #[test]
+    fn terminal_validation() {
+        let mut c = Config::default();
+        c.templates.library_paths = vec![];
+        // disabled: only malformed entries are reported
+        c.server.bind = "0.0.0.0:8080".parse().unwrap();
+        c.auth.password_hash = Some("$argon2id$x".into());
+        assert!(c.validate().is_empty(), "{:?}", c.validate());
+        c.terminal.enabled = true;
+        let issues = c.validate();
+        assert_eq!(issues.len(), 1, "{issues:?}");
+        assert_eq!(issues[0].level, IssueLevel::Warning);
+        assert_eq!(issues[0].message_key, "config-issue-terminal-any-target");
+        // loopback bind: no warning
+        c.server.bind = "127.0.0.1:8080".parse().unwrap();
+        assert!(c.validate().is_empty());
+        c.terminal.allowed_targets = vec!["10.0.0.0/33".into(), "r1:x".into(), "lab*".into()];
+        c.terminal.max_sessions = 0;
+        let keys: Vec<(IssueLevel, String, String)> = c
+            .validate()
+            .into_iter()
+            .map(|i| (i.level, i.key, i.message_key))
+            .collect();
+        assert_eq!(
+            keys.iter()
+                .filter(|k| k.2 == "config-issue-terminal-bad-target")
+                .count(),
+            3,
+            "{keys:?}"
+        );
+        assert!(keys.contains(&(
+            IssueLevel::Error,
+            "terminal.max_sessions".into(),
+            "config-issue-zero".into()
+        )));
     }
 }
 

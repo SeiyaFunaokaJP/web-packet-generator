@@ -15,6 +15,7 @@
 //! * [`tls`]: HTTPS with given or self-signed certificates (rustls);
 //! * [`store`]: file-backed template library with hot reload;
 //! * [`jobs`]: job manager on top of `wpg-tx` with the transmit policy;
+//! * [`terminal`]: the web terminal (SSH / Telnet bridged over a WebSocket);
 //! * [`state::AppState`]: what the handlers share.
 
 use std::net::SocketAddr;
@@ -43,6 +44,7 @@ pub mod rx;
 pub mod security;
 pub mod state;
 pub mod store;
+pub mod terminal;
 pub mod tls;
 
 pub use config::{Config, ConfigError, Overrides};

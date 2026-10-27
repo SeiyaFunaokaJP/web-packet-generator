@@ -14,6 +14,7 @@ use crate::events::{bus, EventBus, ServerEvent};
 use crate::jobs::JobManager;
 use crate::rx::RxManager;
 use crate::store::{StoreError, TemplateStore};
+use crate::terminal::Terminal;
 
 /// How long the interface list is cached.
 const IFACE_TTL: Duration = Duration::from_secs(5);
@@ -69,6 +70,8 @@ pub struct AppState {
     pub jobs: JobManager,
     /// Capture manager.
     pub rx: RxManager,
+    /// Web terminal.
+    pub terminal: Terminal,
     /// The `SQLite` database.
     pub db: Db,
     /// Authentication.
@@ -135,6 +138,7 @@ impl AppState {
             db.clone(),
         );
         let rx = RxManager::new(Arc::clone(&config), events.clone());
+        let terminal = Terminal::new(&config);
         let (shutdown_tx, shutdown) = watch::channel(false);
         Ok(Self {
             config,
@@ -142,6 +146,7 @@ impl AppState {
             templates,
             jobs,
             rx,
+            terminal,
             db,
             auth,
             started_at: Instant::now(),
