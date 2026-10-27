@@ -62,6 +62,16 @@ HTTPS で使う証明書チェーンと秘密鍵 (PEM)。`self_signed_tls` よ�
 | `cert` | `string` |   | `WPG_SERVER__TLS__CERT` | PEM 形式の証明書チェーン。 |
 | `key` | `string` |   | `WPG_SERVER__TLS__KEY` | PEM 形式の秘密鍵。 |
 
+### `[snmp]`
+
+SNMP マネージャツール（Get / Walk / Set / トラップ、MIB アップロード）。
+
+| キー | 型 | 既定値 | 環境変数 | 説明 |
+|---|---|---|---|---|
+| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | SNMP ツール画面と `/api/snmp` を有効にします。 |
+| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | アップロードした MIB ファイルのディレクトリ。空なら `<data_dir>/mibs`。 |
+| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | 起動時からトラップ / インフォーム受信を待ち受けるアドレス（例 `0.0.0.0:162`。1024 未満のポートには root か `CAP_NET_BIND_SERVICE` が必要）。空なら起動時は受信しません（画面から開始できます）。 |
+
 ### `[templates]`
 
 テンプレートライブラリ。
@@ -70,6 +80,18 @@ HTTPS で使う証明書チェーンと秘密鍵 (PEM)。`self_signed_tls` よ�
 |---|---|---|---|---|
 | `library_paths` | `string[]` | `["./templates"]` | `WPG_TEMPLATES__LIBRARY_PATHS` | 読み取り専用のテンプレートライブラリ (Git のチェックアウトなど)。`*.wpg.yaml` / `*.wpg.json` を再帰的に読み込み、ファイルが変わると再読み込みします。 |
 | `user_dir` | `string` |   | `WPG_TEMPLATES__USER_DIR` | GUI で作成・インポートしたテンプレートを書き込むディレクトリ。既定は `<data_dir>/templates`。 |
+
+### `[terminal]`
+
+Web ターミナル: ログインしたユーザのためにサーバが開く SSH / Telnet セッション (Web ターミナルのガイドを参照)。
+
+| キー | 型 | 既定値 | 環境変数 | 説明 |
+|---|---|---|---|---|
+| `allowed_targets` | `string[]` | `[]` | `WPG_TERMINAL__ALLOWED_TARGETS` | セッションの接続先として許可する宛先: `host`、`host:port`、`*.domain`、IP アドレス、CIDR (`10.0.0.0/8`、`[2001:db8::1]:830`)。空ならすべて。 |
+| `enabled` | `boolean` | `false` | `WPG_TERMINAL__ENABLED` | Web ターミナルを有効にします。既定では無効です。 |
+| `idle_timeout_secs` | `integer` | `1800` | `WPG_TERMINAL__IDLE_TIMEOUT_SECS` | 入出力がこの秒数ないセッションを切断します。`0` で切断しません。 |
+| `max_sessions` | `integer` | `8` | `WPG_TERMINAL__MAX_SESSIONS` | 同時に開けるセッション数の上限 (全ユーザ合計)。 |
+| `record_sessions` | `boolean` | `true` | `WPG_TERMINAL__RECORD_SESSIONS` | セッションログ (接続先からの出力) を `<data_dir>/terminal-logs` に残すことを許可します。`false` でサーバ側のログを無効にします。 |
 
 ### `[tx]`
 
@@ -153,6 +175,16 @@ allowed_ifaces = []
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
 
+[snmp]
+# SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).
+enabled = true
+# Trap / inform receiver started at boot, e.g. "0.0.0.0:162" (ports below 1024
+# need root or CAP_NET_BIND_SERVICE). Empty: not started at boot (it can be
+# started from the UI).
+trap_listen = ""
+# Directory of uploaded MIB files. Empty: <data_dir>/mibs
+mib_dir = ""
+
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".
 level = "info"
@@ -166,4 +198,11 @@ rotation = "never"
 # max_files = 7
 # Colour the console output when it is a terminal.
 ansi = true
+
+[terminal]
+enabled = false          # Web terminal (SSH / Telnet)
+allowed_targets = []     # "host", "host:port" or CIDR; empty = any target
+record_sessions = true   # keep session logs under <data_dir>/terminal-logs
+idle_timeout_secs = 1800
+max_sessions = 8
 ```

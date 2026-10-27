@@ -76,6 +76,16 @@ Everything below is the initial development towards 1.0. No version has been tag
   (Chinese by script and region), with a language menu in the header; the manual and the bundled
   template descriptions stay Japanese / English, falling back to English.
 
+- SNMP manager tool (ADR-0010, new `wpg-snmp` crate, `/snmp` screen, `/api/snmp/*`, `[snmp]` in
+  `wpg.toml`): Get / GetNext / GetBulk / Walk / Set, trap and inform send / receive, SNMP v1 / v2c and v3
+  (USM auth MD5 / SHA-1 / SHA-2, privacy DES / AES), MIB upload with an SMIv1 / SMIv2 parser and a MIB
+  tree browser, readable values (enum labels, DISPLAY-HINT, TimeTicks, units, tables keyed by INDEX,
+  counter rates), and pcap / pcapng recording of the exchanged messages.
+- Web terminal (ADR-0011, `/terminal` screen, `/api/terminal/*`, `[terminal]` in `wpg.toml`, off by
+  default): SSH (password, private key, keyboard-interactive) and Telnet sessions in the browser with
+  xterm.js, tabs, SSH jump hosts (ProxyJump, up to 4 hops, SSH or Telnet behind them), trust-on-first-use
+  host keys, a target allowlist, session logs and audit events.
+
 #### Templates
 
 - YAML / JSON template format (`schema: 1`) with a published JSON Schema, `wpg template lint`, variables
@@ -104,6 +114,11 @@ Everything below is the initial development towards 1.0. No version has been tag
   touching the packaging, that test each archive, the launchd daemon with pcap send / receive on macOS,
   the Windows scheduled task and the no-Npcap path, `build.ps1`, and the Docker compose setup (M10).
 
+- Interactive deploy wizard: `scripts/deploy.bat` / `deploy.ps1` for Windows and `scripts/deploy.sh` without
+  arguments ask for the host, SSH user / password / port and the options, install an SSH key, and can
+  build wpg on the target from source (`scripts/lib/remote-*.sh`); `setcap` now also grants
+  `cap_net_bind_service` for the SNMP trap receiver.
+
 #### Documentation
 
 - Japanese and English manuals (mdBook): installation on three OSes, permissions and first login,
@@ -122,6 +137,9 @@ Everything below is the initial development towards 1.0. No version has been tag
 - Dependency updates: `zip` 9 (RUSTSEC-2026-0367 / 0368 / 0369, also via `utoipa-swagger-ui` 10.0.2), `rustls` 0.23.46,
   `rustls-webpki` 0.103.16 and `webpki-roots` 1.0.11 (RUSTSEC-2026-0346 to 0349, 0381, 0382), `tokio` 1.54
   (RUSTSEC-2026-0386), plus `toml` 1, `rusqlite` 0.40, `sha2` 0.11, `tokio-tungstenite` 0.29 and `bindgen` 0.73.
+
+- RUSTSEC-2023-0071 (`rsa`, Marvin attack; pulled in by `russh` for the web terminal) is ignored in
+  `deny.toml` / `.cargo/audit.toml`: wpg only signs with and verifies RSA keys and never decrypts.
 
 ### Known limitations
 

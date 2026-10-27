@@ -44,6 +44,11 @@ export default defineConfig({
       `--password ${PASSWORD}`,
       `--library-path ${JSON.stringify(path.join(root, 'templates'))}`,
     ].join(' '),
+    // The web terminal spec talks to a local fake Telnet server.
+    env: {
+      WPG_TERMINAL__ENABLED: 'true',
+      WPG_TERMINAL__ALLOWED_TARGETS: '["127.0.0.1"]',
+    },
     url: `http://127.0.0.1:${port}/api/auth/status`,
     reuseExistingServer: false,
     timeout: 60_000,

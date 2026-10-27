@@ -6,6 +6,9 @@
     <meta name="color-scheme" content="light dark" />
     <title>Web Packet Generator</title>
     <link data-trunk rel="tailwind-css" href="style/tailwind.css" />
+    <!-- xterm.js for the web terminal (MIT, see vendor/xterm/LICENSE): served from /xterm/
+         and loaded by the terminal page on first use. -->
+    <link data-trunk rel="copy-dir" href="vendor/xterm" />
     <!-- Release: the size-optimised `wasm-release` profile (workspace Cargo.toml) + wasm-opt -Oz.
          The feature flags match what rustc enables by default for wasm32 (Rust >= 1.82);
          Trunk's bundled wasm-opt would otherwise reject bulk-memory instructions. -->

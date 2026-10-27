@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Host side of scripts/deploy.sh: runs as root on the target host from the staging
-# directory the files were copied to. Not meant to be run by hand (see deploy.sh).
+# Host side of scripts/deploy.sh and scripts/deploy.ps1: runs as root on the target host
+# from the staging directory the files were copied to. Not meant to be run by hand (see
+# deploy.sh / deploy.ps1).
 set -euo pipefail
 
 stage=""
@@ -14,6 +15,8 @@ hugepages=1024
 allow_insecure=0
 templates=""
 password_file=""
+terminal=0
+snmp_trap=0
 ifaces=()
 
 while [ "$#" -gt 0 ]; do
@@ -30,6 +33,8 @@ while [ "$#" -gt 0 ]; do
         --templates) templates="$2"; shift ;;
         --password-file) password_file="$2"; shift ;;
         --iface) ifaces+=("$2"); shift ;;
+        --terminal) terminal=1 ;;
+        --snmp-trap) snmp_trap=1 ;;
         *) echo "deploy-remote: unknown argument: $1" >&2; exit 2 ;;
     esac
     shift
@@ -50,6 +55,80 @@ state=/var/lib/wpg
 unit=/etc/systemd/system/wpg.service
 
 have_systemd() { [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1; }
+
+# enable_feature <section> "<key> = <value>"...: sets the keys of [section] in a copy of
+# wpg.toml, checks the copy with `wpg config validate` and installs it. Only a wpg.toml
+# created by this run is changed. Keys the installed binary does not know would make it
+# refuse to start (deny_unknown_fields), so they are first tried on a scratch file.
+enable_feature() {
+    local section="$1"
+    shift
+    local toml="$etc/wpg.toml" probe tmp line
+    probe="$(mktemp)"
+    { echo "[$section]"; printf '%s\n' "$@"; } >"$probe"
+    if ! "$exe" config validate --config "$probe" >/dev/null 2>&1; then
+        rm -f "$probe"
+        warn "this wpg build ($("$exe" --version 2>/dev/null || echo unknown)) does not support [$section]; not enabled. Upgrade wpg and deploy again."
+        return 0
+    fi
+    rm -f "$probe"
+    if [ "$toml_created" -eq 0 ]; then
+        warn "$toml already exists and is never changed by deploy. To enable [$section], add these lines to it and run 'sudo systemctl restart wpg':"
+        { echo "[$section]"; printf '%s\n' "$@"; } | sed 's/^/       /' >&2
+        return 0
+    fi
+    tmp="$(mktemp)"
+    cp "$toml" "$tmp"
+    for line in "$@"; do
+        toml_set "$tmp" "$section" "$line"
+    done
+    if "$exe" config validate --config "$tmp" >/dev/null 2>&1; then
+        cat "$tmp" >"$toml"
+        info "enabled [$section] in $toml"
+    else
+        warn "could not enable [$section] in $toml automatically; add these lines by hand:"
+        { echo "[$section]"; printf '%s\n' "$@"; } | sed 's/^/       /' >&2
+    fi
+    rm -f "$tmp"
+}
+
+# toml_set <file> <section> "<key> = <value>": replaces the key (also a commented-out
+# one) inside an uncommented [section], or adds the line, or appends the section.
+toml_set() {
+    local file="$1" section="$2" line="$3" key
+    key="${line%%[ =]*}"
+    awk -v sec="[$section]" -v key="$key" -v line="$line" '
+        function flush() { if (insec && !done) { print line; done = 1 } }
+        /^[[:space:]]*\[/ {
+            t = $0; gsub(/[[:space:]]/, "", t); sub(/#.*/, "", t)
+            if (insec) flush()
+            insec = (t == sec)
+            if (insec) seen = 1
+            print; next
+        }
+        insec && !done && $0 ~ ("^[[:space:]]*#?[[:space:]]*" key "[[:space:]]*=") { print line; done = 1; next }
+        { print }
+        END {
+            if (insec) flush()
+            if (!seen) { print ""; print sec; print line }
+        }' "$file" >"$file.new"
+    mv -f "$file.new" "$file"
+}
+
+# Hints only: the firewall is never changed.
+firewall_hint() {
+    local port="${bind##*:}"
+    if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
+        if ! ufw status 2>/dev/null | grep -Eq "^$port(/tcp)?[[:space:]].*ALLOW"; then
+            warn "ufw is active and does not allow port $port: sudo ufw allow $port/tcp"
+        fi
+        if [ "$snmp_trap" -eq 1 ] && ! ufw status 2>/dev/null | grep -Eq '^162(/udp)?[[:space:]].*ALLOW'; then
+            warn "ufw: allow the SNMP traps with: sudo ufw allow 162/udp"
+        fi
+    elif command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+        warn "firewalld is running; open the port if needed: sudo firewall-cmd --permanent --add-port=$port/tcp && sudo firewall-cmd --reload"
+    fi
+}
 
 # ---- binary -----------------------------------------------------------------
 install -d -m 0755 "$bin_dir"
@@ -73,15 +152,16 @@ else
 fi
 
 # ---- capabilities -----------------------------------------------------------
-# Lets `wpg send` / `wpg serve` run by a normal user open raw sockets. The systemd
+# Lets `wpg send` / `wpg serve` run by a normal user open raw sockets (and bind the
+# SNMP trap port 162). The systemd
 # unit does not need it (it uses AmbientCapabilities).
 if ! command -v setcap >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
     info "installing libcap2-bin (setcap)"
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libcap2-bin >/dev/null || true
 fi
 if command -v setcap >/dev/null 2>&1; then
-    setcap cap_net_raw,cap_net_admin+eip "$exe"
-    info "setcap cap_net_raw,cap_net_admin+eip $exe"
+    setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip "$exe"
+    info "setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip $exe"
 else
     warn "setcap not found (package libcap2-bin / libcap); 'wpg send' will need sudo"
 fi
@@ -121,6 +201,9 @@ if [ "$dpdk" -eq 1 ]; then
 fi
 
 # ---- systemd service --------------------------------------------------------
+if [ "$service" -eq 0 ] && [ "$((terminal + snmp_trap))" -gt 0 ]; then
+    warn "--terminal / --snmp-trap only configure the service (/etc/wpg/wpg.toml); ignored without --service"
+fi
 if [ "$service" -eq 1 ]; then
     have_systemd || die "systemd is not running on this host; start 'wpg serve' another way"
     if ! id wpg >/dev/null 2>&1; then
@@ -131,12 +214,17 @@ if [ "$service" -eq 1 ]; then
     install -d -m 0750 -o root -g wpg "$etc"
     install -d -m 0750 -o wpg -g wpg "$state"
 
+    toml_created=0
     if [ ! -f "$etc/wpg.toml" ]; then
         "$exe" config init --path "$etc/wpg.toml" >/dev/null
         chown root:wpg "$etc/wpg.toml"
         chmod 0640 "$etc/wpg.toml"
+        toml_created=1
         info "wrote $etc/wpg.toml (edit it for settings not covered by deploy.sh)"
     fi
+    # Optional features (web terminal, SNMP trap receiver).
+    [ "$terminal" -eq 0 ] || enable_feature terminal "enabled = true" "allowed_targets = []"
+    [ "$snmp_trap" -eq 0 ] || enable_feature snmp 'trap_listen = "0.0.0.0:162"'
     if [ -n "$password_file" ]; then
         install -m 0640 -o root -g wpg "$password_file" "$etc/password"
         info "admin password -> $etc/password"
@@ -179,6 +267,17 @@ if [ "$service" -eq 1 ]; then
         rm -f /etc/systemd/system/wpg.service.d/allow-insecure.conf
     fi
 
+    # Port 162 (SNMP traps) is privileged: give the service CAP_NET_BIND_SERVICE when a
+    # trap listener is configured, as a drop-in so that wpg.service stays as shipped.
+    if grep -Eq '^[[:space:]]*trap_listen[[:space:]]*=' "$etc/wpg.toml" 2>/dev/null; then
+        mkdir -p /etc/systemd/system/wpg.service.d
+        printf '[Service]\nAmbientCapabilities=CAP_NET_BIND_SERVICE\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n' \
+            >/etc/systemd/system/wpg.service.d/bind-service.conf
+        info "drop-in wpg.service.d/bind-service.conf: CAP_NET_BIND_SERVICE for the SNMP trap port"
+    else
+        rm -f /etc/systemd/system/wpg.service.d/bind-service.conf
+    fi
+
     sed "s#/usr/local/bin/wpg#$exe#g" "$stage/wpg.service" >"$unit.new"
     chmod 0644 "$unit.new"
     mv -f "$unit.new" "$unit"
@@ -186,6 +285,7 @@ if [ "$service" -eq 1 ]; then
     systemctl enable --quiet wpg
     systemctl restart wpg
     info "systemd unit wpg.service (re)started"
+    firewall_hint
 elif [ "$rollback" -eq 1 ] && have_systemd && systemctl is-enabled --quiet wpg 2>/dev/null; then
     systemctl restart wpg
     info "wpg.service restarted"

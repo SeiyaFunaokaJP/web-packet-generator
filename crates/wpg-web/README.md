@@ -61,6 +61,8 @@ locales have the same keys).
 | `src/components/` | Icons, buttons, modal / confirm / drawer, badges, toasts, logs panel |
 | `src/pages/` | Dashboard, jobs (list, form, detail drawer), templates, settings, login / setup, placeholders |
 | `src/builder/` | Packet builder — phase 2 (placeholder route; planned module layout in `mod.rs`) |
+| `src/term/`, `src/pages/terminal.rs` | Web terminal (ADR-0011): xterm.js bindings and lazy loader, tab sessions over `/api/terminal/ws`, profiles / settings in `localStorage` |
+| `vendor/xterm/` | xterm.js 6 + fit / web-links / search add-ons (MIT), copied to `/xterm/` by Trunk; refresh with `scripts/vendor-xterm.sh` |
 | `src/validate.rs`, `src/shortcuts.rs`, `src/sparkline.rs`, `src/dom.rs` | Rate / duration validation, `g`-chord parser, SVG sparkline paths, browser helpers |
 
 ## Routes and shortcuts
@@ -72,6 +74,7 @@ locales have the same keys).
 | `/jobs` (`?new=1\|<template>`, `?job=<id>`) | Jobs, new-job form, detail drawer | `g j`, `n` |
 | `/templates` | Template library | `g t` |
 | `/rx` | Receive (M9) | `g r` |
+| `/terminal` | Web terminal (SSH / Telnet) | `g c` |
 | `/settings` | Settings, about, doctor | `g s` |
 | `/login`, `/setup` | Authentication | |
 

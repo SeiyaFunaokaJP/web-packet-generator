@@ -15,6 +15,8 @@
 //! * [`tls`]: HTTPS with given or self-signed certificates (rustls);
 //! * [`store`]: file-backed template library with hot reload;
 //! * [`jobs`]: job manager on top of `wpg-tx` with the transmit policy;
+//! * [`terminal`]: the web terminal (SSH / Telnet bridged over a WebSocket);
+//! * [`snmp`]: the SNMP manager tool (MIBs, trap receiver, pcap recording);
 //! * [`state::AppState`]: what the handlers share.
 
 use std::net::SocketAddr;
@@ -41,8 +43,10 @@ pub mod jobs;
 pub mod localize;
 pub mod rx;
 pub mod security;
+pub mod snmp;
 pub mod state;
 pub mod store;
+pub mod terminal;
 pub mod tls;
 
 pub use config::{Config, ConfigError, Overrides};
@@ -196,6 +200,7 @@ impl Server {
             state.watch_templates();
         }
         let listener = tokio::net::TcpListener::bind(bind).await?;
+        state.snmp.start_from_config().await;
         Ok(Self {
             listener,
             state,
@@ -241,6 +246,7 @@ impl Server {
             signal_state.begin_shutdown();
             signal_state.jobs.shutdown().await;
             signal_state.rx.shutdown().await;
+            signal_state.snmp.stop_receiver().await;
         };
         let res = match self.tls {
             None => {

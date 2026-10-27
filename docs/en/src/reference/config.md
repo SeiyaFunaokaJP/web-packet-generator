@@ -62,6 +62,16 @@ TLS certificate chain and private key (PEM) to serve HTTPS with; takes precedenc
 | `cert` | `string` |   | `WPG_SERVER__TLS__CERT` | PEM certificate chain. |
 | `key` | `string` |   | `WPG_SERVER__TLS__KEY` | PEM private key. |
 
+### `[snmp]`
+
+SNMP manager tool (Get / Walk / Set / traps, MIB upload).
+
+| Key | Type | Default | Environment variable | Description |
+|---|---|---|---|---|
+| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | Enables the SNMP tool screen and the `/api/snmp` endpoints. |
+| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | Directory of uploaded MIB files. Empty: `<data_dir>/mibs`. |
+| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | Address the trap / inform receiver listens on from startup, e.g. `0.0.0.0:162` (ports below 1024 need root or `CAP_NET_BIND_SERVICE`). Empty: not started at boot (it can be started from the UI). |
+
 ### `[templates]`
 
 Template library.
@@ -70,6 +80,18 @@ Template library.
 |---|---|---|---|---|
 | `library_paths` | `string[]` | `["./templates"]` | `WPG_TEMPLATES__LIBRARY_PATHS` | Read-only template libraries (Git checkouts, for example), scanned recursively for `*.wpg.yaml` / `*.wpg.json` and reloaded when files change. |
 | `user_dir` | `string` |   | `WPG_TEMPLATES__USER_DIR` | Writable directory for templates created or imported in the GUI; default `<data_dir>/templates`. |
+
+### `[terminal]`
+
+Web terminal: SSH / Telnet sessions the server opens for logged-in users (see the web terminal guide).
+
+| Key | Type | Default | Environment variable | Description |
+|---|---|---|---|---|
+| `allowed_targets` | `string[]` | `[]` | `WPG_TERMINAL__ALLOWED_TARGETS` | Targets sessions may connect to: `host`, `host:port`, `*.domain`, an IP address or a CIDR block (`10.0.0.0/8`, `[2001:db8::1]:830`); empty = any target. |
+| `enabled` | `boolean` | `false` | `WPG_TERMINAL__ENABLED` | Enable the web terminal. Off by default. |
+| `idle_timeout_secs` | `integer` | `1800` | `WPG_TERMINAL__IDLE_TIMEOUT_SECS` | Close a session after this many seconds without input or output; `0` = never. |
+| `max_sessions` | `integer` | `8` | `WPG_TERMINAL__MAX_SESSIONS` | Maximum number of simultaneous sessions (all users). |
+| `record_sessions` | `boolean` | `true` | `WPG_TERMINAL__RECORD_SESSIONS` | Allow session logs (what the remote side sends) under `<data_dir>/terminal-logs`; `false` disables server-side logs. |
 
 ### `[tx]`
 
@@ -153,6 +175,16 @@ allowed_ifaces = []
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
 
+[snmp]
+# SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).
+enabled = true
+# Trap / inform receiver started at boot, e.g. "0.0.0.0:162" (ports below 1024
+# need root or CAP_NET_BIND_SERVICE). Empty: not started at boot (it can be
+# started from the UI).
+trap_listen = ""
+# Directory of uploaded MIB files. Empty: <data_dir>/mibs
+mib_dir = ""
+
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".
 level = "info"
@@ -166,4 +198,11 @@ rotation = "never"
 # max_files = 7
 # Colour the console output when it is a terminal.
 ansi = true
+
+[terminal]
+enabled = false          # Web terminal (SSH / Telnet)
+allowed_targets = []     # "host", "host:port" or CIDR; empty = any target
+record_sessions = true   # keep session logs under <data_dir>/terminal-logs
+idle_timeout_secs = 1800
+max_sessions = 8
 ```

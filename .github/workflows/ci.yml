@@ -184,3 +184,34 @@ jobs:
       - uses: actions/checkout@v7
       - run: shellcheck scripts/*.sh scripts/lib/*.sh docs/build.sh
       - run: systemd-analyze verify packaging/systemd/wpg.service 2>&1 | grep -v 'is not executable' | tee /dev/stderr | (! grep .)
+      # deploy.sh without a host: the command lines it would run (no SSH connection).
+      - name: deploy.sh --dry-run
+        run: |
+          ./scripts/deploy.sh ubuntu@192.0.2.10 --service --iface eth1 --binary /bin/true --dry-run
+          ./scripts/deploy.sh ubuntu@192.0.2.10 --service --build-on-host --source git --git-ref main --terminal --snmp-trap --dry-run
+      # The Windows scripts must parse in Windows PowerShell 5.1 (no PowerShell 7-only
+      # syntax), and deploy.ps1 needs its UTF-8 BOM for the Japanese prompts.
+      - name: PowerShell scripts (syntax, 5.1 compatibility)
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem scripts/*.ps1, packaging/windows/*.ps1)
+          $failed = $false
+          foreach ($f in $files) {
+            $tokens = $null; $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
+            foreach ($e in $errors) { Write-Host "::error file=$($f.Name)::$($e.Extent.StartLineNumber): $($e.Message)"; $failed = $true }
+          }
+          $bytes = [System.IO.File]::ReadAllBytes("scripts/deploy.ps1")
+          if (-not ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)) { Write-Host "::error file=deploy.ps1::UTF-8 BOM missing"; $failed = $true }
+          if (Get-Module -ListAvailable PSScriptAnalyzer) {
+            $settings = @{ IncludeRules = @('PSUseCompatibleSyntax'); Rules = @{ PSUseCompatibleSyntax = @{ Enable = $true; TargetVersions = @('5.1', '7.0') } } }
+            foreach ($f in $files) {
+              foreach ($d in (Invoke-ScriptAnalyzer -Path $f.FullName -Settings $settings)) {
+                Write-Host "::error file=$($f.Name)::$($d.Line): $($d.Message)"; $failed = $true
+              }
+            }
+          } else {
+            Write-Host "PSScriptAnalyzer not installed; skipped the 5.1 compatibility check"
+          }
+          if ($failed) { exit 1 }
+      - run: grep -q $'\r$' scripts/deploy.bat && ! LC_ALL=C grep -qP '[^\x00-\x7F]' scripts/deploy.bat

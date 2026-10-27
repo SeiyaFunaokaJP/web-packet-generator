@@ -22,6 +22,11 @@ ignore = [
     # "unmaintained" only, no known vulnerability. Revisit when leptos drops it.
     # Mirrored in .cargo/audit.toml for the cargo-audit workflow.
     { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained, transitive via leptos (build-time only)" },
+    # rsa (Marvin attack, no fixed release): pulled in by russh for the web terminal's SSH
+    # client (ADR-0011). wpg never decrypts with RSA; it verifies RSA host-key signatures
+    # (public-key operation) and signs once per login with a user's RSA key, which gives
+    # no timing oracle to repeat. Revisit when RustCrypto/RSA#626 is fixed.
+    { id = "RUSTSEC-2023-0071", reason = "rsa: Marvin timing attack; only SSH client signing / verification (web terminal), no RSA decryption" },
 ]
 
 [licenses]

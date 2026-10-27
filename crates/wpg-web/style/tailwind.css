@@ -3,6 +3,8 @@
 
 /* Class names are only ever written as complete literals in the Rust sources. */
 @source "../src";
+/* The vendored xterm.js bundle is not a source of class names. */
+@source not "../vendor";
 
 /* Theme is class based: `<html class="dark">` (see src/prefs.rs). */
 @custom-variant dark (&:where(.dark, .dark *));

@@ -447,6 +447,10 @@ mod tests {
                     "found",
                     // user-defined protocols
                     "file",
+                    // web terminal jump hosts
+                    "host",
+                    "hop",
+                    "via",
                 ] {
                     args.set(name, "1");
                 }

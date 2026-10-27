@@ -2,6 +2,8 @@
 
 対応: Windows 10 21H2 以降。リリースバイナリはまだ公開していないため、ソースからビルドします。送信は Npcap のみを使い、GUI での低〜中レート利用を想定しています。高いレートが必要なときは Linux を使ってください。以下のコマンドは PowerShell 用です。
 
+> **Windows から Linux の検証用ホストに wpg を入れたいだけなら**、Windows 上でビルドする必要はありません。リポジトリを手元に用意し (`git clone`、または GitHub の「Download ZIP」を展開)、**`scripts\deploy.bat` をダブルクリック**します。ウィザードが接続先、SSH のユーザとパスワード、sudo パスワード、Web UI の管理者パスワード、送信に使うインタフェースを日本語で聞き、ホスト上で wpg をビルドしてサービスとして入れます。必要なのは Windows 10 / 11 標準の OpenSSH クライアントだけです。[デプロイ](../operations/deploy.md) を参照してください。
+
 ## 1. 前提ソフトウェアを入れる
 
 1. [rustup](https://rustup.rs) をインストールします (既定の MSVC ツールチェーンを選びます。Visual Studio Build Tools の「C++ によるデスクトップ開発」が無い場合は案内されます)。

@@ -5,5 +5,8 @@ doc-valid-idents = [
     "IPv4", "IPv6", "ICMPv4", "ICMPv6", "OSPFv2", "OSPFv3", "IS-IS", "CLNP", "ES-IS",
     "NSAP", "EtherType", "VLAN", "QinQ", "VXLAN", "DPDK", "AF_XDP", "AF_PACKET",
     "TPACKET_V3", "Npcap", "WebSocket", "OpenAPI", "YAML", "JSON", "WASM", "..",
+    # SNMP (wpg-snmp)
+    "SNMPv1", "SNMPv2", "SNMPv2c", "SNMPv3", "SMIv1", "SMIv2", "GetNext", "GetBulk",
+    "TimeTicks", "IpAddress",
 ]
 too-many-arguments-threshold = 8

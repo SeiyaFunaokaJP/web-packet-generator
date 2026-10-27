@@ -52,6 +52,8 @@ const ENV_SECTIONS: &[&str] = &[
     "data_dir",
     "tx",
     "log",
+    "terminal",
+    "snmp",
 ];
 
 /// The whole configuration (`wpg.toml`).
@@ -76,6 +78,10 @@ pub struct Config {
     pub tx: TxConfig,
     /// Logging.
     pub log: LogConfig,
+    /// Web terminal (SSH / Telnet in the browser).
+    pub terminal: TerminalConfig,
+    /// SNMP manager tool (ADR-0010).
+    pub snmp: SnmpConfig,
 }
 
 /// `[server]`.
@@ -188,6 +194,64 @@ pub struct TxConfig {
     pub dpdk_eal_args: Vec<String>,
 }
 
+/// `[terminal]`: the web terminal (ADR-0011, spec §2.6 "Web ターミナル").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct TerminalConfig {
+    /// Enable the web terminal (SSH / Telnet sessions opened by the server on
+    /// behalf of logged-in users). Off by default.
+    pub enabled: bool,
+    /// Targets sessions may connect to: `"host"`, `"host:port"`, `"*.domain"`, an
+    /// IP address or a CIDR block (`"10.0.0.0/8"`, `"[2001:db8::1]:830"`); empty =
+    /// any target.
+    pub allowed_targets: Vec<String>,
+    /// Allow session logs (the received text, like Tera Term's log) under
+    /// `<data_dir>/terminal-logs`; sessions start recording unless the user
+    /// switches it off. `false` disables server-side logs.
+    pub record_sessions: bool,
+    /// Close a session after this many seconds without input or output
+    /// (`0` = never).
+    pub idle_timeout_secs: u64,
+    /// Maximum number of simultaneous sessions (all users).
+    pub max_sessions: usize,
+}
+
+impl Default for TerminalConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            allowed_targets: Vec::new(),
+            record_sessions: true,
+            idle_timeout_secs: 1800,
+            max_sessions: 8,
+        }
+    }
+}
+
+/// `[snmp]`: the SNMP manager tool (Get / Walk / Set / traps, MIBs).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct SnmpConfig {
+    /// Enables the SNMP tool screen and the `/api/snmp` endpoints.
+    pub enabled: bool,
+    /// Address the trap / inform receiver listens on from startup, e.g.
+    /// `0.0.0.0:162` (ports below 1024 need root or `CAP_NET_BIND_SERVICE`).
+    /// Empty: not started at boot (it can be started from the UI).
+    pub trap_listen: String,
+    /// Directory of uploaded MIB files. Empty: `<data_dir>/mibs`.
+    pub mib_dir: PathBuf,
+}
+
+impl Default for SnmpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            trap_listen: String::new(),
+            mib_dir: PathBuf::new(),
+        }
+    }
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
@@ -229,6 +293,8 @@ impl Default for Config {
             protocols: ProtocolsConfig::default(),
             tx: TxConfig::default(),
             log: LogConfig::default(),
+            terminal: TerminalConfig::default(),
+            snmp: SnmpConfig::default(),
         }
     }
 }
@@ -424,10 +490,32 @@ impl Config {
         self.data_dir.join("wpg.sqlite")
     }
 
+    /// Directory of uploaded MIB files: `snmp.mib_dir` or `<data_dir>/mibs`.
+    #[must_use]
+    pub fn mib_dir(&self) -> PathBuf {
+        if self.snmp.mib_dir.as_os_str().is_empty() {
+            self.data_dir.join("mibs")
+        } else {
+            self.snmp.mib_dir.clone()
+        }
+    }
+
     /// Directory of the generated self-signed certificate.
     #[must_use]
     pub fn tls_dir(&self) -> PathBuf {
         self.data_dir.join("tls")
+    }
+
+    /// Directory of the web terminal's session logs.
+    #[must_use]
+    pub fn terminal_log_dir(&self) -> PathBuf {
+        self.data_dir.join("terminal-logs")
+    }
+
+    /// The web terminal's SSH host keys (OpenSSH `known_hosts` format).
+    #[must_use]
+    pub fn known_hosts_path(&self) -> PathBuf {
+        self.data_dir.join("terminal").join("known_hosts")
     }
 
     /// Default backend name (configured or the build's default).
@@ -592,6 +680,26 @@ impl Config {
                 Some(_) => {}
             }
         }
+        self.validate_terminal(&mut out);
+        let listen = self.snmp.trap_listen.trim();
+        if !listen.is_empty() {
+            match listen.parse::<SocketAddr>() {
+                Err(e) => out.push(ConfigIssue::new(
+                    Error,
+                    "snmp.trap_listen",
+                    "config-issue-snmp-listen",
+                    format!("{listen}: {e}"),
+                )),
+                Ok(a) if a.port() < 1024 && cfg!(unix) && !self.snmp.enabled => {}
+                Ok(a) if a.port() < 1024 && cfg!(unix) => out.push(ConfigIssue::new(
+                    Warning,
+                    "snmp.trap_listen",
+                    "config-issue-snmp-privileged-port",
+                    a.to_string(),
+                )),
+                Ok(_) => {}
+            }
+        }
         if let Err(e) = tracing_subscriber::EnvFilter::try_new(&self.log.level) {
             out.push(ConfigIssue::new(
                 Error,
@@ -601,6 +709,40 @@ impl Config {
             ));
         }
         out
+    }
+
+    fn validate_terminal(&self, out: &mut Vec<ConfigIssue>) {
+        use IssueLevel::{Error, Warning};
+        let t = &self.terminal;
+        for entry in &t.allowed_targets {
+            if let Err(e) = crate::terminal::target::Rule::parse(entry) {
+                out.push(ConfigIssue::new(
+                    Error,
+                    "terminal.allowed_targets",
+                    "config-issue-terminal-bad-target",
+                    format!("{entry}: {e}"),
+                ));
+            }
+        }
+        if !t.enabled {
+            return;
+        }
+        if t.max_sessions == 0 {
+            out.push(ConfigIssue::new(
+                Error,
+                "terminal.max_sessions",
+                "config-issue-zero",
+                "0",
+            ));
+        }
+        if t.allowed_targets.is_empty() && !self.server.bind.ip().is_loopback() {
+            out.push(ConfigIssue::new(
+                Warning,
+                "terminal.allowed_targets",
+                "config-issue-terminal-any-target",
+                self.server.bind.to_string(),
+            ));
+        }
     }
 
     /// A fully commented example `wpg.toml` (`wpg config init`). Every active
@@ -761,6 +903,16 @@ allowed_ifaces = []
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
 
+[snmp]
+# SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).
+enabled = true
+# Trap / inform receiver started at boot, e.g. "0.0.0.0:162" (ports below 1024
+# need root or CAP_NET_BIND_SERVICE). Empty: not started at boot (it can be
+# started from the UI).
+trap_listen = ""
+# Directory of uploaded MIB files. Empty: <data_dir>/mibs
+mib_dir = ""
+
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".
 level = "info"
@@ -774,6 +926,13 @@ rotation = "never"
 # max_files = 7
 # Colour the console output when it is a terminal.
 ansi = true
+
+[terminal]
+enabled = false          # Web terminal (SSH / Telnet)
+allowed_targets = []     # "host", "host:port" or CIDR; empty = any target
+record_sessions = true   # keep session logs under <data_dir>/terminal-logs
+idle_timeout_secs = 1800
+max_sessions = 8
 "#;
 
 #[cfg(test)]
@@ -929,6 +1088,85 @@ mod tests {
         assert!(keys.contains(&(IssueLevel::Error, "tx.default_backend".into())));
         assert!(keys.contains(&(IssueLevel::Warning, "server.bind".into())));
         assert!(keys.contains(&(IssueLevel::Error, "log.level".into())));
+    }
+
+    #[test]
+    fn terminal_section() {
+        let c = Config::default();
+        assert!(!c.terminal.enabled, "off by default");
+        assert_eq!(c.terminal.max_sessions, 8);
+        let c = Config::from_toml_str(
+            "[terminal]\nenabled = true\nallowed_targets = [\"10.0.0.0/8\", \"r1:23\"]\n",
+        )
+        .unwrap();
+        assert!(c.terminal.enabled);
+        assert_eq!(c.terminal.allowed_targets.len(), 2);
+        let e = Config::from_toml_str("[terminal]\nenable = true\n").unwrap_err();
+        assert!(e.to_string().contains("enable"), "{e}");
+    }
+
+    #[test]
+    fn terminal_validation() {
+        let mut c = Config::default();
+        c.templates.library_paths = vec![];
+        // disabled: only malformed entries are reported
+        c.server.bind = "0.0.0.0:8080".parse().unwrap();
+        c.auth.password_hash = Some("$argon2id$x".into());
+        assert!(c.validate().is_empty(), "{:?}", c.validate());
+        c.terminal.enabled = true;
+        let issues = c.validate();
+        assert_eq!(issues.len(), 1, "{issues:?}");
+        assert_eq!(issues[0].level, IssueLevel::Warning);
+        assert_eq!(issues[0].message_key, "config-issue-terminal-any-target");
+        // loopback bind: no warning
+        c.server.bind = "127.0.0.1:8080".parse().unwrap();
+        assert!(c.validate().is_empty());
+        c.terminal.allowed_targets = vec!["10.0.0.0/33".into(), "r1:x".into(), "lab*".into()];
+        c.terminal.max_sessions = 0;
+        let keys: Vec<(IssueLevel, String, String)> = c
+            .validate()
+            .into_iter()
+            .map(|i| (i.level, i.key, i.message_key))
+            .collect();
+        assert_eq!(
+            keys.iter()
+                .filter(|k| k.2 == "config-issue-terminal-bad-target")
+                .count(),
+            3,
+            "{keys:?}"
+        );
+        assert!(keys.contains(&(
+            IssueLevel::Error,
+            "terminal.max_sessions".into(),
+            "config-issue-zero".into()
+        )));
+    }
+
+    #[test]
+    fn snmp_section() {
+        let c = Config::from_toml_str(
+            "data_dir = \"/d\"\n[snmp]\nenabled = false\ntrap_listen = \"0.0.0.0:1162\"\n",
+        )
+        .unwrap();
+        assert!(!c.snmp.enabled);
+        assert_eq!(c.mib_dir(), PathBuf::from("/d/mibs"));
+        let mut c = Config::default();
+        c.templates.library_paths = vec![];
+        c.snmp.trap_listen = "nonsense".into();
+        let issues = c.validate();
+        assert!(issues
+            .iter()
+            .any(|i| i.key == "snmp.trap_listen" && i.level == IssueLevel::Error));
+        c.snmp.trap_listen = "0.0.0.0:162".into();
+        c.snmp.mib_dir = "/m".into();
+        assert_eq!(c.mib_dir(), PathBuf::from("/m"));
+        if cfg!(unix) {
+            assert!(c
+                .validate()
+                .iter()
+                .any(|i| i.message_key == "config-issue-snmp-privileged-port"));
+        }
+        assert!(Config::from_toml_str("[snmp]\nbogus = 1\n").is_err());
     }
 }
 

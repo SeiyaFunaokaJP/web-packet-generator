@@ -53,6 +53,35 @@ wpg-server は `/api` 以下で REST (JSON) API を提供し、リアルタイ�
 | captures | [`GET /api/captures/{id}/pcapng`](#op-get-api-captures-id-pcapng) | The pcapng file of a finished capture started with `save`. |
 | captures | [`POST /api/captures/{id}/stop`](#op-post-api-captures-id-stop) | Stops a running capture (asynchronously; watch `capture_state`). |
 | events | [`GET /api/ws`](#op-get-api-ws) | WebSocket upgrade. |
+| terminal | [`GET /api/terminal/known-hosts`](#op-get-api-terminal-known-hosts) | Trusted SSH host keys (`<data_dir>/terminal/known_hosts`). |
+| terminal | [`DELETE /api/terminal/known-hosts/{host}/{port}`](#op-delete-api-terminal-known-hosts-host-port) | Forgets the host key(s) of `host`:`port` (after a legitimate key change). |
+| terminal | [`GET /api/terminal/logs`](#op-get-api-terminal-logs) | Session logs, newest first. |
+| terminal | [`GET /api/terminal/logs/{name}`](#op-get-api-terminal-logs-name) | Downloads a session log (`text/plain`, also while it is being written). |
+| terminal | [`DELETE /api/terminal/logs/{name}`](#op-delete-api-terminal-logs-name) | Deletes a session log (not one that is being written). |
+| terminal | [`GET /api/terminal/status`](#op-get-api-terminal-status) | Configuration and running sessions (also when the terminal is disabled, so the UI can explain how to enable it). |
+| terminal | [`GET /api/terminal/ws`](#op-get-api-terminal-ws) | Opens a terminal session (WebSocket). Send `connect` first; see `TerminalClientMessage` / `TerminalServerMessage`. Remote output arrives as binary frames, keystrokes may be sent as binary frames or `input` messages. |
+| snmp | [`GET /api/snmp/capture`](#op-get-api-snmp-capture) | Recording state. |
+| snmp | [`POST /api/snmp/capture`](#op-post-api-snmp-capture) | Starts / stops the recording of every SNMP datagram this server sends or receives (requests, responses, traps), or clears it. |
+| snmp | [`GET /api/snmp/capture/download`](#op-get-api-snmp-capture-download) | The recorded frames as a pcap / pcapng file (Ethernet / IP / UDP synthesised around the real datagrams; placeholder MAC addresses). |
+| snmp | [`POST /api/snmp/get`](#op-post-api-snmp-get) | `GetRequest`. |
+| snmp | [`POST /api/snmp/getbulk`](#op-post-api-snmp-getbulk) | `GetBulkRequest` (v2c / v3). |
+| snmp | [`POST /api/snmp/getnext`](#op-post-api-snmp-getnext) | `GetNextRequest`. |
+| snmp | [`POST /api/snmp/inform`](#op-post-api-snmp-inform) | Sends an `InformRequest` (v2c / v3) and waits for the acknowledgement. |
+| snmp | [`GET /api/snmp/mibs`](#op-get-api-snmp-mibs) | Loaded MIB modules with their load state. |
+| snmp | [`POST /api/snmp/mibs`](#op-post-api-snmp-mibs) | Uploads MIB files (stored under `<data_dir>/mibs`, loaded at once). |
+| snmp | [`GET /api/snmp/mibs/node`](#op-get-api-snmp-mibs-node) | Details of a MIB node (longest-prefix match for instances). |
+| snmp | [`GET /api/snmp/mibs/search`](#op-get-api-snmp-mibs-search) | Finds MIB objects by name (for OID autocompletion). |
+| snmp | [`GET /api/snmp/mibs/tree`](#op-get-api-snmp-mibs-tree) | One level of the MIB tree. |
+| snmp | [`DELETE /api/snmp/mibs/{module}`](#op-delete-api-snmp-mibs-module) | Deletes an uploaded module (its whole file). Bundled modules cannot be deleted. |
+| snmp | [`GET /api/snmp/receiver`](#op-get-api-snmp-receiver) | Receiver state. |
+| snmp | [`POST /api/snmp/receiver/start`](#op-post-api-snmp-receiver-start) | Starts (or restarts) the trap / inform receiver. |
+| snmp | [`POST /api/snmp/receiver/stop`](#op-post-api-snmp-receiver-stop) | Stops the receiver. |
+| snmp | [`POST /api/snmp/set`](#op-post-api-snmp-set) | `SetRequest`. |
+| snmp | [`GET /api/snmp/status`](#op-get-api-snmp-status) | Whether the SNMP tool is enabled, with MIB / receiver / recording summaries. |
+| snmp | [`POST /api/snmp/trap`](#op-post-api-snmp-trap) | Sends a trap (v1 Trap-PDU, SNMPv2-Trap, or a v3 trap with this server as the authoritative engine). The result lists the bindings sent. |
+| snmp | [`GET /api/snmp/traps`](#op-get-api-snmp-traps) | Received notifications, newest first (also pushed as `snmp_trap` events on the WebSocket). |
+| snmp | [`DELETE /api/snmp/traps`](#op-delete-api-snmp-traps) | Forgets the received notifications. |
+| snmp | [`POST /api/snmp/walk`](#op-post-api-snmp-walk) | Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns. |
 
 ### `auth`
 
@@ -834,9 +863,491 @@ WebSocket upgrade.
 |---|---|---|
 | `101` | WebSocket: JSON `ServerEvent` messages | `application/json` [`ServerEvent`](#schema-serverevent) |
 
+### `terminal`
+
+Web terminal: SSH / Telnet sessions, session logs, host keys
+
+<a id="op-get-api-terminal-known-hosts"></a>
+
+#### `GET /api/terminal/known-hosts`
+
+Trusted SSH host keys (`<data_dir>/terminal/known_hosts`).
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Host keys | `application/json` [`KnownHost`](#schema-knownhost)`[]` |
+
+<a id="op-delete-api-terminal-known-hosts-host-port"></a>
+
+#### `DELETE /api/terminal/known-hosts/{host}/{port}`
+
+Forgets the host key(s) of `host`:`port` (after a legitimate key change).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `host` | path | `string` | はい | Host as stored |
+| `port` | path | `integer` | はい | Port |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Removed |   |
+| `404` | No key stored | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-terminal-logs"></a>
+
+#### `GET /api/terminal/logs`
+
+Session logs, newest first.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Logs | `application/json` [`LogInfo`](#schema-loginfo)`[]` |
+
+<a id="op-get-api-terminal-logs-name"></a>
+
+#### `GET /api/terminal/logs/{name}`
+
+Downloads a session log (`text/plain`, also while it is being written).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `name` | path | `string` | はい | Log file name |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | The log | `text/plain` |
+| `404` | Unknown log | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-delete-api-terminal-logs-name"></a>
+
+#### `DELETE /api/terminal/logs/{name}`
+
+Deletes a session log (not one that is being written).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `name` | path | `string` | はい | Log file name |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Deleted |   |
+| `404` | Unknown log | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `409` | `invalid_state`: the session is still recording | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-terminal-status"></a>
+
+#### `GET /api/terminal/status`
+
+Configuration and running sessions (also when the terminal is disabled, so the UI can explain how to enable it).
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Terminal status | `application/json` [`TerminalStatus`](#schema-terminalstatus) |
+
+<a id="op-get-api-terminal-ws"></a>
+
+#### `GET /api/terminal/ws`
+
+Opens a terminal session (WebSocket). Send `connect` first; see `TerminalClientMessage` / `TerminalServerMessage`. Remote output arrives as binary frames, keystrokes may be sent as binary frames or `input` messages.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `101` | WebSocket: `TerminalServerMessage` JSON + binary output | `application/json` [`TerminalServerMessage`](#schema-terminalservermessage) |
+| `403` | `terminal_disabled` (`terminal.enabled = false`) or `forbidden` (viewer role) | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+### `snmp`
+
+SNMP manager tool: Get / Walk / Set / traps, MIBs, trap receiver, pcap recording
+
+<a id="op-get-api-snmp-capture"></a>
+
+#### `GET /api/snmp/capture`
+
+Recording state.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | State | `application/json` [`CaptureStatus`](#schema-capturestatus) |
+
+<a id="op-post-api-snmp-capture"></a>
+
+#### `POST /api/snmp/capture`
+
+Starts / stops the recording of every SNMP datagram this server sends or receives (requests, responses, traps), or clears it.
+
+**リクエスト本文**: `application/json` [`CaptureControl`](#schema-capturecontrol)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | State | `application/json` [`CaptureStatus`](#schema-capturestatus) |
+
+<a id="op-get-api-snmp-capture-download"></a>
+
+#### `GET /api/snmp/capture/download`
+
+The recorded frames as a pcap / pcapng file (Ethernet / IP / UDP synthesised around the real datagrams; placeholder MAC addresses).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `format` | path | `string` \| `null` | はい | `pcap` (default) or `pcapng`. |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | pcap / pcapng file | `application/octet-stream` |
+| `400` | Unknown format | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-snmp-get"></a>
+
+#### `POST /api/snmp/get`
+
+`GetRequest`.
+
+**リクエスト本文**: `application/json` [`SnmpOidsRequest`](#schema-snmpoidsrequest)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Response (check `error_status`) | `application/json` [`SnmpResult`](#schema-snmpresult) |
+| `400` | Bad target / OID / v3 settings | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `snmp_error`: Report PDU, authentication or decoding failure | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `504` | `snmp_error`: no response | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-snmp-getbulk"></a>
+
+#### `POST /api/snmp/getbulk`
+
+`GetBulkRequest` (v2c / v3).
+
+**リクエスト本文**: `application/json` [`SnmpBulkRequest`](#schema-snmpbulkrequest)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Response | `application/json` [`SnmpResult`](#schema-snmpresult) |
+| `400` | Bad request (also: GetBulk on v1) | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `snmp_error` | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `504` | `snmp_error`: no response | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-snmp-getnext"></a>
+
+#### `POST /api/snmp/getnext`
+
+`GetNextRequest`.
+
+**リクエスト本文**: `application/json` [`SnmpOidsRequest`](#schema-snmpoidsrequest)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Response | `application/json` [`SnmpResult`](#schema-snmpresult) |
+| `400` | Bad request | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `snmp_error` | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `504` | `snmp_error`: no response | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-snmp-inform"></a>
+
+#### `POST /api/snmp/inform`
+
+Sends an `InformRequest` (v2c / v3) and waits for the acknowledgement.
+
+**リクエスト本文**: `application/json` [`SnmpNotifyRequest`](#schema-snmpnotifyrequest)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Acknowledged (the Response's bindings) | `application/json` [`SnmpResult`](#schema-snmpresult) |
+| `400` | Bad request (also: inform on v1) | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `snmp_error` | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `504` | `snmp_error`: not acknowledged | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-snmp-mibs"></a>
+
+#### `GET /api/snmp/mibs`
+
+Loaded MIB modules with their load state.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Modules | `application/json` [`MibModuleOut`](#schema-mibmoduleout)`[]` |
+
+<a id="op-post-api-snmp-mibs"></a>
+
+#### `POST /api/snmp/mibs`
+
+Uploads MIB files (stored under `<data_dir>/mibs`, loaded at once).
+
+**リクエスト本文**: `application/json` [`MibUpload`](#schema-mibupload)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Per-file result and module state | `application/json` [`MibUploadResult`](#schema-mibuploadresult) |
+| `400` | Bad file name / too large | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-snmp-mibs-node"></a>
+
+#### `GET /api/snmp/mibs/node`
+
+Details of a MIB node (longest-prefix match for instances).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `id` | path | `string` | はい | Name (`ifOperStatus`, `IF-MIB::ifOperStatus`, `ifOperStatus.3`) or dotted OID. |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Node | `application/json` [`NodeOut`](#schema-nodeout) |
+| `400` | Unparsable id | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `404` | No MIB defines it | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-snmp-mibs-search"></a>
+
+#### `GET /api/snmp/mibs/search`
+
+Finds MIB objects by name (for OID autocompletion).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `q` | path | `string` | はい | Part of a descriptor (`ifOper`, `IF-MIB::ifH`). |
+| `limit` | path | `integer` \| `null` | はい | Most hits (default 20, at most 200). |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Hits, prefix matches first | `application/json` [`SearchHit`](#schema-searchhit)`[]` |
+
+<a id="op-get-api-snmp-mibs-tree"></a>
+
+#### `GET /api/snmp/mibs/tree`
+
+One level of the MIB tree.
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `oid` | path | `string` \| `null` | はい | Parent (name or dotted OID; empty = the roots). |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Children | `application/json` [`TreeChildOut`](#schema-treechildout)`[]` |
+| `400` | Unknown name | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-delete-api-snmp-mibs-module"></a>
+
+#### `DELETE /api/snmp/mibs/{module}`
+
+Deletes an uploaded module (its whole file). Bundled modules cannot be deleted.
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `module` | path | `string` | はい | Module name |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Deleted | `application/json` [`MibDeleted`](#schema-mibdeleted) |
+| `404` | Unknown module | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `409` | `read_only`: bundled module | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-snmp-receiver"></a>
+
+#### `GET /api/snmp/receiver`
+
+Receiver state.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | State | `application/json` [`ReceiverStatus`](#schema-receiverstatus) |
+
+<a id="op-post-api-snmp-receiver-start"></a>
+
+#### `POST /api/snmp/receiver/start`
+
+Starts (or restarts) the trap / inform receiver.
+
+**リクエスト本文**: `application/json` [`ReceiverStart`](#schema-receiverstart)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Listening | `application/json` [`ReceiverStatus`](#schema-receiverstatus) |
+| `400` | Bad address / users | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `backend_error`: cannot bind (privileged port, in use) | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-snmp-receiver-stop"></a>
+
+#### `POST /api/snmp/receiver/stop`
+
+Stops the receiver.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Stopped | `application/json` [`ReceiverStatus`](#schema-receiverstatus) |
+
+<a id="op-post-api-snmp-set"></a>
+
+#### `POST /api/snmp/set`
+
+`SetRequest`.
+
+**リクエスト本文**: `application/json` [`SnmpSetRequest`](#schema-snmpsetrequest)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Response (check `error_status`: notWritable, wrongType, ...) | `application/json` [`SnmpResult`](#schema-snmpresult) |
+| `400` | Bad target / OID / value | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `snmp_error` | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `504` | `snmp_error`: no response | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-snmp-status"></a>
+
+#### `GET /api/snmp/status`
+
+Whether the SNMP tool is enabled, with MIB / receiver / recording summaries.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Status | `application/json` [`SnmpStatus`](#schema-snmpstatus) |
+
+<a id="op-post-api-snmp-trap"></a>
+
+#### `POST /api/snmp/trap`
+
+Sends a trap (v1 Trap-PDU, SNMPv2-Trap, or a v3 trap with this server as the authoritative engine). The result lists the bindings sent.
+
+**リクエスト本文**: `application/json` [`SnmpNotifyRequest`](#schema-snmpnotifyrequest)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Sent | `application/json` [`SnmpResult`](#schema-snmpresult) |
+| `400` | Bad request | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-snmp-traps"></a>
+
+#### `GET /api/snmp/traps`
+
+Received notifications, newest first (also pushed as `snmp_trap` events on the WebSocket).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `limit` | path | `integer` \| `null` | はい | Most notifications (default 200, at most 1000). |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Notifications | `application/json` [`TrapOut`](#schema-trapout)`[]` |
+
+<a id="op-delete-api-snmp-traps"></a>
+
+#### `DELETE /api/snmp/traps`
+
+Forgets the received notifications.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Cleared |   |
+
+<a id="op-post-api-snmp-walk"></a>
+
+#### `POST /api/snmp/walk`
+
+Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns.
+
+**リクエスト本文**: `application/json` [`SnmpWalkRequest`](#schema-snmpwalkrequest)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Bindings and tables | `application/json` [`SnmpResult`](#schema-snmpresult) |
+| `400` | Bad request | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `snmp_error` | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `504` | `snmp_error`: no response | `application/json` [`ErrorBody`](#schema-errorbody) |
+
 ## スキーマ
 
 上記で参照しているリクエスト・レスポンス本文の型です。
+
+<a id="schema-activesession"></a>
+
+### `ActiveSession`
+
+A running session (`GET /api/terminal/status`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `host` | `string` | はい | Target host as entered. |
+| `id` | `string` | はい | Session id. |
+| `log` | `string` \| `null` |   | Log file being written, if recording. |
+| `port` | `integer` | はい | Target port. |
+| `protocol` | [`Protocol`](#schema-protocol) | はい | Protocol. |
+| `started` | `integer` | はい | Start (Unix seconds). |
+| `user` | `string` | はい | wpg user who opened it. |
+| `via` | `string``[]` |   | SSH jump hosts in order (`user@host:port`), empty for a direct session. |
 
 <a id="schema-authstatus"></a>
 
@@ -875,6 +1386,17 @@ One transmit backend.
 |---|---|---|---|
 | `backends` | [`BackendItem`](#schema-backenditem)`[]` | はい | All backends. |
 | `default` | `string` | はい | Backend used when a job names none. |
+
+<a id="schema-capturecontrol"></a>
+
+### `CaptureControl`
+
+`POST /api/snmp/capture` body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `clear` | `boolean` |   | Discard the recorded frames first. |
+| `enabled` | `boolean` \| `null` |   | Start (`true`) / stop (`false`) recording. |
 
 <a id="schema-captureinfo"></a>
 
@@ -915,6 +1437,18 @@ What to capture (all fields are optional).
 | `promisc` | `boolean` |   | Promiscuous mode. |
 | `save` | `string` \| `null` |   | Save the matching frames as a pcapng file of this name under `<data_dir>/captures`. |
 | `verify` | `boolean` |   | Check the signatures of matching frames (loss / order / latency). |
+
+<a id="schema-capturestatus"></a>
+
+### `CaptureStatus`
+
+pcap recording state.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `dropped` | `integer` | はい | Frames dropped because the buffer was full. |
+| `enabled` | `boolean` | はい | Recording. |
+| `frames` | `integer` | はい | Kept frames. |
 
 <a id="schema-capturedframe"></a>
 
@@ -982,7 +1516,7 @@ Error object.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
-| `code` | `string` | はい | Stable machine code: `not_found`, `bad_request`, `invalid_template`, `policy_violation`, `read_only`, `invalid_state`, `backend_error`, `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`, `forbidden`, `already_configured`, `internal`. |
+| `code` | `string` | はい | Stable machine code: `not_found`, `bad_request`, `invalid_template`, `policy_violation`, `read_only`, `invalid_state`, `backend_error`, `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`, `forbidden`, `already_configured`, `terminal_disabled`, `snmp_error`, `internal`. |
 | `details` | `any` |   | Extra data, e.g. the lint issues of an invalid template. |
 | `message` | `string` | はい | Human readable message in the language of `Accept-Language`. |
 
@@ -1211,6 +1745,35 @@ Dashboard aggregate of the running jobs.
 | `pps` | `number` | はい | Sum of the jobs' packets per second. |
 | `running` | `integer` | はい | Jobs currently sending. |
 
+<a id="schema-jumphost"></a>
+
+### `JumpHost`
+
+One SSH jump host of a [`ConnectRequest`].
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `host` | `string` | はい | Host name or address (resolved by the previous hop, or by the server for the first one). |
+| `passphrase` | `string` \| `null` |   | Passphrase of `private_key`. |
+| `password` | `string` \| `null` |   | Password (also answers a single keyboard-interactive password prompt); empty: the server's prompts are shown. |
+| `port` | `integer` \| `null` |   | SSH port (default 22). |
+| `private_key` | `string` \| `null` |   | Private key (OpenSSH / PEM / `PuTTY` `.ppk` text). |
+| `username` | `string` | はい | User name on the jump host. |
+
+<a id="schema-knownhost"></a>
+
+### `KnownHost`
+
+A stored host key (`GET /api/terminal/known-hosts`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `algorithm` | `string` | はい | Key algorithm (`ssh-ed25519`, `rsa-sha2-512`, ...). |
+| `comment` | `string` | はい | The entry's comment (who accepted it and when). |
+| `fingerprint` | `string` | はい | `SHA256:...` fingerprint. |
+| `host` | `string` | はい | Host as typed by the user who accepted the key (lower case). |
+| `port` | `integer` | はい | TCP port. |
+
 <a id="schema-lintrequest"></a>
 
 ### `LintRequest`
@@ -1234,6 +1797,19 @@ Dashboard aggregate of the running jobs.
 | `ok` | `boolean` | はい | No errors (warnings allowed). |
 | `warnings` | `integer` | はい | Number of warnings. |
 
+<a id="schema-loginfo"></a>
+
+### `LogInfo`
+
+A past or running session log (`GET /api/terminal/logs`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `active` | `boolean` | はい | Still being written by a live session. |
+| `modified` | `integer` | はい | Last modification (Unix seconds). |
+| `name` | `string` | はい | File name (the id in `/api/terminal/logs/{name}`). |
+| `size` | `integer` | はい | Size in bytes. |
+
 <a id="schema-loginrequest"></a>
 
 ### `LoginRequest`
@@ -1245,6 +1821,64 @@ Dashboard aggregate of the running jobs.
 | `password` | `string` | はい | Password. |
 | `username` | `string` \| `null` |   | User name (default `admin`). |
 
+<a id="schema-mibdeleted"></a>
+
+### `MibDeleted`
+
+Removed modules.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `removed` | `string``[]` | はい | Modules removed with the file. |
+
+<a id="schema-mibfilein"></a>
+
+### `MibFileIn`
+
+One file of an upload.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `content` | `string` | はい | File content (text). |
+| `name` | `string` | はい | File name (`CISCO-SMI.my`; `.mib`, `.txt`, `.my`, `.smi`, `.asn`, `.asn1` or none). |
+
+<a id="schema-mibmoduleout"></a>
+
+### `MibModuleOut`
+
+A loaded MIB module.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `bundled` | `boolean` | はい | Bundled with wpg (cannot be deleted). |
+| `errors` | `string``[]` | はい | Problems: parse warnings, unresolved definitions. |
+| `file` | `string` \| `null` |   | Uploaded file it came from. |
+| `missing_imports` | `string``[]` | はい | Modules named in IMPORTS that are not loaded (upload them). |
+| `name` | `string` | はい | Module name. |
+| `nodes` | `integer` | はい | Resolved definitions. |
+| `status` | `string` | はい | `ok`, `partial` (loaded with problems) or `error`. |
+
+<a id="schema-mibupload"></a>
+
+### `MibUpload`
+
+`POST /api/snmp/mibs` body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `files` | [`MibFileIn`](#schema-mibfilein)`[]` | はい | Files. |
+
+<a id="schema-mibuploadresult"></a>
+
+### `MibUploadResult`
+
+`POST /api/snmp/mibs` result.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `files` | [`UploadedFile`](#schema-uploadedfile)`[]` | はい | Per file. |
+| `modules` | [`MibModuleOut`](#schema-mibmoduleout)`[]` | はい | The state of the uploaded modules after loading (missing imports are named here). |
+
 <a id="schema-mix"></a>
 
 ### `Mix`
@@ -1252,6 +1886,47 @@ Dashboard aggregate of the running jobs.
 How several streams are interleaved.
 
 型: `"weighted"` | `"sequential"` | `"round_robin"`
+
+<a id="schema-namednumber"></a>
+
+### `NamedNumber`
+
+An enumeration value / BITS position.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `label` | `string` | はい | Label. |
+| `value` | `integer` | はい | Number. |
+
+<a id="schema-nodeout"></a>
+
+### `NodeOut`
+
+MIB node details.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `access` | `string` \| `null` |   | MAX-ACCESS. |
+| `augments` | `string` \| `null` |   | AUGMENTS. |
+| `base_type` | `string` \| `null` |   | Base type. |
+| `defval` | `string` \| `null` |   | DEFVAL. |
+| `description` | `string` \| `null` |   | DESCRIPTION. |
+| `display_hint` | `string` \| `null` |   | DISPLAY-HINT. |
+| `enums` | [`NamedNumber`](#schema-namednumber)`[]` | はい | Enumeration / BITS names. |
+| `index` | `string``[]` | はい | INDEX (of a row; AUGMENTS followed). |
+| `instance` | `string` | はい | Instance part of the requested id (`3` of `ifDescr.3`). |
+| `kind` | `string` | はい | `object_type`, `object_identifier`, ... |
+| `module` | `string` | はい | Module. |
+| `name` | `string` | はい | Descriptor. |
+| `objects` | `string``[]` | はい | OBJECTS / VARIABLES (notifications). |
+| `oid` | `string` | はい | OID of the definition. |
+| `path` | [`PathElem`](#schema-pathelem)`[]` | はい | Path from the root. |
+| `reference` | `string` \| `null` |   | REFERENCE. |
+| `role` | `string` \| `null` |   | Table / row / column / scalar. |
+| `status` | `string` \| `null` |   | STATUS. |
+| `syntax` | `string` \| `null` |   | SYNTAX text. |
+| `type_name` | `string` \| `null` |   | Textual convention. |
+| `units` | `string` \| `null` |   | UNITS. |
 
 <a id="schema-overview"></a>
 
@@ -1295,6 +1970,36 @@ How several streams are interleaved.
 | `packet` | `object` | はい | Decoded packet (`wpg_core::Packet`: layers with Manual field values). |
 | `trailers` | `object``[]` | はい | Padding / FCS. |
 
+<a id="schema-pathelem"></a>
+
+### `PathElem`
+
+Breadcrumb element.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `name` | `string` | はい | Name (or the number). |
+| `oid` | `string` | はい | OID. |
+
+<a id="schema-promptitem"></a>
+
+### `PromptItem`
+
+One keyboard-interactive prompt.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `echo` | `boolean` | はい | Whether the answer may be shown while typed. |
+| `prompt` | `string` | はい | Prompt text from the server. |
+
+<a id="schema-protocol"></a>
+
+### `Protocol`
+
+Remote protocol.
+
+型: `"ssh"` | `"telnet"`
+
 <a id="schema-protocolsummary"></a>
 
 ### `ProtocolSummary`
@@ -1309,6 +2014,48 @@ Catalog entry.
 | `name` | `string` | はい | Display name. |
 | `next` | `string``[]` | はい | Protocols this one can carry (its next-layer binding table). |
 | `synth` | `boolean` | はい | Content generator instead of wire fields (payload). |
+
+<a id="schema-receiverstart"></a>
+
+### `ReceiverStart`
+
+`POST /api/snmp/receiver/start` body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `communities` | `string``[]` |   | Accepted communities (empty = any; others are listed with an error). |
+| `listen` | `string` | はい | Listen address (`0.0.0.0:162`, `[::]:1162`). |
+| `users` | [`ReceiverUserIn`](#schema-receiveruserin)`[]` |   | v3 users (kept in memory while the receiver runs). |
+
+<a id="schema-receiverstatus"></a>
+
+### `ReceiverStatus`
+
+Trap receiver state.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `communities` | `string``[]` | はい | Accepted communities (empty = any). |
+| `engine_id` | `string` | はい | This receiver's engine id (hex), for v3 informs. |
+| `from_config` | `boolean` | はい | Started at boot from `snmp.trap_listen`. |
+| `listen` | `string` \| `null` |   | Bound address. |
+| `received` | `integer` | はい | Notifications received since the start. |
+| `running` | `boolean` | はい | Listening. |
+| `users` | `string``[]` | はい | Configured v3 user names. |
+
+<a id="schema-receiveruserin"></a>
+
+### `ReceiverUserIn`
+
+A v3 user of the receiver.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `auth_password` | `string` \| `null` |   | Authentication pass phrase. |
+| `auth_protocol` | `string` \| `null` |   | Authentication protocol (default `SHA`). |
+| `priv_password` | `string` \| `null` |   | Privacy pass phrase. |
+| `priv_protocol` | `string` \| `null` |   | Privacy protocol (default `AES`). |
+| `user` | `string` | はい | User name. |
 
 <a id="schema-renderrequest"></a>
 
@@ -1357,6 +2104,21 @@ One rendered packet.
 A user role (only `admin` is created for now; operator / viewer are P1).
 
 型: `"admin"` | `"operator"` | `"viewer"`
+
+<a id="schema-searchhit"></a>
+
+### `SearchHit`
+
+A search hit.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `kind` | `string` | はい | Kind. |
+| `module` | `string` | はい | Module. |
+| `name` | `string` | はい | Descriptor. |
+| `oid` | `string` | はい | OID. |
+| `role` | `string` \| `null` |   | Table / row / column / scalar. |
+| `syntax` | `string` \| `null` |   | SYNTAX text. |
 
 <a id="schema-serverevent"></a>
 
@@ -1421,6 +2183,16 @@ A capture started or ended.
 | `state` | `object` | はい | New state (`{ "state": "running" \| "finished" \| "failed", "detail" }`). |
 | `type` | `"capture_state"` | はい |   |
 
+#### `type: "snmp_trap"`
+
+The SNMP trap receiver got a notification (also listed by
+`GET /api/snmp/traps`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `trap` | [`TrapOut`](#schema-trapout) | はい | The rendered notification. |
+| `type` | `"snmp_trap"` | はい |   |
+
 <a id="schema-setuprequest"></a>
 
 ### `SetupRequest`
@@ -1431,6 +2203,167 @@ A capture started or ended.
 |---|---|---|---|
 | `confirm` | `string` | はい | The same password again. |
 | `password` | `string` | はい | The new admin password (at least 8 characters). |
+
+<a id="schema-snmpbulkrequest"></a>
+
+### `SnmpBulkRequest`
+
+GetBulk request body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `max_repetitions` | `integer` \| `null` |   | `max-repetitions` (default 10). |
+| `non_repeaters` | `integer` \| `null` |   | `non-repeaters` (default 0). |
+| `oids` | `string``[]` | はい | Objects (the first `non_repeaters` are fetched once). |
+| `target` | [`SnmpTarget`](#schema-snmptarget) | はい | The agent. |
+
+<a id="schema-snmpnotifyrequest"></a>
+
+### `SnmpNotifyRequest`
+
+Trap / Inform request body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `target` | [`SnmpTarget`](#schema-snmptarget) | はい | The receiver (port default 162). |
+| `trap_oid` | `string` | はい | `snmpTrapOID` (`linkDown`, `IF-MIB::linkUp`, `1.3.6.1.6.3.1.1.5.1`). v1 traps are converted per RFC 3584. |
+| `uptime` | `integer` \| `null` |   | `sysUpTime` in hundredths of a second (default: the server's uptime). |
+| `varbinds` | [`VarBindIn`](#schema-varbindin)`[]` |   | Extra bindings. |
+
+<a id="schema-snmpoidsrequest"></a>
+
+### `SnmpOidsRequest`
+
+Get / GetNext request body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `oids` | `string``[]` | はい | Objects: names (`sysDescr.0`, `IF-MIB::ifDescr.1`) or dotted OIDs. |
+| `target` | [`SnmpTarget`](#schema-snmptarget) | はい | The agent. |
+
+<a id="schema-snmpresult"></a>
+
+### `SnmpResult`
+
+Result of an operation.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `elapsed_ms` | `number` | はい | Round trip(s) in milliseconds. |
+| `engine_id` | `string` \| `null` |   | The agent's engine id (v3, hex). |
+| `error_index` | `integer` | はい | `error-index` (1-based binding, 0 = none). |
+| `error_status` | `integer` | はい | `error-status` of the response (0 = noError). |
+| `error_status_name` | `string` \| `null` |   | Its name (`noSuchName`, `notWritable`, ...), when not 0. |
+| `op` | `string` | はい | `get`, `getnext`, `getbulk`, `walk`, `set`, `trap`, `inform`. |
+| `requests` | `integer` | はい | Requests sent. |
+| `tables` | [`TableOut`](#schema-tableout)`[]` |   | Conceptual tables found among the bindings (walks). |
+| `target` | `string` | はい | The agent / receiver address. |
+| `truncated` | `boolean` |   | The walk stopped at its limit. |
+| `varbinds` | [`VarBindOut`](#schema-varbindout)`[]` | はい | The bindings (response, walk results, or the notification sent). |
+| `version` | `string` | はい | `v1`, `v2c`, `v3`. |
+
+<a id="schema-snmpsetrequest"></a>
+
+### `SnmpSetRequest`
+
+Set request body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `target` | [`SnmpTarget`](#schema-snmptarget) | はい | The agent. |
+| `varbinds` | [`VarBindIn`](#schema-varbindin)`[]` | はい | Bindings to set. |
+
+<a id="schema-snmpstatus"></a>
+
+### `SnmpStatus`
+
+`GET /api/snmp/status`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `capture` | [`CaptureStatus`](#schema-capturestatus) \| `null` |   |   |
+| `enabled` | `boolean` | はい | `snmp.enabled`. |
+| `mib_dir` | `string` | はい | Directory of uploaded MIBs. |
+| `modules` | `integer` | はい | Loaded modules. |
+| `nodes` | `integer` | はい | Resolved MIB nodes. |
+| `receiver` | [`ReceiverStatus`](#schema-receiverstatus) \| `null` |   |   |
+
+<a id="schema-snmptarget"></a>
+
+### `SnmpTarget`
+
+Where to send a request.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `community` | `string` \| `null` |   | Community for v1 / v2c (default `public`). |
+| `host` | `string` | はい | Host name or address. |
+| `port` | `integer` \| `null` |   | UDP port (default 161 for requests, 162 for notifications). |
+| `retries` | `integer` \| `null` |   | Extra attempts (default 1, at most 10). |
+| `timeout_ms` | `integer` \| `null` |   | Wait per attempt in milliseconds (default 2000, at most 60000). |
+| `v3` | [`V3In`](#schema-v3in) \| `null` |   |   |
+| `version` | [`SnmpVersion`](#schema-snmpversion) |   | Version (default `v2c`). |
+
+<a id="schema-snmpversion"></a>
+
+### `SnmpVersion`
+
+SNMP protocol version.
+
+型: `"v1"` | `"v2c"` | `"v3"`
+
+<a id="schema-snmpwalkrequest"></a>
+
+### `SnmpWalkRequest`
+
+Walk request body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `limit` | `integer` \| `null` |   | Most bindings returned (default 10000, at most 100000). |
+| `max_repetitions` | `integer` \| `null` |   | `max-repetitions` per GetBulk (default 20; v1 walks with GetNext). |
+| `oid` | `string` | はい | Subtree root: name (`ifTable`, `system`) or dotted OID. |
+| `target` | [`SnmpTarget`](#schema-snmptarget) | はい | The agent. |
+
+<a id="schema-tablecolumnout"></a>
+
+### `TableColumnOut`
+
+A table column.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `counter` | `boolean` | はい | Counter column (rates make sense). |
+| `name` | `string` | はい | Descriptor. |
+| `oid` | `string` | はい | Column OID. |
+| `syntax` | `string` | はい | Syntax text. |
+
+<a id="schema-tableout"></a>
+
+### `TableOut`
+
+A conceptual table assembled from walk results.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `columns` | [`TableColumnOut`](#schema-tablecolumnout)`[]` | はい | Columns present, in OID order. |
+| `entry` | `string` | はい | `IF-MIB::ifEntry`. |
+| `index_names` | `string``[]` | はい | INDEX objects. |
+| `rows` | [`TableRowOut`](#schema-tablerowout)`[]` | はい | Rows in instance order. |
+| `table` | `string` \| `null` |   | `IF-MIB::ifTable`. |
+
+<a id="schema-tablerowout"></a>
+
+### `TableRowOut`
+
+A table row.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `cells` | (`string` \| `null`)`[]` | はい | Readable cells (one per column; `null` = absent). |
+| `index` | `string``[]` | はい | Decoded INDEX values (empty when not decodable). |
+| `instance` | `string` | はい | Instance sub-identifiers. |
+| `numeric` | (`integer` \| `null`)`[]` | はい | Numeric cells (integer types). |
 
 <a id="schema-templatedetail"></a>
 
@@ -1487,6 +2420,260 @@ Index entry of a template.
 | `tags` | `string``[]` | はい | Tags. |
 | `writable` | `boolean` | はい | Whether it can be updated / deleted through the API. |
 
+<a id="schema-terminalclientmessage"></a>
+
+### `TerminalClientMessage`
+
+Client → server message on `/api/terminal/ws`. Keystrokes may also arrive
+as binary frames (raw bytes).
+
+#### `type: "connect"`
+
+First message: opens the session.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `type` | `"connect"` | はい |   |
+
+#### `type: "input"`
+
+Keystrokes / pasted text (UTF-8).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `data` | `string` | はい | The text. |
+| `type` | `"input"` | はい |   |
+
+#### `type: "resize"`
+
+The terminal was resized.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `cols` | `integer` | はい | Columns. |
+| `rows` | `integer` | はい | Rows. |
+| `type` | `"resize"` | はい |   |
+
+#### `type: "host_key"`
+
+Answer to a `host_key` prompt.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `accept` | `boolean` | はい | Trust the key. |
+| `save` | `boolean` |   | Store it in the known hosts (otherwise trust it for this session). |
+| `type` | `"host_key"` | はい |   |
+
+#### `type: "auth_response"`
+
+Answers to an `auth_prompt` (one per prompt).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `responses` | `string``[]` | はい | The answers. |
+| `type` | `"auth_response"` | はい |   |
+
+#### `type: "record"`
+
+Starts / stops the session log.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `enabled` | `boolean` | はい | Record from now on. |
+| `strip_ansi` | `boolean` \| `null` |   | Remove escape sequences (default true). |
+| `type` | `"record"` | はい |   |
+
+#### `type: "disconnect"`
+
+Ends the session.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `type` | `"disconnect"` | はい |   |
+
+<a id="schema-terminalconnectrequest"></a>
+
+### `TerminalConnectRequest`
+
+`connect`: where to and how to log in.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `cols` | `integer` |   | Terminal width. |
+| `host` | `string` | はい | Host name or address. |
+| `jump` | [`JumpHost`](#schema-jumphost)`[]` |   | SSH jump hosts (`ProxyJump`), nearest first: the server logs in to each in turn and reaches the next one (and finally `host`) through a `direct-tcpip` channel. Works for SSH and Telnet targets. |
+| `passphrase` | `string` \| `null` |   | Passphrase of `private_key`. |
+| `password` | `string` \| `null` |   | SSH password (also answers a single keyboard-interactive password prompt). |
+| `port` | `integer` \| `null` |   | Port (default 22 / 23). |
+| `private_key` | `string` \| `null` |   | SSH private key (OpenSSH / PEM / `PuTTY` `.ppk` text). |
+| `protocol` | [`Protocol`](#schema-protocol) | はい | `ssh` or `telnet`. |
+| `record` | `boolean` \| `null` |   | Record a session log (default: `terminal.record_sessions`). |
+| `rows` | `integer` |   | Terminal height. |
+| `strip_ansi` | `boolean` \| `null` |   | Remove escape sequences from the log (default true). |
+| `username` | `string` \| `null` |   | SSH user name. |
+
+<a id="schema-terminalservermessage"></a>
+
+### `TerminalServerMessage`
+
+Server → client message on `/api/terminal/ws`. Remote output travels as
+binary frames.
+
+#### `type: "state"`
+
+Progress: `resolving`, `connecting`, `authenticating`; with jump hosts,
+`jumping` (opening the tunnel from `host` onwards) and the other phases
+carry the host they concern.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `host` | `string` \| `null` |   | The host of this phase (sessions with jump hosts). |
+| `state` | `string` | はい | The phase. |
+| `type` | `"state"` | はい |   |
+
+#### `type: "host_key"`
+
+An unknown SSH host key: confirm the fingerprint (`host_key` message).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `algorithm` | `string` | はい | Key algorithm. |
+| `fingerprint` | `string` | はい | `SHA256:...`. |
+| `host` | `string` | はい | Host. |
+| `port` | `integer` | はい | Port. |
+| `type` | `"host_key"` | はい |   |
+
+#### `type: "auth_prompt"`
+
+The server asks questions (keyboard-interactive, or the password when
+none was given): answer with `auth_response`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `host` | `string` | はい | The host asking (the target or a jump host). |
+| `instructions` | `string` | はい | Instructions from the server. |
+| `name` | `string` | はい | Request name from the server. |
+| `prompts` | [`PromptItem`](#schema-promptitem)`[]` | はい | The prompts. |
+| `type` | `"auth_prompt"` | はい |   |
+
+#### `type: "connected"`
+
+The session is up.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `address` | `string` | はい | Address actually connected to. |
+| `fingerprint` | `string` \| `null` |   | SSH host key fingerprint. |
+| `host` | `string` | はい | Host. |
+| `port` | `integer` | はい | Port. |
+| `protocol` | [`Protocol`](#schema-protocol) | はい | Protocol. |
+| `session_id` | `string` | はい | Session id. |
+| `type` | `"connected"` | はい |   |
+| `via` | `string``[]` |   | Jump hosts the session goes through (`user@host:port`). |
+
+#### `type: "record"`
+
+Log state after `connected` / `record`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `enabled` | `boolean` | はい | Recording. |
+| `file` | `string` \| `null` |   | The log file (`GET /api/terminal/logs/{name}`). |
+| `type` | `"record"` | はい |   |
+
+#### `type: "error"`
+
+A failure; `fatal` ones are followed by `closed`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `code` | `string` | はい | `target_not_allowed`, `too_many_sessions`, `resolve_failed`, `connect_failed`, `host_key_changed`, `host_key_rejected`, `auth_failed`, `key_invalid`, `ssh_error`, `timeout`, `bad_request`, `recording_disabled`, `log_failed`. |
+| `detail` | `string` \| `null` |   | Untranslated detail (an OS / protocol error). |
+| `fatal` | `boolean` | はい | The session ends. |
+| `info` | `object` \| `null` |   | `host_key_changed`: `{algorithm, fingerprint, known_algorithm, known_fingerprint}`; a failure at a jump host adds `{hop: "host:port"}`. |
+| `type` | `"error"` | はい |   |
+
+#### `type: "closed"`
+
+The session ended.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `bytes_in` | `integer` | はい | Bytes received from the host. |
+| `bytes_out` | `integer` | はい | Bytes sent to the host. |
+| `duration_secs` | `integer` | はい | Session length in seconds. |
+| `reason` | `string` | はい | `remote` (the host closed it), `client`, `idle`, `shutdown`, `error`. |
+| `type` | `"closed"` | はい |   |
+
+<a id="schema-terminalstatus"></a>
+
+### `TerminalStatus`
+
+`GET /api/terminal/status`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `allowed_targets` | `string``[]` | はい | `terminal.allowed_targets` (empty = any target). |
+| `enabled` | `boolean` | はい | `terminal.enabled`. |
+| `idle_timeout_secs` | `integer` | はい | `terminal.idle_timeout_secs`. |
+| `max_sessions` | `integer` | はい | `terminal.max_sessions`. |
+| `record_sessions` | `boolean` | はい | `terminal.record_sessions`. |
+| `sessions` | [`ActiveSession`](#schema-activesession)`[]` | はい | Running sessions (all users). |
+
+<a id="schema-trapout"></a>
+
+### `TrapOut`
+
+A received notification.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `acknowledged` | `boolean` | はい | An inform that was acknowledged. |
+| `community` | `string` \| `null` |   | Community (v1 / v2c). |
+| `error` | `string` \| `null` |   | Why the message was not accepted (wrong community, digest, ...). |
+| `id` | `integer` | はい | Sequence number (increasing). |
+| `level` | `string` \| `null` |   | v3 security level. |
+| `pdu_type` | `string` \| `null` |   | `trap_v1`, `trap_v2`, `inform` (absent when undecodable). |
+| `received_ms` | `integer` | はい | Arrival, milliseconds since the Unix epoch. |
+| `source` | `string` | はい | Sender `address:port`. |
+| `trap_name` | `string` \| `null` |   | The trap OID's name (`IF-MIB::linkDown`). |
+| `trap_oid` | `string` \| `null` |   | `snmpTrapOID.0` (dotted). |
+| `uptime` | `integer` \| `null` |   | `sysUpTime.0` / v1 time-stamp (hundredths of a second). |
+| `uptime_text` | `string` \| `null` |   | Uptime as `1d 02:03:04.56`. |
+| `user` | `string` \| `null` |   | User (v3). |
+| `v1` | [`V1Out`](#schema-v1out) \| `null` |   |   |
+| `varbinds` | [`VarBindOut`](#schema-varbindout)`[]` | はい | Bindings (without `sysUpTime.0` / `snmpTrapOID.0`). |
+| `version` | `string` | はい | `v1`, `v2c`, `v3`. |
+
+<a id="schema-treechildout"></a>
+
+### `TreeChildOut`
+
+A tree entry.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `arc` | `integer` | はい | Last sub-identifier. |
+| `has_children` | `boolean` | はい | Something is defined below. |
+| `kind` | `string` \| `null` |   | `object_type`, `object_identifier`, `notification_type`, ... |
+| `module` | `string` \| `null` |   | Module. |
+| `name` | `string` \| `null` |   | Descriptor (absent for an undefined intermediate OID). |
+| `oid` | `string` | はい | OID. |
+| `role` | `string` \| `null` |   | Table / row / column / scalar for OBJECT-TYPEs. |
+
+<a id="schema-uploadedfile"></a>
+
+### `UploadedFile`
+
+Result of one uploaded file.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `errors` | `string``[]` | はい | Problems (no module found: the file was not stored). |
+| `file` | `string` | はい | Stored file name. |
+| `modules` | `string``[]` | はい | Modules found in it. |
+| `stored` | `boolean` | はい | Whether the file was stored. |
+
 <a id="schema-userinfo"></a>
 
 ### `UserInfo`
@@ -1497,6 +2684,68 @@ Index entry of a template.
 |---|---|---|---|
 | `name` | `string` | はい | User name. |
 | `role` | [`Role`](#schema-role) | はい | `admin`, `operator` or `viewer`. |
+
+<a id="schema-v1out"></a>
+
+### `V1Out`
+
+SNMPv1 trap header.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `agent_addr` | `string` | はい | `agent-addr`. |
+| `enterprise` | `string` | はい | `enterprise` (name or dotted). |
+| `generic` | `integer` | はい | `generic-trap`. |
+| `specific` | `integer` | はい | `specific-trap`. |
+
+<a id="schema-v3in"></a>
+
+### `V3In`
+
+SNMPv3 parameters. The level follows from the pass phrases given:
+none = noAuthNoPriv, `auth_password` = authNoPriv, both = authPriv.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `auth_password` | `string` \| `null` |   | Authentication pass phrase (at least 8 characters). |
+| `auth_protocol` | `string` \| `null` |   | `MD5`, `SHA` (SHA-1), `SHA-224`, `SHA-256`, `SHA-384`, `SHA-512` (default `SHA`). |
+| `context_engine_id` | `string` \| `null` |   | `contextEngineID` (hex; default: the agent's engine id). |
+| `context_name` | `string` \| `null` |   | `contextName`. |
+| `priv_password` | `string` \| `null` |   | Privacy pass phrase (at least 8 characters). |
+| `priv_protocol` | `string` \| `null` |   | `DES`, `AES` (AES-128), `AES-192`, `AES-256` (default `AES`). |
+| `user` | `string` | はい | User name. |
+
+<a id="schema-varbindin"></a>
+
+### `VarBindIn`
+
+A variable binding to send (Set, notifications).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `oid` | `string` | はい | Object instance: name (`sysName.0`, `IF-MIB::ifAdminStatus.2`) or dotted OID. |
+| `type` | `string` \| `null` |   | `auto` (default: from the MIB), or `i` / `integer`, `u` / `unsigned`, `c` / `counter32`, `C` / `counter64`, `t` / `timeticks`, `a` / `ipaddress`, `o` / `oid`, `s` / `string`, `x` / `hex`, `d` / `decimal`, `n` / `null`, `opaque`. |
+| `value` | `string` |   | Value text (enum labels such as `down` and object names are accepted). |
+
+<a id="schema-varbindout"></a>
+
+### `VarBindOut`
+
+A rendered variable binding.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `instance` | `string` | はい | Instance sub-identifiers (`3`). |
+| `module` | `string` \| `null` |   | Defining module. |
+| `name` | `string` | はい | `IF-MIB::ifDescr.3` (numeric when no MIB knows it). |
+| `numeric` | `integer` \| `null` |   | Numeric value of integer types (rates, charts). |
+| `object` | `string` \| `null` |   | Object descriptor (`ifDescr`). |
+| `oid` | `string` | はい | OID (dotted decimal). |
+| `raw` | `string` | はい | The value without MIB knowledge. |
+| `syntax` | `string` \| `null` |   | Textual convention of the object (`DisplayString`, `InterfaceIndex`). |
+| `type` | `string` | はい | Wire type (`Counter32`, `OCTET STRING`, `noSuchInstance`, ...). |
+| `units` | `string` \| `null` |   | UNITS of the object. |
+| `value` | `string` | はい | Readable value (enum labels, display hints, units, names). |
 
 <a id="schema-versioninfo"></a>
 
