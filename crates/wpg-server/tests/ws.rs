@@ -163,7 +163,9 @@ async fn log_lines_reach_websocket_clients() {
     tracing::info!(target: "wpg_test", "hello from the log");
     loop {
         let ev = next_json(&mut ws).await;
-        if ev["type"] == "log" {
+        // The subscriber is process-global: log lines of the tests running in
+        // parallel (jobs, captures) can arrive first.
+        if ev["type"] == "log" && ev["target"] == "wpg_test" {
             assert_eq!(ev["message"], "hello from the log");
             assert_eq!(ev["level"], "INFO");
             assert_eq!(ev["target"], "wpg_test");

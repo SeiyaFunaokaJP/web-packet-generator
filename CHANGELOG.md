@@ -118,6 +118,11 @@ Everything below is the initial development towards 1.0. No version has been tag
   arguments ask for the host, SSH user / password / port and the options, install an SSH key, and can
   build wpg on the target from source (`scripts/lib/remote-*.sh`); `setcap` now also grants
   `cap_net_bind_service` for the SNMP trap receiver.
+- Unattended deploys: answer files (`--config`, the wizard's `deploy.conf` format with `[host ...]` sections)
+  and `--targets` files for several hosts (optionally in parallel), `--yes` without prompts (secrets from an SSH
+  key, `WPG_DEPLOY_*_PASSWORD`, password files or Windows DPAPI files), `--json` summaries, documented exit
+  codes, `--skip-if-current` (a deploy stamp on the host) and `--check-config`; the wizard offers to save its
+  answers as an answer file with the matching cron / `schtasks` line.
 
 #### Documentation
 

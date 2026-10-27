@@ -6,6 +6,8 @@ These scripts install wpg on a Linux host (Ubuntu 20.04 to 24.04, Debian; first 
 
 **There are no arguments to remember.** Started without arguments, a wizard asks for everything it needs, one question at a time, in English or Japanese (from the system language). Every question has a default in `[ ]` that Enter accepts.
 
+**It can run unattended too.** With the answer file the wizard offers to save at the end, the same deploy runs without any question (scheduled upgrades, several hosts, CI); see [Unattended deploy](#unattended-deploy).
+
 ## Using the wizard (recommended)
 
 ### Windows
@@ -121,7 +123,7 @@ The `deploy.sh` wizard asks the same questions (its binary menu also offers "Bui
 
 ### Later runs
 
-The answers (never the passwords) are saved to `%APPDATA%\wpg\deploy.conf` on Windows and `~/.config/wpg/deploy.conf` on Linux / macOS. The next run starts with "Use the previous settings?"; Enter repeats the last deployment and only the passwords are asked (the SSH password is not needed any more, the key works).
+The answers (never the passwords) are saved to `%APPDATA%\wpg\deploy.conf` on Windows and `~/.config/wpg/deploy.conf` on Linux / macOS. The next run starts with "Use the previous settings?"; Enter repeats the last deployment and only the passwords are asked (the SSH password is not needed any more, the key works). After a successful deploy the wizard offers to save a file that runs the same deploy without questions ([Unattended deploy](#unattended-deploy)).
 
 When wpg is installed and a `wpg.prev` exists, a menu comes first:
 
@@ -189,6 +191,7 @@ scripts/deploy.sh ubuntu@192.0.2.10 --service --dry-run
 | (none), `--interactive` | The wizard. |
 | `--iface <name>` | Interface jobs may send on (repeatable); written as `WPG_TX__ALLOWED_IFACES`. Leave the management interface out. |
 | `--service` | Install / update `wpg.service` and restart it. |
+| `--no-service` | Do not install the service (overrides `service=1` of `--config`). |
 | `--bind <addr:port>` | Listen address of the service (default `0.0.0.0:8080`). |
 | `--password-file <file>` | Admin password (or argon2 hash) for the service. |
 | `--allow-insecure` | Start without a password on a non-loopback address (adds a drop-in running `wpg serve --allow-insecure`). |
@@ -208,13 +211,14 @@ scripts/deploy.sh ubuntu@192.0.2.10 --service --dry-run
 | `--dpdk`, `--hugepages <n>` | Prepare the host for DPDK (see below). |
 | `--profile <file>`, `--lang <ja\|en>`, `--log <file>` | Wizard answers file, message language, log file. |
 | `--dry-run` | Print the commands instead of running them. |
+| `--config`, `--yes`, `--json`, `--skip-if-current`, `--check-config`, `--targets`, `--section`, `--parallel`, `--set` | Unattended runs ([Unattended deploy](#unattended-deploy)). |
 
 ### deploy.ps1
 
-Everything the wizard asks can also be passed as parameters. With `-HostName` the wizard does not start (only missing passwords are asked).
+Everything the wizard asks can also be passed as parameters. With `-HostName` the wizard does not start (only missing passwords are asked; with `-Yes` nothing is asked and a missing one fails at once).
 
 ```powershell
-# Build on the host and install the service, without confirmation
+# Build on the host and install the service, without questions (sudo password from WPG_DEPLOY_SUDO_PASSWORD, ...)
 .\scripts\deploy.ps1 -HostName 192.0.2.10 -User cisco -Iface ens3,ens4 -Yes
 
 # Use a Linux binary you already have
@@ -238,7 +242,286 @@ Everything the wizard asks can also be passed as parameters. With `-HostName` th
 | `-Terminal`, `-SnmpTrap` | Web terminal / SNMP trap receiver. |
 | `-Rollback`, `-NoTemplates`, `-NoHealthcheck` | As in deploy.sh. |
 | `-ProfilePath`, `-Lang ja\|en`, `-LogFile` | Answers file, message language, log file. |
-| `-Interactive`, `-Yes`, `-DryRun` | Start the wizard with the parameters as defaults / skip confirmations / only connect and ask, without building or installing. |
+| `-Interactive`, `-Yes`, `-DryRun` | Start the wizard with the parameters as defaults / never ask anything (no confirmation, no password) / only connect and check, without building or installing. |
+| `-Prefix`, `-AllowInsecure` | Install prefix on the host, start without a password (as in deploy.sh). |
+| `-ConfigFile`, `-Json`, `-SkipIfCurrent`, `-CheckConfig`, `-Targets`, `-Section`, `-Parallel`, `-Set` | Unattended runs ([Unattended deploy](#unattended-deploy)). |
+
+## Unattended deploy
+
+Use the wizard when you deploy by hand. To repeat a known setup (scheduled upgrades, several hosts, CI), use **an answer file plus `--yes`**: the scripts then run to the end without a single question.
+
+### The easy way: let the wizard write it
+
+At the end of a successful wizard run the scripts ask:
+
+```text
+Save a file to run this deploy unattended (automatically) from now on? (no passwords) [Y/n]:
+File [C:\Users\you\AppData\Roaming\wpg\deploy-192.0.2.10.conf]:
+Save the sudo password encrypted? (Windows DPAPI: only this Windows user on this PC can decrypt it) [Y/n]:
+Saved C:\Users\you\AppData\Roaming\wpg\deploy-192.0.2.10.conf (no plain-text passwords).
+From now on this one line runs the same deploy without questions:
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\work\web-packet-generator\scripts\deploy.ps1" -ConfigFile "C:\Users\you\AppData\Roaming\wpg\deploy-192.0.2.10.conf" -Yes -SkipIfCurrent
+Scheduled run, e.g. Task Scheduler every Sunday at 3:17 (logs stay in %LOCALAPPDATA%\wpg\deploy-logs):
+  schtasks /Create /TN "wpg deploy 192.0.2.10" /SC WEEKLY /D SUN /ST 03:17 /TR "..."
+```
+
+Copy the printed line as it is (deploy.sh prints `scripts/deploy.sh --config ~/.config/wpg/deploy-192.0.2.10.conf --yes --skip-if-current` and a cron line). SSH uses the deploy key the wizard installed, so no SSH password is needed. When sudo needs a password, Windows can keep it DPAPI-encrypted (the question above); on Linux / macOS use an environment variable or a password file (see below).
+
+### The answer file
+
+Same format as the wizard's `deploy.conf` (`key=value` lines, `#` starts a comment); you can also write it by hand. Both scripts read the same file.
+
+```ini
+# deploy.wpg.conf
+host=192.0.2.10
+user=cisco
+binary_source=build
+source=git
+git_ref=main
+bind=0.0.0.0:8080
+ifaces=ens3,ens4
+service=1
+sudo_password_file=/home/you/.config/wpg/sudo.pw
+```
+
+```sh
+scripts/deploy.sh --config deploy.wpg.conf --yes                       # Linux / macOS
+scripts/deploy.sh --config deploy.wpg.conf --check-config              # only show the settings (no connection)
+```
+
+```powershell
+.\scripts\deploy.ps1 -ConfigFile .\deploy.wpg.conf -Yes                 # Windows
+```
+
+Relative paths in the file (`binary_file`, `identity`, `*_password_file`, ...) are relative to the answer file. Command-line options win over the file (`--set key=value` / `-Set "key=value"` overrides any key). An unknown key is an error (exit code 1), so typos do not go unnoticed.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `host` | (required) | Target host; `user@host` works too. |
+| `user` | `ubuntu` | SSH user. |
+| `ssh_port` (`port`) | `22` | SSH port. |
+| `identity` | (none) | SSH private key. Without it: the deploy key (`wpg_deploy_ed25519`), then ssh-agent / your default keys. |
+| `binary_source` | `build` | `build` (on the host), `file` (upload `binary_file`), `release` (GitHub Release); deploy.sh also has `local` (build on this machine). |
+| `binary_file` | | Linux binary for `binary_source=file`. |
+| `source` | `local` | Source for `build`: `local` (upload this checkout) or `git`. |
+| `git_url`, `git_ref` | GitHub, `main` | Repository and branch / tag / commit for `source=git`. |
+| `release_tag` | `latest` | Tag for `binary_source=release`. |
+| `bind` | `0.0.0.0:8080` | Listen address. |
+| `ifaces` | (all) | Interfaces jobs may send on (comma separated). |
+| `service` | `1` | Install the systemd service. |
+| `terminal`, `snmp_trap` | `0` | Web terminal / SNMP trap receiver. |
+| `templates`, `healthcheck` | `1` | Copy the sample templates / run the health check. |
+| `allow_insecure` | `0` | Listen on a non-loopback address without a password. |
+| `prefix` | `/usr/local` | Install prefix on the host. |
+| `skip_if_current` | `0` | Same as `--skip-if-current`. |
+| `dpdk`, `hugepages` | `0`, `1024` | DPDK host preparation (deploy.sh only). |
+| `admin_password_file`, `ssh_password_file`, `sudo_password_file` | | A file you create with the password on its first line. `admin_password_file` may hold an argon2 hash instead. |
+| `admin_password_dpapi`, `ssh_password_dpapi`, `sudo_password_dpapi` | | DPAPI-encrypted file (deploy.ps1 on Windows only; written by the wizard). |
+| `name` | section / host | Name in the result table and the JSON. |
+| `parallel` | `1` | Several hosts: how many at a time. |
+| `lang` | from the environment | `ja` / `en`. |
+
+Booleans are `1` / `0` (`yes` / `no`, `true` / `false` work too).
+
+### Secrets without questions
+
+| Source | SSH | sudo | Admin (web UI) |
+|---|---|---|---|
+| SSH key (recommended) | deploy key / `identity=` / ssh-agent | - | - |
+| Environment | `WPG_DEPLOY_SSH_PASSWORD` | `WPG_DEPLOY_SUDO_PASSWORD` | `WPG_DEPLOY_ADMIN_PASSWORD` |
+| File you create (`chmod 600`) | `ssh_password_file=` | `sudo_password_file=` | `admin_password_file=` |
+| DPAPI file (Windows) | `ssh_password_dpapi=` | `sudo_password_dpapi=` | `admin_password_dpapi=` |
+
+- Searched top to bottom. In deploy.ps1 the `SecureString` parameters (`-SshPassword`, ...) come first.
+- The SSH password is only used when no key works, and then installs the deploy key (not needed next time). Without a sudo password the SSH password is tried. `NOPASSWD` sudo or a root login need none.
+- The admin password is only required for a first install that listens on a non-loopback address (`0.0.0.0:8080`, ...). On later runs leaving it out keeps the current one (setting it rewrites it every time).
+- **The scripts never write a password to a file in plain text.** A DPAPI file is the output of `ConvertFrom-SecureString` (no key): only the Windows user who made it can decrypt it, on that PC. Run the scheduled task as that user.
+- A missing secret fails at once without asking: the message names the variable / key to set, and the exit code is 2 (SSH / sudo) or 1 (admin password). Even without `--yes` / `-Yes` nothing is asked when the standard input is not a terminal (cron, a pipe, `-NonInteractive`): the scripts say to add `--yes` and exit with 1.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Success; also nothing to do with `--skip-if-current`, `--dry-run` and `--check-config`. |
+| 1 | Usage error, bad answer file, missing setting or admin password, a question needed without `--yes`. |
+| 2 | Connection / SSH authentication / sudo failed (including a missing SSH or sudo password). |
+| 3 | Preparing the binary failed (local build, Release download, build dependencies or build on the host). |
+| 4 | Upload or installation failed. |
+| 5 | Health check failed (the installation itself is done). |
+| 6 | Several hosts: at least one failed (each host's code is in the table and the JSON). |
+| 130 | Interrupted, e.g. Ctrl+C (deploy.sh). |
+
+### `--json` / `-Json`
+
+Only the result goes to the standard output, as JSON (the log goes to the standard error and the log file). One host or several, the shape is the same:
+
+```json
+{"tool":"wpg-deploy","format":1,"status":"ok","exit_code":0,"dry_run":false,"message":"",
+ "hosts":[{"name":"lab1","host":"192.0.2.10","user":"cisco","port":22,"status":"ok","exit_code":0,
+  "failed_step":"","message":"","version_before":"wpg 0.1.0","version_after":"wpg 0.1.0",
+  "source_id":"git:24d946f6614eecbff02ca481df380aafeb63f368","url":"http://192.0.2.10:8080/",
+  "dry_run":false,"log":"/home/you/.local/state/wpg/deploy-20261027-031700-192.0.2.10.log",
+  "started_at":"2026-10-27T03:17:00Z","duration_s":41}]}
+```
+
+A host's `status` is `ok`, `skipped` (already current, nothing done), `dry-run`, `checked`, `aborted` or `failed`. On a failure `failed_step` (`config`, `connect`, `sudo`, `binary`, `deps`, `build`, `upload`, `install`, `health`) and `message` say what went wrong.
+
+### `--skip-if-current` / `-SkipIfCurrent`: nothing to do, nothing done
+
+Every deploy records what it installed with which settings in `/usr/local/share/wpg/deploy.stamp` on the host (source id, settings, SHA-256 of the binary, time; no passwords). With `--skip-if-current` the scripts connect, and when all of the following match they stop without building or installing anything (exit code 0, `status` `skipped`), without even using the sudo password:
+
+- The same source id: for `source=git` the commit the branch / tag points to (resolved with `git ls-remote`), for `source=local` the commit of this checkout (plus a hash of uncommitted changes), for `binary_source=file` the file's SHA-256, for `release` the URL of the release archive.
+- The same settings (`bind`, `ifaces`, `service`, `terminal`, `snmp_trap`, `templates`, `allow_insecure`, `prefix`).
+- The installed binary is the recorded one (after a rollback or a manual replacement the scripts deploy again).
+- With a service: `wpg.service` runs and answers the health check.
+
+`wpg --version` carries no commit, hence the record file. When the source cannot be identified (no Git, the ref does not resolve) the scripts warn and deploy as usual. Re-installing an identical binary no longer overwrites `wpg.prev`, so the previous version stays available for a rollback.
+
+### `--dry-run` / `-DryRun` without questions
+
+Together with `--yes` the scripts connect, read the host facts, check that every needed secret is there (the sudo password is really tried) and print the commands they would run. Nothing on the host changes (not even the key installation). Good for checking a setup from CI. To check only the answer file, without connecting, use `--check-config` / `-CheckConfig`.
+
+### Several hosts
+
+`[host <name>]` sections in the answer file deploy to one host each. Keys before the first section apply to all hosts; a section's own values win (without `host=` the section name is the host name).
+
+```ini
+# lab.conf
+user=cisco
+binary_source=build
+source=git
+git_ref=v0.2.0
+sudo_password_file=sudo.pw
+
+[host r1]
+host=192.0.2.11
+ifaces=ens3
+
+[host r2]
+host=192.0.2.12
+ifaces=ens3,ens4
+bind=127.0.0.1:8080
+```
+
+The hosts can also come from a separate list (`--targets` / `-Targets`: one host per line, `[user@]host[:port]` followed by optional `key=value` pairs; relative paths are relative to that file):
+
+```text
+# hosts.txt
+cisco@192.0.2.11 ifaces=ens3
+cisco@192.0.2.12:2222 ifaces=ens3,ens4
+```
+
+```sh
+scripts/deploy.sh --config lab.conf --yes --parallel 2
+scripts/deploy.sh --config common.conf --targets hosts.txt --yes --json > result.json
+```
+
+```powershell
+.\scripts\deploy.ps1 -ConfigFile .\lab.conf -Yes -Parallel 2
+```
+
+Each host runs in its own process (`--parallel` / `-Parallel` sets how many at a time, default 1); per-host logs stay in `~/.local/state/wpg/deploy-<time>/` (Windows: `%LOCALAPPDATA%\wpg\deploy-logs\deploy-<time>\`). At the end a table is printed, and the exit code is 6 if any host failed.
+
+```text
+Result
+  NAME HOST                     STATUS    EXIT VERSION      DETAIL
+  r1   cisco@192.0.2.11         ok        0    0.2.0        git:5d0c1e2...
+  r2   cisco@192.0.2.12         skipped   0    0.2.0        git:5d0c1e2...
+  r3   cisco@192.0.2.13         failed    2                 cannot connect to cisco@192.0.2.13 (port 22): ssh: connect to host ...
+2 succeeded, 1 failed
+```
+
+### Scheduled runs
+
+#### Windows (Task Scheduler)
+
+Paste the `schtasks` line the wizard prints into a command prompt. By hand it looks like this (add `/RU <user> /RP` to run while logged off; with a DPAPI file, run the task as the user who created the file):
+
+```bat
+schtasks /Create /TN "wpg deploy lab" /SC WEEKLY /D SUN /ST 03:17 ^
+  /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\work\web-packet-generator\scripts\deploy.ps1 -ConfigFile C:\Users\you\AppData\Roaming\wpg\lab.conf -Yes -SkipIfCurrent"
+```
+
+Task Scheduler's "Last Run Result" shows the exit code; the logs are in `%LOCALAPPDATA%\wpg\deploy-logs\`.
+
+#### Linux / macOS (cron)
+
+```sh
+# crontab -e
+17 3 * * 0 /home/you/web-packet-generator/scripts/deploy.sh --config /home/you/.config/wpg/lab.conf --yes --skip-if-current >/dev/null 2>&1
+```
+
+When sudo needs a password, put `sudo_password_file=` (a file you create, `chmod 600`) into the answer file, or give the deploy user `NOPASSWD` on the host (environment variables are awkward in cron).
+
+#### Linux (systemd user timer)
+
+```ini
+# ~/.config/systemd/user/wpg-deploy.service
+[Unit]
+Description=wpg unattended deploy
+
+[Service]
+Type=oneshot
+ExecStart=%h/web-packet-generator/scripts/deploy.sh --config %h/.config/wpg/lab.conf --yes --skip-if-current
+```
+
+```ini
+# ~/.config/systemd/user/wpg-deploy.timer
+[Timer]
+OnCalendar=Sun 03:17
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```sh
+systemctl --user daemon-reload && systemctl --user enable --now wpg-deploy.timer
+journalctl --user -u wpg-deploy      # results
+```
+
+### From CI (GitHub Actions example)
+
+Keep the SSH key and the sudo password in repository secrets. Putting the host's public key into `known_hosts` avoids accepting it blindly on the first connection.
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: deploy to the lab
+        env:
+          WPG_DEPLOY_SUDO_PASSWORD: ${{ secrets.LAB_SUDO_PASSWORD }}
+          WPG_DEPLOY_ADMIN_PASSWORD: ${{ secrets.LAB_ADMIN_PASSWORD }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.LAB_SSH_KEY }}" > ~/.ssh/lab_ed25519 && chmod 600 ~/.ssh/lab_ed25519
+          printf '%s\n' "${{ secrets.LAB_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          scripts/deploy.sh --config deploy/lab.conf --yes --skip-if-current --json \
+            --set identity=$HOME/.ssh/lab_ed25519 --set source=git --set git_ref=${{ github.sha }} > deploy-result.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deploy-result
+          path: deploy-result.json
+```
+
+### Options for unattended runs
+
+| deploy.sh | deploy.ps1 | Meaning |
+|---|---|---|
+| `--config <file>` | `-ConfigFile <file>` | Answer file. |
+| `--yes` | `-Yes` | Never ask anything. |
+| `--json` | `-Json` | JSON result on the standard output. |
+| `--skip-if-current` | `-SkipIfCurrent` | Do nothing when the host is current. |
+| `--dry-run` | `-DryRun` | Check and print the commands, change nothing. |
+| `--check-config` | `-CheckConfig` | Check the answer file and print the settings (no connection). |
+| `--targets <file>` | `-Targets <file>` | File with the hosts. |
+| `--section <name>` | `-Section <name>` | Only one section of the answer file. |
+| `--parallel <n>` | `-Parallel <n>` | Hosts deployed at a time. |
+| `--set <key=value>` | `-Set "key=value"` | Override an answer-file key (repeatable). |
+| `--log <file>` | `-LogFile <file>` | Log file (default: `~/.local/state/wpg/`, `%LOCALAPPDATA%\wpg\deploy-logs\`). |
 
 ## Security
 
@@ -246,6 +529,7 @@ Everything the wizard asks can also be passed as parameters. With `-HostName` th
 - **The sudo and admin passwords go through the standard input of ssh** (`sudo -S`, `cat > /tmp/wpg-deploy.*/password`): they never appear on a command line, in the process list or on the local disk. The saved answers file contains no passwords.
 - The host key of a new host is accepted automatically (`StrictHostKeyChecking=accept-new`; a changed key is still refused). Outside a lab, connect once with `ssh` first and check the fingerprint.
 - The admin password is stored on the host as `/etc/wpg/password` (`0640 root:wpg`) and hashed by wpg at startup.
+- Unattended runs read passwords from the environment, from files you create, or on Windows from DPAPI-encrypted files. The scripts never store a password in plain text ([Unattended deploy](#unattended-deploy)).
 - Keep the management interface out of the TX interfaces (the wizard's default does): test traffic on it can cut your SSH session.
 
 ## Web terminal and SNMP trap receiver
@@ -271,6 +555,7 @@ trap_listen = "0.0.0.0:162"
 |---|---|---|
 | `/usr/local/bin/wpg`, `wpg.prev` | Current and previous binary | yes |
 | `/usr/local/share/wpg/templates/` | Sample templates (template library) | yes |
+| `/usr/local/share/wpg/deploy.stamp` | Record of the last deployed source and settings (for `--skip-if-current`; no passwords) | yes |
 | `/etc/systemd/system/wpg.service` | The unit from `packaging/systemd/wpg.service` | yes |
 | `/etc/systemd/system/wpg.service.d/` | `allow-insecure.conf` (`--allow-insecure`), `bind-service.conf` (SNMP traps) | yes |
 | `/etc/wpg/wpg.env` | `WPG_SERVER__BIND`, `WPG_TX__ALLOWED_IFACES`, library path, password file | yes |
@@ -321,4 +606,4 @@ scripts/deploy.sh ubuntu@192.0.2.10 --rollback
 
 ## Verification status
 
-`deploy.sh` was run against an Ubuntu 24.04 container (sshd, a minimal `systemctl` stand-in instead of systemd): the wizard (key installation with the password through both `sshpass` and `SSH_ASKPASS`, the sudo password, the interface selection, saving and reusing the answers, the rollback menu), building on the host (this checkout uploaded, rustup and trunk installed, through to the health check), and writing `[terminal]` / `[snmp]` into a new `wpg.toml` (with a stub standing in for a binary that knows the keys) while leaving an existing `wpg.toml` alone. The earlier checks in a container running systemd (installation, refusal without a password, `--service` with the health check, `--rollback`, `--dpdk`) still stand. **`deploy.ps1` / `deploy.bat` have not been run on Windows** (CI only parses them and checks the PowerShell 5.1 syntax). Not tested on CML2 nodes or real hardware yet.
+`deploy.sh` was run against an Ubuntu 24.04 container (sshd, a minimal `systemctl` stand-in instead of systemd): the wizard (key installation with the password through both `sshpass` and `SSH_ASKPASS`, the sudo password, the interface selection, saving and reusing the answers, the rollback menu), building on the host (this checkout uploaded, rustup and trunk installed, through to the health check), and writing `[terminal]` / `[snmp]` into a new `wpg.toml` (with a stub standing in for a binary that knows the keys) while leaving an existing `wpg.toml` alone. The earlier checks in a container running systemd (installation, refusal without a password, `--service` with the health check, `--rollback`, `--dpdk`) still stand. The unattended mode was checked with `deploy.sh` against the same Ubuntu 24.04 container (two sshds, each in its own mount namespace separating `/usr/local`, `/etc/wpg` and `/var/lib/wpg`): a first install from an answer file with `--yes` (the deploy key installed with the SSH password from the environment, sudo and admin passwords from the environment, the sudo password also from a file), failing at once without asking when a secret is missing (no key and no SSH password: 2, sudo password missing / wrong: 2, no admin password on a first install: 1, no `--yes` with a non-terminal stdin: 1), `--skip-if-current` (skipped when nothing changed, even without a sudo password; deployed again after a new binary, changed settings or a rollback), `--dry-run`, `--check-config`, the `--json` output (validated with `python3 -m json.tool`), several hosts (three sections, one unreachable: per-host results in the table and the JSON, exit code 6; `--parallel 2`; `--targets`), and saving the unattended file at the end of the wizard plus a rerun with it. **`deploy.ps1` / `deploy.bat` have not been run on Windows** (CI only parses them and checks the PowerShell 5.1 syntax; the unattended parts are untested on Windows too). Not tested on CML2 nodes or real hardware yet.

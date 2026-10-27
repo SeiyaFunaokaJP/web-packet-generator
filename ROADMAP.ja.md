@@ -159,7 +159,7 @@ DPDK、実機の CML2) は仮想環境以外で未確認です。M10 のリリ�
 
 - [x] SNMP マネージャ (Get / Walk / Set / Trap、v1 / v2c / v3、MIB アップロード、pcap 保存。ADR-0010)
 - [x] Web ターミナル (SSH / Telnet、踏み台経由 (ProxyJump)。ADR-0011)
-- [x] 対話式デプロイウィザード (Windows の `deploy.bat` / `deploy.ps1`、`deploy.sh`)
+- [x] 対話式デプロイウィザードと無人実行 (Windows の `deploy.bat` / `deploy.ps1`、`deploy.sh`。回答ファイル、複数ホスト、定期実行)
 
 ## 1.0 以降
 

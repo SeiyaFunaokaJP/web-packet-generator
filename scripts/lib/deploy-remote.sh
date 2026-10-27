@@ -18,6 +18,9 @@ password_file=""
 terminal=0
 snmp_trap=0
 ifaces=()
+stamp_source=""
+stamp_settings=""
+stamp_tool="deploy"
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -35,6 +38,9 @@ while [ "$#" -gt 0 ]; do
         --iface) ifaces+=("$2"); shift ;;
         --terminal) terminal=1 ;;
         --snmp-trap) snmp_trap=1 ;;
+        --stamp-source) stamp_source="$2"; shift ;;
+        --stamp-settings) stamp_settings="$2"; shift ;;
+        --stamp-tool) stamp_tool="$2"; shift ;;
         *) echo "deploy-remote: unknown argument: $1" >&2; exit 2 ;;
     esac
     shift
@@ -142,13 +148,18 @@ if [ "$rollback" -eq 1 ]; then
 else
     if [ -z "$binary" ] || [ ! -f "$binary" ]; then die "uploaded binary missing"; fi
     "$binary" --version >/dev/null 2>&1 || die "the uploaded binary does not run on this host (wrong architecture or libc?)"
-    if [ -x "$exe" ]; then
-        info "keeping the current binary as $exe.prev ($("$exe" --version 2>/dev/null || echo unknown))"
-        cp -p "$exe" "$exe.prev"
+    if [ -x "$exe" ] && cmp -s "$binary" "$exe"; then
+        # Re-running the same deploy: keep wpg.prev (the real previous version).
+        info "the binary is unchanged ($("$exe" --version 2>/dev/null || echo unknown)); $exe.prev kept"
+    else
+        if [ -x "$exe" ]; then
+            info "keeping the current binary as $exe.prev ($("$exe" --version 2>/dev/null || echo unknown))"
+            cp -p "$exe" "$exe.prev"
+        fi
+        # install(1) writes a new inode, so a running server keeps its old image until restart.
+        install -m 0755 "$binary" "$exe"
+        info "installed $("$exe" --version) to $exe"
     fi
-    # install(1) writes a new inode, so a running server keeps its old image until restart.
-    install -m 0755 "$binary" "$exe"
-    info "installed $("$exe" --version) to $exe"
 fi
 
 # ---- capabilities -----------------------------------------------------------
@@ -289,6 +300,27 @@ if [ "$service" -eq 1 ]; then
 elif [ "$rollback" -eq 1 ] && have_systemd && systemctl is-enabled --quiet wpg 2>/dev/null; then
     systemctl restart wpg
     info "wpg.service restarted"
+fi
+
+# ---- deploy record ------------------------------------------------------------
+# What was deployed, for `deploy.sh --skip-if-current` / `deploy.ps1 -SkipIfCurrent`
+# (read by remote-probe.sh). No secrets. A rollback leaves it alone: the checksum of
+# the restored binary no longer matches, so the next run deploys again.
+if [ "$rollback" -eq 0 ]; then
+    sum=""
+    if command -v sha256sum >/dev/null 2>&1; then sum="$(sha256sum "$exe" | awk '{print $1}')"; fi
+    install -d -m 0755 "$share"
+    {
+        echo "# Written by scripts/deploy.sh / deploy.ps1 (for --skip-if-current). No secrets."
+        echo "source_id=$stamp_source"
+        echo "settings=$stamp_settings"
+        echo "version=$("$exe" --version 2>/dev/null | head -n 1)"
+        echo "binary_sha256=$sum"
+        echo "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "deployed_by=$stamp_tool"
+    } >"$share/deploy.stamp.new"
+    chmod 0644 "$share/deploy.stamp.new"
+    mv -f "$share/deploy.stamp.new" "$share/deploy.stamp"
 fi
 
 info "doctor:"

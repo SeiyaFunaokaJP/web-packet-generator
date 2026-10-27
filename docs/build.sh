@@ -20,9 +20,14 @@ cat > book/index.html <<'HTML'
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>wpg Documentation</title>
 <script>
-  // Redirect by browser language: ja -> ja/, otherwise en/.
-  var lang = (navigator.language || "en").toLowerCase();
-  location.replace(lang.indexOf("ja") === 0 ? "ja/" : "en/");
+  // The language last picked with the switcher in the books (lang-switch.js),
+  // else the browser language: ja -> ja/, otherwise en/.
+  var lang = "";
+  try { lang = localStorage.getItem("wpg-docs-lang") || ""; } catch (e) {}
+  if (lang !== "en" && lang !== "ja") {
+    lang = (navigator.language || "en").toLowerCase().indexOf("ja") === 0 ? "ja" : "en";
+  }
+  location.replace(lang + "/");
 </script>
 <noscript><meta http-equiv="refresh" content="0; url=en/"></noscript>
 </head>

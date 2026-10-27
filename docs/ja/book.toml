@@ -7,3 +7,5 @@ src = "src"
 build-dir = "../book/ja"
 
 [output.html]
+# Language switcher in the menu bar (shared by both books).
+additional-js = ["../lang-switch.js"]

@@ -2,7 +2,11 @@
 # Host side of the deploy wizards (scripts/deploy.sh --interactive, scripts/deploy.ps1):
 # runs as the SSH user on the target and prints facts about it as KEY=value lines, one
 # WPG_PROBE_IFACE line per interface. Read-only; uses sudo only with -n (never prompts).
+#
+# Usage: remote-probe.sh [prefix]      (install prefix, default /usr/local)
 set -u
+
+prefix="${1:-/usr/local}"
 
 kv() { printf 'WPG_PROBE_%s=%s\n' "$1" "$2"; }
 
@@ -49,11 +53,22 @@ else
     kv SUDO password
 fi
 
-exe=/usr/local/bin/wpg
+exe="$prefix/bin/wpg"
 if [ -x "$exe" ]; then
     kv WPG_VERSION "$("$exe" --version 2>/dev/null | head -n 1)"
+    if command -v sha256sum >/dev/null 2>&1; then
+        kv WPG_SHA256 "$(sha256sum "$exe" 2>/dev/null | awk '{print $1}')"
+    fi
 else
     kv WPG_VERSION ""
+fi
+# The record of the last deploy (deploy-remote.sh), for --skip-if-current.
+stamp="$prefix/share/wpg/deploy.stamp"
+if [ -r "$stamp" ]; then
+    kv STAMP_SOURCE "$(sed -n 's/^source_id=//p' "$stamp" | head -n 1)"
+    kv STAMP_SETTINGS "$(sed -n 's/^settings=//p' "$stamp" | head -n 1)"
+    kv STAMP_SHA256 "$(sed -n 's/^binary_sha256=//p' "$stamp" | head -n 1)"
+    kv STAMP_TIME "$(sed -n 's/^deployed_at=//p' "$stamp" | head -n 1)"
 fi
 if [ -x "$exe.prev" ]; then kv WPG_PREV 1; else kv WPG_PREV 0; fi
 if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled --quiet wpg 2>/dev/null; then

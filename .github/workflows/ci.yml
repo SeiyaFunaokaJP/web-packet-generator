@@ -189,6 +189,9 @@ jobs:
         run: |
           ./scripts/deploy.sh ubuntu@192.0.2.10 --service --iface eth1 --binary /bin/true --dry-run
           ./scripts/deploy.sh ubuntu@192.0.2.10 --service --build-on-host --source git --git-ref main --terminal --snmp-trap --dry-run
+          # An answer file with two hosts, checked without connecting.
+          printf 'user=ubuntu\nbinary_source=file\nbinary_file=/bin/true\n[host a]\nhost=192.0.2.11\n[host b]\nhost=192.0.2.12\nifaces=eth1\n' >"$RUNNER_TEMP/deploy.conf"
+          ./scripts/deploy.sh --config "$RUNNER_TEMP/deploy.conf" --check-config --json | python3 -m json.tool
       # The Windows scripts must parse in Windows PowerShell 5.1 (no PowerShell 7-only
       # syntax), and deploy.ps1 needs its UTF-8 BOM for the Japanese prompts.
       - name: PowerShell scripts (syntax, 5.1 compatibility)
