@@ -8,6 +8,7 @@
 //! * a 401 outside `/api/auth/*` calls the hook installed by [`crate::auth`], which
 //!   re-checks the session and sends the user to `/login` (or `/setup`).
 
+pub(crate) mod snmp;
 pub(crate) mod types;
 
 use std::cell::{Cell, RefCell};

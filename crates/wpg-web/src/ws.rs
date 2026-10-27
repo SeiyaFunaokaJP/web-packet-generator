@@ -87,6 +87,8 @@ pub(crate) struct Live {
     pub(crate) capture_states: RwSignal<HashMap<String, JobStatus>>,
     /// Bumped on every `capture_state` (and on reconnect): capture lists refetch.
     pub(crate) captures_rev: RwSignal<u64>,
+    /// Bumped on every `snmp_trap` (and on reconnect): the trap list refetches.
+    pub(crate) snmp_rev: RwSignal<u64>,
     log_seq: StoredValue<u64>,
 }
 
@@ -102,6 +104,7 @@ impl Live {
             rx_stats: RwSignal::new(HashMap::new()),
             capture_states: RwSignal::new(HashMap::new()),
             captures_rev: RwSignal::new(0),
+            snmp_rev: RwSignal::new(0),
             log_seq: StoredValue::new(0),
         }
     }
@@ -147,6 +150,7 @@ impl Live {
                 });
                 self.captures_rev.update(|r| *r += 1);
             }
+            ServerEvent::SnmpTrap { .. } => self.snmp_rev.update(|r| *r += 1),
             ServerEvent::Unknown => {}
         }
     }
@@ -233,6 +237,7 @@ async fn run(live: Live) {
                 live.jobs_rev.update(|r| *r += 1);
                 live.templates_rev.update(|r| *r += 1);
                 live.captures_rev.update(|r| *r += 1);
+                live.snmp_rev.update(|r| *r += 1);
                 while let Some(msg) = ws.next().await {
                     match msg {
                         Ok(Message::Text(t)) => live.handle(&t),

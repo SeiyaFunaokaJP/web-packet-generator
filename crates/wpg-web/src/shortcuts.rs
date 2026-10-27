@@ -10,6 +10,7 @@ pub(crate) enum Screen {
     Jobs,
     Templates,
     Rx,
+    Snmp,
     Settings,
 }
 
@@ -22,6 +23,7 @@ impl Screen {
             Screen::Jobs => "/jobs",
             Screen::Templates => "/templates",
             Screen::Rx => "/rx",
+            Screen::Snmp => "/snmp",
             Screen::Settings => "/settings",
         }
     }
@@ -47,6 +49,7 @@ pub(crate) const HELP: &[(&str, &str)] = &[
     ("g j", "ui-shortcut-jobs"),
     ("g t", "ui-shortcut-templates"),
     ("g r", "ui-shortcut-rx"),
+    ("g m", "ui-shortcut-snmp"),
     ("g s", "ui-shortcut-settings"),
     ("n", "ui-shortcut-new-job"),
     ("l", "ui-shortcut-logs"),
@@ -89,6 +92,7 @@ impl Parser {
                 "j" | "J" => Screen::Jobs,
                 "t" | "T" => Screen::Templates,
                 "r" | "R" => Screen::Rx,
+                "m" | "M" => Screen::Snmp,
                 "s" | "S" => Screen::Settings,
                 _ => return None,
             };
@@ -133,6 +137,7 @@ mod tests {
             ("b", Screen::Builder),
             ("t", Screen::Templates),
             ("r", Screen::Rx),
+            ("m", Screen::Snmp),
             ("s", Screen::Settings),
         ] {
             assert_eq!(p.feed("g", false, 1000.0), None);
