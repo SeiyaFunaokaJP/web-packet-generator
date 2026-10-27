@@ -71,6 +71,18 @@ HTTPS で使う証明書チェーンと秘密鍵 (PEM)。`self_signed_tls` よ�
 | `library_paths` | `string[]` | `["./templates"]` | `WPG_TEMPLATES__LIBRARY_PATHS` | 読み取り専用のテンプレートライブラリ (Git のチェックアウトなど)。`*.wpg.yaml` / `*.wpg.json` を再帰的に読み込み、ファイルが変わると再読み込みします。 |
 | `user_dir` | `string` |   | `WPG_TEMPLATES__USER_DIR` | GUI で作成・インポートしたテンプレートを書き込むディレクトリ。既定は `<data_dir>/templates`。 |
 
+### `[terminal]`
+
+Web ターミナル: ログインしたユーザのためにサーバが開く SSH / Telnet セッション (Web ターミナルのガイドを参照)。
+
+| キー | 型 | 既定値 | 環境変数 | 説明 |
+|---|---|---|---|---|
+| `allowed_targets` | `string[]` | `[]` | `WPG_TERMINAL__ALLOWED_TARGETS` | セッションの接続先として許可する宛先: `host`、`host:port`、`*.domain`、IP アドレス、CIDR (`10.0.0.0/8`、`[2001:db8::1]:830`)。空ならすべて。 |
+| `enabled` | `boolean` | `false` | `WPG_TERMINAL__ENABLED` | Web ターミナルを有効にします。既定では無効です。 |
+| `idle_timeout_secs` | `integer` | `1800` | `WPG_TERMINAL__IDLE_TIMEOUT_SECS` | 入出力がこの秒数ないセッションを切断します。`0` で切断しません。 |
+| `max_sessions` | `integer` | `8` | `WPG_TERMINAL__MAX_SESSIONS` | 同時に開けるセッション数の上限 (全ユーザ合計)。 |
+| `record_sessions` | `boolean` | `true` | `WPG_TERMINAL__RECORD_SESSIONS` | セッションログ (接続先からの出力) を `<data_dir>/terminal-logs` に残すことを許可します。`false` でサーバ側のログを無効にします。 |
+
 ### `[tx]`
 
 送出のポリシーと既定値。
@@ -166,4 +178,11 @@ rotation = "never"
 # max_files = 7
 # Colour the console output when it is a terminal.
 ansi = true
+
+[terminal]
+enabled = false          # Web terminal (SSH / Telnet)
+allowed_targets = []     # "host", "host:port" or CIDR; empty = any target
+record_sessions = true   # keep session logs under <data_dir>/terminal-logs
+idle_timeout_secs = 1800
+max_sessions = 8
 ```

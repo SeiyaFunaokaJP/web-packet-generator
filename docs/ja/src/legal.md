@@ -20,6 +20,8 @@ wpg は、ネットワークの検証・試験を目的としたツールです�
 
 依存クレートはそれぞれのライセンスに従います。一覧とライセンスポリシーは `cargo deny check` (`deny.toml`) で検査しています。
 
+Web ターミナルの画面には [xterm.js](https://xtermjs.org/) と、その fit / web-links / search アドオン (いずれも MIT ライセンス) を同梱しています。著作権表示とライセンス本文は `crates/wpg-web/vendor/xterm/LICENSE` にあり、wpg の配布物では `/xterm/LICENSE` として配信されます。
+
 Windows の送信に使う **Npcap** は本ソフトウェアには同梱されず、利用者が [npcap.com](https://npcap.com/) から入手し、同社の規約のもとでインストールする必要があります。再配布には別途ライセンスが必要な場合があります。
 
 ## 免責

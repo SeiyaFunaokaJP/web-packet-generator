@@ -53,6 +53,13 @@ wpg-server は `/api` 以下で REST (JSON) API を提供し、リアルタイ�
 | captures | [`GET /api/captures/{id}/pcapng`](#op-get-api-captures-id-pcapng) | The pcapng file of a finished capture started with `save`. |
 | captures | [`POST /api/captures/{id}/stop`](#op-post-api-captures-id-stop) | Stops a running capture (asynchronously; watch `capture_state`). |
 | events | [`GET /api/ws`](#op-get-api-ws) | WebSocket upgrade. |
+| terminal | [`GET /api/terminal/known-hosts`](#op-get-api-terminal-known-hosts) | Trusted SSH host keys (`<data_dir>/terminal/known_hosts`). |
+| terminal | [`DELETE /api/terminal/known-hosts/{host}/{port}`](#op-delete-api-terminal-known-hosts-host-port) | Forgets the host key(s) of `host`:`port` (after a legitimate key change). |
+| terminal | [`GET /api/terminal/logs`](#op-get-api-terminal-logs) | Session logs, newest first. |
+| terminal | [`GET /api/terminal/logs/{name}`](#op-get-api-terminal-logs-name) | Downloads a session log (`text/plain`, also while it is being written). |
+| terminal | [`DELETE /api/terminal/logs/{name}`](#op-delete-api-terminal-logs-name) | Deletes a session log (not one that is being written). |
+| terminal | [`GET /api/terminal/status`](#op-get-api-terminal-status) | Configuration and running sessions (also when the terminal is disabled, so the UI can explain how to enable it). |
+| terminal | [`GET /api/terminal/ws`](#op-get-api-terminal-ws) | Opens a terminal session (WebSocket). Send `connect` first; see `TerminalClientMessage` / `TerminalServerMessage`. Remote output arrives as binary frames, keystrokes may be sent as binary frames or `input` messages. |
 
 ### `auth`
 
@@ -834,9 +841,137 @@ WebSocket upgrade.
 |---|---|---|
 | `101` | WebSocket: JSON `ServerEvent` messages | `application/json` [`ServerEvent`](#schema-serverevent) |
 
+### `terminal`
+
+Web terminal: SSH / Telnet sessions, session logs, host keys
+
+<a id="op-get-api-terminal-known-hosts"></a>
+
+#### `GET /api/terminal/known-hosts`
+
+Trusted SSH host keys (`<data_dir>/terminal/known_hosts`).
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Host keys | `application/json` [`KnownHost`](#schema-knownhost)`[]` |
+
+<a id="op-delete-api-terminal-known-hosts-host-port"></a>
+
+#### `DELETE /api/terminal/known-hosts/{host}/{port}`
+
+Forgets the host key(s) of `host`:`port` (after a legitimate key change).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `host` | path | `string` | はい | Host as stored |
+| `port` | path | `integer` | はい | Port |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Removed |   |
+| `404` | No key stored | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-terminal-logs"></a>
+
+#### `GET /api/terminal/logs`
+
+Session logs, newest first.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Logs | `application/json` [`LogInfo`](#schema-loginfo)`[]` |
+
+<a id="op-get-api-terminal-logs-name"></a>
+
+#### `GET /api/terminal/logs/{name}`
+
+Downloads a session log (`text/plain`, also while it is being written).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `name` | path | `string` | はい | Log file name |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | The log | `text/plain` |
+| `404` | Unknown log | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-delete-api-terminal-logs-name"></a>
+
+#### `DELETE /api/terminal/logs/{name}`
+
+Deletes a session log (not one that is being written).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `name` | path | `string` | はい | Log file name |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Deleted |   |
+| `404` | Unknown log | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `409` | `invalid_state`: the session is still recording | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-terminal-status"></a>
+
+#### `GET /api/terminal/status`
+
+Configuration and running sessions (also when the terminal is disabled, so the UI can explain how to enable it).
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Terminal status | `application/json` [`TerminalStatus`](#schema-terminalstatus) |
+
+<a id="op-get-api-terminal-ws"></a>
+
+#### `GET /api/terminal/ws`
+
+Opens a terminal session (WebSocket). Send `connect` first; see `TerminalClientMessage` / `TerminalServerMessage`. Remote output arrives as binary frames, keystrokes may be sent as binary frames or `input` messages.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `101` | WebSocket: `TerminalServerMessage` JSON + binary output | `application/json` [`TerminalServerMessage`](#schema-terminalservermessage) |
+| `403` | `terminal_disabled` (`terminal.enabled = false`) or `forbidden` (viewer role) | `application/json` [`ErrorBody`](#schema-errorbody) |
+
 ## スキーマ
 
 上記で参照しているリクエスト・レスポンス本文の型です。
+
+<a id="schema-activesession"></a>
+
+### `ActiveSession`
+
+A running session (`GET /api/terminal/status`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `host` | `string` | はい | Target host as entered. |
+| `id` | `string` | はい | Session id. |
+| `log` | `string` \| `null` |   | Log file being written, if recording. |
+| `port` | `integer` | はい | Target port. |
+| `protocol` | [`Protocol`](#schema-protocol) | はい | Protocol. |
+| `started` | `integer` | はい | Start (Unix seconds). |
+| `user` | `string` | はい | wpg user who opened it. |
 
 <a id="schema-authstatus"></a>
 
@@ -982,7 +1117,7 @@ Error object.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
-| `code` | `string` | はい | Stable machine code: `not_found`, `bad_request`, `invalid_template`, `policy_violation`, `read_only`, `invalid_state`, `backend_error`, `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`, `forbidden`, `already_configured`, `internal`. |
+| `code` | `string` | はい | Stable machine code: `not_found`, `bad_request`, `invalid_template`, `policy_violation`, `read_only`, `invalid_state`, `backend_error`, `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`, `forbidden`, `already_configured`, `terminal_disabled`, `internal`. |
 | `details` | `any` |   | Extra data, e.g. the lint issues of an invalid template. |
 | `message` | `string` | はい | Human readable message in the language of `Accept-Language`. |
 
@@ -1211,6 +1346,20 @@ Dashboard aggregate of the running jobs.
 | `pps` | `number` | はい | Sum of the jobs' packets per second. |
 | `running` | `integer` | はい | Jobs currently sending. |
 
+<a id="schema-knownhost"></a>
+
+### `KnownHost`
+
+A stored host key (`GET /api/terminal/known-hosts`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `algorithm` | `string` | はい | Key algorithm (`ssh-ed25519`, `rsa-sha2-512`, ...). |
+| `comment` | `string` | はい | The entry's comment (who accepted it and when). |
+| `fingerprint` | `string` | はい | `SHA256:...` fingerprint. |
+| `host` | `string` | はい | Host as typed by the user who accepted the key (lower case). |
+| `port` | `integer` | はい | TCP port. |
+
 <a id="schema-lintrequest"></a>
 
 ### `LintRequest`
@@ -1233,6 +1382,19 @@ Dashboard aggregate of the running jobs.
 | `issues` | `object``[]` | はい | Findings (`level`, `path`, `key`, `args`, localised `message`). |
 | `ok` | `boolean` | はい | No errors (warnings allowed). |
 | `warnings` | `integer` | はい | Number of warnings. |
+
+<a id="schema-loginfo"></a>
+
+### `LogInfo`
+
+A past or running session log (`GET /api/terminal/logs`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `active` | `boolean` | はい | Still being written by a live session. |
+| `modified` | `integer` | はい | Last modification (Unix seconds). |
+| `name` | `string` | はい | File name (the id in `/api/terminal/logs/{name}`). |
+| `size` | `integer` | はい | Size in bytes. |
 
 <a id="schema-loginrequest"></a>
 
@@ -1294,6 +1456,25 @@ How several streams are interleaved.
 | `len` | `integer` | はい | Frame length in octets. |
 | `packet` | `object` | はい | Decoded packet (`wpg_core::Packet`: layers with Manual field values). |
 | `trailers` | `object``[]` | はい | Padding / FCS. |
+
+<a id="schema-promptitem"></a>
+
+### `PromptItem`
+
+One keyboard-interactive prompt.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `echo` | `boolean` | はい | Whether the answer may be shown while typed. |
+| `prompt` | `string` | はい | Prompt text from the server. |
+
+<a id="schema-protocol"></a>
+
+### `Protocol`
+
+Remote protocol.
+
+型: `"ssh"` | `"telnet"`
 
 <a id="schema-protocolsummary"></a>
 
@@ -1486,6 +1667,200 @@ Index entry of a template.
 | `source` | [`TemplateSource`](#schema-templatesource) | はい | Library or user template. |
 | `tags` | `string``[]` | はい | Tags. |
 | `writable` | `boolean` | はい | Whether it can be updated / deleted through the API. |
+
+<a id="schema-terminalclientmessage"></a>
+
+### `TerminalClientMessage`
+
+Client → server message on `/api/terminal/ws`. Keystrokes may also arrive
+as binary frames (raw bytes).
+
+#### `type: "connect"`
+
+First message: opens the session.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `type` | `"connect"` | はい |   |
+
+#### `type: "input"`
+
+Keystrokes / pasted text (UTF-8).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `data` | `string` | はい | The text. |
+| `type` | `"input"` | はい |   |
+
+#### `type: "resize"`
+
+The terminal was resized.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `cols` | `integer` | はい | Columns. |
+| `rows` | `integer` | はい | Rows. |
+| `type` | `"resize"` | はい |   |
+
+#### `type: "host_key"`
+
+Answer to a `host_key` prompt.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `accept` | `boolean` | はい | Trust the key. |
+| `save` | `boolean` |   | Store it in the known hosts (otherwise trust it for this session). |
+| `type` | `"host_key"` | はい |   |
+
+#### `type: "auth_response"`
+
+Answers to an `auth_prompt` (one per prompt).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `responses` | `string``[]` | はい | The answers. |
+| `type` | `"auth_response"` | はい |   |
+
+#### `type: "record"`
+
+Starts / stops the session log.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `enabled` | `boolean` | はい | Record from now on. |
+| `strip_ansi` | `boolean` \| `null` |   | Remove escape sequences (default true). |
+| `type` | `"record"` | はい |   |
+
+#### `type: "disconnect"`
+
+Ends the session.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `type` | `"disconnect"` | はい |   |
+
+<a id="schema-terminalconnectrequest"></a>
+
+### `TerminalConnectRequest`
+
+`connect`: where to and how to log in.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `cols` | `integer` |   | Terminal width. |
+| `host` | `string` | はい | Host name or address. |
+| `passphrase` | `string` \| `null` |   | Passphrase of `private_key`. |
+| `password` | `string` \| `null` |   | SSH password (also answers a single keyboard-interactive password prompt). |
+| `port` | `integer` \| `null` |   | Port (default 22 / 23). |
+| `private_key` | `string` \| `null` |   | SSH private key (OpenSSH / PEM / `PuTTY` `.ppk` text). |
+| `protocol` | [`Protocol`](#schema-protocol) | はい | `ssh` or `telnet`. |
+| `record` | `boolean` \| `null` |   | Record a session log (default: `terminal.record_sessions`). |
+| `rows` | `integer` |   | Terminal height. |
+| `strip_ansi` | `boolean` \| `null` |   | Remove escape sequences from the log (default true). |
+| `username` | `string` \| `null` |   | SSH user name. |
+
+<a id="schema-terminalservermessage"></a>
+
+### `TerminalServerMessage`
+
+Server → client message on `/api/terminal/ws`. Remote output travels as
+binary frames.
+
+#### `type: "state"`
+
+Progress: `resolving`, `connecting`, `authenticating`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `state` | `string` | はい | The phase. |
+| `type` | `"state"` | はい |   |
+
+#### `type: "host_key"`
+
+An unknown SSH host key: confirm the fingerprint (`host_key` message).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `algorithm` | `string` | はい | Key algorithm. |
+| `fingerprint` | `string` | はい | `SHA256:...`. |
+| `host` | `string` | はい | Host. |
+| `port` | `integer` | はい | Port. |
+| `type` | `"host_key"` | はい |   |
+
+#### `type: "auth_prompt"`
+
+The server asks questions (keyboard-interactive, or the password when
+none was given): answer with `auth_response`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `instructions` | `string` | はい | Instructions from the server. |
+| `name` | `string` | はい | Request name from the server. |
+| `prompts` | [`PromptItem`](#schema-promptitem)`[]` | はい | The prompts. |
+| `type` | `"auth_prompt"` | はい |   |
+
+#### `type: "connected"`
+
+The session is up.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `address` | `string` | はい | Address actually connected to. |
+| `fingerprint` | `string` \| `null` |   | SSH host key fingerprint. |
+| `host` | `string` | はい | Host. |
+| `port` | `integer` | はい | Port. |
+| `protocol` | [`Protocol`](#schema-protocol) | はい | Protocol. |
+| `session_id` | `string` | はい | Session id. |
+| `type` | `"connected"` | はい |   |
+
+#### `type: "record"`
+
+Log state after `connected` / `record`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `enabled` | `boolean` | はい | Recording. |
+| `file` | `string` \| `null` |   | The log file (`GET /api/terminal/logs/{name}`). |
+| `type` | `"record"` | はい |   |
+
+#### `type: "error"`
+
+A failure; `fatal` ones are followed by `closed`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `code` | `string` | はい | `target_not_allowed`, `too_many_sessions`, `resolve_failed`, `connect_failed`, `host_key_changed`, `host_key_rejected`, `auth_failed`, `key_invalid`, `ssh_error`, `timeout`, `bad_request`, `recording_disabled`, `log_failed`. |
+| `detail` | `string` \| `null` |   | Untranslated detail (an OS / protocol error). |
+| `fatal` | `boolean` | はい | The session ends. |
+| `info` | `object` \| `null` |   | `host_key_changed`: `{algorithm, fingerprint, known_algorithm, known_fingerprint}`. |
+| `type` | `"error"` | はい |   |
+
+#### `type: "closed"`
+
+The session ended.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `bytes_in` | `integer` | はい | Bytes received from the host. |
+| `bytes_out` | `integer` | はい | Bytes sent to the host. |
+| `duration_secs` | `integer` | はい | Session length in seconds. |
+| `reason` | `string` | はい | `remote` (the host closed it), `client`, `idle`, `shutdown`, `error`. |
+| `type` | `"closed"` | はい |   |
+
+<a id="schema-terminalstatus"></a>
+
+### `TerminalStatus`
+
+`GET /api/terminal/status`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `allowed_targets` | `string``[]` | はい | `terminal.allowed_targets` (empty = any target). |
+| `enabled` | `boolean` | はい | `terminal.enabled`. |
+| `idle_timeout_secs` | `integer` | はい | `terminal.idle_timeout_secs`. |
+| `max_sessions` | `integer` | はい | `terminal.max_sessions`. |
+| `record_sessions` | `boolean` | はい | `terminal.record_sessions`. |
+| `sessions` | [`ActiveSession`](#schema-activesession)`[]` | はい | Running sessions (all users). |
 
 <a id="schema-userinfo"></a>
 

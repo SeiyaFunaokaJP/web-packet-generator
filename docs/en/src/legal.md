@@ -20,6 +20,8 @@ This software is dual-licensed under [MIT](https://github.com/SeiyaFunaokaJP/web
 
 Dependency crates keep their own licenses. The set and the license policy are checked with `cargo deny check` (`deny.toml`).
 
+The web terminal page bundles [xterm.js](https://xtermjs.org/) and its fit / web-links / search add-ons (all MIT licensed). The copyright notices and license text are in `crates/wpg-web/vendor/xterm/LICENSE` and are served by wpg as `/xterm/LICENSE`.
+
 **Npcap**, used for transmission on Windows, is not bundled with this software; you obtain it from [npcap.com](https://npcap.com/) and install it under its own terms. Redistribution may require a separate license.
 
 ## Disclaimer

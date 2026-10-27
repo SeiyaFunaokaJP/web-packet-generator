@@ -53,6 +53,13 @@ wpg-server serves a REST (JSON) API under `/api` and pushes live statistics, job
 | captures | [`GET /api/captures/{id}/pcapng`](#op-get-api-captures-id-pcapng) | The pcapng file of a finished capture started with `save`. |
 | captures | [`POST /api/captures/{id}/stop`](#op-post-api-captures-id-stop) | Stops a running capture (asynchronously; watch `capture_state`). |
 | events | [`GET /api/ws`](#op-get-api-ws) | WebSocket upgrade. |
+| terminal | [`GET /api/terminal/known-hosts`](#op-get-api-terminal-known-hosts) | Trusted SSH host keys (`<data_dir>/terminal/known_hosts`). |
+| terminal | [`DELETE /api/terminal/known-hosts/{host}/{port}`](#op-delete-api-terminal-known-hosts-host-port) | Forgets the host key(s) of `host`:`port` (after a legitimate key change). |
+| terminal | [`GET /api/terminal/logs`](#op-get-api-terminal-logs) | Session logs, newest first. |
+| terminal | [`GET /api/terminal/logs/{name}`](#op-get-api-terminal-logs-name) | Downloads a session log (`text/plain`, also while it is being written). |
+| terminal | [`DELETE /api/terminal/logs/{name}`](#op-delete-api-terminal-logs-name) | Deletes a session log (not one that is being written). |
+| terminal | [`GET /api/terminal/status`](#op-get-api-terminal-status) | Configuration and running sessions (also when the terminal is disabled, so the UI can explain how to enable it). |
+| terminal | [`GET /api/terminal/ws`](#op-get-api-terminal-ws) | Opens a terminal session (WebSocket). Send `connect` first; see `TerminalClientMessage` / `TerminalServerMessage`. Remote output arrives as binary frames, keystrokes may be sent as binary frames or `input` messages. |
 
 ### `auth`
 
@@ -834,9 +841,137 @@ WebSocket upgrade.
 |---|---|---|
 | `101` | WebSocket: JSON `ServerEvent` messages | `application/json` [`ServerEvent`](#schema-serverevent) |
 
+### `terminal`
+
+Web terminal: SSH / Telnet sessions, session logs, host keys
+
+<a id="op-get-api-terminal-known-hosts"></a>
+
+#### `GET /api/terminal/known-hosts`
+
+Trusted SSH host keys (`<data_dir>/terminal/known_hosts`).
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Host keys | `application/json` [`KnownHost`](#schema-knownhost)`[]` |
+
+<a id="op-delete-api-terminal-known-hosts-host-port"></a>
+
+#### `DELETE /api/terminal/known-hosts/{host}/{port}`
+
+Forgets the host key(s) of `host`:`port` (after a legitimate key change).
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `host` | path | `string` | yes | Host as stored |
+| `port` | path | `integer` | yes | Port |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `204` | Removed |   |
+| `404` | No key stored | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-terminal-logs"></a>
+
+#### `GET /api/terminal/logs`
+
+Session logs, newest first.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Logs | `application/json` [`LogInfo`](#schema-loginfo)`[]` |
+
+<a id="op-get-api-terminal-logs-name"></a>
+
+#### `GET /api/terminal/logs/{name}`
+
+Downloads a session log (`text/plain`, also while it is being written).
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `name` | path | `string` | yes | Log file name |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | The log | `text/plain` |
+| `404` | Unknown log | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-delete-api-terminal-logs-name"></a>
+
+#### `DELETE /api/terminal/logs/{name}`
+
+Deletes a session log (not one that is being written).
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `name` | path | `string` | yes | Log file name |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `204` | Deleted |   |
+| `404` | Unknown log | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `409` | `invalid_state`: the session is still recording | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-terminal-status"></a>
+
+#### `GET /api/terminal/status`
+
+Configuration and running sessions (also when the terminal is disabled, so the UI can explain how to enable it).
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Terminal status | `application/json` [`TerminalStatus`](#schema-terminalstatus) |
+
+<a id="op-get-api-terminal-ws"></a>
+
+#### `GET /api/terminal/ws`
+
+Opens a terminal session (WebSocket). Send `connect` first; see `TerminalClientMessage` / `TerminalServerMessage`. Remote output arrives as binary frames, keystrokes may be sent as binary frames or `input` messages.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `101` | WebSocket: `TerminalServerMessage` JSON + binary output | `application/json` [`TerminalServerMessage`](#schema-terminalservermessage) |
+| `403` | `terminal_disabled` (`terminal.enabled = false`) or `forbidden` (viewer role) | `application/json` [`ErrorBody`](#schema-errorbody) |
+
 ## Schemas
 
 Request and response bodies referenced above.
+
+<a id="schema-activesession"></a>
+
+### `ActiveSession`
+
+A running session (`GET /api/terminal/status`).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `host` | `string` | yes | Target host as entered. |
+| `id` | `string` | yes | Session id. |
+| `log` | `string` \| `null` |   | Log file being written, if recording. |
+| `port` | `integer` | yes | Target port. |
+| `protocol` | [`Protocol`](#schema-protocol) | yes | Protocol. |
+| `started` | `integer` | yes | Start (Unix seconds). |
+| `user` | `string` | yes | wpg user who opened it. |
 
 <a id="schema-authstatus"></a>
 
@@ -982,7 +1117,7 @@ Error object.
 
 | Key | Type | Required | Description |
 |---|---|---|---|
-| `code` | `string` | yes | Stable machine code: `not_found`, `bad_request`, `invalid_template`, `policy_violation`, `read_only`, `invalid_state`, `backend_error`, `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`, `forbidden`, `already_configured`, `internal`. |
+| `code` | `string` | yes | Stable machine code: `not_found`, `bad_request`, `invalid_template`, `policy_violation`, `read_only`, `invalid_state`, `backend_error`, `unauthorized`, `setup_required`, `rate_limited`, `csrf_failed`, `forbidden`, `already_configured`, `terminal_disabled`, `internal`. |
 | `details` | `any` |   | Extra data, e.g. the lint issues of an invalid template. |
 | `message` | `string` | yes | Human readable message in the language of `Accept-Language`. |
 
@@ -1211,6 +1346,20 @@ Dashboard aggregate of the running jobs.
 | `pps` | `number` | yes | Sum of the jobs' packets per second. |
 | `running` | `integer` | yes | Jobs currently sending. |
 
+<a id="schema-knownhost"></a>
+
+### `KnownHost`
+
+A stored host key (`GET /api/terminal/known-hosts`).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `algorithm` | `string` | yes | Key algorithm (`ssh-ed25519`, `rsa-sha2-512`, ...). |
+| `comment` | `string` | yes | The entry's comment (who accepted it and when). |
+| `fingerprint` | `string` | yes | `SHA256:...` fingerprint. |
+| `host` | `string` | yes | Host as typed by the user who accepted the key (lower case). |
+| `port` | `integer` | yes | TCP port. |
+
 <a id="schema-lintrequest"></a>
 
 ### `LintRequest`
@@ -1233,6 +1382,19 @@ Dashboard aggregate of the running jobs.
 | `issues` | `object``[]` | yes | Findings (`level`, `path`, `key`, `args`, localised `message`). |
 | `ok` | `boolean` | yes | No errors (warnings allowed). |
 | `warnings` | `integer` | yes | Number of warnings. |
+
+<a id="schema-loginfo"></a>
+
+### `LogInfo`
+
+A past or running session log (`GET /api/terminal/logs`).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `active` | `boolean` | yes | Still being written by a live session. |
+| `modified` | `integer` | yes | Last modification (Unix seconds). |
+| `name` | `string` | yes | File name (the id in `/api/terminal/logs/{name}`). |
+| `size` | `integer` | yes | Size in bytes. |
 
 <a id="schema-loginrequest"></a>
 
@@ -1294,6 +1456,25 @@ Type: `"weighted"` | `"sequential"` | `"round_robin"`
 | `len` | `integer` | yes | Frame length in octets. |
 | `packet` | `object` | yes | Decoded packet (`wpg_core::Packet`: layers with Manual field values). |
 | `trailers` | `object``[]` | yes | Padding / FCS. |
+
+<a id="schema-promptitem"></a>
+
+### `PromptItem`
+
+One keyboard-interactive prompt.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `echo` | `boolean` | yes | Whether the answer may be shown while typed. |
+| `prompt` | `string` | yes | Prompt text from the server. |
+
+<a id="schema-protocol"></a>
+
+### `Protocol`
+
+Remote protocol.
+
+Type: `"ssh"` | `"telnet"`
 
 <a id="schema-protocolsummary"></a>
 
@@ -1486,6 +1667,200 @@ Index entry of a template.
 | `source` | [`TemplateSource`](#schema-templatesource) | yes | Library or user template. |
 | `tags` | `string``[]` | yes | Tags. |
 | `writable` | `boolean` | yes | Whether it can be updated / deleted through the API. |
+
+<a id="schema-terminalclientmessage"></a>
+
+### `TerminalClientMessage`
+
+Client → server message on `/api/terminal/ws`. Keystrokes may also arrive
+as binary frames (raw bytes).
+
+#### `type: "connect"`
+
+First message: opens the session.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `type` | `"connect"` | yes |   |
+
+#### `type: "input"`
+
+Keystrokes / pasted text (UTF-8).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `data` | `string` | yes | The text. |
+| `type` | `"input"` | yes |   |
+
+#### `type: "resize"`
+
+The terminal was resized.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `cols` | `integer` | yes | Columns. |
+| `rows` | `integer` | yes | Rows. |
+| `type` | `"resize"` | yes |   |
+
+#### `type: "host_key"`
+
+Answer to a `host_key` prompt.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `accept` | `boolean` | yes | Trust the key. |
+| `save` | `boolean` |   | Store it in the known hosts (otherwise trust it for this session). |
+| `type` | `"host_key"` | yes |   |
+
+#### `type: "auth_response"`
+
+Answers to an `auth_prompt` (one per prompt).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `responses` | `string``[]` | yes | The answers. |
+| `type` | `"auth_response"` | yes |   |
+
+#### `type: "record"`
+
+Starts / stops the session log.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `enabled` | `boolean` | yes | Record from now on. |
+| `strip_ansi` | `boolean` \| `null` |   | Remove escape sequences (default true). |
+| `type` | `"record"` | yes |   |
+
+#### `type: "disconnect"`
+
+Ends the session.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `type` | `"disconnect"` | yes |   |
+
+<a id="schema-terminalconnectrequest"></a>
+
+### `TerminalConnectRequest`
+
+`connect`: where to and how to log in.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `cols` | `integer` |   | Terminal width. |
+| `host` | `string` | yes | Host name or address. |
+| `passphrase` | `string` \| `null` |   | Passphrase of `private_key`. |
+| `password` | `string` \| `null` |   | SSH password (also answers a single keyboard-interactive password prompt). |
+| `port` | `integer` \| `null` |   | Port (default 22 / 23). |
+| `private_key` | `string` \| `null` |   | SSH private key (OpenSSH / PEM / `PuTTY` `.ppk` text). |
+| `protocol` | [`Protocol`](#schema-protocol) | yes | `ssh` or `telnet`. |
+| `record` | `boolean` \| `null` |   | Record a session log (default: `terminal.record_sessions`). |
+| `rows` | `integer` |   | Terminal height. |
+| `strip_ansi` | `boolean` \| `null` |   | Remove escape sequences from the log (default true). |
+| `username` | `string` \| `null` |   | SSH user name. |
+
+<a id="schema-terminalservermessage"></a>
+
+### `TerminalServerMessage`
+
+Server → client message on `/api/terminal/ws`. Remote output travels as
+binary frames.
+
+#### `type: "state"`
+
+Progress: `resolving`, `connecting`, `authenticating`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `state` | `string` | yes | The phase. |
+| `type` | `"state"` | yes |   |
+
+#### `type: "host_key"`
+
+An unknown SSH host key: confirm the fingerprint (`host_key` message).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `algorithm` | `string` | yes | Key algorithm. |
+| `fingerprint` | `string` | yes | `SHA256:...`. |
+| `host` | `string` | yes | Host. |
+| `port` | `integer` | yes | Port. |
+| `type` | `"host_key"` | yes |   |
+
+#### `type: "auth_prompt"`
+
+The server asks questions (keyboard-interactive, or the password when
+none was given): answer with `auth_response`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `instructions` | `string` | yes | Instructions from the server. |
+| `name` | `string` | yes | Request name from the server. |
+| `prompts` | [`PromptItem`](#schema-promptitem)`[]` | yes | The prompts. |
+| `type` | `"auth_prompt"` | yes |   |
+
+#### `type: "connected"`
+
+The session is up.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `address` | `string` | yes | Address actually connected to. |
+| `fingerprint` | `string` \| `null` |   | SSH host key fingerprint. |
+| `host` | `string` | yes | Host. |
+| `port` | `integer` | yes | Port. |
+| `protocol` | [`Protocol`](#schema-protocol) | yes | Protocol. |
+| `session_id` | `string` | yes | Session id. |
+| `type` | `"connected"` | yes |   |
+
+#### `type: "record"`
+
+Log state after `connected` / `record`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `enabled` | `boolean` | yes | Recording. |
+| `file` | `string` \| `null` |   | The log file (`GET /api/terminal/logs/{name}`). |
+| `type` | `"record"` | yes |   |
+
+#### `type: "error"`
+
+A failure; `fatal` ones are followed by `closed`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `code` | `string` | yes | `target_not_allowed`, `too_many_sessions`, `resolve_failed`, `connect_failed`, `host_key_changed`, `host_key_rejected`, `auth_failed`, `key_invalid`, `ssh_error`, `timeout`, `bad_request`, `recording_disabled`, `log_failed`. |
+| `detail` | `string` \| `null` |   | Untranslated detail (an OS / protocol error). |
+| `fatal` | `boolean` | yes | The session ends. |
+| `info` | `object` \| `null` |   | `host_key_changed`: `{algorithm, fingerprint, known_algorithm, known_fingerprint}`. |
+| `type` | `"error"` | yes |   |
+
+#### `type: "closed"`
+
+The session ended.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `bytes_in` | `integer` | yes | Bytes received from the host. |
+| `bytes_out` | `integer` | yes | Bytes sent to the host. |
+| `duration_secs` | `integer` | yes | Session length in seconds. |
+| `reason` | `string` | yes | `remote` (the host closed it), `client`, `idle`, `shutdown`, `error`. |
+| `type` | `"closed"` | yes |   |
+
+<a id="schema-terminalstatus"></a>
+
+### `TerminalStatus`
+
+`GET /api/terminal/status`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `allowed_targets` | `string``[]` | yes | `terminal.allowed_targets` (empty = any target). |
+| `enabled` | `boolean` | yes | `terminal.enabled`. |
+| `idle_timeout_secs` | `integer` | yes | `terminal.idle_timeout_secs`. |
+| `max_sessions` | `integer` | yes | `terminal.max_sessions`. |
+| `record_sessions` | `boolean` | yes | `terminal.record_sessions`. |
+| `sessions` | [`ActiveSession`](#schema-activesession)`[]` | yes | Running sessions (all users). |
 
 <a id="schema-userinfo"></a>
 
