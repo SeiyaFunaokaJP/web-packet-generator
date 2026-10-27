@@ -5940,6 +5940,7 @@ dependencies = [
  "serde_json",
  "wpg-core",
  "wpg-protocols",
+ "wpg-template",
  "wpg-testutil",
 ]
 

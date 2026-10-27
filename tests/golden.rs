@@ -5,14 +5,72 @@
 //! Regenerate with `WPG_UPDATE_GOLDEN=1 cargo test -p wpg-golden-tests --test golden`
 //! (or `just golden-update`).
 //!
-//! To add a protocol: write one `fn case_xxx() -> Packet`, add one line to [`cases`],
-//! regenerate, and (optionally) add expectations in `tests/tshark.rs`.
+//! To add a protocol: write one `fn case_xxx() -> Packet` (or reuse a bundled sample
+//! with [`sample`]), add one line to [`cases`],
+//! regenerate, and add expectations in `tests/tshark.rs` (required by its check).
 
 use std::net::{Ipv4Addr, Ipv6Addr};
+use std::path::Path;
 
 use wpg_core::{FieldValue, Layer, Packet, TlvItem};
 use wpg_protocols::{bgp_mp, catalog, gtpv2};
+use wpg_template::{compile, Template, VarOverrides};
 use wpg_testutil::{assert_golden, read_pcap};
+
+/// The base packet of a bundled per-protocol sample,
+/// `templates/protocols/<rel>.wpg.yaml` (the P0 / P1 cases reuse these so the
+/// samples shipped to users are the ones Wireshark checks). Samples with field
+/// generators are rejected: the golden case is the template's single packet.
+fn sample(rel: &str) -> Packet {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../templates/protocols")
+        .join(format!("{rel}.wpg.yaml"));
+    let t = Template::from_path(&path).unwrap_or_else(|e| panic!("{rel}: {e}"));
+    let c = compile(&t, &VarOverrides::new(), catalog()).unwrap_or_else(|e| panic!("{rel}: {e}"));
+    assert!(
+        c.stream.assignments.is_empty(),
+        "{rel}: samples with generators cannot be golden cases"
+    );
+    c.packet
+}
+
+/// RSTP BPDU (IEEE 802.1D-2004 9.3.3): version 2, BPDU type 0x02, proposal /
+/// learning / forwarding / agreement flags, version-1 length 0.
+fn case_dot3_llc_rstp() -> Packet {
+    let mut p = sample("l2/stp");
+    let stp = p.layers.pop().unwrap();
+    p.layers.push(
+        stp.with("protocol_version", 2u8)
+            .with("bpdu_type", 0x02u8)
+            .with("flags", 0x7eu8)
+            .with("trailer", vec![0x00]),
+    );
+    p
+}
+
+/// MSTP BPDU (IEEE 802.1Q-2018 14.6) without MSTI records: version 3, version-1
+/// length 0, version-3 length 64, MST configuration identifier (format 0, name
+/// "region1", revision 1, digest) and the CIST fields.
+fn case_dot3_llc_mstp() -> Packet {
+    let mut trailer = vec![0x00, 0x00, 0x40, 0x00];
+    let mut name = b"region1".to_vec();
+    name.resize(32, 0);
+    trailer.extend_from_slice(&name);
+    trailer.extend_from_slice(&1u16.to_be_bytes());
+    trailer.extend_from_slice(&[0xac; 16]);
+    trailer.extend_from_slice(&0u32.to_be_bytes()); // CIST internal root path cost
+    trailer.extend_from_slice(&[0x80, 0x00, 0x02, 0, 0, 0, 0, 0x01]); // CIST bridge id
+    trailer.push(20); // CIST remaining hops
+    let mut p = sample("l2/stp");
+    let stp = p.layers.pop().unwrap();
+    p.layers.push(
+        stp.with("protocol_version", 3u8)
+            .with("bpdu_type", 0x02u8)
+            .with("flags", 0x7cu8)
+            .with("trailer", trailer),
+    );
+    p
+}
 
 fn eth() -> Layer {
     Layer::new("ethernet2")
@@ -910,6 +968,63 @@ fn cases() -> Vec<(&'static str, Packet)> {
             "eth_ipv4_udp_rtcp_compound",
             case_eth_ipv4_udp_rtcp_compound(),
         ),
+        // P0 / P1 protocols, from the bundled per-protocol samples.
+        ("eth_arp_request", sample("l2/arp-request")),
+        ("dot3_llc", sample("l2/dot3-llc")),
+        ("eth_ipv4_icmpv4_echo", sample("l3/icmpv4-echo")),
+        ("eth_ipv6_ext_chain", sample("l3/ipv6-ext-chain")),
+        ("eth_ipv6_udp", sample("l4/udp-ipv6")),
+        ("eth_ipv6_icmpv6_echo", sample("l3/icmpv6-echo")),
+        ("eth_ipv6_ndp_ns", sample("l3/ndp-ns")),
+        ("eth_ipv6_ndp_ra", sample("l3/ndp-ra")),
+        ("eth_lldp", sample("l2/lldp")),
+        ("dot3_llc_snap_cdp", sample("l2/cdp")),
+        ("dot3_llc_stp", sample("l2/stp")),
+        ("eth_lacp", sample("l2/lacp")),
+        ("eth_eapol", sample("l2/eapol")),
+        ("eth_pppoe_discovery", sample("l2/pppoe-discovery")),
+        ("eth_pppoe_ppp_lcp", sample("l2/pppoe-ppp-lcp")),
+        ("eth_ipv4_udp_vxlan", sample("encap/vxlan")),
+        ("eth_ipv4_gre_ipv4", sample("encap/gre-ipv4")),
+        ("eth_ipv4_nvgre", sample("encap/nvgre")),
+        ("eth_mpls_ipv4", sample("encap/mpls-ipv4")),
+        ("eth_ipv4_udp_mpls_in_udp", sample("encap/mpls-in-udp")),
+        ("eth_ipv4_udp_l2tpv2", sample("encap/l2tpv2")),
+        ("eth_ipv4_l2tpv3", sample("encap/l2tpv3")),
+        ("eth_ipv4_udp_gtpu", sample("encap/gtpu-ipv4")),
+        ("eth_ipv4_udp_geneve", sample("encap/geneve")),
+        ("eth_ipv4_ipip", sample("encap/ipip")),
+        ("eth_ipv4_ospfv2_hello", sample("routing/ospfv2-hello")),
+        ("eth_ipv6_ospfv3_hello", sample("routing/ospfv3-hello")),
+        ("eth_ipv4_tcp_bgp_open", sample("routing/bgp-open")),
+        ("eth_ipv4_tcp_bgp_update", sample("routing/bgp-update")),
+        ("eth_ipv4_udp_ripv2", sample("routing/ripv2-response")),
+        ("eth_ipv6_udp_ripng", sample("routing/ripng-response")),
+        ("eth_ipv4_eigrp_hello", sample("routing/eigrp-hello")),
+        ("eth_ipv4_vrrpv2", sample("fhrp/vrrpv2")),
+        ("eth_ipv4_vrrpv3", sample("fhrp/vrrpv3")),
+        ("eth_ipv4_udp_hsrpv1", sample("fhrp/hsrpv1")),
+        ("eth_ipv4_udp_hsrpv2", sample("fhrp/hsrpv2")),
+        ("eth_ipv4_udp_glbp", sample("fhrp/glbp")),
+        ("eth_ipv4_igmpv2_query", sample("mcast/igmpv2-query")),
+        ("eth_ipv4_igmpv3_report", sample("mcast/igmpv3-report")),
+        ("eth_ipv6_mldv1_query", sample("mcast/mldv1-query")),
+        ("eth_ipv6_mldv2_report", sample("mcast/mldv2-report")),
+        ("eth_ipv4_pim_hello", sample("mcast/pim-hello")),
+        (
+            "eth_ipv4_udp_dhcpv4_discover",
+            sample("app/dhcpv4-discover"),
+        ),
+        ("eth_ipv6_udp_dhcpv6_solicit", sample("app/dhcpv6-solicit")),
+        ("eth_ipv4_udp_dns_query", sample("app/dns-query")),
+        ("eth_ipv4_udp_dns_response", sample("app/dns-response")),
+        ("eth_ipv4_udp_ntp", sample("app/ntp-client")),
+        ("eth_ipv4_udp_snmp_get", sample("app/snmp-get-request")),
+        ("eth_ipv4_udp_syslog", sample("app/syslog")),
+        ("eth_ipv4_udp_radius", sample("app/radius-access-request")),
+        ("eth_ipv4_udp_tftp_rrq", sample("app/tftp-rrq")),
+        ("dot3_llc_rstp", case_dot3_llc_rstp()),
+        ("dot3_llc_mstp", case_dot3_llc_mstp()),
     ]
 }
 

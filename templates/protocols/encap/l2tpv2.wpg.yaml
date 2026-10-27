@@ -26,7 +26,7 @@ layers:
   - protocol: l2tpv2
     fields:
       flags: 0x4002 # T=0 (data), L=1 (length present), version 2
-      body: "00 0c 00 01 00 02 ff 03 00 21 45 00" # length, tunnel 1, session 2, then PPP bytes
+      body: "00 14 00 01 00 02 ff 03 c0 21 09 01 00 08 00 00 00 00" # length 20, tunnel 1, session 2, then PPP LCP Echo-Request (magic 0)
 
 tx:
   count: 1

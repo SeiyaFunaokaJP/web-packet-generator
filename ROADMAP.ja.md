@@ -148,7 +148,7 @@ DPDK、実機の CML2) は仮想環境以外で未確認です。M10 のリリ�
 
 ## M12: v1.0 リリース判定
 
-- [ ] P0 + P1 プロトコルの golden pcap と tshark 突合がすべて緑
+- [x] P0 + P1 プロトコルの golden pcap と tshark 突合がすべて緑
 - [ ] 3 OS でビルド・起動・pcap バックエンド送出を確認 (Windows は確認済み。macOS と Linux の pcap バックエンドが残り)
 - [ ] Linux `afpacket` で 1 Mpps/core 以上 (参考値)。DPDK は環境依存のため参考記録
 - [ ] GUI の E2E が緑、i18n の抜け漏れ 0 (lint)

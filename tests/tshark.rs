@@ -68,7 +68,9 @@ fn s(v: Option<&Value>) -> &str {
 }
 
 /// Per-case expectations: `(file stem, [(tshark field, expected string)])`.
-/// One entry per golden case; cases without an entry still get the generic checks.
+/// One entry per golden case (required); every pcap also gets the generic checks.
+/// `find` sees the last of repeated JSON keys, so for tunnels the inner header wins
+/// (`udp.dstport` of a VXLAN frame is the inner one).
 fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
     vec![
         (
@@ -534,6 +536,598 @@ fn expectations() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
                 ("rtcp.length_check", "1"),
             ],
         ),
+        // P0 / P1 protocols (cases built from the bundled per-protocol samples).
+        (
+            "dot3_llc",
+            vec![
+                ("eth.len", "46"),
+                ("llc.dsap", "0x0e"),
+                ("llc.ssap", "0x0e"),
+                ("llc.control", "0x0003"),
+                ("data.len", "43"),
+            ],
+        ),
+        (
+            "dot3_llc_stp",
+            vec![
+                ("llc.dsap", "0x42"),
+                ("stp.version", "0"),
+                ("stp.type", "0x00"),
+                ("stp.root.hw", "02:00:00:00:00:01"),
+                ("stp.port", "0x8001"),
+                ("stp.max_age", "20"),
+                ("stp.forward", "15"),
+            ],
+        ),
+        (
+            "dot3_llc_rstp",
+            vec![
+                ("stp.version", "2"),
+                ("stp.type", "0x02"),
+                ("stp.flags", "0x7e"),
+                ("stp.flags.proposal", "1"),
+                ("stp.flags.port_role", "3"),
+                ("stp.flags.agreement", "1"),
+                ("stp.version_1_length", "0"),
+            ],
+        ),
+        (
+            "dot3_llc_mstp",
+            vec![
+                ("stp.version", "3"),
+                ("stp.type", "0x02"),
+                ("stp.version_1_length", "0"),
+                ("mstp.version_3_length", "64"),
+                ("mstp.config_name", "region1"),
+                ("mstp.config_revision_level", "1"),
+                ("mstp.cist_bridge.hw", "02:00:00:00:00:01"),
+                ("mstp.cist_remaining_hops", "20"),
+            ],
+        ),
+        (
+            "dot3_llc_snap_cdp",
+            vec![
+                ("llc.oui", "12"),
+                ("llc.cisco_pid", "0x2000"),
+                ("cdp.version", "2"),
+                ("cdp.ttl", "180"),
+                ("cdp.deviceid", "sw1"),
+                ("cdp.portid", "Gi0/1"),
+                ("cdp.capabilities.switch", "1"),
+            ],
+        ),
+        (
+            "eth_arp_request",
+            vec![
+                ("eth.type", "0x0806"),
+                ("arp.opcode", "1"),
+                ("arp.src.hw_mac", "02:00:00:00:00:01"),
+                ("arp.src.proto_ipv4", "192.0.2.1"),
+                ("arp.dst.proto_ipv4", "192.0.2.2"),
+            ],
+        ),
+        (
+            "eth_eapol",
+            vec![
+                ("eth.type", "0x888e"),
+                ("eapol.version", "2"),
+                ("eapol.type", "0"),
+                ("eapol.len", "10"),
+                ("eap.code", "2"),
+                ("eap.type", "1"),
+                ("eap.identity", "user1"),
+            ],
+        ),
+        (
+            "eth_lacp",
+            vec![
+                ("slow.subtype", "0x01"),
+                ("lacp.version", "0x01"),
+                ("lacp.actor.sysid", "02:00:00:00:00:01"),
+                ("lacp.actor.key", "1"),
+                ("lacp.actor.state", "0x45"),
+                ("lacp.partner.sysid", "02:00:00:00:00:02"),
+                ("lacp.collector.max_delay", "0"),
+            ],
+        ),
+        (
+            "eth_lldp",
+            vec![
+                ("eth.type", "0x88cc"),
+                ("lldp.chassis.id.mac", "02:00:00:00:00:01"),
+                ("lldp.port.subtype", "3"),
+                ("lldp.time_to_live", "120"),
+                ("lldp.tlv.system.name", "sw1"),
+            ],
+        ),
+        (
+            "eth_pppoe_discovery",
+            vec![
+                ("eth.type", "0x8863"),
+                ("pppoe.version", "1"),
+                ("pppoe.code", "0x09"),
+                ("pppoe.session_id", "0x0000"),
+                ("pppoe.payload_length", "12"),
+                ("pppoed.tags.host_uniq", "de:ad:be:ef"),
+            ],
+        ),
+        (
+            "eth_pppoe_ppp_lcp",
+            vec![
+                ("eth.type", "0x8864"),
+                ("pppoe.session_id", "0x0001"),
+                ("pppoe.payload_length", "16"),
+                ("ppp.protocol", "0xc021"),
+                ("ppp.code", "1"),
+                ("ppp.length", "14"),
+                ("lcp.opt.mru", "1492"),
+                ("lcp.opt.magic_number", "0x12345678"),
+            ],
+        ),
+        (
+            "eth_ipv4_icmpv4_echo",
+            vec![
+                ("ip.proto", "1"),
+                ("icmp.type", "8"),
+                ("icmp.code", "0"),
+                ("icmp.checksum.status", "1"),
+                ("icmp.ident", "4660"),
+                ("icmp.seq", "0"),
+                ("data.len", "32"),
+            ],
+        ),
+        (
+            "eth_ipv6_ext_chain",
+            vec![
+                ("eth.type", "0x86dd"),
+                ("ipv6.nxt", "0"),
+                ("ipv6.plen", "88"),
+                ("ipv6.hopopts.nxt", "60"),
+                ("ipv6.dstopts.nxt", "43"),
+                ("ipv6.routing.nxt", "44"),
+                ("ipv6.routing.type", "2"),
+                ("ipv6.fraghdr.nxt", "17"),
+                ("ipv6.fraghdr.ident", "0x00000001"),
+                ("udp.dstport", "40001"),
+                ("udp.length", "40"),
+            ],
+        ),
+        (
+            "eth_ipv6_udp",
+            vec![
+                ("ipv6.nxt", "17"),
+                ("ipv6.plen", "40"),
+                ("ipv6.src", "2001:db8::1"),
+                ("ipv6.dst", "2001:db8::2"),
+                ("udp.dstport", "40001"),
+                ("udp.length", "40"),
+                ("data.len", "32"),
+            ],
+        ),
+        (
+            "eth_ipv6_icmpv6_echo",
+            vec![
+                ("ipv6.nxt", "58"),
+                ("icmpv6.type", "128"),
+                ("icmpv6.checksum.status", "1"),
+                ("icmpv6.echo.identifier", "0x1234"),
+                ("icmpv6.echo.sequence_number", "1"),
+                ("data.len", "32"),
+            ],
+        ),
+        (
+            "eth_ipv6_ndp_ns",
+            vec![
+                ("icmpv6.type", "135"),
+                ("icmpv6.checksum.status", "1"),
+                ("icmpv6.nd.ns.target_address", "2001:db8::2"),
+                ("icmpv6.opt.type", "1"),
+                ("icmpv6.opt.src_linkaddr", "02:00:00:00:00:01"),
+            ],
+        ),
+        (
+            "eth_ipv6_ndp_ra",
+            vec![
+                ("icmpv6.type", "134"),
+                ("icmpv6.checksum.status", "1"),
+                ("icmpv6.nd.ra.cur_hop_limit", "64"),
+                ("icmpv6.nd.ra.router_lifetime", "1800"),
+                ("icmpv6.opt.prefix.length", "64"),
+                ("icmpv6.opt.prefix.flag", "0xc0"),
+                ("icmpv6.opt.prefix.valid_lifetime", "2592000"),
+                ("icmpv6.opt.prefix", "2001:db8:1::"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_vxlan",
+            vec![
+                ("vxlan.flags", "0x0800"),
+                ("vxlan.flag_i", "1"),
+                ("vxlan.vni", "1193046"),
+                ("data.len", "16"),
+            ],
+        ),
+        (
+            "eth_ipv4_gre_ipv4",
+            vec![
+                ("gre.flags_and_version", "0x0000"),
+                ("gre.proto", "0x0800"),
+                ("icmp.type", "8"),
+                ("icmp.checksum.status", "1"),
+                ("icmp.seq", "1"),
+            ],
+        ),
+        (
+            "eth_ipv4_nvgre",
+            vec![
+                ("gre.flags_and_version", "0x2000"),
+                ("gre.flags.key", "1"),
+                ("gre.proto", "0x6558"),
+                ("gre.key", "0x12345600"),
+                ("data.len", "16"),
+            ],
+        ),
+        (
+            "eth_mpls_ipv4",
+            vec![
+                ("eth.type", "0x8847"),
+                ("mpls.label", "200"),
+                ("mpls.bottom", "1"),
+                ("mpls.ttl", "64"),
+                ("data.len", "16"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_mpls_in_udp",
+            vec![
+                ("mpls.label", "100"),
+                ("mpls.bottom", "1"),
+                ("mpls.ttl", "64"),
+                ("data.len", "16"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_l2tpv2",
+            vec![
+                ("udp.dstport", "1701"),
+                ("l2tp.flags", "0x4002"),
+                ("l2tp.version", "2"),
+                ("l2tp.length", "20"),
+                ("l2tp.tunnel", "1"),
+                ("l2tp.session", "2"),
+                ("ppp.protocol", "0xc021"),
+                ("ppp.code", "9"),
+            ],
+        ),
+        (
+            "eth_ipv4_l2tpv3",
+            vec![
+                ("ip.proto", "115"),
+                ("l2tp.sid", "0x11223344"),
+                ("data.len", "16"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_gtpu",
+            vec![
+                ("gtp.flags.version", "1"),
+                ("gtp.message", "0xff"),
+                ("gtp.length", "44"),
+                ("gtp.teid", "0x00000001"),
+                ("data.len", "16"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_geneve",
+            vec![
+                ("geneve.version", "0"),
+                ("geneve.option.length", "0"),
+                ("geneve.vni", "0x123456"),
+                ("data.len", "16"),
+            ],
+        ),
+        (
+            "eth_ipv4_ipip",
+            vec![
+                ("ip.proto", "1"),
+                ("icmp.type", "8"),
+                ("icmp.checksum.status", "1"),
+                ("icmp.ident", "1"),
+                ("data.len", "8"),
+            ],
+        ),
+        (
+            "eth_ipv4_ospfv2_hello",
+            vec![
+                ("ip.proto", "89"),
+                ("ospf.version", "2"),
+                ("ospf.msg", "1"),
+                ("ospf.packet_length", "48"),
+                ("ospf.srcrouter", "192.0.2.1"),
+                ("ospf.hello.network_mask", "255.255.255.0"),
+                ("ospf.hello.router_dead_interval", "40"),
+                ("ospf.hello.backup_designated_router", "192.0.2.2"),
+            ],
+        ),
+        (
+            "eth_ipv6_ospfv3_hello",
+            vec![
+                ("ipv6.nxt", "89"),
+                ("ospf.version", "3"),
+                ("ospf.msg", "1"),
+                ("ospf.packet_length", "40"),
+                ("ospf.hello.interface_id", "5"),
+                ("ospf.v3.options", "0x000013"),
+                ("ospf.hello.active_neighbor", "192.0.2.2"),
+            ],
+        ),
+        (
+            "eth_ipv4_tcp_bgp_open",
+            vec![
+                ("tcp.dstport", "179"),
+                ("bgp.type", "1"),
+                ("bgp.length", "45"),
+                ("bgp.open.version", "4"),
+                ("bgp.open.myas", "65001"),
+                ("bgp.open.holdtime", "180"),
+                ("bgp.open.identifier", "192.0.2.1"),
+                ("bgp.cap.4as", "65001"),
+            ],
+        ),
+        (
+            "eth_ipv4_tcp_bgp_update",
+            vec![
+                ("bgp.type", "2"),
+                ("bgp.length", "61"),
+                ("bgp.update.path_attributes.length", "34"),
+                ("bgp.update.path_attribute.community_as", "65001"),
+                ("bgp.update.path_attribute.community_value", "100"),
+                ("bgp.prefix_length", "24"),
+                ("bgp.nlri_prefix", "198.51.100.0"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_ripv2",
+            vec![
+                ("udp.dstport", "520"),
+                ("rip.command", "2"),
+                ("rip.version", "2"),
+            ],
+        ),
+        (
+            "eth_ipv6_udp_ripng",
+            vec![
+                ("udp.dstport", "521"),
+                ("ripng.cmd", "2"),
+                ("ripng.version", "1"),
+                ("ripng.rte.ipv6_prefix", "2001:db8:1::"),
+                ("ripng.rte.prefix_length", "64"),
+                ("ripng.rte.metric", "1"),
+            ],
+        ),
+        (
+            "eth_ipv4_eigrp_hello",
+            vec![
+                ("ip.proto", "88"),
+                ("eigrp.version", "2"),
+                ("eigrp.opcode", "5"),
+                ("eigrp.checksum.status", "1"),
+                ("eigrp.as", "100"),
+                ("eigrp.par.k1", "1"),
+                ("eigrp.par.k3", "1"),
+                ("eigrp.par.holdtime", "15"),
+            ],
+        ),
+        (
+            "eth_ipv4_vrrpv2",
+            vec![
+                ("ip.proto", "112"),
+                ("vrrp.version", "2"),
+                ("vrrp.virt_rtr_id", "10"),
+                ("vrrp.prio", "200"),
+                ("vrrp.addr_count", "2"),
+                ("vrrp.checksum.status", "1"),
+            ],
+        ),
+        (
+            "eth_ipv4_vrrpv3",
+            vec![
+                ("vrrp.version", "3"),
+                ("vrrp.virt_rtr_id", "10"),
+                ("vrrp.prio", "200"),
+                ("vrrp.short_adver_int", "100"),
+                ("vrrp.checksum.status", "1"),
+                ("vrrp.ip_addr", "192.0.2.254"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_hsrpv1",
+            vec![
+                ("udp.dstport", "1985"),
+                ("hsrp.version", "0"),
+                ("hsrp.state", "16"),
+                ("hsrp.priority", "110"),
+                ("hsrp.group", "1"),
+                ("hsrp.auth_data", "cisco"),
+                ("hsrp.virt_ip", "192.0.2.254"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_hsrpv2",
+            vec![
+                ("hsrp2.version", "2"),
+                ("hsrp2.state", "6"),
+                ("hsrp2.group", "1"),
+                ("hsrp2.priority", "110"),
+                ("hsrp2.hellotime", "3000"),
+                ("hsrp2.virt_ip", "192.0.2.254"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_glbp",
+            vec![
+                ("udp.dstport", "3222"),
+                ("glbp.version", "1"),
+                ("glbp.group", "1"),
+                ("glbp.ownerid", "02:00:00:00:00:02"),
+                ("glbp.hello.priority", "110"),
+                ("glbp.hello.virtualipv4", "192.0.2.254"),
+            ],
+        ),
+        (
+            "eth_ipv4_igmpv2_query",
+            vec![
+                ("ip.proto", "2"),
+                ("igmp.version", "2"),
+                ("igmp.type", "0x11"),
+                ("igmp.max_resp", "100"),
+                ("igmp.checksum.status", "1"),
+                ("igmp.maddr", "0.0.0.0"),
+            ],
+        ),
+        (
+            "eth_ipv4_igmpv3_report",
+            vec![
+                ("igmp.version", "3"),
+                ("igmp.type", "0x22"),
+                ("igmp.checksum.status", "1"),
+                ("igmp.num_grp_recs", "2"),
+            ],
+        ),
+        (
+            "eth_ipv6_mldv1_query",
+            vec![
+                ("ipv6.hopopts.nxt", "58"),
+                ("icmpv6.type", "130"),
+                ("icmpv6.checksum.status", "1"),
+                ("icmpv6.mld.maximum_response_delay", "10000"),
+                ("icmpv6.mld.multicast_address", "::"),
+            ],
+        ),
+        (
+            "eth_ipv6_mldv2_report",
+            vec![
+                ("icmpv6.type", "143"),
+                ("icmpv6.checksum.status", "1"),
+                ("icmpv6.mldr.nb_mcast_records", "1"),
+                ("icmpv6.mldr.mar.record_type", "4"),
+                ("icmpv6.mldr.mar.multicast_address", "ff05::1"),
+            ],
+        ),
+        (
+            "eth_ipv4_pim_hello",
+            vec![
+                ("ip.proto", "103"),
+                ("pim.version", "2"),
+                ("pim.type", "0"),
+                ("pim.cksum.status", "1"),
+                ("pim.holdtime", "105"),
+                ("pim.dr_priority", "1"),
+                ("pim.generation_id", "305419896"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_dhcpv4_discover",
+            vec![
+                ("udp.dstport", "67"),
+                ("dhcp.type", "1"),
+                ("dhcp.id", "0x3903f326"),
+                ("dhcp.flags.bc", "1"),
+                ("dhcp.hw.mac_addr", "02:00:00:00:00:01"),
+                ("dhcp.cookie", "99.130.83.99"),
+                ("dhcp.option.end", "255"),
+            ],
+        ),
+        (
+            "eth_ipv6_udp_dhcpv6_solicit",
+            vec![
+                ("udp.dstport", "547"),
+                ("dhcpv6.msgtype", "1"),
+                ("dhcpv6.xid", "0x5a1b2c"),
+                ("dhcpv6.requested_option_code", "24"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_dns_query",
+            vec![
+                ("udp.dstport", "53"),
+                ("dns.id", "0x1234"),
+                ("dns.flags", "0x0100"),
+                ("dns.count.queries", "1"),
+                ("dns.qry.name", "example.com"),
+                ("dns.qry.type", "1"),
+                ("dns.qry.class", "0x0001"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_dns_response",
+            vec![
+                ("dns.id", "0x1234"),
+                ("dns.flags", "0x8580"),
+                ("dns.count.answers", "1"),
+                ("dns.resp.name", "example.com"),
+                ("dns.resp.ttl", "3600"),
+                ("dns.a", "192.0.2.10"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_ntp",
+            vec![
+                ("udp.dstport", "123"),
+                ("ntp.flags.vn", "4"),
+                ("ntp.flags.mode", "3"),
+                ("ntp.stratum", "0"),
+                ("ntp.ppoll", "6"),
+                ("ntp.precision", "-20"),
+                ("ntp.xmt", "Dec 16, 2024 03:21:16.500000000 UTC"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_snmp_get",
+            vec![
+                ("udp.dstport", "161"),
+                ("snmp.version", "1"),
+                ("snmp.community", "public"),
+                ("snmp.request_id", "42"),
+                ("snmp.variable_bindings", "2"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_syslog",
+            vec![
+                ("udp.dstport", "514"),
+                ("syslog.facility", "4"),
+                ("syslog.level", "2"),
+                ("syslog.version", "1"),
+                ("syslog.hostname", "host1"),
+                ("syslog.appname", "su"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_radius",
+            vec![
+                ("udp.dstport", "1812"),
+                ("radius.code", "1"),
+                ("radius.id", "1"),
+                ("radius.length", "63"),
+                (
+                    "radius.authenticator",
+                    "0f:40:3f:94:73:97:80:57:bd:83:d5:cb:98:f4:22:7a",
+                ),
+                ("radius.NAS_Port_Type", "15"),
+            ],
+        ),
+        (
+            "eth_ipv4_udp_tftp_rrq",
+            vec![
+                ("udp.dstport", "69"),
+                ("tftp.opcode", "1"),
+                ("tftp.source_file", "pxelinux.0"),
+                ("tftp.type", "octet"),
+                ("tftp.option.name", "blksize"),
+                ("tftp.option.value", "1428"),
+            ],
+        ),
     ]
 }
 
@@ -606,10 +1200,14 @@ fn tshark_agrees_with_golden_pcaps() {
             );
         }
 
-        if let Some((_, want)) = expectations.iter().find(|(n, _)| *n == stem) {
-            for (field, expected) in want {
-                assert_eq!(s(find(pkt, field)), *expected, "{stem}: {field}");
-            }
+        // Every golden case needs decoded-field expectations (the M12 gate).
+        let (_, want) = expectations
+            .iter()
+            .find(|(n, _)| *n == stem)
+            .unwrap_or_else(|| panic!("{stem}: no entry in expectations()"));
+        assert!(!want.is_empty(), "{stem}: empty expectations");
+        for (field, expected) in want {
+            assert_eq!(s(find(pkt, field)), *expected, "{stem}: {field}");
         }
     }
 }

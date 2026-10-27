@@ -39,6 +39,8 @@ Everything below is the initial development towards 1.0. No version has been tag
   Micro-BFD; SRv6 SRH and SR-MPLS; PTP, ESMC, Ethernet CFM / Y.1731, ERPS R-APS and 802.3ah OAM;
   MACsec, GTPv2-C, Diameter, SIP and RTP / RTCP (M7).
 - Golden byte tests and `tshark -V` cross-checks for the protocols, and `proptest` round trips (M1, M6, M7).
+- Golden pcaps for every P0 / P1 protocol (built from the bundled samples), each cross-checked by tshark
+  with decoded-field expectations; the tshark CI job is now required (M12).
 - Field generators (range, list, random, random MAC, counter, file, expr) combined by zip, product or
   nested order, and a stream expander that pre-renders or builds on the fly (M1).
 
