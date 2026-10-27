@@ -247,6 +247,7 @@
 - [性能チューニング](operations/tuning.md)
 - [認証と TLS](operations/security.md)
 - [受信と検証](operations/rx-verify.md)
+- [SNMP ツール](operations/snmp.md)
 
 # 開発者ガイド
 

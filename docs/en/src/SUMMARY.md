@@ -247,6 +247,7 @@
 - [Performance tuning](operations/tuning.md)
 - [Authentication and TLS](operations/security.md)
 - [Receive and verification](operations/rx-verify.md)
+- [SNMP tool](operations/snmp.md)
 
 # Developer Guide
 

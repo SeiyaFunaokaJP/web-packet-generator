@@ -62,6 +62,16 @@ TLS certificate chain and private key (PEM) to serve HTTPS with; takes precedenc
 | `cert` | `string` |   | `WPG_SERVER__TLS__CERT` | PEM certificate chain. |
 | `key` | `string` |   | `WPG_SERVER__TLS__KEY` | PEM private key. |
 
+### `[snmp]`
+
+docgen-config-snmp
+
+| Key | Type | Default | Environment variable | Description |
+|---|---|---|---|---|
+| `enabled` | `boolean` | `true` | `WPG_SNMP__ENABLED` | docgen-config-snmp-enabled |
+| `mib_dir` | `string` | `""` | `WPG_SNMP__MIB_DIR` | docgen-config-snmp-mib-dir |
+| `trap_listen` | `string` | `""` | `WPG_SNMP__TRAP_LISTEN` | docgen-config-snmp-trap-listen |
+
 ### `[templates]`
 
 Template library.
@@ -152,6 +162,16 @@ allowed_ifaces = []
 # "--in-memory" unless given). EAL starts with the first dpdk job; changing them
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
+
+[snmp]
+# SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).
+enabled = true
+# Trap / inform receiver started at boot, e.g. "0.0.0.0:162" (ports below 1024
+# need root or CAP_NET_BIND_SERVICE). Empty: not started at boot (it can be
+# started from the UI).
+trap_listen = ""
+# Directory of uploaded MIB files. Empty: <data_dir>/mibs
+mib_dir = ""
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".
