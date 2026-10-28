@@ -154,11 +154,11 @@ jobs:
             e2e/test-results/
           retention-days: 7
 
-  # Optional (M1): cross-check the golden pcaps against Wireshark's dissector.
+  # Cross-check the golden pcaps against Wireshark's dissector (required since M12:
+  # every P0 / P1 golden case has decoded-field expectations).
   tshark:
     name: tshark cross-check
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

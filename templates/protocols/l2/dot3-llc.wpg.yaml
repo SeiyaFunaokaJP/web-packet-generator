@@ -1,11 +1,11 @@
-# IEEE 802.3 frame (length field) with an 802.2 LLC header (SAP 0x04)
+# IEEE 802.3 frame (length field) with an 802.2 LLC header (SAP 0x0e)
 schema: 1
 
 meta:
   name: dot3-llc-frame
   descriptions:
-    ja: "IEEE 802.3 (長さフィールド) + 802.2 LLC (SAP 0x04) フレーム"
-    en: "IEEE 802.3 frame (length field) with an 802.2 LLC header (SAP 0x04)"
+    ja: "IEEE 802.3 (長さフィールド) + 802.2 LLC (SAP 0x0e) フレーム"
+    en: "IEEE 802.3 frame (length field) with an 802.2 LLC header (SAP 0x0e)"
   tags: ["protocol:dot3", "protocol:llc", "layer:l2", sample]
   author: wpg
   created: 2026-09-29
@@ -26,8 +26,8 @@ layers:
       length: auto # octets after the 802.3 header
   - protocol: llc
     fields:
-      dsap: 0x04 # any SAP; 0x04 = IBM SNA path control
-      ssap: 0x04
+      dsap: 0x0e # any SAP; 0x0e = PROWAY (IEC 955) network management
+      ssap: 0x0e
       control: ui
   - protocol: payload
     fields:

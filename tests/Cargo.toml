@@ -23,6 +23,7 @@ path = "tshark.rs"
 [dev-dependencies]
 wpg-core.workspace = true
 wpg-protocols.workspace = true
+wpg-template.workspace = true
 wpg-testutil.workspace = true
 serde_json.workspace = true
 

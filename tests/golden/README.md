@@ -23,8 +23,13 @@ just tshark                   # optional: needs tshark, checks checksums/decoded
 1. Add `fn case_<name>() -> Packet` to `tests/golden.rs`.
 2. Add one line `("<name>", case_<name>())` to `cases()`.
 3. Run `just golden-update`, review, commit the new `.hex` and `.pcap`.
-4. Optionally add `(<name>, [(tshark field, expected)])` to `expectations()` in
-   `tests/tshark.rs`. Checksum status and `_ws.malformed` are checked for every pcap.
+4. Add `(<name>, [(tshark field, expected)])` to `expectations()` in
+   `tests/tshark.rs` (required: the tshark test fails for a pcap without an entry).
+   Checksum status and `_ws.malformed` are checked for every pcap.
+
+Cases can also reuse a bundled sample: `("<name>", sample("<group>/<file>"))` builds
+`templates/protocols/<group>/<file>.wpg.yaml`, so the sample shipped to users is the
+one Wireshark checks.
 
 Never edit `.hex` by hand to make a test pass: verify the bytes against an independent
 source (RFC, Wireshark) first.
