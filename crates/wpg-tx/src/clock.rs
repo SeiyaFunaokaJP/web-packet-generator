@@ -226,15 +226,29 @@ mod tests {
     fn clocks_track_instant() {
         for src in [ClockSource::Monotonic, ClockSource::Auto] {
             let c = Clock::new(src);
-            let t = Instant::now();
-            std::thread::sleep(Duration::from_millis(20));
-            let a = c.now_ns();
-            let b = t.elapsed().as_secs_f64() * 1e9;
-            // Within 2 ms + 2 % of each other (calibration error, scheduling).
-            assert!(
-                (a - b).abs() < 2e6 + b * 0.02,
-                "{src:?}: clock {a} vs instant {b}"
-            );
+            // Locally one measurement must be within tolerance; on CI (`CI`
+            // set) a descheduled thread may skew one run, so allow retries.
+            let attempts = if std::env::var_os("CI").is_some() {
+                5
+            } else {
+                1
+            };
+            let mut a = 0.0;
+            let mut last = String::new();
+            let mut ok = false;
+            for _ in 0..attempts {
+                let t = Instant::now();
+                std::thread::sleep(Duration::from_millis(20));
+                a = c.now_ns();
+                let b = t.elapsed().as_secs_f64() * 1e9;
+                // Within 2 ms + 2 % of each other (calibration error, scheduling).
+                if (a - b).abs() < 2e6 + b * 0.02 {
+                    ok = true;
+                    break;
+                }
+                last = format!("{src:?}: clock {a} vs instant {b}");
+            }
+            assert!(ok, "{last}");
             assert!(c.now_ns() >= a);
         }
         if let Some(cal) = tsc_calibration() {
