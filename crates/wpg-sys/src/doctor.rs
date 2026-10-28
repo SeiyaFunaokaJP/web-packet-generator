@@ -89,8 +89,12 @@ impl Report {
 }
 
 /// Runs every check against the current host.
+///
+/// `pcap_backend`: the calling binary was built with the `pcap` feature (pass
+/// `cfg!(feature = "pcap")`). On Windows that backend is the only way to send, so a build
+/// without it fails the `backend.pcap` check.
 #[must_use]
-pub fn run() -> Report {
+pub fn run(pcap_backend: bool) -> Report {
     let exe = std::env::current_exe()
         .map_or_else(|_| "wpg".to_owned(), |p| p.to_string_lossy().into_owned());
     let ifaces = ifaces::list();
@@ -108,6 +112,7 @@ pub fn run() -> Report {
             check_tpacket_v3(kernel::release().as_deref(), cfg!(target_os = "linux")),
             check_hugepages(hugepages::read().as_ref(), first_iface.as_deref()),
             check_npcap(&npcap, cfg!(windows)),
+            check_pcap_backend(pcap_backend, cfg!(windows)),
             check_pcap_lib(
                 pcaplib::find().as_deref().map(|p| p.display().to_string()),
                 cfg!(windows),
@@ -288,6 +293,32 @@ fn check_npcap(info: &NpcapInfo, windows: bool) -> Check {
     }
 }
 
+/// Windows: was this `wpg.exe` built with the Npcap backend (`pcap` feature)?
+fn check_pcap_backend(built_in: bool, windows: bool) -> Check {
+    if !windows {
+        return Check::skip("backend.pcap");
+    }
+    if built_in {
+        Check::new(
+            "backend.pcap",
+            Status::Ok,
+            "doctor-pcap-backend-ok",
+            String::new(),
+        )
+    } else {
+        Check::new(
+            "backend.pcap",
+            Status::Fail,
+            "doctor-pcap-backend-missing",
+            "built without the pcap feature".to_owned(),
+        )
+        .with_fix(
+            "doctor-fix-pcap-backend",
+            r"unpack the Npcap SDK (https://npcap.com/#download) to C:\Npcap-SDK, then run .\scripts\build.ps1 -Release".to_owned(),
+        )
+    }
+}
+
 fn check_pcap_lib(found: Option<String>, windows: bool) -> Check {
     if windows {
         return Check::skip("pcap_lib");
@@ -413,6 +444,16 @@ mod tests {
     }
 
     #[test]
+    fn pcap_backend_check() {
+        assert_eq!(check_pcap_backend(true, true).status, Status::Ok);
+        let missing = check_pcap_backend(false, true);
+        assert_eq!(missing.status, Status::Fail);
+        assert_eq!(missing.fix_key, Some("doctor-fix-pcap-backend"));
+        assert!(missing.fix_hint.unwrap().contains("build.ps1"));
+        assert_eq!(check_pcap_backend(false, false).status, Status::Skip);
+    }
+
+    #[test]
     fn iface_and_pcap_lib_checks() {
         assert_eq!(check_ifaces(Ok(&[])).status, Status::Warn);
         assert_eq!(check_ifaces(Err("boom".into())).status, Status::Fail);
@@ -423,7 +464,7 @@ mod tests {
 
     #[test]
     fn run_has_all_ids_and_serializes() {
-        let r = run();
+        let r = run(false);
         for id in [
             "caps.raw_socket",
             "iface.any_up",
@@ -431,6 +472,7 @@ mod tests {
             "kernel.tpacket_v3",
             "hugepages",
             "npcap",
+            "backend.pcap",
             "pcap_lib",
         ] {
             assert!(r.get(id).is_some(), "missing {id}");

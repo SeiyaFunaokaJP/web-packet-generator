@@ -129,7 +129,7 @@ pub async fn ifaces(
     responses((status = 200, description = "`{ ok, locale, checks: [...] }`", body = Object)))]
 pub async fn doctor(headers: HeaderMap) -> ApiResult<Json<Value>> {
     let locale = request_locale(&headers);
-    let report = tokio::task::spawn_blocking(doctor::run)
+    let report = tokio::task::spawn_blocking(|| doctor::run(cfg!(feature = "pcap")))
         .await
         .map_err(ApiError::internal)?;
     let checks: Vec<Value> = report

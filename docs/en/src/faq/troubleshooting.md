@@ -12,6 +12,7 @@ When something goes wrong, run `wpg doctor` first. It diagnoses privileges, inte
 | `kernel.tpacket_v3` | warn | Kernel 3.2+; without it afpacket falls back to `sendmmsg` |
 | `hugepages` | warn | Hugepages configured; needed only for the DPDK backend |
 | `npcap` | fail / warn (Windows only) | Npcap installed and `wpcap.dll` present (`System32\Npcap` or `System32`); skipped on other OSes |
+| `backend.pcap` | fail (Windows only) | This `wpg.exe` was built with the Npcap backend (`pcap` feature), the only way to send on Windows. A build without the Npcap SDK fails here: unpack the SDK to `C:\Npcap-SDK` and run `scripts\build.ps1` again (see [Install on Windows](../getting-started/install-windows.md)); skipped on other OSes |
 | `pcap_lib` | warn | libpcap found (needed for the `pcap` backend); skipped on Windows |
 
 Each result is `ok`, `warn`, `fail` or `skip` (not applicable on this OS).

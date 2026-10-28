@@ -121,7 +121,7 @@ pub fn setcap_hint(exe_path: &str) -> String {
     } else if cfg!(target_os = "macos") {
         format!("sudo {exe_path} …   (or make /dev/bpf* accessible, e.g. via Wireshark's ChmodBPF)")
     } else if cfg!(windows) {
-        "Run from an elevated (Administrator) terminal".to_owned()
+        "Run from an elevated (Administrator) terminal, or reinstall Npcap (https://npcap.com/#download) without \"Restrict Npcap driver's access to Administrators only\"".to_owned()
     } else {
         format!("run {exe_path} as root")
     }

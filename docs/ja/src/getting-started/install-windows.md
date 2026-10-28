@@ -16,7 +16,7 @@
    ```
 
 3. [Npcap](https://npcap.com/#download) をインストールします (既定のオプションのままでかまいません。WinPcap API 互換モードは不要です)。送信に必要です。
-4. [Npcap SDK](https://npcap.com/#download) をダウンロードして `C:\Npcap-SDK` に展開します (または環境変数 `LIBPCAP_LIBDIR` に SDK の `Lib\x64` を設定します)。すると `scripts\build.ps1` が Npcap バックエンド (`pcap` feature) を組み込みます。Windows で送信できるのはこのバックエンドだけです。SDK が無くてもビルドは成功しますが、できた `wpg.exe` は送信できず、`build.ps1` が警告します。
+4. [Npcap SDK](https://npcap.com/#download) をダウンロードして `C:\Npcap-SDK` に展開します。`scripts\build.ps1` は `C:\npcap-sdk-<バージョン>` (zip の名前のまま。複数あれば新しいもの)、環境変数 `NPCAP_SDK` で指定したディレクトリ、SDK の `Lib\x64` を指す `LIBPCAP_LIBDIR` も探します。見つかると `scripts\build.ps1` が Npcap バックエンド (`pcap` feature) を組み込みます。Windows で送信できるのはこのバックエンドだけです。SDK が無くてもビルドは成功しますが、できた `wpg.exe` は送信できず、`build.ps1` が警告します。
 5. 任意: Wireshark (`tshark` 用)。
 
 ## 2. ビルドする
@@ -27,7 +27,17 @@ cd web-packet-generator
 .\scripts\build.ps1 -Release       # または: just release
 ```
 
-最後に `==> done: target\release\wpg.exe` と表示されます。
+SDK が見つかると `==> Npcap SDK: LIBPCAP_LIBDIR=...` と表示し、最後に `==> done: target\release\wpg.exe` と表示されます。主な使い方は次のとおりです。
+
+| コマンド | 結果 |
+|---|---|
+| `.\scripts\build.ps1` | デバッグビルド (`target\debug\wpg.exe`)。SDK が見つかれば Npcap バックエンドを組み込む |
+| `.\scripts\build.ps1 -Release` | 最適化ビルド (`target\release\wpg.exe`)。SDK の検出は同じ |
+| `.\scripts\build.ps1 -NoPcap` | SDK があっても Npcap バックエンドなしでビルドする (送信不可) |
+| `.\scripts\build.ps1 -Features pcap` | Npcap バックエンドを必須にする。SDK が見つからなければエラーで止まる |
+| `Get-Help .\scripts\build.ps1 -Detailed` | すべてのパラメータ |
+
+trunk が無いとフロントエンドのビルドは警告付きで省略されます (Web UI は古い、または存在しない `crates\wpg-web\dist` を配信します)。
 
 ## 3. 権限なしで試す
 
@@ -38,7 +48,7 @@ cd web-packet-generator
 
 ## 4. 送信を許可する
 
-`wpg doctor` が Npcap をインストール済みと報告することを確認します。Npcap を既定のオプションで入れていれば、通常の PowerShell から送信できます (`caps.raw_socket` は ok)。「Restrict Npcap driver's access to Administrators only」を選んで入れた場合は `caps.raw_socket` が fail になるので、送信するときは **管理者として PowerShell を開いて** ください。[権限設定](permissions.md) を参照してください。
+`wpg doctor` が Npcap をインストール済み (`npcap`)、Npcap バックエンドを組み込み済み (`backend.pcap`) と報告することを確認します。`backend.pcap` が fail なら `build.ps1` が Npcap SDK を見つけられていないので、手順 1 のとおり SDK を入れてビルドし直してください。Npcap を既定のオプションで入れていれば、通常の PowerShell から送信できます (`caps.raw_socket` は ok)。「Restrict Npcap driver's access to Administrators only」を選んで入れた場合は `caps.raw_socket` が fail になるので、送信するときは **管理者として PowerShell を開いて** ください。[権限設定](permissions.md) を参照してください。
 
 ## 5. サーバを起動する
 
@@ -55,7 +65,7 @@ cd web-packet-generator
 .\target\release\wpg.exe send templates\examples\arp-sweep.wpg.yaml -i <インタフェース> --rate 1000pps
 ```
 
-インタフェース名は `wpg ifaces` の表示を使います。送信してよいのは、自分が所有する、または試験を許可されたネットワークだけです。続けて [ARP スイープのチュートリアル](../tutorials/arp-sweep.md) に進んでください。
+インタフェース名は `wpg ifaces` の表示 (`{GUID}`) を使います (`tshark -D` が表示する `\Device\NPF_{GUID}` でもかまいません)。Npcap のループバックアダプタ (`\Device\NPF_Loopback`) は Ethernet フレームを受け付けません (`PacketSendPacket failed ... (50)`)。実ネットワークに出さずに送信を試すときは、Hyper-V の `vEthernet (Default Switch)` や VMware のホストオンリーアダプタなどの仮想アダプタを使い、`wpg capture -i <インタフェース> --backend pcap --include-outgoing` か `tshark` で確認してください。送信してよいのは、自分が所有する、または試験を許可されたネットワークだけです。続けて [ARP スイープのチュートリアル](../tutorials/arp-sweep.md) に進んでください。
 
 ## リリースアーカイブと Npcap の確認
 
@@ -74,6 +84,8 @@ Npcap は同梱していません (無償版のライセンスでは再配布で
 
 - `wpg doctor` は、Npcap が無いと `npcap` のチェックを失敗にし、Npcap がインストールされているように見えるのに `wpcap.dll` が `System32\Npcap` にも `System32` にも無いときは警告します。対処の行に <https://npcap.com/#download> へのリンクが出ます。
 - Npcap 無しで送信すると、クラッシュせずに `Npcap is not installed; install it from https://npcap.com/#download and run wpg doctor` で止まります。
-- `scripts\build.ps1` もビルドの前に警告を出します。Npcap が無くてもビルドは成功しますが、送信はできないためです。
+- `wpg doctor` は、`wpg.exe` が Npcap バックエンドなしでビルドされていると `backend.pcap` を失敗にし、SDK を展開して `scripts\build.ps1` を再実行するよう案内します。
+- Npcap を管理者専用モードで入れた場合、昇格していないターミナルでは `caps.raw_socket` が fail になります。管理者ターミナルで実行するか、そのオプションを外して Npcap を入れ直してください。
+- `scripts\build.ps1` もビルドの前に警告を出します。Npcap が無くてもビルドは成功しますが送信はできないため、また Npcap SDK なしでビルドするときも警告します。
 
 起動時に wpg をバックグラウンドで動かす方法は [サービスとして動かす](../operations/services.md) を参照してください。

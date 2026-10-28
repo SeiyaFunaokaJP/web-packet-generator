@@ -24,7 +24,7 @@ file capability はバイナリを置き換えると失われ、`nosuid` マウ�
 
 ## Windows
 
-Npcap が必要です (インストールモードは問いません。wpg が `System32\Npcap` の `wpcap.dll` を自分で見つけます)。管理者ターミナルが必要なのは、Npcap を管理者専用モードで入れた場合だけです。`wpg doctor` はその設定 (`HKLM\SYSTEM\CurrentControlSet\Services\npcap\Parameters` の `AdminOnly`) を読み、既定のインストールなら管理者権限なしでも `caps.raw_socket` を ok (`npcap_admin_only=no`) に、管理者専用モードなら fail にしてヒント `Run from an elevated (Administrator) terminal` を表示します。設定を読めないときは警告です。Npcap がない場合は `https://npcap.com/#download` を案内します。
+Npcap が必要です (インストールモードは問いません。wpg が `System32\Npcap` の `wpcap.dll` を自分で見つけます)。管理者ターミナルが必要なのは、Npcap を管理者専用モードで入れた場合だけです。`wpg doctor` はその設定 (`HKLM\SYSTEM\CurrentControlSet\Services\npcap\Parameters` の `AdminOnly`) を読み、既定のインストールなら管理者権限なしでも `caps.raw_socket` を ok (`npcap_admin_only=no`) に、管理者専用モードなら fail にしてヒント `Run from an elevated (Administrator) terminal, or reinstall Npcap ... without "Restrict Npcap driver's access to Administrators only"` (管理者ターミナルで実行するか、この選択を外して Npcap を入れ直す) を表示します。設定を読めないときは警告です。Npcap がない場合は `https://npcap.com/#download` を案内します。
 
 ## `wpg doctor` による確認
 
