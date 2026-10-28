@@ -2,7 +2,7 @@
 
 Status: draft
 
-Measure first with `wpg bench` and compare against the baseline in `docs/perf.md` (measured on `lo` and `null` only). All flags below exist on both `wpg send` and `wpg bench` unless noted; see the [CLI reference](../reference/cli.md).
+Measure first with `wpg bench` and compare against the baseline in `docs/perf.md` (measured on `lo`, `null` and a veth / dummy interface on WSL2, not on real NICs; afpacket reached 2-3 Mpps on one core on WSL2). All flags below exist on both `wpg send` and `wpg bench` unless noted; see the [CLI reference](../reference/cli.md).
 
 ## Where to start
 

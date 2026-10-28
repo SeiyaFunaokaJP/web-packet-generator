@@ -53,6 +53,8 @@ Everything below is the initial development towards 1.0. No version has been tag
   TSC clock, busy-poll waiting and accuracy reporting (M2, M8).
 - Multi-queue, multi-core sending with `--workers`, core pinning and NUMA-aware placement (`--auto-pin`) (M8).
 - `wpg bench`, the performance baseline in `docs/perf.md` and a nightly benchmark job with thresholds (M2, M8).
+- Linux check on WSL2 (Ubuntu 24.04, kernel 6.18): the libpcap backend sends over a veth pair, and
+  `afpacket` reaches 2-3 Mpps on one core with the TX ring (`docs/perf.md`) (M12).
 - Receive counters with a tcpdump-style filter evaluated in user space, `wpg capture`, the first frames
   and pcapng output, and send-signature verification for loss, ordering, duplicates and latency (M9).
 

@@ -1,10 +1,10 @@
 # 性能ベースライン (wpg bench)
 
-Status: draft / 計測日: 2026-09-29、2026-10-12 (M8) / English summary は末尾 ([English summary](#english-summary))
+Status: draft / 計測日: 2026-09-29、2026-10-12 (M8)、2026-10-28 (M12, WSL2) / English summary は末尾 ([English summary](#english-summary))
 
 このページは `wpg bench` で測った送出性能のベースラインと、その再現方法・解釈・実機で記録すべき項目をまとめたものです。生の JSON は `docs/perf/` に置いています。
 
-> **重要**: ここにある数値はすべて **4 vCPU のコンテナ上の `lo` (ループバック) と null バックエンド** で測ったものです。実 NIC や CML2 上の virtio-net では測っていません。実機の値として引用しないでください。
+> **重要**: ここにある数値はすべて **4 vCPU のコンテナ上の `lo` (ループバック) と null バックエンド** (M12 の節は WSL2 上の `lo` / veth / dummy) で測ったものです。実 NIC や CML2 上の virtio-net では測っていません。実機の値として引用しないでください。
 
 ## 計測環境
 
@@ -163,6 +163,44 @@ JSON のフィールド: `backend`, `detail` (ring/sendmmsg の別とスロッ�
 - **p99 と最大値はホスト次第**: 数百 µs〜数 ms の外れ値は共有ホストで vCPU が奪われたもので、待ち方では消せません。`isolcpus` と `--pin-core` を使った専有コアでは小さくなるはずですが、未計測です。
 - **平均レートは全条件で目標の ±0.1 % 以内** (1 kpps の 100.1 % は 1 秒の計測で先頭フレームが 1 つ多い分)。
 
+## Linux の pcap バックエンドと afpacket 1 コア (2026-10-28, release, M12)
+
+M12 の「Linux で pcap バックエンド送出を確認」と「afpacket で 1 Mpps/core 以上 (参考値)」の確認です。
+
+| 項目 | 値 |
+|---|---|
+| マシン | WSL2 (Hyper-V 上の軽量 VM)、Ubuntu 24.04.1 LTS、32 論理 CPU (Intel Core i9-13900K) |
+| カーネル | `6.18.54.1-microsoft-standard-WSL2` |
+| ビルド | `cargo build --release -p wpg-cli --features pcap` (libpcap 1.10.4)。`--features` なしのビルドも成功 |
+| インタフェース | `lo`、veth (`ip link add wpgv0 type veth peer name wpgv1`、相手側 `wpgv1` は受信アプリなし)、dummy (`ip link add wpgd0 type dummy`) |
+| 条件 | 1 ワーカー、`--pin-core 2`、64 B (指定時 1514 B)、バッチ 256、`--duration 5`、各 3 回 |
+
+**pcap バックエンド (libpcap) の送出確認**: `wpg send templates/examples/eth-ipv4-udp-range.wpg.yaml --backend pcap --iface wpgv0 --count 100 --rate 1000pps` を、相手側で `tcpdump -i wpgv1 -c 100 -w cap.pcap` で受けました。100 フレームすべてが届き (kernel drop 0)、tshark で IPv4 / UDP のチェックサムがすべて正常、`wpg render` で同じテンプレートを書き出した pcapng とバイト単位で一致しました。`vlan-tcp-syn` と `arp-sweep` も 20 / 20 フレームが届き、tshark で正しく解釈されました。`wpg ifaces` は veth / dummy を表示し、`wpg doctor` は `caps.raw_socket`、`kernel.tpacket_v3`、`pcap_lib` が ok (hugepages のみ警告)。`wpg serve --bind 127.0.0.1:18080` も起動し、`/api/health` が 200 を返しました。
+
+| Backend | インタフェース | 条件 | pps (3 回) | dropped |
+|---|---|---|---|---|
+| null | - | - | 72.1–142 Mpps | 0 |
+| afpacket | `lo` | TPACKET_V3 ring (1024 slots x 16384 B) | 2.95 / 3.33 / 3.10 Mpps | 0 |
+| afpacket | `lo` | sendmmsg (`--no-tx-ring`) | 0.96 / 0.90 / 1.06 Mpps | 0 |
+| afpacket | `lo` | ring + `--qdisc-bypass` | 2.31 / 2.68 / 2.78 Mpps | 0 |
+| afpacket | `lo` | ring、1514 B | 2.51 / 2.79 / 2.82 Mpps (約 33 Gbps L2) | 0 |
+| afpacket | veth | ring (4096 slots x 2048 B) | 2.51 / 2.54 / 2.05 Mpps | 0 |
+| afpacket | veth | sendmmsg | 1.01 / 0.94 / 1.40 Mpps | 0 |
+| afpacket | veth | ring + `--qdisc-bypass` | 0.64 / 2.06 / 2.29 Mpps | 0 |
+| afpacket | veth | sendmmsg + `--qdisc-bypass` | 2.64 / 2.83 / 2.61 Mpps | 0 |
+| afpacket | veth | ring、1514 B | 2.04 / 2.02 / 2.14 Mpps (約 25 Gbps L2) | 0 |
+| afpacket | dummy | ring | 5.95 / 6.08 / 6.15 Mpps | 0 |
+| afpacket | dummy | ring + `--qdisc-bypass` | 6.19 / 6.03 / 5.96 Mpps | 0 |
+| pcap | veth | libpcap `pcap_sendpacket` | 2.35 / 2.46 / 2.44 Mpps | 0 |
+
+JSON: [`perf/2026-10-28-afpacket-lo-wsl2.json`](perf/2026-10-28-afpacket-lo-wsl2.json)、[`perf/2026-10-28-afpacket-veth-wsl2.json`](perf/2026-10-28-afpacket-veth-wsl2.json)、[`perf/2026-10-28-pcap-veth-wsl2.json`](perf/2026-10-28-pcap-veth-wsl2.json)。
+
+- **afpacket は既定の TX ring で 1 コア 2–3 Mpps** (`lo` と veth)。veth では相手側 `wpgv1` の `rx_packets` の増分が `wpg bench` の送出数と一致しました (3 秒で 4,532,480)。M12 の目安 1 Mpps/core を満たしています。
+- **dummy は受信経路がない** (フレームをすぐ捨てる) ため 6 Mpps 前後で、afpacket の送信側だけのおおよその上限です。
+- **WSL2 は揺れが大きい**: 同じ条件でも 1 回だけ 0.64 Mpps になるなど、Windows 側の負荷と Hyper-V の vCPU スケジューリングの影響を受けます。null が 72–142 Mpps と倍も違うのも同じ理由です。桁と相対比較として読んでください。
+- コンテナの結果と違い、ここでは sendmmsg が ring より遅く (`lo` で約 1/3)、`--qdisc-bypass` は ring では効果がなく sendmmsg では 2.5 倍以上になりました。WSL2 ではシステムコールと qdisc のロックのコストが大きいためと考えられます。
+- 実 NIC、CML2 の virtio-net では測っていません。
+
 ## 性能レグレッションテスト (nightly)
 
 `.github/workflows/nightly-bench.yml` が毎日 18:17 UTC (03:17 JST) と手動実行 (`workflow_dispatch`) で動きます。release ビルドで次を実行し、`scripts/bench-check.py` が `scripts/bench-thresholds.json` のしきい値と比べ、1 つでも外れればジョブを失敗させます。結果の表はジョブのサマリに、生の JSON は 90 日間 artifact に残ります。
@@ -218,5 +256,7 @@ Interpretation: the null backend shows the engine is not the bottleneck; on `lo`
 M8 additions (2026-10-12, release, same 4-vCPU container, 64-byte frames, 3 s, batch 256; `vxa` is a 4-queue veth whose peer discards the frames): AF_XDP copy mode reached 2.48 Mpps on `lo` (afpacket ring 1.74 Mpps) and 2.61 Mpps on veth with one worker, 4.51 Mpps with `--workers 2 --auto-pin` and 5.10 Mpps with 4 workers (all four vCPUs); afpacket on veth went from 1.48 Mpps (1 worker) to 2.74 Mpps (2 workers, `--qdisc-bypass`). `--busy-poll` does not help in copy mode (2.23 Mpps on `lo`). Zero-copy on physical NICs has not been measured.
 
 Rate control precision (`cargo run --release -p wpg-tx --example pacing -- 1 --json`, raw data in `docs/perf/2026-10-12-pacing.json`; lateness = how late the pacer woke up relative to its deadline): lowering the TX thread's timer slack to 1 µs and learning the oversleep cut the mean lateness of `hybrid` at 1 kpps from 74.5 to 10-15 µs (10 kpps: 13.9 to 1.8-2.3 µs) and of `sleep` from 62-121 to 2-44 µs; the TSC clock halves the median lateness of the spinning modes (0.07-0.11 to 0.03-0.06 µs). The average rate is within ±0.1 % of the target everywhere. p99 and maximum values (hundreds of µs to ms) are vCPU preemption on the shared host and are not removed by any wait mode.
+
+M12 Linux check (2026-10-28, release, WSL2 on an Intel Core i9-13900K, kernel `6.18.54.1-microsoft-standard-WSL2`, Ubuntu 24.04.1, one worker pinned with `--pin-core 2`, 64-byte frames, batch 256, 5 s, three runs each): the libpcap backend (`--features pcap`) sent `eth-ipv4-udp-range` over a veth pair and all 100 frames arrived on the peer, byte-identical to `wpg render` and with valid IPv4 / UDP checksums in tshark (`vlan-tcp-syn` and `arp-sweep`: 20 of 20); `wpg serve`, `wpg ifaces` and `wpg doctor` also worked. afpacket on one core: `lo` ring 2.95-3.33 Mpps, `lo` sendmmsg 0.90-1.06 Mpps, `lo` ring + `--qdisc-bypass` 2.31-2.78 Mpps, `lo` 1514-byte frames 2.51-2.82 Mpps; veth ring 2.05-2.54 Mpps (the peer's `rx_packets` matched the frames sent), veth sendmmsg 0.94-1.40 Mpps, veth sendmmsg + `--qdisc-bypass` 2.61-2.83 Mpps, veth ring + `--qdisc-bypass` 0.64-2.29 Mpps; a dummy interface (no receive path) 5.95-6.19 Mpps; the pcap backend on veth 2.35-2.46 Mpps. This meets the 1 Mpps/core reference target. WSL2 runs vary a lot (the null backend gave 72-142 Mpps), and real NICs and CML2 virtio-net were not measured.
 
 Performance regression test: `.github/workflows/nightly-bench.yml` runs nightly (18:17 UTC) and on demand, benchmarks null / afpacket `lo` / afxdp `lo` and the pacer, and `scripts/bench-check.py` compares the JSON with the deliberately loose thresholds in `scripts/bench-thresholds.json` (they catch order-of-magnitude regressions on noisy shared runners). Results go to the job summary and a 90-day artifact.
