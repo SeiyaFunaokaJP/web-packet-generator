@@ -113,6 +113,10 @@ Everything below is the initial development towards 1.0. No version has been tag
 - `scripts/smoke-archive.sh` (`just smoke-archive`) and release-workflow jobs, also run on pull requests
   touching the packaging, that test each archive, the launchd daemon with pcap send / receive on macOS,
   the Windows scheduled task and the no-Npcap path, `build.ps1`, and the Docker compose setup (M10).
+  A tag is published only once all of them pass, and the release builds pin their trunk version.
+  `scripts/release.sh` and `scripts/build.sh` no longer hand trunk an empty `NO_COLOR` (trunk 0.21
+  refused to build), and the Docker health check asks the address in `WPG_SERVER__BIND` rather than
+  always `127.0.0.1` (M10).
 
 - Interactive deploy wizard: `scripts/deploy.bat` / `deploy.ps1` for Windows and `scripts/deploy.sh` without
   arguments ask for the host, SSH user / password / port and the options, install an SSH key, and can
@@ -140,6 +144,9 @@ Everything below is the initial development towards 1.0. No version has been tag
 
 ### Security
 
+- `packaging/windows/wpg-service.ps1` creates the configuration and data directories for `SYSTEM` and
+  Administrators only: other users could otherwise read the password hash, the database and the TLS key
+  under `C:\ProgramData` (M10).
 - `cargo audit` and `cargo deny` run in CI; the deprecated `serde_yaml` was replaced with the maintained
   `serde_norway` fork (RUSTSEC-2024-0449) (M12).
 - Dependency updates: `zip` 9 (RUSTSEC-2026-0367 / 0368 / 0369, also via `utoipa-swagger-ui` 10.0.2), `rustls` 0.23.46,

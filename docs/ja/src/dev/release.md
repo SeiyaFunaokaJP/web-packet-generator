@@ -45,7 +45,7 @@ cargo deny check
 
 ## バイナリ配布
 
-リリースは `.github/workflows/release.yml` がビルドします。各ターゲットをそれぞれのランナーで `scripts/release.sh` がビルドして `scripts/smoke-archive.sh` で確認し、さらに各 OS でアーカイブを試すジョブ (下記) が走ります。macOS と Windows の確認が通ると、最後のジョブがすべてのアーカイブと `SHA256SUMS` ファイルを付けた GitHub Release を公開します。
+リリースは `.github/workflows/release.yml` がビルドします。各ターゲットをそれぞれのランナーで `scripts/release.sh` がビルドして `scripts/smoke-archive.sh` で確認し、さらに各 OS でアーカイブを試すジョブ (下記) が走ります。ほかのジョブがすべて通ると、最後のジョブがすべてのアーカイブと `SHA256SUMS` ファイルを付けた GitHub Release を公開します。リリースビルドの trunk はワークフローでバージョンを固定しているので、同じタグを再実行しても同じ Web UI がビルドされます。
 
 ### ターゲット
 
@@ -64,7 +64,7 @@ cargo deny check
 |---|---|
 | `build (<target>)` | `scripts/smoke-archive.sh`: `.sha256` ファイル、アーカイブの中身、`wpg --version`、`wpg doctor --json`、`wpg render`、`wpg serve` が `/api/health` に応答し組み込みの UI を返すこと (クロスビルドの Intel macOS 版は中身のみ) |
 | `macOS (launchd, pcap)` | Apple シリコン版のアーカイブと launchd デーモンを [サービスとして動かす](../operations/services.md) のとおりに入れて `/api/health` を確認し、削除する。続けて `feth` ペアの片側で `--backend pcap` により 16 フレーム送信し、もう片側で `wpg capture --backend pcap` により受信する |
-| `Windows (scheduled task, no Npcap)` | `wpg doctor` が `npcap` チェックを失敗にすること、`wpg send --backend pcap` がクラッシュせずに「Npcap is not installed」で止まること、`packaging\windows\wpg-service.ps1` でタスクを登録・起動 (`/api/health` で確認)・停止・削除できること |
+| `Windows (scheduled task, no Npcap)` | `wpg doctor` が `npcap` チェックを失敗にすること、`wpg send --backend pcap` がクラッシュせずに「Npcap is not installed」で止まること、`packaging\windows\wpg-service.ps1` でタスクを登録・起動 (`/api/health` で確認)・停止・削除できること、`C:\ProgramData\wpg` と `wpg.toml` を `BUILTIN\Users` が読めないこと |
 | `Windows (build.ps1)` | Npcap SDK を `C:\Npcap-SDK` に置いて (`pcap` が自動で付く) `scripts\build.ps1` を実行し、できたバイナリを動かす |
 | `Docker (compose)` | `docker compose up --build --wait`、コンテナの `/api/health` と `wpg doctor` |
 

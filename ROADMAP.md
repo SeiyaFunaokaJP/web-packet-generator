@@ -132,8 +132,8 @@ release packaging of M10 still has open items.
 ## M10: Deployment, distribution and operations
 
 - [x] `scripts/deploy.sh` (scp + setcap + systemd + health check), `--dpdk` option
-- [ ] `scripts/release.sh` and GitHub Releases for the three OSes (built and smoke-tested in CI; the release workflow still has open items)
-- [ ] Dockerfile / compose, systemd unit, launchd plist, Windows service procedure (all written; the launchd, Windows and compose CI jobs still have to pass)
+- [x] `scripts/release.sh` and GitHub Releases for the three OSes (built and smoke-tested in CI; the first published release is part of M12)
+- [x] Dockerfile / compose, systemd unit, launchd plist, Windows service procedure (checked in CI)
 - [ ] Windows: Npcap detection and installation guidance, `build.ps1` verification
 - [x] macOS: Gatekeeper / quarantine workaround documented (signing and notarisation deferred)
 - [x] Upgrade procedure and template migration (`wpg template migrate`)

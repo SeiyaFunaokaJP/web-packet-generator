@@ -62,7 +62,7 @@ Stop and remove it with `sudo launchctl bootout system/io.github.seiyafunaokajp.
 .\packaging\windows\wpg-service.ps1 -Action Uninstall
 ```
 
-It creates `C:\ProgramData\wpg\wpg.toml` (with `wpg config init`) when missing and keeps the data in `C:\ProgramData\wpg\data`. Set the password with `& "C:\Program Files\wpg\wpg.exe" config set-password --config C:\ProgramData\wpg\wpg.toml` before binding to a non-loopback address. The script warns when Npcap is missing.
+It creates `C:\ProgramData\wpg\wpg.toml` (with `wpg config init`) when missing and keeps the data in `C:\ProgramData\wpg\data`. A directory it creates is open to `SYSTEM` and Administrators only: every user may read new folders under `C:\ProgramData`, and these hold the password hash, the database and the TLS key (existing directories keep their permissions). From an elevated PowerShell, set the password with `& "C:\Program Files\wpg\wpg.exe" config set-password --config C:\ProgramData\wpg\wpg.toml` before binding to a non-loopback address. The script warns when Npcap is missing.
 
 ### A real service through a wrapper
 
@@ -80,4 +80,4 @@ Npcap must be installed in either case (`wpg doctor` checks it). Allow `wpg.exe`
 
 ## Verification status
 
-The systemd unit was started by `scripts/deploy.sh` in an Ubuntu 24.04 container running systemd (the server ran as `wpg` with only `CAP_NET_RAW` and `CAP_NET_ADMIN` and answered `/api/health`); `systemd-analyze verify` accepts it. The launchd plist was only checked to parse; the PowerShell script was only parsed and linted with PSScriptAnalyzer. **Not tested on real macOS or Windows yet.** The release workflow now has jobs that install the launchd daemon on a macOS 14 runner and the scheduled task on a Windows runner and check `/api/health` (see "What CI checks" in [Release process](../dev/release.md)); this page will be updated once they have run green.
+The systemd unit was started by `scripts/deploy.sh` in an Ubuntu 24.04 container running systemd (the server ran as `wpg` with only `CAP_NET_RAW` and `CAP_NET_ADMIN` and answered `/api/health`); `systemd-analyze verify` accepts it. The release workflow installs the launchd daemon from the Apple silicon archive on a macOS 14 runner and the scheduled task from the Windows archive on a Windows Server runner as described above, checks `/api/health`, then stops and removes them; on Windows it also checks that `BUILTIN\Users` cannot read the configuration directory (see "What CI checks" in [Release process](../dev/release.md)). Both jobs pass. Not covered: a reboot (the boot trigger and `RunAtLoad` themselves), the NSSM / WinSW wrappers, and sending through Npcap on Windows.

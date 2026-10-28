@@ -49,12 +49,23 @@ function Test-Npcap {
     }
 }
 
+# Creates a directory that only SYSTEM (the task) and Administrators can open. Every user
+# may read new folders under C:\ProgramData, but wpg.toml holds the password hash and the
+# data directory the database and the TLS key. Existing directories are left alone.
+function New-PrivateDirectory([string]$Path) {
+    if (Test-Path $Path) { return }
+    New-Item -ItemType Directory -Force -Path $Path | Out-Null
+    & icacls.exe $Path /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "icacls failed on $Path ($LASTEXITCODE)" }
+}
+
 switch ($Action) {
     "Install" {
         Assert-Admin
         if (-not (Test-Path $Exe)) { throw "wpg.exe not found: $Exe (use -Exe)" }
         Test-Npcap
-        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $ConfigFile), $DataDir | Out-Null
+        New-PrivateDirectory (Split-Path -Parent $ConfigFile)
+        New-PrivateDirectory $DataDir
         if (-not (Test-Path $ConfigFile)) {
             & $Exe config init --path $ConfigFile
             if ($LASTEXITCODE -ne 0) { throw "wpg config init failed ($LASTEXITCODE)" }

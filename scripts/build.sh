@@ -89,8 +89,13 @@ if [ "$have_trunk" -eq 1 ]; then
     trunk_args=(build)
     [ "$release" -eq 1 ] && trunk_args+=(--release)
     echo "==> building frontend (trunk ${trunk_args[*]})"
-    # trunk reads NO_COLOR as a boolean and rejects the usual NO_COLOR=1 (no-color.org).
-    (cd crates/wpg-web && NO_COLOR="${NO_COLOR:+true}" trunk "${trunk_args[@]}")
+    (
+        cd crates/wpg-web
+        # trunk reads NO_COLOR as a boolean: it rejects the usual NO_COLOR=1 (no-color.org)
+        # and, in 0.21, an empty value too, so pass "true" or leave it unset.
+        if [ -n "${NO_COLOR:-}" ]; then export NO_COLOR=true; else unset NO_COLOR; fi
+        trunk "${trunk_args[@]}"
+    )
 else
     warn "skipping frontend build (crates/wpg-web/dist will be missing or stale)"
 fi

@@ -45,7 +45,7 @@ A manual run of the workflow (`workflow_dispatch`), or a pull request that touch
 
 ## Binary distribution
 
-Releases are built by `.github/workflows/release.yml`. Each target is built on its own runner by `scripts/release.sh` and checked by `scripts/smoke-archive.sh`; further jobs test the archives on their OS (below), and a final job publishes a GitHub Release with all archives and a `SHA256SUMS` file once the macOS and Windows checks pass.
+Releases are built by `.github/workflows/release.yml`. Each target is built on its own runner by `scripts/release.sh` and checked by `scripts/smoke-archive.sh`; further jobs test the archives on their OS (below), and a final job publishes a GitHub Release with all archives and a `SHA256SUMS` file once every other job has passed. The release builds use a pinned trunk version (set in the workflow), so re-running a tag builds the same web UI.
 
 ### Targets
 
@@ -64,7 +64,7 @@ Each archive holds `wpg` / `wpg.exe` (with the web UI embedded), `README.md`, `R
 |---|---|
 | `build (<target>)` | `scripts/smoke-archive.sh`: the `.sha256` file, the archive contents, `wpg --version`, `wpg doctor --json`, `wpg render`, and `wpg serve` answering `/api/health` with the embedded UI (contents only for the cross-built Intel macOS archive) |
 | `macOS (launchd, pcap)` | Installs the Apple silicon archive and the launchd daemon as in [Running as a service](../operations/services.md), checks `/api/health`, removes it; then sends 16 frames with `--backend pcap` on a `feth` pair and receives them with `wpg capture --backend pcap` |
-| `Windows (scheduled task, no Npcap)` | `wpg doctor` fails the `npcap` check, `wpg send --backend pcap` stops with the "Npcap is not installed" message instead of crashing, and `packaging\windows\wpg-service.ps1` installs, starts (checked through `/api/health`), stops and removes the task |
+| `Windows (scheduled task, no Npcap)` | `wpg doctor` fails the `npcap` check, `wpg send --backend pcap` stops with the "Npcap is not installed" message instead of crashing, and `packaging\windows\wpg-service.ps1` installs, starts (checked through `/api/health`), stops and removes the task, with `C:\ProgramData\wpg` and `wpg.toml` not readable by `BUILTIN\Users` |
 | `Windows (build.ps1)` | `scripts\build.ps1` with the Npcap SDK in `C:\Npcap-SDK` (so it adds `pcap`), then runs the result |
 | `Docker (compose)` | `docker compose up --build --wait`, `/api/health` and `wpg doctor` in the container |
 

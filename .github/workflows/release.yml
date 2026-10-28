@@ -58,9 +58,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: release-${{ matrix.target }}
+      # Pinned so that a re-run of a tag builds the same web UI.
       - uses: taiki-e/install-action@v2
         with:
-          tool: trunk
+          tool: trunk@0.22.0
       - name: Build and package
         shell: bash
         run: |
@@ -184,6 +185,11 @@ jobs:
           }
           & $script -Action Status
           if (-not $ok) { throw "the scheduled task did not bring up wpg serve" }
+          # wpg.toml holds the password hash: BUILTIN\Users must not be able to read it.
+          $users = (New-Object Security.Principal.SecurityIdentifier "S-1-5-32-545").Translate([Security.Principal.NTAccount]).Value
+          foreach ($p in "$env:ProgramData\wpg", "$env:ProgramData\wpg\wpg.toml") {
+            if ((Get-Acl $p).Access | Where-Object { $_.IdentityReference -eq $users }) { throw "$p is readable by $users" }
+          }
           & $script -Action Stop
           Start-Sleep 2
           if (Get-Process -Name wpg -ErrorAction SilentlyContinue) { throw "wpg.exe still running after Stop" }
@@ -257,7 +263,9 @@ jobs:
 
   publish:
     name: publish
-    needs: [build, macos, windows]
+    # Every check, not only the archive tests: a tag whose Docker or build.ps1 job fails
+    # is not released.
+    needs: [build, macos, windows, build-ps1, docker]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

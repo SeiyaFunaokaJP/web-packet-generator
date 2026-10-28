@@ -71,9 +71,13 @@ VOLUME ["/var/lib/wpg"]
 WORKDIR /var/lib/wpg
 EXPOSE 8080
 
+# Asks the address in WPG_SERVER__BIND (loopback for a wildcard bind), so a compose
+# WPG_BIND with one host address still turns healthy.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD port="${WPG_SERVER__BIND##*:}"; curl -fsS "http://127.0.0.1:${port}/api/health" >/dev/null \
-        || curl -fsSk "https://127.0.0.1:${port}/api/health" >/dev/null || exit 1
+    CMD bind="${WPG_SERVER__BIND:-0.0.0.0:8080}"; port="${bind##*:}"; host="${bind%:*}"; \
+        case "$host" in ""|0.0.0.0|"[::]") host=127.0.0.1 ;; esac; \
+        curl -fsS "http://${host}:${port}/api/health" >/dev/null \
+        || curl -fsSk "https://${host}:${port}/api/health" >/dev/null || exit 1
 
 ENTRYPOINT ["/usr/local/bin/wpg"]
 CMD ["serve"]
