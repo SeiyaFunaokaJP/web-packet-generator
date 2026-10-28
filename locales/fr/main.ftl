@@ -2,11 +2,9 @@
 # (vérifié par les tests unitaires de wpg-i18n).
 
 app-name = Web Packet Generator
-app-tagline = Générateur de paquets haute performance pour les tests réseau, piloté depuis votre navigateur.
 
 ## Serveur / API
 health-ok = Le service fonctionne correctement
-server-listening = En écoute sur { $addr }
 server-placeholder-ui = L'interface web n'a pas encore été compilée. Exécutez `trunk build` dans crates/wpg-web.
 
 ## Erreurs
@@ -16,7 +14,6 @@ error-internal = Erreur interne du serveur
 
 ## Interface
 ui-language = Langue
-ui-protocols = Protocoles
 
 ## Diagnostics (wpg-core `diag::keys` ; les noms d'arguments font partie du contrat)
 diag-field-out-of-range = Le champ `{ $field }` = { $value } est hors de la plage { $min }..{ $max }.
@@ -676,8 +673,6 @@ ui-set-platform = Plateforme
 ui-set-features = Fonctionnalités optionnelles
 ui-set-locales = Langues
 ui-set-license = wpg est distribué sous double licence MIT ou Apache-2.0.
-ui-builder-placeholder = L'éditeur de paquets (palette de protocoles, pile de couches, éditeur de champs, vue hexadécimale / arborescente) arrive à la prochaine étape du jalon.
-ui-builder-placeholder-template = L'éditeur de paquets arrive à la prochaine étape du jalon. Le modèle « { $id } » s'ouvrira ici.
 ui-reason-end-of-input = Fin du fichier de capture
 ui-valid-stream-id = Saisissez un nombre entier de 0 à 4294967295.
 ui-jobs-verification = Vérification en réception

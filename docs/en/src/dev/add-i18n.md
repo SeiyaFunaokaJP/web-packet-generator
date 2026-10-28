@@ -42,7 +42,7 @@ The `.ftl` files of all languages must hold the **same set of keys**. A `wpg-i18
 cargo test -p wpg-i18n
 ```
 
-This is the "i18n parity lint" of the specification (`docs/spec/11-risks.md`).
+This is the "i18n parity lint" of the specification (`docs/spec/11-risks.md`); there is no separate `wpg` subcommand for it. The same test run also checks that every field-description key of the protocol catalog exists, and that no key is dead (`no_unused_keys`: a key that no source file mentions must be removed; keys built at run time from a prefix, `docgen-*` and `rtcp-*`, are exempt). In CI it runs as part of `cargo test --workspace`; the GUI end-to-end tests (`just e2e`, [e2e/README.md](https://github.com/SeiyaFunaokaJP/web-packet-generator/blob/main/e2e/README.md)) additionally switch the language in the browser.
 
 ## Protocol names and field descriptions
 

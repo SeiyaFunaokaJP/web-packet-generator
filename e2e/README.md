@@ -7,7 +7,7 @@ stream and send-time estimates, undo / redo, saving and loading templates), job
 creation on the `null` backend, the receive page (a signed dry-run job replayed
 by a `pcapfile` capture with verification: counters, the per-stream loss table,
 the first frames with a decoded frame, live filter validation), and the
-language switch.
+language switch, and smoke tests of the SNMP tool and the web terminal.
 
 ## Running
 

@@ -2,11 +2,9 @@
 # (durchgesetzt von den wpg-i18n-Unit-Tests).
 
 app-name = Web Packet Generator
-app-tagline = Leistungsstarker Paketgenerator für Netzwerktests, gesteuert über Ihren Browser.
 
 ## Server / API
 health-ok = Dienst ist betriebsbereit
-server-listening = Lauscht auf { $addr }
 server-placeholder-ui = Die Web-UI wurde noch nicht gebaut. Führen Sie `trunk build` in crates/wpg-web aus.
 
 ## Fehler
@@ -16,7 +14,6 @@ error-internal = Interner Serverfehler
 
 ## UI
 ui-language = Sprache
-ui-protocols = Protokolle
 
 ## Diagnosen (wpg-core `diag::keys`; Argumentnamen sind Teil des Vertrags)
 diag-field-out-of-range = Feld `{ $field }` = { $value } liegt außerhalb des Bereichs { $min }..{ $max }.
@@ -676,8 +673,6 @@ ui-set-platform = Plattform
 ui-set-features = Optionale Funktionen
 ui-set-locales = Sprachen
 ui-set-license = wpg ist dual lizenziert unter MIT oder Apache-2.0.
-ui-builder-placeholder = Der Paket-Builder (Protokollpalette, Schichtstapel, Feldeditor, Hex-/Baumansicht) folgt im nächsten Meilensteinschritt.
-ui-builder-placeholder-template = Der Paket-Builder folgt im nächsten Meilensteinschritt. Vorlage „{ $id }“ wird hier geöffnet.
 ui-reason-end-of-input = Ende der Capture-Datei
 ui-valid-stream-id = Geben Sie eine ganze Zahl von 0 bis 4294967295 ein.
 ui-jobs-verification = Empfangsverifikation
