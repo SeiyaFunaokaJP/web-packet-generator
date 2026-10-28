@@ -155,7 +155,7 @@ release packaging of M10 still has open items.
 - [ ] Linux `afpacket` at 1 Mpps/core or more (reference value); DPDK recorded as reference only
 - [ ] GUI end-to-end tests green, zero i18n gaps (lint)
 - [x] `cargo audit` / `cargo deny` clean
-- [ ] Documentation complete in ja / en, CHANGELOG
+- [x] Documentation complete in ja / en, CHANGELOG
 
 ## Added beyond the 1.0 plan
 

@@ -131,6 +131,9 @@ Everything below is the initial development towards 1.0. No version has been tag
   IS-IS adjacency), operations (deployment, services, Docker, upgrades, DPDK / AF_XDP, CML2, interop,
   tuning, security, receive and verification), developer guide, FAQ and troubleshooting, legal notice,
   and screenshots (M11).
+- English / 日本語 language switcher in the menu bar of every manual page (`docs/lang-switch.js`), a landing
+  page that redirects by the last choice or the browser language, and publication of both books to GitHub
+  Pages by the `Docs` workflow on every push to `main` that touches `docs/` (M11, M12).
 - Protocol, CLI, API, configuration and template schema references generated from the code with
   `wpg docs gen` (M11).
 - Architecture decision records `docs/adr/0001` to `0009` and the split specification in `docs/spec/` (M0).

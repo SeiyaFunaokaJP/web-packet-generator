@@ -153,7 +153,7 @@ DPDK、実機の CML2) は仮想環境以外で未確認です。M10 のリリ�
 - [ ] Linux `afpacket` で 1 Mpps/core 以上 (参考値)。DPDK は環境依存のため参考記録
 - [ ] GUI の E2E が緑、i18n の抜け漏れ 0 (lint)
 - [x] `cargo audit` / `cargo deny` クリーン
-- [ ] ドキュメントが ja / en そろっている、CHANGELOG
+- [x] ドキュメントが ja / en そろっている、CHANGELOG
 
 ## 1.0 の計画外で追加した機能
 
