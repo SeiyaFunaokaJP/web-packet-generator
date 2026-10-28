@@ -1100,6 +1100,10 @@ mod tests {
             burst: 5,
             ..PacerConfig::default()
         };
+        // Measure from before the pacer's origin: the two short polls below take
+        // several milliseconds on a loaded runner, and that time is part of the
+        // 50 ms the pacer waits.
+        let t0 = Instant::now();
         let mut p = Pacer::new(Rate::Pps(100.0), cfg).unwrap();
         let g = p.poll(Duration::from_millis(1)).unwrap();
         assert_eq!(g, 5);
@@ -1108,7 +1112,6 @@ mod tests {
         }
         // Not ready within 1 ms.
         assert_eq!(p.poll(Duration::from_millis(1)), None);
-        let t0 = Instant::now();
         let g = loop {
             if let Some(g) = p.poll(Duration::from_millis(100)) {
                 break g;
