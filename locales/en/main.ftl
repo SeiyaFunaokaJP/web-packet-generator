@@ -1788,7 +1788,7 @@ ui-snmp-bad-number = Timeout and retries must be whole numbers.
 ui-snmp-need-oid = Enter at least one OID or object name.
 ui-snmp-operations = Request
 ui-snmp-oids = OIDs / object names
-ui-snmp-oids-hint = Names from the loaded MIBs (ifDescr.1, IF-MIB::ifTable, sysUpTime.0) or dotted OIDs, separated by spaces. Walk uses the first one. Enter runs Get.
+ui-snmp-oids-hint = Names from the loaded MIBs (ifDescr.1, IF-MIB::ifTable, sysUpTime.0) or dotted OIDs, separated by spaces. Walk goes through each subtree in turn. Enter runs Get.
 ui-snmp-op-get = Get
 ui-snmp-op-getnext = GetNext
 ui-snmp-op-getbulk = GetBulk
@@ -1923,6 +1923,13 @@ ui-snmp-mib-run = Query this object
 ui-snmp-mib-pick-tree = Pick from the MIB tree
 ui-snmp-mib-pick-hint = Checked objects go into the OID field above (scalars get .0). Uncheck to remove them.
 ui-snmp-mib-pick-named = Put { $what } in the OID field
+ui-snmp-op-get-hint = The value of the given instances (sysDescr.0 for a scalar, ifDescr.1 with the INDEX for a table column).
+ui-snmp-op-getnext-hint = The one instance that follows each OID.
+ui-snmp-op-getbulk-hint = Up to max-repetitions instances after each OID in one request (does not stop at the end of the subtree; v2c / v3).
+ui-snmp-op-walk-hint = Everything in the subtree below each OID (tables shown as rows × columns).
+ui-snmp-requested = Requested OIDs:
+ui-snmp-get-missing-hint = noSuchObject / noSuchInstance means the agent has no value at that OID. Get needs the instance (.0 for a scalar, an INDEX such as .1 for a table column); use Walk to fetch a whole subtree or table.
+ui-snmp-getbulk-note = GetBulk returns up to max-repetitions instances after each OID and does not stop at the end of the subtree, so values outside the requested OIDs are included. Use Walk for just the subtree.
 
 ## DHCP server
 

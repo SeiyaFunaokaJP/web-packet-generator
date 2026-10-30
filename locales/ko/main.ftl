@@ -1788,7 +1788,7 @@ ui-snmp-bad-number = 타임아웃과 재시도 횟수는 정수여야 합니다.
 ui-snmp-need-oid = OID 또는 객체 이름을 하나 이상 입력하세요.
 ui-snmp-operations = 요청
 ui-snmp-oids = OID / 객체 이름
-ui-snmp-oids-hint = 로드된 MIB의 이름(ifDescr.1, IF-MIB::ifTable, sysUpTime.0) 또는 점 표기 OID를 공백으로 구분해 입력합니다. Walk는 첫 번째를 사용합니다. Enter로 Get 실행.
+ui-snmp-oids-hint = 로드된 MIB의 이름(ifDescr.1, IF-MIB::ifTable, sysUpTime.0) 또는 점 표기 OID를 공백으로 구분해 입력합니다. Walk는 각 하위 트리를 차례로 순회합니다. Enter로 Get 실행.
 ui-snmp-op-get = Get
 ui-snmp-op-getnext = GetNext
 ui-snmp-op-getbulk = GetBulk
@@ -1923,6 +1923,13 @@ ui-snmp-mib-run = 이 객체 조회
 ui-snmp-mib-pick-tree = MIB 트리에서 선택
 ui-snmp-mib-pick-hint = 체크한 객체가 위의 OID 칸에 들어갑니다(스칼라에는 .0을 붙입니다). 체크를 해제하면 제거됩니다.
 ui-snmp-mib-pick-named = { $what } 을(를) OID 칸에 넣기
+ui-snmp-op-get-hint = 지정한 인스턴스의 값(스칼라는 sysDescr.0, 테이블 열은 ifDescr.1처럼 INDEX 포함).
+ui-snmp-op-getnext-hint = 각 OID 다음에 있는 인스턴스 1개.
+ui-snmp-op-getbulk-hint = 각 OID 뒤의 인스턴스를 최대 반복 수만큼 한 번의 요청으로(하위 트리 끝에서 멈추지 않음, v2c / v3).
+ui-snmp-op-walk-hint = 각 OID 아래의 하위 트리 전체(테이블은 행 × 열로 표시).
+ui-snmp-requested = 요청한 OID:
+ui-snmp-get-missing-hint = noSuchObject / noSuchInstance는 해당 OID에 값이 없다는 응답입니다. Get에는 인스턴스까지 지정하세요(스칼라는 .0, 테이블 열은 .1 등의 INDEX). 하위 트리나 테이블을 한꺼번에 가져오려면 Walk를 사용하세요.
+ui-snmp-getbulk-note = GetBulk는 각 OID 뒤를 최대 반복 수만큼 반환하며 하위 트리 끝에서 멈추지 않으므로, 요청한 OID 밖의 값도 포함됩니다. 하위 트리만 필요하면 Walk를 사용하세요.
 
 ## DHCP server
 

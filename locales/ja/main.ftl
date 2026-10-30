@@ -1788,7 +1788,7 @@ ui-snmp-bad-number = タイムアウトと再試行回数は整数で入力し�
 ui-snmp-need-oid = OID かオブジェクト名を 1 つ以上入力してください。
 ui-snmp-operations = リクエスト
 ui-snmp-oids = OID / オブジェクト名
-ui-snmp-oids-hint = 読み込んだ MIB の名前（ifDescr.1、IF-MIB::ifTable、sysUpTime.0）またはドット区切りの OID をスペース区切りで。Walk は先頭の 1 つを使います。Enter で Get。
+ui-snmp-oids-hint = 読み込んだ MIB の名前（ifDescr.1、IF-MIB::ifTable、sysUpTime.0）またはドット区切りの OID をスペース区切りで。Walk はそれぞれのサブツリーを順に辿ります。Enter で Get。
 ui-snmp-op-get = Get
 ui-snmp-op-getnext = GetNext
 ui-snmp-op-getbulk = GetBulk
@@ -1923,6 +1923,13 @@ ui-snmp-mib-run = このオブジェクトを問い合わせる
 ui-snmp-mib-pick-tree = MIB ツリーから選ぶ
 ui-snmp-mib-pick-hint = チェックしたオブジェクトが上の OID 欄に入ります（スカラーには .0 を付けます）。もう一度チェックを外すと欄から消えます。
 ui-snmp-mib-pick-named = { $what } を OID 欄に入れる
+ui-snmp-op-get-hint = 指定したインスタンスの値（スカラーは sysDescr.0、表の列は ifDescr.1 のように INDEX 付き）。
+ui-snmp-op-getnext-hint = 各 OID の次にあるインスタンス 1 件。
+ui-snmp-op-getbulk-hint = 各 OID の後ろを最大繰り返し数ぶん、1 リクエストで（サブツリーの終わりでは止まりません。v2c / v3）。
+ui-snmp-op-walk-hint = 各 OID の下のサブツリーをすべて（表は行 × 列で表示）。
+ui-snmp-requested = 要求した OID:
+ui-snmp-get-missing-hint = noSuchObject / noSuchInstance は、その OID に値がないという応答です。Get にはインスタンスまで指定してください（スカラーは .0、表の列は .1 などの INDEX）。サブツリーや表をまとめて取るには Walk を使います。
+ui-snmp-getbulk-note = GetBulk は各 OID の後ろを最大繰り返し数ぶん返し、サブツリーの終わりでは止まらないため、指定した OID の外の値も含まれます。サブツリーだけが欲しいときは Walk を使ってください。
 
 ## DHCP サーバー
 

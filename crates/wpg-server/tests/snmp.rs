@@ -120,6 +120,33 @@ async fn operations_v2c_and_v3() {
     assert_eq!(t["columns"][counter_col]["counter"], true);
     assert_eq!(t["rows"][1]["numeric"][counter_col], 1000);
 
+    // Several roots are walked one after another (a scalar instance falls
+    // back to a Get); the limit counts them all.
+    let r = app
+        .post(
+            "/api/snmp/walk",
+            json!({ "target": target(&a, "public"), "oids": ["sysDescr.0", "ifTable"], "max_repetitions": 3 }),
+        )
+        .await;
+    r.expect(StatusCode::OK);
+    let j = r.json();
+    let vb = j["varbinds"].as_array().unwrap();
+    assert_eq!(vb.len(), 11);
+    assert_eq!(vb[0]["name"], "SNMPv2-MIB::sysDescr.0");
+    assert_eq!(j["tables"][0]["entry"], "IF-MIB::ifEntry");
+    let r = app
+        .post(
+            "/api/snmp/walk",
+            json!({ "target": target(&a, "public"), "oids": ["sysDescr.0", "ifTable"], "limit": 4 }),
+        )
+        .await;
+    let j = r.json();
+    assert_eq!(j["varbinds"].as_array().unwrap().len(), 4);
+    assert_eq!(j["truncated"], true);
+    app.post("/api/snmp/walk", json!({ "target": target(&a, "public") }))
+        .await
+        .expect_error(StatusCode::BAD_REQUEST, "bad_request");
+
     let r = app
         .post(
             "/api/snmp/getbulk",

@@ -2748,7 +2748,7 @@
         "description": "Walk request body.",
         "properties": {
           "limit": {
-            "description": "Most bindings returned (default 10000, at most 100000).",
+            "description": "Most bindings returned in all (default 10000, at most 100000).",
             "minimum": 0,
             "type": [
               "integer",
@@ -2767,14 +2767,20 @@
             "description": "Subtree root: name (`ifTable`, `system`) or dotted OID.",
             "type": "string"
           },
+          "oids": {
+            "description": "More subtree roots, walked one after another after `oid` (either may\nbe empty, not both).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "target": {
             "$ref": "#/components/schemas/SnmpTarget",
             "description": "The agent."
           }
         },
         "required": [
-          "target",
-          "oid"
+          "target"
         ],
         "type": "object"
       },
@@ -6571,7 +6577,7 @@
             "description": "`snmp_error`: no response"
           }
         },
-        "summary": "Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in\nthe result are also returned as rows × columns.",
+        "summary": "Walks one or more subtrees (GetBulk on v2c / v3, GetNext on v1); conceptual\ntables in the result are also returned as rows × columns.",
         "tags": [
           "snmp"
         ]

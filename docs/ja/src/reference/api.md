@@ -81,7 +81,7 @@ wpg-server は `/api` 以下で REST (JSON) API を提供し、リアルタイ�
 | snmp | [`POST /api/snmp/trap`](#op-post-api-snmp-trap) | Sends a trap (v1 Trap-PDU, SNMPv2-Trap, or a v3 trap with this server as the authoritative engine). The result lists the bindings sent. |
 | snmp | [`GET /api/snmp/traps`](#op-get-api-snmp-traps) | Received notifications, newest first (also pushed as `snmp_trap` events on the WebSocket). |
 | snmp | [`DELETE /api/snmp/traps`](#op-delete-api-snmp-traps) | Forgets the received notifications. |
-| snmp | [`POST /api/snmp/walk`](#op-post-api-snmp-walk) | Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns. |
+| snmp | [`POST /api/snmp/walk`](#op-post-api-snmp-walk) | Walks one or more subtrees (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns. |
 | dhcp | [`GET /api/dhcp`](#op-get-api-dhcp) | State, settings and counters. |
 | dhcp | [`PUT /api/dhcp`](#op-put-api-dhcp) | Saves the settings; a running server restarts with them. |
 | dhcp | [`GET /api/dhcp/activity`](#op-get-api-dhcp-activity) | Recent requests and replies, newest first (`wpg_dhcp::Activity`). |
@@ -1324,7 +1324,7 @@ Forgets the received notifications.
 
 #### `POST /api/snmp/walk`
 
-Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns.
+Walks one or more subtrees (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns.
 
 **リクエスト本文**: `application/json` [`SnmpWalkRequest`](#schema-snmpwalkrequest)
 
@@ -2502,9 +2502,10 @@ Walk request body.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
-| `limit` | `integer` \| `null` |   | Most bindings returned (default 10000, at most 100000). |
+| `limit` | `integer` \| `null` |   | Most bindings returned in all (default 10000, at most 100000). |
 | `max_repetitions` | `integer` \| `null` |   | `max-repetitions` per GetBulk (default 20; v1 walks with GetNext). |
-| `oid` | `string` | はい | Subtree root: name (`ifTable`, `system`) or dotted OID. |
+| `oid` | `string` |   | Subtree root: name (`ifTable`, `system`) or dotted OID. |
+| `oids` | `string``[]` |   | More subtree roots, walked one after another after `oid` (either may be empty, not both). |
 | `target` | [`SnmpTarget`](#schema-snmptarget) | はい | The agent. |
 
 <a id="schema-tablecolumnout"></a>

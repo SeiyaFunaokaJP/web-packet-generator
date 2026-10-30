@@ -530,11 +530,16 @@ pub struct SnmpWalkRequest {
     /// The agent.
     pub target: SnmpTarget,
     /// Subtree root: name (`ifTable`, `system`) or dotted OID.
+    #[serde(default)]
     pub oid: String,
+    /// More subtree roots, walked one after another after `oid` (either may
+    /// be empty, not both).
+    #[serde(default)]
+    pub oids: Vec<String>,
     /// `max-repetitions` per GetBulk (default 20; v1 walks with GetNext).
     #[serde(default)]
     pub max_repetitions: Option<i32>,
-    /// Most bindings returned (default 10000, at most 100000).
+    /// Most bindings returned in all (default 10000, at most 100000).
     #[serde(default)]
     pub limit: Option<usize>,
 }
@@ -667,8 +672,8 @@ pub async fn getbulk(
     )))
 }
 
-/// Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in
-/// the result are also returned as rows × columns.
+/// Walks one or more subtrees (GetBulk on v2c / v3, GetNext on v1); conceptual
+/// tables in the result are also returned as rows × columns.
 #[utoipa::path(post, path = "/api/snmp/walk", tag = "snmp", request_body = SnmpWalkRequest,
     responses(
         (status = 200, description = "Bindings and tables", body = SnmpResult),
@@ -680,17 +685,33 @@ pub async fn walk(
     ApiJson(req): ApiJson<SnmpWalkRequest>,
 ) -> ApiResult<Json<SnmpResult>> {
     let m = snmp(&st)?;
-    let root = m.with_registry(|reg| resolve_oid(reg, &req.oid))?;
+    let names: Vec<String> = std::iter::once(req.oid.trim().to_owned())
+        .filter(|s| !s.is_empty())
+        .chain(req.oids.iter().cloned())
+        .collect();
+    let roots = oids(m, &names)?;
     let (mut c, addr) = connect(m, &req.target, 161).await?;
     let started = Instant::now();
-    let w = c
-        .walk(
-            &root,
-            req.max_repetitions.unwrap_or(20).clamp(1, 1000),
-            req.limit.unwrap_or(10_000).clamp(1, MAX_WALK),
-        )
-        .await
-        .map_err(|e| client_error(e, addr))?;
+    let reps = req.max_repetitions.unwrap_or(20).clamp(1, 1000);
+    let limit = req.limit.unwrap_or(10_000).clamp(1, MAX_WALK);
+    let mut w = wpg_snmp::client::Walk::default();
+    for root in &roots {
+        let left = limit - w.varbinds.len();
+        if left == 0 {
+            w.truncated = true;
+            break;
+        }
+        let part = c
+            .walk(root, reps, left)
+            .await
+            .map_err(|e| client_error(e, addr))?;
+        w.varbinds.extend(part.varbinds);
+        w.requests += part.requests;
+        if part.truncated {
+            w.truncated = true;
+            break;
+        }
+    }
     Ok(Json(render(
         m,
         &Outcome {

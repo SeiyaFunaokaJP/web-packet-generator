@@ -18,7 +18,13 @@ The screen has three tabs; the "Record pcap" switch in the header applies to all
 
 1. Fill in the target (host, port, version; the community for v1 / v2c; user, security level, protocols and pass phrases for v3). "Save profile" keeps a target in the browser. **Communities and pass phrases are never stored, neither in profiles nor on the server.**
 2. Type object names or OIDs; names from the loaded MIBs are completed (`ifDescr.1`, `IF-MIB::ifTable`, `sysUpTime.0`, `1.3.6.1.2.1.1`). Separate several with spaces. "Pick from the MIB tree" opens the tree (whole, or one module) with check boxes that add OIDs to the field and remove them; scalars get `.0`.
-3. Press Get / GetNext / GetBulk / Walk. Walk uses GetBulk on v2c / v3 and GetNext on v1 and stops at the end of the subtree, at `endOfMibView` or at an OID that does not increase.
+3. Press Get / GetNext / GetBulk / Walk. What each one does is listed below the buttons:
+   - Get: the value of the given instances: `sysDescr.0` for a scalar, `ifDescr.1` with the INDEX for a table column. `sysDescr` or `ifTable` alone return `noSuchObject` (the result says so).
+   - GetNext: the one instance after each OID.
+   - GetBulk (v2c / v3): up to "Max repetitions" instances after each OID in one request. It does not stop at the end of the subtree, so values outside the requested OIDs are included.
+   - Walk: the whole subtree of each OID, in the order given. It uses GetBulk on v2c / v3 and GetNext on v1 and stops at the end of the subtree, at `endOfMibView` or at an OID that does not increase. An instance such as `sysDescr.0` gives the Get result. "Walk limit" counts all OIDs together.
+
+The result names the OIDs that were requested.
 
 Results are shown as name / type / value, formatted with the MIBs:
 
@@ -31,7 +37,7 @@ Results are shown as name / type / value, formatted with the MIBs:
 | `hrMemorySize` 8048 | `8048 KBytes` (UNITS) |
 | OID value | `IF-MIB::ifIndex` |
 
-"Raw values" shows the values without MIB knowledge. When a walk contains a conceptual table (ifTable, ...) it is also shown as rows × columns keyed by its INDEX ("Table view").
+"Raw values" shows the values without MIB knowledge. When a walk contains a conceptual table (ifTable, ...) it is also shown as rows × columns keyed by its INDEX ("Table view"). Values outside the tables (`ifNumber.0` when walking `interfaces`, ...) are listed above them.
 
 "Auto refresh" repeats the last read operation at the chosen interval. Counter32 / Counter64 values get a per-second rate from the previous poll and a sparkline (Counter32 wraps are handled).
 
@@ -52,7 +58,7 @@ Drop MIB files (`.mib` `.txt` `.my`) on the upload area or use "Choose files". T
 
 The quirks of vendor MIBs (comment banners, unknown macros, missing imports, broken definitions) become warnings; the rest stays usable. Uploaded modules can be deleted (with every module of the same file). Bundled modules cannot be deleted, but uploading a newer version with the same name replaces them.
 
-The MIB tree shows descriptions, syntax, access, enumerations, INDEX and more. "Module to show" narrows it to one uploaded (or bundled) MIB module: only the objects that module defines, starting at its top nodes instead of 1.3.6.1. The magnifier button in the module list does the same. "Use in a request" copies the name to the Operations tab (scalars with `.0`); the Get (scalars only) / GetNext / Walk buttons switch to the Operations tab and run the request at once.
+The MIB tree shows descriptions, syntax, access, enumerations, INDEX and more. "Module to show" narrows it to one uploaded (or bundled) MIB module: only the objects that module defines, starting at its top nodes instead of 1.3.6.1. The magnifier button in the module list does the same. "Use in a request" copies the name to the Operations tab (scalars with `.0`); the Get (scalars only) / GetNext / Walk buttons switch to the Operations tab, run the request at once and scroll to the result.
 
 Bundled MIBs: SNMPv2-SMI / TC / CONF / MIB, RFC1155-SMI, RFC-1212, RFC-1215, RFC1213-MIB, IANAifType-MIB, IF-MIB, INET-ADDRESS-MIB, IP-MIB, HOST-RESOURCES-MIB, SNMP-FRAMEWORK-MIB, SNMP-USER-BASED-SM-MIB, UUID-TC-MIB, IANA-ENTITY-MIB, ENTITY-MIB (IETF MIB modules extracted from the RFCs).
 

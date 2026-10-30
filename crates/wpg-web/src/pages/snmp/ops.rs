@@ -1,7 +1,8 @@
 //! Operations tab: OID input with MIB name completion and a MIB tree
-//! picker, Get / GetNext /
-//! GetBulk / Walk / Set, readable results (list or table view, raw toggle),
-//! auto refresh with counter rates and sparklines.
+//! picker, Get / GetNext / GetBulk / Walk (every listed OID) / Set, what each
+//! operation does, readable results (tables plus the remaining bindings, raw
+//! toggle, hints for empty Gets and GetBulk), auto refresh with counter rates
+//! and sparklines.
 
 use std::time::Duration;
 
@@ -55,7 +56,21 @@ impl Op {
             Op::Set => "ui-snmp-op-set",
         }
     }
+
+    /// One line on what the operation returns.
+    const fn hint(self) -> &'static str {
+        match self {
+            Op::Get => "ui-snmp-op-get-hint",
+            Op::GetNext => "ui-snmp-op-getnext-hint",
+            Op::GetBulk => "ui-snmp-op-getbulk-hint",
+            Op::Walk => "ui-snmp-op-walk-hint",
+            Op::Set => "ui-snmp-set-hint",
+        }
+    }
 }
+
+/// The read operations, in button order.
+const READ_OPS: [Op; 4] = [Op::Get, Op::GetNext, Op::GetBulk, Op::Walk];
 
 /// One row of the Set editor.
 #[derive(Debug, Clone, Copy)]
@@ -159,6 +174,8 @@ pub(crate) fn OpsPanel() -> impl IntoView {
     let max_rep = RwSignal::new("20".to_owned());
     let limit = RwSignal::new("10000".to_owned());
     let result = RwSignal::new(None::<SnmpResult>);
+    // The OIDs of the request shown (kept across auto refreshes).
+    let requested = RwSignal::new(Vec::<String>::new());
     let error = RwSignal::new(None::<ApiError>);
     let form_error = RwSignal::new(None::<&'static str>);
     let busy = RwSignal::new(false);
@@ -189,7 +206,7 @@ pub(crate) fn OpsPanel() -> impl IntoView {
             Op::GetBulk => Ok(json!({ "target": target, "oids": oids, "max_repetitions": reps })),
             Op::Walk => Ok(json!({
                 "target": target,
-                "oid": oids[0],
+                "oids": oids,
                 "max_repetitions": reps,
                 "limit": limit.get_untracked().trim().parse::<usize>().unwrap_or(10_000),
             })),
@@ -244,6 +261,15 @@ pub(crate) fn OpsPanel() -> impl IntoView {
         Ok(body) => {
             form_error.set(None);
             rates.update(Rates::clear);
+            requested.set(if op == Op::Set {
+                rows.get_untracked()
+                    .iter()
+                    .map(|r| r.oid.get_untracked().trim().to_owned())
+                    .filter(|o| !o.is_empty())
+                    .collect()
+            } else {
+                parse_oid_list(&ctx.oids.get_untracked())
+            });
             last.set_value((op != Op::Set).then(|| (op, body.clone())));
             if op == Op::Walk || op == Op::GetBulk {
                 table_view.set(true);
@@ -257,6 +283,8 @@ pub(crate) fn OpsPanel() -> impl IntoView {
         if let Some(op) = ctx.run.get() {
             ctx.run.set(None);
             start(op);
+            // The result sits below the forms: bring it into view.
+            crate::dom::focus_id("snmp-result-h");
         }
     });
 
@@ -292,6 +320,7 @@ pub(crate) fn OpsPanel() -> impl IntoView {
             <button
                 type="button"
                 class=if primary { BTN_PRIMARY } else { BTN }
+                title=move || i18n.t(op.hint())
                 disabled=move || busy.get()
                 aria-busy=move || (running.get() == Some(op)).to_string()
                 on:click=move |_| start(op)
@@ -387,6 +416,15 @@ pub(crate) fn OpsPanel() -> impl IntoView {
                             </select>
                         </div>
                     </div>
+                    <dl class="grid gap-x-3 gap-y-0.5 text-xs text-slate-500 sm:grid-cols-[auto_1fr]">
+                        {READ_OPS
+                            .into_iter()
+                            .map(|op| view! {
+                                <dt class="font-semibold text-slate-600 dark:text-slate-400">{move || i18n.t(op.key())}</dt>
+                                <dd>{move || i18n.t(op.hint())}</dd>
+                            })
+                            .collect_view()}
+                    </dl>
                     {move || form_error.get().map(|k| view! {
                         <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{move || i18n.t(k)}</p>
                     })}
@@ -397,7 +435,7 @@ pub(crate) fn OpsPanel() -> impl IntoView {
 
             <section aria-labelledby="snmp-result-h" aria-busy=move || busy.get().to_string()>
                 <div class="mb-2 flex flex-wrap items-center gap-3">
-                    <h2 id="snmp-result-h" class="text-base font-semibold">{tr("ui-snmp-result")}</h2>
+                    <h2 id="snmp-result-h" tabindex="-1" class="text-base font-semibold outline-none">{tr("ui-snmp-result")}</h2>
                     <label class="flex items-center gap-1.5 text-sm">
                         <input type="checkbox" prop:checked=move || raw.get() on:change=move |ev| raw.set(event_target_checked(&ev)) />
                         {tr("ui-snmp-raw")}
@@ -418,7 +456,7 @@ pub(crate) fn OpsPanel() -> impl IntoView {
                 {move || error.get().map(|e| view! { <ErrorBox error=e /> })}
                 {move || match result.get() {
                     None => view! { <Empty text=tr("ui-snmp-no-result") /> }.into_any(),
-                    Some(r) => view! { <ResultView result=r raw=raw table_view=table_view rates=rates /> }.into_any(),
+                    Some(r) => view! { <ResultView result=r requested=requested.get() raw=raw table_view=table_view rates=rates /> }.into_any(),
                 }}
             </section>
         </div>
@@ -516,10 +554,28 @@ fn is_exception(vb: &VarBindOut) -> bool {
     )
 }
 
-/// A result: summary, bindings (list) or tables.
+/// Bindings not shown in any of `tables` (the scalars of a walked group,
+/// `ifNumber.0` next to `ifTable`, ...).
+fn outside_tables(varbinds: &[VarBindOut], tables: &[TableOut]) -> Vec<VarBindOut> {
+    let cols: Vec<String> = tables
+        .iter()
+        .flat_map(|t| t.columns.iter().map(|c| format!("{}.", c.oid)))
+        .collect();
+    varbinds
+        .iter()
+        .filter(|v| !cols.iter().any(|c| v.oid.starts_with(c.as_str())))
+        .cloned()
+        .collect()
+}
+
+/// A result: summary, what was asked, hints, bindings (list) or tables plus
+/// the bindings outside them.
 #[component]
 pub(crate) fn ResultView(
     result: SnmpResult,
+    /// The OIDs of the request (empty: not shown).
+    #[prop(optional)]
+    requested: Vec<String>,
     raw: RwSignal<bool>,
     table_view: RwSignal<bool>,
     rates: RwSignal<Rates>,
@@ -555,20 +611,54 @@ pub(crate) fn ResultView(
     let tables = StoredValue::new(result.tables.clone());
     let has_tables = !result.tables.is_empty();
     let error_index = usize::try_from(result.error_index).unwrap_or(0);
+    // A Get of a node without its instance (`sysDescr`, `ifTable`) comes back
+    // as noSuchObject / noSuchInstance.
+    let get_missing = result.op == "get"
+        && result
+            .varbinds
+            .iter()
+            .any(|v| matches!(v.value_type.as_str(), "noSuchObject" | "noSuchInstance"));
+    let bulk = result.op == "getbulk";
+    let loose = outside_tables(&result.varbinds, &result.tables);
     let varbinds = result.varbinds;
+    let asked = (!requested.is_empty()).then(move || {
+        let list = requested.join("  ");
+        view! {
+            <p class="text-xs text-slate-600 dark:text-slate-400">
+                {tr("ui-snmp-requested")}" "
+                <span class="font-mono break-all">{list}</span>
+            </p>
+        }
+    });
+    let note = move |key: &'static str| {
+        view! {
+            <p class="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
+                {move || i18n.t(key)}
+            </p>
+        }
+    };
     view! {
         <div class="space-y-3">
             <p class="text-xs text-slate-500" aria-live="polite">{summary}</p>
+            {asked}
             {status}
+            {get_missing.then(|| note("ui-snmp-get-missing-hint"))}
+            {bulk.then(|| note("ui-snmp-getbulk-note"))}
             {truncated.then(|| view! { <p class="text-xs text-amber-700 dark:text-amber-400">{tr("ui-snmp-truncated")}</p> })}
             {engine.map(|e| view! { <p class="font-mono text-xs text-slate-500">{move || i18n.ta("ui-snmp-engine-id", &[("id", e.clone())])}</p> })}
             {move || if has_tables && table_view.get() {
-                tables
-                    .get_value()
-                    .into_iter()
-                    .map(|t| view! { <TableBlock table=t raw=raw rates=rates /> })
-                    .collect_view()
-                    .into_any()
+                let rest = (!loose.is_empty()).then(|| {
+                    view! { <VarBindTable varbinds=loose.clone() raw=raw rates=rates error_index=0 /> }
+                });
+                view! {
+                    {rest}
+                    {tables
+                        .get_value()
+                        .into_iter()
+                        .map(|t| view! { <TableBlock table=t raw=raw rates=rates /> })
+                        .collect_view()}
+                }
+                .into_any()
             } else {
                 view! { <VarBindTable varbinds=varbinds.clone() raw=raw rates=rates error_index=error_index /> }.into_any()
             }}

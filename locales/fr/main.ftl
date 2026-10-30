@@ -1788,7 +1788,7 @@ ui-snmp-bad-number = Le délai et les tentatives doivent être des entiers.
 ui-snmp-need-oid = Saisissez au moins un OID ou nom d’objet.
 ui-snmp-operations = Requête
 ui-snmp-oids = OID / noms d’objets
-ui-snmp-oids-hint = Noms des MIB chargées (ifDescr.1, IF-MIB::ifTable, sysUpTime.0) ou OID pointés, séparés par des espaces. Walk utilise le premier. Entrée lance Get.
+ui-snmp-oids-hint = Noms des MIB chargées (ifDescr.1, IF-MIB::ifTable, sysUpTime.0) ou OID pointés, séparés par des espaces. Walk parcourt chaque sous-arbre tour à tour. Entrée lance Get.
 ui-snmp-op-get = Get
 ui-snmp-op-getnext = GetNext
 ui-snmp-op-getbulk = GetBulk
@@ -1923,6 +1923,13 @@ ui-snmp-mib-run = Interroger cet objet
 ui-snmp-mib-pick-tree = Choisir dans l’arbre MIB
 ui-snmp-mib-pick-hint = Les objets cochés vont dans le champ OID ci-dessus (.0 ajouté aux scalaires). Décochez pour les retirer.
 ui-snmp-mib-pick-named = Mettre { $what } dans le champ OID
+ui-snmp-op-get-hint = La valeur des instances indiquées (sysDescr.0 pour un scalaire, ifDescr.1 avec l’INDEX pour une colonne de table).
+ui-snmp-op-getnext-hint = L’instance qui suit chaque OID.
+ui-snmp-op-getbulk-hint = Jusqu’à max-repetitions instances après chaque OID en une requête (ne s’arrête pas à la fin du sous-arbre ; v2c / v3).
+ui-snmp-op-walk-hint = Tout le sous-arbre sous chaque OID (tables en lignes × colonnes).
+ui-snmp-requested = OID demandés :
+ui-snmp-get-missing-hint = noSuchObject / noSuchInstance signifie que l’agent n’a pas de valeur à cet OID. Get attend l’instance (.0 pour un scalaire, un INDEX comme .1 pour une colonne de table) ; Walk récupère un sous-arbre ou une table entière.
+ui-snmp-getbulk-note = GetBulk renvoie jusqu’à max-repetitions instances après chaque OID sans s’arrêter à la fin du sous-arbre : des valeurs hors des OID demandés sont donc incluses. Walk ne renvoie que le sous-arbre.
 
 ## DHCP server
 

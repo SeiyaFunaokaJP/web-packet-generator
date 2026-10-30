@@ -1788,7 +1788,7 @@ ui-snmp-bad-number = 超时和重试次数必须为整数。
 ui-snmp-need-oid = 请至少输入一个 OID 或对象名。
 ui-snmp-operations = 请求
 ui-snmp-oids = OID / 对象名
-ui-snmp-oids-hint = 已加载 MIB 中的名称（ifDescr.1、IF-MIB::ifTable、sysUpTime.0）或点分 OID，以空格分隔。Walk 使用第一个。按 Enter 执行 Get。
+ui-snmp-oids-hint = 已加载 MIB 中的名称（ifDescr.1、IF-MIB::ifTable、sysUpTime.0）或点分 OID，以空格分隔。Walk 依次遍历每个子树。按 Enter 执行 Get。
 ui-snmp-op-get = Get
 ui-snmp-op-getnext = GetNext
 ui-snmp-op-getbulk = GetBulk
@@ -1923,6 +1923,13 @@ ui-snmp-mib-run = 查询此对象
 ui-snmp-mib-pick-tree = 从 MIB 树中选择
 ui-snmp-mib-pick-hint = 勾选的对象会填入上方的 OID 栏（标量会加上 .0）。取消勾选即可移除。
 ui-snmp-mib-pick-named = 将 { $what } 填入 OID 栏
+ui-snmp-op-get-hint = 指定实例的值（标量如 sysDescr.0，表列如 ifDescr.1，需带 INDEX）。
+ui-snmp-op-getnext-hint = 每个 OID 之后的下一个实例。
+ui-snmp-op-getbulk-hint = 一次请求返回每个 OID 之后最多“最大重复数”个实例（不会在子树末尾停止；v2c / v3）。
+ui-snmp-op-walk-hint = 每个 OID 下的整个子树（表按行 × 列显示）。
+ui-snmp-requested = 请求的 OID：
+ui-snmp-get-missing-hint = noSuchObject / noSuchInstance 表示该 OID 上没有值。Get 需要指定到实例（标量用 .0，表列用 .1 等 INDEX）。要一次获取整个子树或表，请使用 Walk。
+ui-snmp-getbulk-note = GetBulk 返回每个 OID 之后最多“最大重复数”个实例，且不会在子树末尾停止，因此会包含所请求 OID 以外的值。只需要子树时请使用 Walk。
 
 ## DHCP server
 
