@@ -48,6 +48,14 @@ such as full TCP handshakes, and optimisation for attack tooling.
 
 ## Quick start
 
+Three ways to get wpg running; [Choose how to install](docs/en/src/getting-started/overview.md) compares them:
+
+- **Linux lab host over SSH**: `scripts/deploy.sh` (or double-click `scripts\deploy.bat` on Windows) builds wpg on
+  the host and installs a service ([Deploying](docs/en/src/operations/deploy.md)).
+- **Docker on a Linux host**: `WPG_PASSWORD='change me' docker compose up -d --build`
+  ([Run with Docker](docs/en/src/getting-started/docker.md)).
+- **Build from source** on Linux, macOS or Windows, as below.
+
 Prerequisites: [rustup](https://rustup.rs), the WASM target
 (`rustup target add wasm32-unknown-unknown`), [trunk](https://trunkrs.dev) (`cargo install trunk --locked`),
 and optionally [just](https://github.com/casey/just). The libpcap / Npcap transmit backend is optional

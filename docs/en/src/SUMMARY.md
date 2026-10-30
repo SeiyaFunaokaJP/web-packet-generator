@@ -4,9 +4,11 @@
 
 # Getting Started
 
+- [Choose how to install](getting-started/overview.md)
 - [Install on Linux](getting-started/install-linux.md)
 - [Install on macOS](getting-started/install-macos.md)
 - [Install on Windows](getting-started/install-windows.md)
+- [Run with Docker](getting-started/docker.md)
 - [Permissions](getting-started/permissions.md)
 - [First login](getting-started/first-login.md)
 

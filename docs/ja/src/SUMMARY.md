@@ -4,9 +4,11 @@
 
 # はじめに (Getting Started)
 
+- [インストール方法を選ぶ](getting-started/overview.md)
 - [Linux へのインストール](getting-started/install-linux.md)
 - [macOS へのインストール](getting-started/install-macos.md)
 - [Windows へのインストール](getting-started/install-windows.md)
+- [Docker で動かす](getting-started/docker.md)
 - [権限設定](getting-started/permissions.md)
 - [初回ログイン](getting-started/first-login.md)
 

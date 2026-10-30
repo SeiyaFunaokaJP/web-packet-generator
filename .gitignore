@@ -28,3 +28,6 @@ Thumbs.db
 
 # Private planning notes of the maintainer (not part of the public repository; see ROADMAP.md)
 /TODO.md
+
+# Docker Compose settings (may hold WPG_PASSWORD)
+.env
