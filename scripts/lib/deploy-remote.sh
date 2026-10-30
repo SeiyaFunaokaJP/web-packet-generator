@@ -147,6 +147,8 @@ if [ "$rollback" -eq 1 ]; then
     mv -f "$exe.swap" "$exe"
 else
     if [ -z "$binary" ] || [ ! -f "$binary" ]; then die "uploaded binary missing"; fi
+    # scp from Windows (deploy.ps1 -BinarySource file) uploads without the execute bit.
+    chmod u+x "$binary"
     "$binary" --version >/dev/null 2>&1 || die "the uploaded binary does not run on this host (wrong architecture or libc?)"
     if [ -x "$exe" ] && cmp -s "$binary" "$exe"; then
         # Re-running the same deploy: keep wpg.prev (the real previous version).
