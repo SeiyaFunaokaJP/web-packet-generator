@@ -6,13 +6,16 @@
 //! * notifications: the trap / inform receiver with its live list, and the
 //!   trap / inform sender;
 //! * MIBs: upload (drag & drop), module list with load problems, tree browser
-//!   with node details.
+//!   (whole tree or one module) with node details and direct Get / Walk.
+//!
+//! The operations tab can also pick OIDs from the same tree.
 
 mod mibs;
 pub(crate) mod model;
 mod ops;
 mod target;
 mod traps;
+mod tree;
 
 use leptos::prelude::*;
 
@@ -69,6 +72,10 @@ pub(crate) struct SnmpCtx {
     /// The OID field of the operations tab (the MIB browser fills it).
     pub(crate) oids: RwSignal<String>,
     pub(crate) tab: RwSignal<Tab>,
+    /// The module both MIB trees show (`None` = the whole tree).
+    pub(crate) mib_module: RwSignal<Option<String>>,
+    /// An operation the MIB tab asks the operations tab to run on `oids`.
+    pub(crate) run: RwSignal<Option<ops::Op>>,
     /// Bumped after every exchange: the recording counter refetches.
     pub(crate) capture_rev: RwSignal<u64>,
 }
@@ -84,6 +91,8 @@ pub(crate) fn SnmpPage() -> impl IntoView {
         target: RwSignal::new(TargetValues::default()),
         oids: RwSignal::new("system".to_owned()),
         tab: RwSignal::new(Tab::Ops),
+        mib_module: RwSignal::new(None),
+        run: RwSignal::new(None),
         capture_rev: RwSignal::new(0),
     };
     provide_context(ctx);

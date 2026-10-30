@@ -1169,13 +1169,14 @@ One level of the MIB tree.
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `oid` | path | `string` \| `null` | yes | Parent (name or dotted OID; empty = the roots). |
+| `module` | path | `string` \| `null` | yes | Only the branches leading to definitions of this module; without `oid`, the module's top nodes. |
 
 **Responses**
 
 | Status | Description | Body |
 |---|---|---|
 | `200` | Children | `application/json` [`TreeChildOut`](#schema-treechildout)`[]` |
-| `400` | Unknown name | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `400` | Unknown name or module | `application/json` [`ErrorBody`](#schema-errorbody) |
 
 <a id="op-delete-api-snmp-mibs-module"></a>
 

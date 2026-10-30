@@ -1,4 +1,5 @@
-//! Operations tab: OID input with MIB name completion, Get / GetNext /
+//! Operations tab: OID input with MIB name completion and a MIB tree
+//! picker, Get / GetNext /
 //! GetBulk / Walk / Set, readable results (list or table view, raw toggle),
 //! auto refresh with counter rates and sparklines.
 
@@ -9,6 +10,7 @@ use serde_json::{json, Value};
 
 use super::model::{parse_oid_list, rate_text, split_last_token, Rates, VALUE_TYPES};
 use super::target::TargetForm;
+use super::tree::{MibTree, ModuleSelect};
 use super::use_snmp;
 use crate::api::snmp::{self as api, SearchHit, SnmpResult, TableOut, VarBindOut};
 use crate::api::ApiError;
@@ -169,6 +171,9 @@ pub(crate) fn OpsPanel() -> impl IntoView {
     let next_row = StoredValue::new(1u32);
     let rows = RwSignal::new(vec![SetRow::new(0)]);
     let suggestions = use_suggestions(ctx.oids);
+    let picker = RwSignal::new(false);
+    // The picker only checks OIDs; nothing is "selected" there.
+    let pick_sel = RwSignal::new(None::<String>);
 
     let build = move |op: Op| -> Result<Value, &'static str> {
         let t = ctx.target.get_untracked();
@@ -247,6 +252,13 @@ pub(crate) fn OpsPanel() -> impl IntoView {
         }
         Err(k) => form_error.set(Some(k)),
     };
+    // Runs what the MIB tab asked for (its node details' Get / Walk buttons).
+    Effect::new(move |_| {
+        if let Some(op) = ctx.run.get() {
+            ctx.run.set(None);
+            start(op);
+        }
+    });
 
     // Auto refresh: repeats the last read operation.
     let handle = StoredValue::new(None::<IntervalHandle>);
@@ -317,6 +329,26 @@ pub(crate) fn OpsPanel() -> impl IntoView {
                         />
                         <OidDatalist id="snmp-oid-suggest" items=suggestions />
                         <p id="snmp-oids-hint" class="mt-1 text-xs text-slate-500">{tr("ui-snmp-oids-hint")}</p>
+                        <button
+                            type="button"
+                            class=format!("{BTN_GHOST} mt-2")
+                            aria-expanded=move || picker.get().to_string()
+                            aria-controls="snmp-oid-picker"
+                            on:click=move |_| picker.update(|p| *p = !*p)
+                        >
+                            {move || if picker.get() { "▾ " } else { "▸ " }}
+                            {tr("ui-snmp-mib-pick-tree")}
+                        </button>
+                        // Mounted on opening, so the module list is current.
+                        <Show when=move || picker.get()>
+                            <div id="snmp-oid-picker" class="mt-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                                <ModuleSelect id="snmp-ops-mib-scope" module=ctx.mib_module />
+                                <p id="snmp-oid-picker-h" class="mt-2 text-xs text-slate-500">{tr("ui-snmp-mib-pick-hint")}</p>
+                                <div class="mt-2 max-h-80 overflow-auto">
+                                    <MibTree module=ctx.mib_module selected=pick_sel labelledby="snmp-oid-picker-h" picked=ctx.oids />
+                                </div>
+                            </div>
+                        </Show>
                     </div>
                     <div class="flex flex-wrap items-end gap-3">
                         {op_button(Op::Get, true)}

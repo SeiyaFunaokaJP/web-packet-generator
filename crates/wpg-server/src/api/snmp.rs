@@ -1025,12 +1025,16 @@ pub async fn delete_mib(
     Ok(Json(MibDeleted { removed }))
 }
 
-/// `?oid=` of the tree.
+/// `?oid=&module=` of the tree.
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct TreeQuery {
     /// Parent (name or dotted OID; empty = the roots).
     #[serde(default)]
     pub oid: Option<String>,
+    /// Only the branches leading to definitions of this module; without
+    /// `oid`, the module's top nodes.
+    #[serde(default)]
+    pub module: Option<String>,
 }
 
 /// A tree entry.
@@ -1090,19 +1094,33 @@ fn role(reg: &Registry, n: &wpg_snmp::mib::Node) -> Option<String> {
 #[utoipa::path(get, path = "/api/snmp/mibs/tree", tag = "snmp", params(TreeQuery),
     responses(
         (status = 200, description = "Children", body = Vec<TreeChildOut>),
-        (status = 400, description = "Unknown name", body = crate::error::ErrorBody)))]
+        (status = 400, description = "Unknown name or module", body = crate::error::ErrorBody)))]
 pub async fn tree(
     State(st): State<AppState>,
     ApiQuery(q): ApiQuery<TreeQuery>,
 ) -> ApiResult<Json<Vec<TreeChildOut>>> {
     let m = snmp(&st)?;
     m.with_registry(|reg| {
-        let parent = match q.oid.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
-            None => Oid::default(),
-            Some(s) => resolve_oid(reg, s)?,
+        let module = q.module.as_deref().map(str::trim).filter(|s| !s.is_empty());
+        if let Some(m) = module.filter(|m| !reg.has_module(m)) {
+            return Err(ApiError::bad_request(
+                "api-error-snmp-oid",
+                wpg_snmp::mib::ResolveError::UnknownModule(m.to_owned()),
+            ));
+        }
+        let parent = q.oid.as_deref().map(str::trim).filter(|s| !s.is_empty());
+        let children = match (parent, module) {
+            (None, Some(m)) => reg.module_roots(m),
+            (p, m) => {
+                let parent = match p {
+                    None => Oid::default(),
+                    Some(s) => resolve_oid(reg, s)?,
+                };
+                reg.children_in(&parent, m)
+            }
         };
         Ok(Json(
-            reg.children(&parent)
+            children
                 .into_iter()
                 .map(|c| {
                     let node = reg.node(&c.oid);

@@ -279,6 +279,22 @@ async fn mib_upload_browse_delete() {
     assert_eq!(kids.as_array().unwrap().len(), 5);
     let roots = app.get("/api/snmp/mibs/tree").await.json();
     assert!(roots.as_array().unwrap().iter().any(|c| c["name"] == "iso"));
+    // Per module: its top nodes, then only its branches.
+    let tops = app
+        .get("/api/snmp/mibs/tree?module=WPG-EXAMPLE-VENDOR-MIB")
+        .await
+        .json();
+    let tops = tops.as_array().unwrap();
+    assert!(!tops.is_empty());
+    assert!(tops.iter().all(|c| c["module"] == "WPG-EXAMPLE-VENDOR-MIB"));
+    let below = app
+        .get("/api/snmp/mibs/tree?module=WPG-EXAMPLE-VENDOR-MIB&oid=wpgFanEntry")
+        .await
+        .json();
+    assert_eq!(below.as_array().unwrap().len(), 5);
+    app.get("/api/snmp/mibs/tree?module=NOPE-MIB")
+        .await
+        .expect_error(StatusCode::BAD_REQUEST, "bad_request");
 
     // Survives a restart of the registry (persisted file).
     app.state.snmp.reload();

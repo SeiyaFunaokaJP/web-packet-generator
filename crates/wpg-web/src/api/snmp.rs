@@ -382,11 +382,20 @@ pub(crate) async fn delete_mib(module: &str) -> Result<(), ApiError> {
     .map(|_| ())
 }
 
-pub(crate) async fn tree(oid: &str) -> Result<Vec<TreeChild>, ApiError> {
-    if oid.is_empty() {
+/// One level of the tree below `oid` (empty = the roots); with `module`,
+/// only that module's branches (and, without `oid`, its top nodes).
+pub(crate) async fn tree(oid: &str, module: Option<&str>) -> Result<Vec<TreeChild>, ApiError> {
+    let mut q = Vec::new();
+    if !oid.is_empty() {
+        q.push(format!("oid={}", enc(oid)));
+    }
+    if let Some(m) = module {
+        q.push(format!("module={}", enc(m)));
+    }
+    if q.is_empty() {
         get("/api/snmp/mibs/tree").await
     } else {
-        get(&format!("/api/snmp/mibs/tree?oid={}", enc(oid))).await
+        get(&format!("/api/snmp/mibs/tree?{}", q.join("&"))).await
     }
 }
 

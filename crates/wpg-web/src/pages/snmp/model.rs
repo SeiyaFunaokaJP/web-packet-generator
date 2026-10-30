@@ -203,6 +203,41 @@ pub(crate) fn parse_oid_list(s: &str) -> Vec<String> {
         .collect()
 }
 
+/// Adds `token` to an OID list, or removes it when present (the MIB tree
+/// picker's check boxes).
+pub(crate) fn toggle_oid(list: &str, token: &str) -> String {
+    let mut v = parse_oid_list(list);
+    match v.iter().position(|t| t == token) {
+        Some(i) => {
+            v.remove(i);
+        }
+        None => v.push(token.to_owned()),
+    }
+    v.join(" ")
+}
+
+/// What the tree puts into a request for a node: `MODULE::name`, with the
+/// `.0` instance for a scalar; the dotted OID for an unnamed node.
+pub(crate) fn request_oid(
+    oid: &str,
+    name: Option<&str>,
+    module: Option<&str>,
+    role: Option<&str>,
+) -> String {
+    let Some(name) = name else {
+        return oid.to_owned();
+    };
+    let base = match module {
+        Some(m) if !m.is_empty() => format!("{m}::{name}"),
+        _ => name.to_owned(),
+    };
+    if role == Some("scalar") {
+        format!("{base}.0")
+    } else {
+        base
+    }
+}
+
 /// The word being typed at the end of `s` (for autocompletion) and what
 /// comes before it.
 pub(crate) fn split_last_token(s: &str) -> (&str, &str) {
@@ -403,6 +438,38 @@ mod tests {
         assert_eq!(applied.community, "mine");
         assert_eq!(applied.user, "ops");
         assert!(parse_profiles("garbage").is_empty());
+    }
+
+    #[test]
+    fn tree_picks() {
+        assert_eq!(
+            toggle_oid("sysDescr.0", "IF-MIB::ifTable"),
+            "sysDescr.0 IF-MIB::ifTable"
+        );
+        assert_eq!(toggle_oid("a, IF-MIB::ifTable b", "IF-MIB::ifTable"), "a b");
+        assert_eq!(toggle_oid("", "x"), "x");
+        assert_eq!(
+            request_oid(
+                "1.3.6.1.2.1.1.1",
+                Some("sysDescr"),
+                Some("SNMPv2-MIB"),
+                Some("scalar")
+            ),
+            "SNMPv2-MIB::sysDescr.0"
+        );
+        assert_eq!(
+            request_oid(
+                "1.3.6.1.2.1.2.2",
+                Some("ifTable"),
+                Some("IF-MIB"),
+                Some("table")
+            ),
+            "IF-MIB::ifTable"
+        );
+        assert_eq!(
+            request_oid("1.3.6.1.4.1.9", None, None, None),
+            "1.3.6.1.4.1.9"
+        );
     }
 
     #[test]

@@ -5746,6 +5746,18 @@
                 "null"
               ]
             }
+          },
+          {
+            "description": "Only the branches leading to definitions of this module; without\n`oid`, the module's top nodes.",
+            "in": "path",
+            "name": "module",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         ],
         "responses": {
@@ -5770,7 +5782,7 @@
                 }
               }
             },
-            "description": "Unknown name"
+            "description": "Unknown name or module"
           }
         },
         "summary": "One level of the MIB tree.",
