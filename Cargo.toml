@@ -11,6 +11,7 @@ members = [
     "crates/wpg-server",
     "crates/wpg-log",
     "crates/wpg-snmp",
+    "crates/wpg-dhcp",
     "crates/wpg-cli",
     "crates/wpg-web",
     "crates/wpg-testutil",
@@ -33,6 +34,7 @@ default-members = [
     "crates/wpg-server",
     "crates/wpg-log",
     "crates/wpg-snmp",
+    "crates/wpg-dhcp",
     "crates/wpg-cli",
 ]
 
@@ -60,6 +62,7 @@ wpg-server = { path = "crates/wpg-server", version = "0.1.0" }
 wpg-testutil = { path = "crates/wpg-testutil", version = "0.1.0" }
 wpg-log = { path = "crates/wpg-log", version = "0.1.0" }
 wpg-snmp = { path = "crates/wpg-snmp", version = "0.1.0" }
+wpg-dhcp = { path = "crates/wpg-dhcp", version = "0.1.0" }
 dpdk-sys = { path = "crates/dpdk-sys", version = "0.1.0" }
 
 # --- shared third-party crates ---

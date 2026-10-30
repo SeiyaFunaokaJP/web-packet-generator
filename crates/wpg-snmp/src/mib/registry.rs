@@ -654,13 +654,21 @@ impl Registry {
     /// One level below `oid` (the empty OID lists the roots).
     #[must_use]
     pub fn children(&self, oid: &Oid) -> Vec<Child> {
+        self.children_in(oid, None)
+    }
+
+    /// [`Registry::children`] restricted to the branches that lead to nodes
+    /// defined in `module` (the intermediate entries may come from other
+    /// modules); `None` lists everything.
+    #[must_use]
+    pub fn children_in(&self, oid: &Oid, module: Option<&str>) -> Vec<Child> {
         let depth = oid.len();
         let mut out: BTreeMap<u32, Child> = BTreeMap::new();
-        for (o, _) in self.nodes.range(oid.clone()..) {
+        for (o, n) in self.nodes.range(oid.clone()..) {
             if !o.starts_with(oid) {
                 break;
             }
-            if o.len() <= depth {
+            if o.len() <= depth || module.is_some_and(|m| m != n.module) {
                 continue;
             }
             let arc = o.arcs()[depth];
@@ -680,6 +688,34 @@ impl Registry {
             e.has_children |= deeper;
         }
         out.into_values().collect()
+    }
+
+    /// The top nodes of `module`: its nodes with no ancestor defined in the
+    /// same module, in OID order (`has_children` = the module defines
+    /// something below). Empty for an unknown module.
+    #[must_use]
+    pub fn module_roots(&self, module: &str) -> Vec<Child> {
+        let mut out: Vec<Child> = Vec::new();
+        // OID order puts a node's descendants right after it, so only the
+        // last root can be an ancestor.
+        for (o, n) in &self.nodes {
+            if n.module != module {
+                continue;
+            }
+            if let Some(root) = out.last_mut().filter(|r| o.starts_with(&r.oid)) {
+                root.has_children = true;
+                continue;
+            }
+            out.push(Child {
+                oid: o.clone(),
+                arc: o.arcs().last().copied().unwrap_or_default(),
+                name: Some(n.name.clone()),
+                module: Some(n.module.clone()),
+                kind: Some(n.kind.clone()),
+                has_children: false,
+            });
+        }
+        out
     }
 
     /// Nodes whose descriptor matches `q` (case-insensitive; prefix matches

@@ -68,6 +68,11 @@
   when the installed wpg supports it).
 .PARAMETER SnmpTrap
   Enable the SNMP trap receiver on UDP 162 ([snmp] trap_listen, same rules as -Terminal).
+.PARAMETER DhcpIface
+  Interface the DHCP server answers on ([dhcp] iface in /etc/wpg/wpg.env; with the service).
+.PARAMETER DhcpIfaceAddr
+  Static addresses for -DhcpIface (e.g. 192.168.100.1/24, 2001:db8:1::1/64), written to
+  /etc/netplan/90-wpg-<iface>.yaml on the host.
 .PARAMETER Rollback
   Swap /usr/local/bin/wpg with wpg.prev and restart the service.
 .PARAMETER NoTemplates
@@ -146,6 +151,8 @@ param(
     [switch]$NoService,
     [switch]$Terminal,
     [switch]$SnmpTrap,
+    [string]$DhcpIface = "",
+    [string[]]$DhcpIfaceAddr = @(),
     [switch]$Rollback,
     [switch]$NoTemplates,
     [switch]$NoHealthcheck,
@@ -532,9 +539,11 @@ if ($NoTemplates) { $opt["templates"] = "0" }
 if ($NoHealthcheck) { $opt["healthcheck"] = "0" }
 if ($AllowInsecure) { $opt["allow_insecure"] = "1" }
 if ($SkipIfCurrent) { $opt["skip_if_current"] = "1" }
+if ($DhcpIface) { $opt["dhcp_iface"] = $DhcpIface }
+if ($DhcpIfaceAddr.Count -gt 0) { $opt["dhcp_iface_addr"] = (($DhcpIfaceAddr | ForEach-Object { $_ -split "," }) -join ",") }
 
 $AnswerKeys = @("host", "user", "ssh_port", "port", "identity", "binary_source", "binary_file", "source", "git_url",
-    "git_ref", "release_tag", "prefix", "bind", "ifaces", "service", "terminal", "snmp_trap", "templates",
+    "git_ref", "release_tag", "prefix", "bind", "ifaces", "dhcp_iface", "dhcp_iface_addr", "service", "terminal", "snmp_trap", "templates",
     "healthcheck", "allow_insecure", "skip_if_current", "dpdk", "hugepages", "admin_password_file",
     "ssh_password_file", "sudo_password_file", "admin_password_dpapi", "ssh_password_dpapi",
     "sudo_password_dpapi", "name", "parallel", "lang")
@@ -1029,8 +1038,12 @@ function Get-SourceId {
 
 # The deploy settings recorded next to the binary (same format as deploy.sh).
 function Get-SettingsId {
-    return ("bind={0};ifaces={1};service={2};terminal={3};snmp_trap={4};templates={5};allow_insecure={6};prefix={7};dpdk=0" -f `
+    $id = ("bind={0};ifaces={1};service={2};terminal={3};snmp_trap={4};templates={5};allow_insecure={6};prefix={7};dpdk=0" -f `
             $cfg.bind, $cfg.ifaces, $cfg.service, $cfg.terminal, $cfg.snmp_trap, (Get-Opt "templates" "1"), (Get-Opt "allow_insecure" "0"), $script:InstallPrefix)
+    # Only when used, so that hosts deployed before these options stay "current".
+    $dhcp = Get-Opt "dhcp_iface" ""
+    if ($dhcp) { $id += (";dhcp_iface={0};dhcp_iface_addr={1}" -f $dhcp, (Get-Opt "dhcp_iface_addr" "")) }
+    return $id
 }
 
 # Is the host already running this source with these settings (and healthy)?
@@ -1263,7 +1276,8 @@ function Show-Summary {
         @((T "送信インタフェース" "TX interfaces"), $ifs),
         @((T "管理者パスワード" "Admin password"), $(if ($script:adminPw) { T "設定する" "set" } else { T "変更しない" "unchanged" })),
         @((T "Web ターミナル" "Web terminal"), $(if ($cfg.terminal -eq "1") { T "有効" "on" } else { T "無効" "off" })),
-        @((T "SNMP トラップ受信" "SNMP traps"), $(if ($cfg.snmp_trap -eq "1") { T "有効 (UDP 162)" "on (UDP 162)" } else { T "無効" "off" }))
+        @((T "SNMP トラップ受信" "SNMP traps"), $(if ($cfg.snmp_trap -eq "1") { T "有効 (UDP 162)" "on (UDP 162)" } else { T "無効" "off" })),
+        @((T "DHCP サーバー" "DHCP server"), $(if (Get-Opt "dhcp_iface" "") { "{0} {1}" -f (Get-Opt "dhcp_iface" ""), (Get-Opt "dhcp_iface_addr" "") } else { T "画面で選択" "chosen on the screen" }))
     )
     foreach ($r in $rows) {
         $line = "  {0} : {1}" -f $r[0], $r[1]
@@ -1809,6 +1823,16 @@ try {
     if ($cfg.service -eq "1" -and -not $doRollback) { $remoteArgs += "--service" }
     if ($cfg.terminal -eq "1" -and -not $doRollback) { $remoteArgs += "--terminal" }
     if ($cfg.snmp_trap -eq "1" -and -not $doRollback) { $remoteArgs += "--snmp-trap" }
+    $dhcpIf = Get-Opt "dhcp_iface" ""
+    if ($dhcpIf -and -not $doRollback) {
+        if ($dhcpIf -notmatch '^[A-Za-z0-9_.:@-]+$') { throw "invalid dhcp_iface: $dhcpIf" }
+        $remoteArgs += @("--dhcp-iface", $dhcpIf)
+        foreach ($a in ((Get-Opt "dhcp_iface_addr" "") -split "[, ]+")) {
+            if (-not $a) { continue }
+            if ($a -notmatch '^[0-9A-Fa-f.:]+/[0-9]+$') { throw "invalid dhcp_iface_addr: $a" }
+            $remoteArgs += @("--dhcp-iface-addr", $a)
+        }
+    }
     if ((Get-Opt "allow_insecure" "0") -eq "1") { $remoteArgs += "--allow-insecure" }
     if (-not $doRollback) {
         foreach ($i in ($cfg.ifaces -split ",")) { if ($i) { $remoteArgs += @("--iface", $i) } }

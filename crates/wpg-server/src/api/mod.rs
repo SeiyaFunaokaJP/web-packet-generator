@@ -13,6 +13,7 @@ use crate::state::AppState;
 
 pub mod auth;
 pub mod captures;
+pub mod dhcp;
 pub mod jobs;
 pub mod packets;
 pub mod protocols;
@@ -51,6 +52,7 @@ pub mod ws;
         (name = "events", description = "WebSocket event stream"),
         (name = "terminal", description = "Web terminal: SSH / Telnet sessions, session logs, host keys"),
         (name = "snmp", description = "SNMP manager tool: Get / Walk / Set / traps, MIBs, trap receiver, pcap recording"),
+        (name = "dhcp", description = "DHCP server tool: DHCPv4 / DHCPv6 (IA_NA, IA_PD) pools and options, router advertisements, leases, activity"),
     ),
     components(schemas(
         crate::auth::AuthStatus,
@@ -162,6 +164,11 @@ fn parts() -> (Router<AppState>, utoipa::openapi::OpenApi) {
         .routes(routes!(snmp::traps, snmp::clear_traps))
         .routes(routes!(snmp::capture, snmp::capture_control))
         .routes(routes!(snmp::capture_download))
+        .routes(routes!(dhcp::status, dhcp::update))
+        .routes(routes!(dhcp::start))
+        .routes(routes!(dhcp::stop))
+        .routes(routes!(dhcp::leases, dhcp::delete_leases))
+        .routes(routes!(dhcp::activity, dhcp::clear_activity))
         .routes(routes!(ws::ws))
         .routes(routes!(terminal::status))
         .routes(routes!(terminal::ws))

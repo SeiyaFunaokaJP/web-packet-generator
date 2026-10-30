@@ -169,6 +169,35 @@ mod tests {
     }
 
     #[test]
+    fn module_tree() {
+        let r = Registry::bundled();
+        let roots = r.module_roots("IF-MIB");
+        let names: Vec<_> = roots.iter().filter_map(|c| c.name.as_deref()).collect();
+        // IF-MIB defines `interfaces` itself (ifNumber, ifTable sit below it)
+        // and its notifications under snmpTraps.
+        assert_eq!(names, ["interfaces", "ifMIB", "linkDown", "linkUp"]);
+        assert!(roots.iter().all(|c| c.module.as_deref() == Some("IF-MIB")));
+        // No root lies below another one.
+        assert!(roots.iter().all(|a| roots
+            .iter()
+            .all(|b| a.oid == b.oid || !a.oid.starts_with(&b.oid))));
+        assert!(r.module_roots("NOPE-MIB").is_empty());
+
+        // Below a root: only branches holding IF-MIB definitions.
+        let if_mib = oid("1.3.6.1.2.1.31");
+        let kids = r.children_in(&if_mib, Some("IF-MIB"));
+        assert!(!kids.is_empty());
+        assert!(kids.len() <= r.children(&if_mib).len());
+        // An intermediate entry from another module still leads to IF-MIB nodes.
+        let mib2 = r.children_in(&oid("1.3.6.1.2.1"), Some("IF-MIB"));
+        assert!(mib2.iter().any(|c| c.arc == 2 && c.has_children));
+        assert!(mib2.iter().all(|c| c.arc == 2 || c.arc == 31), "{mib2:?}");
+        assert!(r
+            .children_in(&oid("1.3.6.1.2.1.1"), Some("IF-MIB"))
+            .is_empty());
+    }
+
+    #[test]
     fn readable_values() {
         let r = Registry::bundled();
         let f = |o: &str, v: Value| format_varbind(&r, &VarBind::new(oid(o), v));

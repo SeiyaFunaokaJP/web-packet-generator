@@ -22,6 +22,15 @@ Authentication.
 | `password_hash` | `string` |   | `WPG_AUTH__PASSWORD_HASH` | argon2id PHC string of the admin password; `wpg config set-password` writes it. |
 | `session_ttl_secs` | `integer` | `86400` | `WPG_AUTH__SESSION_TTL_SECS` | Session lifetime in seconds (sliding: every request extends it). |
 
+### `[dhcp]`
+
+DHCP server tool (DHCPv4 / DHCPv6 on one interface; pools and options are edited on the DHCP screen).
+
+| Key | Type | Default | Environment variable | Description |
+|---|---|---|---|---|
+| `enabled` | `boolean` | `true` | `WPG_DHCP__ENABLED` | Enables the DHCP screen and the `/api/dhcp` endpoints. |
+| `iface` | `string` | `""` | `WPG_DHCP__IFACE` | Interface the DHCP server answers on, e.g. `eth1` (`deploy.sh --dhcp-iface`). Empty: chosen on the screen among `tx.allowed_ifaces`. |
+
 ### `[log]`
 
 Logging.
@@ -184,6 +193,14 @@ enabled = true
 trap_listen = ""
 # Directory of uploaded MIB files. Empty: <data_dir>/mibs
 mib_dir = ""
+
+[dhcp]
+# DHCP screen and API (DHCPv4 / DHCPv6 server, Linux only). Pools and options
+# are edited on the screen and kept in <data_dir>/dhcp.json.
+enabled = true
+# Interface the server answers on, e.g. "eth1". Empty: chosen on the screen
+# among tx.allowed_ifaces. Ports 67 / 547 need root or CAP_NET_BIND_SERVICE.
+iface = ""
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".

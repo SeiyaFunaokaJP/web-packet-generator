@@ -205,6 +205,8 @@ scripts/deploy.sh ubuntu@192.0.2.10 --service --dry-run
 | `--ask-password` | Ask for the SSH password once and install the deploy key `~/.ssh/wpg_deploy_ed25519` on the host. |
 | `--sudo-password` | Ask for the sudo password up front and pass it to `sudo -S` on stdin (default: sudo asks on the SSH terminal). |
 | `--terminal`, `--snmp-trap` | Enable the web terminal / the SNMP trap receiver (see below). |
+| `--dhcp-iface <name>` | Pin the interface the DHCP server answers on (`WPG_DHCP__IFACE` in `/etc/wpg/wpg.env`; with `--service`). See [DHCP server](dhcp.md). |
+| `--dhcp-iface-addr <addr/len>` | Static addresses for `--dhcp-iface` (repeatable or comma separated, e.g. `192.168.100.1/24,2001:db8:1::1/64`): written to `/etc/netplan/90-wpg-<iface>.yaml` and applied with `netplan apply`. Refused for an interface carrying the default route. |
 | `--no-templates` | Do not copy the sample templates to `/usr/local/share/wpg/templates`. |
 | `--no-healthcheck` | Skip the health check. |
 | `--rollback` | Swap `/usr/local/bin/wpg` with `wpg.prev` and restart the service. Running it twice undoes it. |
@@ -240,6 +242,7 @@ Everything the wizard asks can also be passed as parameters. With `-HostName` th
 | `-Bind`, `-Iface` | Listen address, interfaces jobs may send on. |
 | `-NoService` | Do not install the service (installed by default). |
 | `-Terminal`, `-SnmpTrap` | Web terminal / SNMP trap receiver. |
+| `-DhcpIface`, `-DhcpIfaceAddr` | DHCP server interface and static addresses (as `--dhcp-iface` / `--dhcp-iface-addr`). |
 | `-Rollback`, `-NoTemplates`, `-NoHealthcheck` | As in deploy.sh. |
 | `-ProfilePath`, `-Lang ja\|en`, `-LogFile` | Answers file, message language, log file. |
 | `-Interactive`, `-Yes`, `-DryRun` | Start the wizard with the parameters as defaults / never ask anything (no confirmation, no password) / only connect and check, without building or installing. |
@@ -310,6 +313,7 @@ Relative paths in the file (`binary_file`, `identity`, `*_password_file`, ...) a
 | `ifaces` | (all) | Interfaces jobs may send on (comma separated). |
 | `service` | `1` | Install the systemd service. |
 | `terminal`, `snmp_trap` | `0` | Web terminal / SNMP trap receiver. |
+| `dhcp_iface`, `dhcp_iface_addr` | empty | DHCP server interface and static addresses (comma separated). |
 | `templates`, `healthcheck` | `1` | Copy the sample templates / run the health check. |
 | `allow_insecure` | `0` | Listen on a non-loopback address without a password. |
 | `prefix` | `/usr/local` | Install prefix on the host. |

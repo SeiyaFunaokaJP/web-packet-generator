@@ -616,6 +616,13 @@ pub(crate) enum ServerEvent {
         #[serde(default)]
         trap: Value,
     },
+    /// The DHCP server handled a request (the activity log refetches).
+    DhcpActivity {
+        #[serde(default)]
+        activity: Value,
+    },
+    /// The DHCP server started / stopped or its settings / leases changed.
+    DhcpState,
     #[serde(other)]
     Unknown,
 }

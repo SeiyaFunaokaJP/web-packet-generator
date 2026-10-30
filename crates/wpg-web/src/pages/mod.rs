@@ -2,6 +2,7 @@
 
 pub(crate) mod auth;
 pub(crate) mod dashboard;
+pub(crate) mod dhcp;
 pub(crate) mod job_detail;
 pub(crate) mod job_form;
 pub(crate) mod jobs;

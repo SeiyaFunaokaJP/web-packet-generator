@@ -249,6 +249,7 @@
 - [Web terminal (SSH / Telnet)](operations/terminal.md)
 - [Receive and verification](operations/rx-verify.md)
 - [SNMP tool](operations/snmp.md)
+- [DHCP server](operations/dhcp.md)
 
 # Developer Guide
 

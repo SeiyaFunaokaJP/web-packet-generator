@@ -249,6 +249,7 @@
 - [Web ターミナル (SSH / Telnet)](operations/terminal.md)
 - [受信と検証](operations/rx-verify.md)
 - [SNMP ツール](operations/snmp.md)
+- [DHCP サーバー](operations/dhcp.md)
 
 # 開発者ガイド
 

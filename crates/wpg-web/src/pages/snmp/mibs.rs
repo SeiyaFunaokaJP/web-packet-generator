@@ -1,12 +1,16 @@
 //! MIB tab: upload (file picker or drag & drop), the module list with load
 //! problems (missing imports named), deletion of uploaded modules, and the
-//! tree browser with node details.
+//! tree browser (whole tree or one module) with node details and direct
+//! Get / GetNext / Walk.
 
 use leptos::html;
 use leptos::prelude::*;
 
+use super::model::request_oid;
+use super::ops::Op;
+use super::tree::{MibTree, ModuleSelect};
 use super::{use_snmp, Tab};
-use crate::api::snmp::{self as api, MibModule, NodeInfo, TreeChild, UploadedFile};
+use crate::api::snmp::{self as api, MibModule, NodeInfo, UploadedFile};
 use crate::components::{
     use_toasts, Confirm, Empty, ErrorBox, Icon, IconName, Loading, BTN, BTN_GHOST, CARD, INPUT, TD,
     TH,
@@ -21,7 +25,7 @@ pub(crate) fn MibsPanel() -> impl IntoView {
         <div class="space-y-6">
             <UploadCard on_done=move || reload.update(|r| *r += 1) />
             <div class="grid gap-6 xl:grid-cols-2">
-                <BrowserCard selected=selected />
+                <BrowserCard selected=selected reload=reload />
                 <NodeDetail selected=selected />
             </div>
             <ModuleList reload=reload />
@@ -181,6 +185,7 @@ fn status_key(s: &str) -> &'static str {
 #[component]
 fn ModuleList(reload: RwSignal<u32>) -> impl IntoView {
     let i18n = use_i18n();
+    let ctx = use_snmp();
     let toasts = use_toasts();
     let show_bundled = RwSignal::new(false);
     let deleting = RwSignal::new(None::<String>);
@@ -240,6 +245,7 @@ fn ModuleList(reload: RwSignal<u32>) -> impl IntoView {
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                     {rows.into_iter().map(|m| {
                                         let name = m.name.clone();
+                                        let tree_name = m.name.clone();
                                         let st = m.status.clone();
                                         let nodes = m.nodes;
                                         view! {
@@ -267,7 +273,19 @@ fn ModuleList(reload: RwSignal<u32>) -> impl IntoView {
                                                         }
                                                     })}
                                                 </td>
-                                                <td class=format!("{TD} text-right")>
+                                                <td class=format!("{TD} whitespace-nowrap text-right")>
+                                                    <button type="button" class=BTN_GHOST
+                                                        title=tr("ui-snmp-mib-show-tree")
+                                                        aria-label=move || i18n.ta("ui-snmp-mib-show-tree-named", &[("what", tree_name.clone())])
+                                                        on:click={
+                                                            let n = m.name.clone();
+                                                            move |_| {
+                                                                ctx.mib_module.set(Some(n.clone()));
+                                                                crate::dom::focus_id(SCOPE_ID);
+                                                            }
+                                                        }>
+                                                        <Icon name=IconName::Search class="h-4 w-4" />
+                                                    </button>
                                                     {(!m.bundled).then(|| view! {
                                                         <button type="button" class=BTN_GHOST
                                                             title=tr("ui-delete")
@@ -306,14 +324,20 @@ fn ModuleList(reload: RwSignal<u32>) -> impl IntoView {
     }
 }
 
+/// Id of the module chooser (the module list's "show in tree" focuses it).
+const SCOPE_ID: &str = "snmp-mib-scope";
+
 #[component]
-fn BrowserCard(selected: RwSignal<Option<String>>) -> impl IntoView {
-    let roots = LocalResource::new(|| api::tree("1.3.6.1"));
+fn BrowserCard(selected: RwSignal<Option<String>>, reload: RwSignal<u32>) -> impl IntoView {
+    let ctx = use_snmp();
     let query = RwSignal::new(String::new());
     let hits = super::ops::use_suggestions(query);
     view! {
         <section class=CARD aria-labelledby="snmp-tree-h">
             <h2 id="snmp-tree-h" class="mb-3 text-base font-semibold">{tr("ui-snmp-mib-browser")}</h2>
+            <div class="mb-3">
+                <ModuleSelect id=SCOPE_ID module=ctx.mib_module reload=reload />
+            </div>
             <input class=INPUT type="search" placeholder=tr("ui-snmp-mib-search") aria-label=tr("ui-snmp-mib-search")
                 prop:value=move || query.get() on:input=move |ev| query.set(event_target_value(&ev)) />
             <ul class="mt-1 max-h-48 overflow-y-auto text-sm">
@@ -332,81 +356,14 @@ fn BrowserCard(selected: RwSignal<Option<String>>) -> impl IntoView {
                 }).collect_view()}
             </ul>
             <div class="mt-3 max-h-[32rem] overflow-auto">
-                <p class="font-mono text-xs text-slate-500">"iso.org.dod.internet (1.3.6.1)"</p>
-                {move || match roots.get() {
-                    None => view! { <Loading /> }.into_any(),
-                    Some(Err(e)) => view! { <ErrorBox error=e /> }.into_any(),
-                    Some(Ok(list)) => view! {
-                        <ul role="tree" aria-labelledby="snmp-tree-h" class="text-sm">
-                            {list.into_iter().map(|c| tree_item(c, 0, selected)).collect_view()}
-                        </ul>
-                    }.into_any(),
-                }}
+                <MibTree module=ctx.mib_module selected=selected labelledby="snmp-tree-h" reload=reload />
             </div>
         </section>
     }
 }
 
-/// One tree node (children fetched on first expansion). A plain function
-/// returning [`AnyView`] so it can recurse.
-#[allow(clippy::needless_pass_by_value)] // consumed by the view (owned strings)
-fn tree_item(child: TreeChild, depth: usize, selected: RwSignal<Option<String>>) -> AnyView {
-    let expanded = RwSignal::new(false);
-    let oid = StoredValue::new(child.oid.clone());
-    let kids = LocalResource::new(move || {
-        let open = expanded.get();
-        let o = oid.get_value();
-        async move {
-            if open {
-                api::tree(&o).await.map(Some)
-            } else {
-                Ok(None)
-            }
-        }
-    });
-    let label = child.name.clone().unwrap_or_else(|| child.arc.to_string());
-    let role = child.role.clone().unwrap_or_default();
-    let has_children = child.has_children;
-    let is_sel = move || selected.with(|s| s.as_deref() == Some(oid.get_value().as_str()));
-    let pad = format!("padding-left: {}rem", depth as f64 * 0.75);
-    view! {
-        <li role="treeitem" aria-expanded=move || has_children.then(|| expanded.get().to_string()) aria-selected=move || is_sel().to_string()>
-            <div class="flex items-center gap-1" style=pad>
-                {if has_children {
-                    view! {
-                        <button type="button" class="w-5 text-slate-500" aria-label=move || if expanded.get() { "−" } else { "+" }
-                            on:click=move |_| expanded.update(|e| *e = !*e)>
-                            {move || if expanded.get() { "▾" } else { "▸" }}
-                        </button>
-                    }.into_any()
-                } else {
-                    view! { <span class="w-5"></span> }.into_any()
-                }}
-                <button type="button"
-                    class=move || if is_sel() { "rounded bg-sky-100 px-1 text-left text-sky-900 dark:bg-sky-500/20 dark:text-sky-200" } else { "rounded px-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800" }
-                    on:click=move |_| selected.set(Some(oid.get_value()))>
-                    {label}
-                    <span class="ml-1 font-mono text-xs text-slate-400">{child.arc}</span>
-                    {(!role.is_empty()).then(|| view! { <span class="ml-1 text-xs text-slate-500">{role.clone()}</span> })}
-                </button>
-            </div>
-            {move || expanded.get().then(|| view! {
-                <ul role="group">
-                    {move || match kids.get() {
-                        Some(Ok(Some(list))) => list.into_iter().map(|c| tree_item(c, depth + 1, selected)).collect_view().into_any(),
-                        Some(Err(e)) => view! { <li><ErrorBox error=e /></li> }.into_any(),
-                        _ => view! { <li class="text-xs text-slate-500">"…"</li> }.into_any(),
-                    }}
-                </ul>
-            })}
-        </li>
-    }
-    .into_any()
-}
-
 #[component]
 fn NodeDetail(selected: RwSignal<Option<String>>) -> impl IntoView {
-    let ctx = use_snmp();
     let node = LocalResource::new(move || {
         let id = selected.get();
         async move {
@@ -423,16 +380,38 @@ fn NodeDetail(selected: RwSignal<Option<String>>) -> impl IntoView {
                 None => view! { <Loading /> }.into_any(),
                 Some(Err(e)) => view! { <ErrorBox error=e /> }.into_any(),
                 Some(Ok(None)) => view! { <Empty text=tr("ui-snmp-mib-pick") /> }.into_any(),
-                Some(Ok(Some(n))) => view! { <NodeBody node=n ctx_oids=ctx.oids ctx_tab=ctx.tab /> }.into_any(),
+                Some(Ok(Some(n))) => view! { <NodeBody node=n /> }.into_any(),
             }}
         </section>
     }
 }
 
 #[component]
-fn NodeBody(node: NodeInfo, ctx_oids: RwSignal<String>, ctx_tab: RwSignal<Tab>) -> impl IntoView {
+fn NodeBody(node: NodeInfo) -> impl IntoView {
     let i18n = use_i18n();
-    let use_name = format!("{}::{}", node.module, node.name);
+    let ctx = use_snmp();
+    // `MODULE::name.0` for a scalar (Get works), `MODULE::name` otherwise.
+    let use_name = request_oid(
+        &node.oid,
+        Some(&node.name),
+        Some(&node.module),
+        node.role.as_deref(),
+    );
+    let base = format!("{}::{}", node.module, node.name);
+    let scalar = node.role.as_deref() == Some("scalar");
+    // Fills the operations tab's OID field and runs `op` there.
+    let run = move |op: Op, oid: String| {
+        ctx.oids.set(oid);
+        ctx.run.set(Some(op));
+        ctx.tab.set(Tab::Ops);
+    };
+    let run_button = move |op: Op, key: &'static str, oid: String| {
+        view! {
+            <button type="button" class=BTN on:click=move |_| run(op, oid.clone())>
+                {move || i18n.t(key)}
+            </button>
+        }
+    };
     let row = |k: &'static str, v: Option<String>| {
         v.filter(|s| !s.is_empty()).map(|v| {
             view! {
@@ -454,10 +433,15 @@ fn NodeBody(node: NodeInfo, ctx_oids: RwSignal<String>, ctx_tab: RwSignal<Tab>) 
                 <span class="text-xs text-slate-500">{node.module.clone()}</span>
                 <button type="button" class=format!("{BTN} ml-auto") on:click={
                     let n = use_name.clone();
-                    move |_| { ctx_oids.set(n.clone()); ctx_tab.set(Tab::Ops); }
+                    move |_| { ctx.oids.set(n.clone()); ctx.tab.set(Tab::Ops); }
                 }>
                     {tr("ui-snmp-mib-use")}
                 </button>
+            </div>
+            <div class="flex flex-wrap gap-2" role="group" aria-label=tr("ui-snmp-mib-run")>
+                {scalar.then(|| run_button(Op::Get, "ui-snmp-op-get", use_name.clone()))}
+                {run_button(Op::GetNext, "ui-snmp-op-getnext", base.clone())}
+                {run_button(Op::Walk, "ui-snmp-op-walk", base.clone())}
             </div>
             <p class="font-mono text-xs break-all text-slate-500">{format!("{} ({path})", node.oid)}</p>
             <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">

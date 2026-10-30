@@ -120,6 +120,33 @@ async fn operations_v2c_and_v3() {
     assert_eq!(t["columns"][counter_col]["counter"], true);
     assert_eq!(t["rows"][1]["numeric"][counter_col], 1000);
 
+    // Several roots are walked one after another (a scalar instance falls
+    // back to a Get); the limit counts them all.
+    let r = app
+        .post(
+            "/api/snmp/walk",
+            json!({ "target": target(&a, "public"), "oids": ["sysDescr.0", "ifTable"], "max_repetitions": 3 }),
+        )
+        .await;
+    r.expect(StatusCode::OK);
+    let j = r.json();
+    let vb = j["varbinds"].as_array().unwrap();
+    assert_eq!(vb.len(), 11);
+    assert_eq!(vb[0]["name"], "SNMPv2-MIB::sysDescr.0");
+    assert_eq!(j["tables"][0]["entry"], "IF-MIB::ifEntry");
+    let r = app
+        .post(
+            "/api/snmp/walk",
+            json!({ "target": target(&a, "public"), "oids": ["sysDescr.0", "ifTable"], "limit": 4 }),
+        )
+        .await;
+    let j = r.json();
+    assert_eq!(j["varbinds"].as_array().unwrap().len(), 4);
+    assert_eq!(j["truncated"], true);
+    app.post("/api/snmp/walk", json!({ "target": target(&a, "public") }))
+        .await
+        .expect_error(StatusCode::BAD_REQUEST, "bad_request");
+
     let r = app
         .post(
             "/api/snmp/getbulk",
@@ -279,6 +306,22 @@ async fn mib_upload_browse_delete() {
     assert_eq!(kids.as_array().unwrap().len(), 5);
     let roots = app.get("/api/snmp/mibs/tree").await.json();
     assert!(roots.as_array().unwrap().iter().any(|c| c["name"] == "iso"));
+    // Per module: its top nodes, then only its branches.
+    let tops = app
+        .get("/api/snmp/mibs/tree?module=WPG-EXAMPLE-VENDOR-MIB")
+        .await
+        .json();
+    let tops = tops.as_array().unwrap();
+    assert!(!tops.is_empty());
+    assert!(tops.iter().all(|c| c["module"] == "WPG-EXAMPLE-VENDOR-MIB"));
+    let below = app
+        .get("/api/snmp/mibs/tree?module=WPG-EXAMPLE-VENDOR-MIB&oid=wpgFanEntry")
+        .await
+        .json();
+    assert_eq!(below.as_array().unwrap().len(), 5);
+    app.get("/api/snmp/mibs/tree?module=NOPE-MIB")
+        .await
+        .expect_error(StatusCode::BAD_REQUEST, "bad_request");
 
     // Survives a restart of the registry (persisted file).
     app.state.snmp.reload();

@@ -81,7 +81,15 @@ wpg-server serves a REST (JSON) API under `/api` and pushes live statistics, job
 | snmp | [`POST /api/snmp/trap`](#op-post-api-snmp-trap) | Sends a trap (v1 Trap-PDU, SNMPv2-Trap, or a v3 trap with this server as the authoritative engine). The result lists the bindings sent. |
 | snmp | [`GET /api/snmp/traps`](#op-get-api-snmp-traps) | Received notifications, newest first (also pushed as `snmp_trap` events on the WebSocket). |
 | snmp | [`DELETE /api/snmp/traps`](#op-delete-api-snmp-traps) | Forgets the received notifications. |
-| snmp | [`POST /api/snmp/walk`](#op-post-api-snmp-walk) | Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns. |
+| snmp | [`POST /api/snmp/walk`](#op-post-api-snmp-walk) | Walks one or more subtrees (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns. |
+| dhcp | [`GET /api/dhcp`](#op-get-api-dhcp) | State, settings and counters. |
+| dhcp | [`PUT /api/dhcp`](#op-put-api-dhcp) | Saves the settings; a running server restarts with them. |
+| dhcp | [`GET /api/dhcp/activity`](#op-get-api-dhcp-activity) | Recent requests and replies, newest first (`wpg_dhcp::Activity`). |
+| dhcp | [`DELETE /api/dhcp/activity`](#op-delete-api-dhcp-activity) | Clears the activity log. |
+| dhcp | [`GET /api/dhcp/leases`](#op-get-api-dhcp-leases) | Leases (`wpg_dhcp::Lease`: `kind` `v4` / `na` / `pd`, `addr`, `plen`, `client`, `iaid`, `mac`, `hostname`, `state`, `expires`, `updated`). |
+| dhcp | [`DELETE /api/dhcp/leases`](#op-delete-api-dhcp-leases) | Deletes one lease (`key`) or all of them. The client keeps using the address until it renews. |
+| dhcp | [`POST /api/dhcp/start`](#op-post-api-dhcp-start) | Starts (or restarts) the server; it also starts at boot until stopped. |
+| dhcp | [`POST /api/dhcp/stop`](#op-post-api-dhcp-stop) | Stops the server (and its start at boot). |
 
 ### `auth`
 
@@ -1169,13 +1177,14 @@ One level of the MIB tree.
 | Name | In | Type | Required | Description |
 |---|---|---|---|---|
 | `oid` | path | `string` \| `null` | yes | Parent (name or dotted OID; empty = the roots). |
+| `module` | path | `string` \| `null` | yes | Only the branches leading to definitions of this module; without `oid`, the module's top nodes. |
 
 **Responses**
 
 | Status | Description | Body |
 |---|---|---|
 | `200` | Children | `application/json` [`TreeChildOut`](#schema-treechildout)`[]` |
-| `400` | Unknown name | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `400` | Unknown name or module | `application/json` [`ErrorBody`](#schema-errorbody) |
 
 <a id="op-delete-api-snmp-mibs-module"></a>
 
@@ -1315,7 +1324,7 @@ Forgets the received notifications.
 
 #### `POST /api/snmp/walk`
 
-Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns.
+Walks one or more subtrees (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns.
 
 **Request body**: `application/json` [`SnmpWalkRequest`](#schema-snmpwalkrequest)
 
@@ -1327,6 +1336,127 @@ Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the r
 | `400` | Bad request | `application/json` [`ErrorBody`](#schema-errorbody) |
 | `502` | `snmp_error` | `application/json` [`ErrorBody`](#schema-errorbody) |
 | `504` | `snmp_error`: no response | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+### `dhcp`
+
+DHCP server tool: DHCPv4 / DHCPv6 (IA_NA, IA_PD) pools and options, router advertisements, leases, activity
+
+<a id="op-get-api-dhcp"></a>
+
+#### `GET /api/dhcp`
+
+State, settings and counters.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | State | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
+| `404` | `dhcp.enabled = false` | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-put-api-dhcp"></a>
+
+#### `PUT /api/dhcp`
+
+Saves the settings; a running server restarts with them.
+
+**Request body**: `application/json` [`DhcpUpdate`](#schema-dhcpupdate)
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Saved | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
+| `400` | Invalid settings (`details`: `[{ field, message }]`) | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `403` | `policy_violation`: interface not in `tx.allowed_ifaces` | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `backend_error`: the restart failed | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-dhcp-activity"></a>
+
+#### `GET /api/dhcp/activity`
+
+Recent requests and replies, newest first (`wpg_dhcp::Activity`).
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `limit` | path | `integer` \| `null` | yes | Most entries returned (newest first; default 200). |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Activity | `application/json` `object``[]` |
+
+<a id="op-delete-api-dhcp-activity"></a>
+
+#### `DELETE /api/dhcp/activity`
+
+Clears the activity log.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `204` | Cleared |   |
+
+<a id="op-get-api-dhcp-leases"></a>
+
+#### `GET /api/dhcp/leases`
+
+Leases (`wpg_dhcp::Lease`: `kind` `v4` / `na` / `pd`, `addr`, `plen`, `client`, `iaid`, `mac`, `hostname`, `state`, `expires`, `updated`).
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Leases | `application/json` `object``[]` |
+
+<a id="op-delete-api-dhcp-leases"></a>
+
+#### `DELETE /api/dhcp/leases`
+
+Deletes one lease (`key`) or all of them. The client keeps using the address until it renews.
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+|---|---|---|---|---|
+| `key` | path | `string` \| `null` | yes | The lease (`192.168.100.10`, `2001:db8::10`, `2001:db8:100::/56`); absent: every lease. |
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `204` | Deleted |   |
+| `404` | No such lease | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-dhcp-start"></a>
+
+#### `POST /api/dhcp/start`
+
+Starts (or restarts) the server; it also starts at boot until stopped.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Running | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
+| `400` | No / unknown interface, invalid settings | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `backend_error`: sockets (ports 67 / 547 need CAP_NET_BIND_SERVICE, RA CAP_NET_RAW; Linux only) | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-dhcp-stop"></a>
+
+#### `POST /api/dhcp/stop`
+
+Stops the server (and its start at boot).
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Stopped | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
 
 ## Schemas
 
@@ -1489,6 +1619,39 @@ Selects the jobs whose `stats` / `job_state` events are sent.
 | Key | Type | Required | Description |
 |---|---|---|---|
 | `start` | `boolean` |   | Start immediately (default `true`); `false` leaves it in state `created`. |
+
+<a id="schema-dhcpstatus"></a>
+
+### `DhcpStatus`
+
+`GET /api/dhcp`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `added_addresses` | `string``[]` |   | Addresses this server put on the interface (removed when it stops). |
+| `enabled` | `boolean` | yes | `dhcp.enabled`. |
+| `error` | `string` \| `null` |   | Why the last start (at boot) failed. |
+| `iface` | `string` | yes | Interface used (pinned or chosen; empty: none chosen yet). |
+| `leases` | `integer` | yes | Leases in the table. |
+| `pinned_iface` | `string` \| `null` |   | `dhcp.iface` (fixed at deploy time); the screen cannot change it. |
+| `running` | `boolean` | yes | Answering. |
+| `server_duid` | `string` \| `null` |   | DHCPv6 server DUID in use. |
+| `server_ip` | `string` \| `null` |   | DHCPv4 server identifier in use. |
+| `settings` | `object` | yes | Pools and options (`wpg_dhcp::Settings`). |
+| `started_ms` | `integer` \| `null` |   | Start time (milliseconds since the Unix epoch). |
+| `stats` | `object` | yes | Packet counters of the running server. |
+| `supported` | `boolean` | yes | Built for Linux (elsewhere the server cannot start). |
+
+<a id="schema-dhcpupdate"></a>
+
+### `DhcpUpdate`
+
+`PUT /api/dhcp` body.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `iface` | `string` \| `null` |   | Interface to answer on (ignored when `dhcp.iface` pins one; must be allowed by `tx.allowed_ifaces`). |
+| `settings` | `object` | yes | Pools and options (`wpg_dhcp::Settings`: `v4`, `v6`). |
 
 <a id="schema-endreason"></a>
 
@@ -2193,6 +2356,25 @@ The SNMP trap receiver got a notification (also listed by
 | `trap` | [`TrapOut`](#schema-trapout) | yes | The rendered notification. |
 | `type` | `"snmp_trap"` | yes |   |
 
+#### `type: "dhcp_activity"`
+
+The DHCP server handled a request or sent a router advertisement
+(also listed by `GET /api/dhcp/activity`).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `activity` | `object` | yes | The exchange (`wpg_dhcp::Activity`). |
+| `type` | `"dhcp_activity"` | yes |   |
+
+#### `type: "dhcp_state"`
+
+The DHCP server started / stopped, its settings changed or leases
+expired / were deleted: reload `GET /api/dhcp`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `type` | `"dhcp_state"` | yes |   |
+
 <a id="schema-setuprequest"></a>
 
 ### `SetupRequest`
@@ -2320,9 +2502,10 @@ Walk request body.
 
 | Key | Type | Required | Description |
 |---|---|---|---|
-| `limit` | `integer` \| `null` |   | Most bindings returned (default 10000, at most 100000). |
+| `limit` | `integer` \| `null` |   | Most bindings returned in all (default 10000, at most 100000). |
 | `max_repetitions` | `integer` \| `null` |   | `max-repetitions` per GetBulk (default 20; v1 walks with GetNext). |
-| `oid` | `string` | yes | Subtree root: name (`ifTable`, `system`) or dotted OID. |
+| `oid` | `string` |   | Subtree root: name (`ifTable`, `system`) or dotted OID. |
+| `oids` | `string``[]` |   | More subtree roots, walked one after another after `oid` (either may be empty, not both). |
 | `target` | [`SnmpTarget`](#schema-snmptarget) | yes | The agent. |
 
 <a id="schema-tablecolumnout"></a>

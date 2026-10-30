@@ -10,6 +10,7 @@ use wpg_sys::ifaces::Iface;
 use crate::auth::{Auth, AuthError};
 use crate::config::Config;
 use crate::db::{Db, DbError};
+use crate::dhcp::DhcpManager;
 use crate::events::{bus, EventBus, ServerEvent};
 use crate::jobs::JobManager;
 use crate::rx::RxManager;
@@ -75,6 +76,8 @@ pub struct AppState {
     pub terminal: Terminal,
     /// SNMP manager tool.
     pub snmp: SnmpManager,
+    /// DHCP server tool.
+    pub dhcp: DhcpManager,
     /// The `SQLite` database.
     pub db: Db,
     /// Authentication.
@@ -143,6 +146,7 @@ impl AppState {
         let rx = RxManager::new(Arc::clone(&config), events.clone());
         let terminal = Terminal::new(&config);
         let snmp = SnmpManager::new(&config, events.clone());
+        let dhcp = DhcpManager::new(&config, events.clone());
         let (shutdown_tx, shutdown) = watch::channel(false);
         Ok(Self {
             config,
@@ -152,6 +156,7 @@ impl AppState {
             rx,
             terminal,
             snmp,
+            dhcp,
             db,
             auth,
             started_at: Instant::now(),
