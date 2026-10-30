@@ -89,6 +89,14 @@ Everything below is the initial development towards 1.0. No version has been tag
   default): SSH (password, private key, keyboard-interactive) and Telnet sessions in the browser with
   xterm.js, tabs, SSH jump hosts (ProxyJump, up to 4 hops, SSH or Telnet behind them), trust-on-first-use
   host keys, a target allowlist, session logs and audit events.
+- DHCP server tool (ADR-0012, new `wpg-dhcp` crate, `/dhcp` screen, `/api/dhcp*`, `[dhcp]` in
+  `wpg.toml`, Linux only): DHCPv4, DHCPv6 IA_NA / IA_PD and router advertisements on one test
+  interface, leases, a live activity log, and static interface addresses added by netlink.
+- SNMP MIB tree per module (its top nodes instead of 1.3.6.1), Get / GetNext / Walk straight from the
+  node details, and a tree picker with check boxes for the OID field. Walk now covers every OID in the
+  field (`/api/snmp/walk` takes `oids`), table view keeps the bindings outside the tables, and the
+  results name the requested OIDs and explain noSuchObject after a Get and GetBulk running past the
+  subtree.
 
 #### Templates
 
@@ -134,6 +142,11 @@ Everything below is the initial development towards 1.0. No version has been tag
   key, `WPG_DEPLOY_*_PASSWORD`, password files or Windows DPAPI files), `--json` summaries, documented exit
   codes, `--skip-if-current` (a deploy stamp on the host) and `--check-config`; the wizard offers to save its
   answers as an answer file with the matching cron / `schtasks` line.
+- Deploys can pin the DHCP server's interface and give it static addresses (`--dhcp-iface` /
+  `--dhcp-iface-addr`, `-DhcpIface` / `-DhcpIfaceAddr`, `dhcp_iface` / `dhcp_iface_addr` in answer files,
+  a wizard question that refuses the management interface): `WPG_DHCP__IFACE`, a netplan file and a
+  `CAP_NET_BIND_SERVICE` drop-in. The uploaded binary is made executable before it is run (scp from
+  Windows drops the execute bit).
 
 #### Documentation
 

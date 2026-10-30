@@ -681,6 +681,10 @@ function Save-Profile([string]$Path, [switch]$Automation, [string[]]$Extra = @()
         $lines += "# Reference: docs/en/src/operations/deploy.md, `"Unattended deploy`"."
     }
     foreach ($k in $cfg.Keys) { $lines += "$k=$($cfg[$k])" }
+    # Wizard answers kept outside $cfg.
+    foreach ($k in @("dhcp_iface", "dhcp_iface_addr")) {
+        if (Get-Opt $k "") { $lines += "$k=$(Get-Opt $k '')" }
+    }
     $lines += $Extra
     [System.IO.File]::WriteAllText($Path, (($lines -join "`n") + "`n"), $script:Utf8NoBom)
     if (-not $Automation) { Say "設定を保存しました: $Path (パスワードは保存していません)" "Saved the answers to $Path (no passwords)." }
@@ -1232,6 +1236,34 @@ function Start-WizardHost {
         if ($t) { $cfg.terminal = "1" } else { $cfg.terminal = "0" }
         $t = Read-YesNo "SNMP トラップ受信 (UDP 162) を有効にしますか? (対応する wpg のみ)" "Enable the SNMP trap receiver (UDP 162)? (newer wpg only)" ($cfg.snmp_trap -eq "1")
         if ($t) { $cfg.snmp_trap = "1" } else { $cfg.snmp_trap = "0" }
+        # DHCP server: pin its interface (empty = chosen on the screen), never
+        # the management one (it would hand out addresses on that LAN).
+        $mgmtIf = Get-Probe "MGMT_IFACE"
+        while ($true) {
+            $v = (Read-Text "DHCP サーバーが応答するインタフェース (空 / - = 画面で選択。対応する wpg のみ)" "Interface the DHCP server answers on (empty / - = chosen on the screen; newer wpg only)" (Get-Opt "dhcp_iface" "")) -replace '\s', ''
+            if ($v -eq "-") { $v = "" }
+            if ($v -and $v -notmatch '^[A-Za-z0-9_.:@-]+$') { Say "  インタフェース名が正しくありません。" "  Not a valid interface name."; continue }
+            if ($v -and $v -eq $mgmtIf) {
+                Say "  $v は管理用 (SSH 接続中) です。試験用のインタフェースを指定してください。" "  $v is the management interface (this SSH session); pick a test interface."
+                continue
+            }
+            $opt["dhcp_iface"] = $v
+            break
+        }
+        $prevAddr = Get-Opt "dhcp_iface_addr" ""
+        $opt["dhcp_iface_addr"] = ""
+        if ($opt["dhcp_iface"]) {
+            while ($true) {
+                $v = (Read-Text "$($opt["dhcp_iface"]) の固定 IP (address/len をカンマ区切り。例 192.168.100.1/24,2001:db8:1::1/64。空 / - = 設定しない)" "Static addresses for $($opt["dhcp_iface"]) (address/len, comma separated, e.g. 192.168.100.1/24,2001:db8:1::1/64; empty / - = none)" $prevAddr) -replace '\s', ''
+                if ($v -eq "-") { $v = "" }
+                $addrs = @($v -split "," | Where-Object { $_ })
+                if (@($addrs | Where-Object { $_ -notmatch '^[0-9A-Fa-f.:]+/[0-9]+$' }).Count -eq 0) {
+                    $opt["dhcp_iface_addr"] = ($addrs -join ",")
+                    break
+                }
+                Say "  192.168.100.1/24 のように address/len で入力してください。" "  Use address/len, e.g. 192.168.100.1/24."
+            }
+        }
     }
     return $true
 }
@@ -1589,6 +1621,7 @@ try {
         $rows = @(@("name", $name), @("host", "$($cfg.user)@$($cfg.host)"), @("ssh_port", (Get-Default "ssh_port" "22")),
             @("identity", $idv), @("binary", (Get-BinaryText)), @("bind", $cfg.bind), @("ifaces", $ifs),
             @("service", $cfg.service), @("terminal", $cfg.terminal), @("snmp_trap", $cfg.snmp_trap),
+            @("dhcp_iface", (Get-Opt "dhcp_iface" "-")), @("dhcp_iface_addr", (Get-Opt "dhcp_iface_addr" "-")),
             @("templates", (Get-Opt "templates" "1")), @("healthcheck", (Get-Opt "healthcheck" "1")), @("prefix", $script:InstallPrefix),
             @("ssh_password", $src["ssh_password"]), @("sudo_password", $src["sudo_password"]), @("admin_password", $src["admin_password"]))
         foreach ($r in $rows) { Write-Ui ("  {0,-16} {1}" -f $r[0], $r[1]) }

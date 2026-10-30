@@ -66,6 +66,8 @@ Interfaces jobs may send on (tx.allowed_ifaces):
 Numbers, comma separated (e.g. 2,3; all = no restriction) [2,3]:
 Enable the web terminal? (newer wpg only) [y/N]:
 Enable the SNMP trap receiver (UDP 162)? (newer wpg only) [y/N]: y
+Interface the DHCP server answers on (empty / - = chosen on the screen; newer wpg only): ens4
+Static addresses for ens4 (address/len, comma separated, e.g. 192.168.100.1/24,2001:db8:1::1/64; empty / - = none): 192.168.100.1/24
 sudo password (Enter = same as the SSH password):
 wpg admin password (Web UI login): ********
 Repeat it: ********
@@ -79,6 +81,7 @@ Summary
   Admin password : set
   Web terminal : off
   SNMP traps : on (UDP 162)
+  DHCP server : ens4 192.168.100.1/24
 Go ahead? [Y/n]:
 Save these answers for next time? (no passwords) [Y/n]:
 Saved the answers to C:\Users\you\AppData\Roaming\wpg\deploy.conf (no passwords).
@@ -375,7 +378,7 @@ A host's `status` is `ok`, `skipped` (already current, nothing done), `dry-run`,
 Every deploy records what it installed with which settings in `/usr/local/share/wpg/deploy.stamp` on the host (source id, settings, SHA-256 of the binary, time; no passwords). With `--skip-if-current` the scripts connect, and when all of the following match they stop without building or installing anything (exit code 0, `status` `skipped`), without even using the sudo password:
 
 - The same source id: for `source=git` the commit the branch / tag points to (resolved with `git ls-remote`), for `source=local` the commit of this checkout (plus a hash of uncommitted changes), for `binary_source=file` the file's SHA-256, for `release` the URL of the release archive.
-- The same settings (`bind`, `ifaces`, `service`, `terminal`, `snmp_trap`, `templates`, `allow_insecure`, `prefix`).
+- The same settings (`bind`, `ifaces`, `service`, `terminal`, `snmp_trap`, `dhcp_iface`, `dhcp_iface_addr`, `templates`, `allow_insecure`, `prefix`).
 - The installed binary is the recorded one (after a rollback or a manual replacement the scripts deploy again).
 - With a service: `wpg.service` runs and answers the health check.
 

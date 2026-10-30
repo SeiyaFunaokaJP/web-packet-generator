@@ -66,6 +66,8 @@ Web UI の待ち受けアドレス:ポート (0.0.0.0 = すべて) [0.0.0.0:8080
 番号をカンマ区切りで (例 2,3。all = すべて許可) [2,3]:
 Web ターミナルを有効にしますか? (対応する wpg のみ) [y/N]:
 SNMP トラップ受信 (UDP 162) を有効にしますか? (対応する wpg のみ) [y/N]: y
+DHCP サーバーが応答するインタフェース (空 / - = 画面で選択。対応する wpg のみ): ens4
+ens4 の固定 IP (address/len をカンマ区切り。例 192.168.100.1/24,2001:db8:1::1/64。空 / - = 設定しない): 192.168.100.1/24
 sudo パスワード (Enter = SSH パスワードと同じ):
 wpg の管理者パスワード (Web UI のログイン用): ********
 もう一度入力してください: ********
@@ -79,6 +81,7 @@ wpg の管理者パスワード (Web UI のログイン用): ********
   管理者パスワード : 設定する
   Web ターミナル : 無効
   SNMP トラップ受信 : 有効 (UDP 162)
+  DHCP サーバー : ens4 192.168.100.1/24
 この内容で実行しますか? [Y/n]:
 この設定を次回のために保存しますか? (パスワードは保存しません) [Y/n]:
 設定を保存しました: C:\Users\you\AppData\Roaming\wpg\deploy.conf (パスワードは保存していません)
@@ -375,7 +378,7 @@ scripts/deploy.sh --config deploy.wpg.conf --check-config              # 読み�
 デプロイのたびに、ホストの `/usr/local/share/wpg/deploy.stamp` に「何をどの設定で入れたか」(ソースの識別子、設定、バイナリの SHA-256、日時。パスワードは含みません) を記録します。`--skip-if-current` を付けると、接続して次がすべて一致するときはビルドもインストールもせずに終了します (終了コード 0、`status` は `skipped`)。sudo パスワードも使いません。
 
 - ソースの識別子が同じ: `source=git` ならブランチ / タグが指すコミット (`git ls-remote` で解決)、`source=local` ならこのチェックアウトのコミット (コミットしていない変更があればその差分のハッシュも)、`binary_source=file` ならファイルの SHA-256、`release` なら Release のファイルの URL。
-- 設定 (`bind`、`ifaces`、`service`、`terminal`、`snmp_trap`、`templates`、`allow_insecure`、`prefix`) が同じ。
+- 設定 (`bind`、`ifaces`、`service`、`terminal`、`snmp_trap`、`dhcp_iface`、`dhcp_iface_addr`、`templates`、`allow_insecure`、`prefix`) が同じ。
 - インストール済みのバイナリが記録と同じ (ロールバックや手動の置き換えがあれば再デプロイします)。
 - サービスとして入れるときは `wpg.service` が動いていて、ヘルスチェックに応答する。
 
