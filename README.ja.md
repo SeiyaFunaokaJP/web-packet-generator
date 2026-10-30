@@ -47,6 +47,14 @@ v1 の非ゴール: 本格的なキャプチャ/解析（Wireshark の代替で�
 
 ## クイックスタート
 
+動かし方は 3 通りあります。違いは [インストール方法を選ぶ](docs/ja/src/getting-started/overview.md) で比べられます。
+
+- **SSH で Linux の検証ホストへ**: `scripts/deploy.sh` (Windows では `scripts\deploy.bat` をダブルクリック) が
+  ホスト上で wpg をビルドし、サービスとして入れます ([デプロイ](docs/ja/src/operations/deploy.md))。
+- **Linux ホストの Docker で**: `WPG_PASSWORD='change me' docker compose up -d --build`
+  ([Docker で動かす](docs/ja/src/getting-started/docker.md))。
+- **ソースからビルド** (Linux / macOS / Windows): 以下の手順です。
+
 前提: [rustup](https://rustup.rs)、WASM ターゲット（`rustup target add wasm32-unknown-unknown`）、
 [trunk](https://trunkrs.dev)（`cargo install trunk --locked`）、任意で [just](https://github.com/casey/just)。
 libpcap / Npcap 送出バックエンドは任意です（`cargo build --release --features pcap`、`wpg-tx/pcap` に転送されます）。Linux では `libpcap-dev`、macOS は標準搭載、Windows では Npcap ランタイムと [Npcap SDK](https://npcap.com/#download)（`LIB` に `wpcap.lib`）が必要です。機能を有効にしなければ pcap ライブラリは不要です。不足しているものは `wpg doctor` で確認できます。
