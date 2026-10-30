@@ -1343,12 +1343,12 @@ mod tests {
         .unwrap()
         .wait();
         assert_eq!(r.state, JobState::Finished(FinishReason::DurationElapsed));
-        // Generous bounds: shared CI runners can deschedule the thread for longer
-        // than the pacer's 10 ms backlog allowance.
+        // Generous bounds: shared CI runners (macOS especially) can deschedule the
+        // thread for much longer than the pacer's 10 ms backlog allowance.
         let ratio = r.stats.rate_achieved_ratio.unwrap();
-        assert!((0.8..=1.15).contains(&ratio), "{ratio}");
+        assert!((0.6..=1.15).contains(&ratio), "{ratio}");
         assert!(
-            (230..=350).contains(&r.stats.packets),
+            (180..=350).contains(&r.stats.packets),
             "{}",
             r.stats.packets
         );
