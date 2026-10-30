@@ -7,7 +7,8 @@ use leptos::prelude::*;
 
 use super::preview::{field_at_byte, range_at_byte, reverse_apply, PreviewCtx};
 use super::state::{edit, Builder};
-use crate::i18n::tr;
+use crate::components::use_toasts;
+use crate::i18n::{tr, use_i18n};
 
 /// Row height in pixels (must match the inline row style).
 const ROW_H: f64 = 22.0;
@@ -39,6 +40,11 @@ fn overlaps(byte: usize, range: Option<(usize, usize)>) -> bool {
 pub(crate) fn HexView() -> impl IntoView {
     let builder = Builder::use_ctx();
     let pv = PreviewCtx::use_ctx();
+    let (i18n, toasts) = (use_i18n(), use_toasts());
+    // A hex edit that lands on a locked field while irregular packets are off.
+    let on_locked = Callback::new(move |field: String| {
+        toasts.error(i18n.ta("ui-bld-irr-hex-locked", &[("field", field)]));
+    });
     let scroll_top = RwSignal::new(0.0f64);
     let caret = RwSignal::new(0usize);
     // Toggles between the two nibbles of the byte under the caret.
@@ -89,7 +95,7 @@ pub(crate) fn HexView() -> impl IntoView {
                     on:mouseleave=move |_| builder.hover.set(None)
                     on:focus=move |_| { caret.set(b); nibble_hi.set(true); builder.range.set(range_at_byte(&pv.preview.get_untracked().layout, b)); }
                     on:click=move |_| select_byte(builder, pv, b)
-                    on:keydown=move |ev| hex_keydown(builder, pv, (caret, nibble_hi, overlay), b, len, &ev)
+                    on:keydown=move |ev| hex_keydown(builder, pv, (caret, nibble_hi, overlay), b, len, &ev, on_locked)
                 >
                     {format!("{val:02x}")}
                 </span>
@@ -176,6 +182,7 @@ fn hex_keydown(
     b: usize,
     len: usize,
     ev: &leptos::ev::KeyboardEvent,
+    on_locked: Callback<String>,
 ) {
     let key = ev.key();
     let mv = |to: usize| {
@@ -214,7 +221,20 @@ fn hex_keydown(
     } else {
         (old & 0xf0) | u8::try_from(digit).unwrap_or(0)
     };
-    if let Some(rev) = reverse_apply(&bytes, &p.layout, b, new_byte) {
+    let rev = reverse_apply(&bytes, &p.layout, b, new_byte);
+    if let Some(r) = &rev {
+        let locked = p
+            .layout
+            .get(r.layer)
+            .and_then(|l| super::proto::def(&l.protocol))
+            .and_then(|d| d.field(&r.field))
+            .is_some_and(super::irregular::is_locked);
+        if locked && !builder.allow_irregular.get_untracked() {
+            on_locked.run(r.field.clone());
+            return;
+        }
+    }
+    if let Some(rev) = rev {
         overlay.update(|o| {
             o.retain(|(i, _)| *i != b);
             o.push((b, new_byte));

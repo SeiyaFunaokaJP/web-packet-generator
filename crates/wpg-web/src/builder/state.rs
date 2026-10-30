@@ -200,6 +200,9 @@ pub(crate) struct Builder {
     pub(crate) auto_recompute: RwSignal<bool>,
     /// Palette favourites (protocol ids).
     pub(crate) favorites: RwSignal<Vec<String>>,
+    /// "Allow irregular packets": unlocks computed fields and turns out-of-spec
+    /// findings from errors into warnings (see [`super::irregular`]).
+    pub(crate) allow_irregular: RwSignal<bool>,
 }
 
 impl Builder {
@@ -216,6 +219,8 @@ impl Builder {
             .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
             .unwrap_or_default();
         let sel = (!template.layers.is_empty()).then_some(0);
+        let allow_irregular =
+            crate::prefs::load(super::irregular::PREF_KEY).is_some_and(|v| v == "1");
         Self {
             template: RwSignal::new(template),
             history: RwSignal::new(History::default()),
@@ -228,7 +233,14 @@ impl Builder {
             index: RwSignal::new(0),
             auto_recompute: RwSignal::new(true),
             favorites: RwSignal::new(favorites),
+            allow_irregular: RwSignal::new(allow_irregular),
         }
+    }
+
+    /// Switches "allow irregular packets" and remembers it for this browser.
+    pub(crate) fn set_irregular(self, on: bool) {
+        self.allow_irregular.set(on);
+        crate::prefs::store(super::irregular::PREF_KEY, if on { "1" } else { "0" });
     }
 
     /// The [`Builder`] context.

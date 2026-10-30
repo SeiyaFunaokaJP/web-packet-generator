@@ -48,6 +48,43 @@ test('generator, stream estimate and send time', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Tree' }).getByRole('button', { name: /^src = 10\.0\.0\.2 / })).toBeVisible();
 });
 
+test('fields are prefilled, quick stacks fill an empty builder', async ({ page }) => {
+  await page.getByRole('region', { name: 'Layers' }).getByRole('button', { name: 'Ethernet II / IPv4 / UDP / Payload' }).click();
+  await expect(page.getByRole('region', { name: 'Layers' }).getByRole('listitem')).toHaveCount(4);
+
+  // Ethernet II is selected: its addresses are editable inputs holding the defaults.
+  const fields = page.getByRole('region', { name: 'Field editor' });
+  const dst = fields.getByRole('group', { name: 'dst' });
+  await expect(dst.getByRole('textbox')).toHaveValue('ff:ff:ff:ff:ff:ff');
+  await dst.getByRole('textbox').fill('00:11:22:33:44:55');
+  await expect(page.getByRole('region', { name: 'Tree' }).getByRole('button', { name: /^dst = 00:11:22:33:44:55/ })).toBeVisible();
+  await dst.getByRole('button', { name: 'Back to default' }).click();
+  await expect(dst.getByRole('textbox')).toHaveValue('ff:ff:ff:ff:ff:ff');
+});
+
+test('strict by default; "Allow irregular" unlocks computed fields', async ({ page }) => {
+  await addLayers(page, ['ethernet2', 'ipv4', 'udp', 'payload']);
+  await page.getByRole('region', { name: 'Layers' }).getByRole('button', { name: /^2 IPv4/ }).click();
+  const fields = page.getByRole('region', { name: 'Field editor' });
+  const csum = fields.getByRole('group', { name: 'header_checksum' });
+  await expect(csum.getByRole('button', { name: 'Override' })).toHaveCount(0);
+
+  const irregular = page.getByRole('switch', { name: 'Allow irregular' });
+  await irregular.click();
+  await csum.getByRole('button', { name: 'Override' }).click();
+  await csum.getByRole('textbox').fill('0xbeef');
+  await expect(csum).toContainText('differs from the computed checksum');
+
+  // Back in strict mode the same packet is an error and cannot be saved.
+  await irregular.click();
+  await expect(page.getByRole('status').filter({ hasText: '1 out of spec' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Template name' }).fill(unique('e2e-bad-csum'));
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('1 out-of-spec values.')).toBeVisible();
+  await csum.getByRole('button', { name: 'Back to computed' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'out of spec' })).toHaveCount(0);
+});
+
 test('undo and redo layer edits', async ({ page }) => {
   await addLayers(page, ['ethernet2', 'ipv4']);
   const layers = page.getByRole('region', { name: 'Layers' }).getByRole('listitem');

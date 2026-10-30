@@ -845,7 +845,6 @@ ui-bld-removed = 계층을 제거했습니다.
 ui-bld-fields = 필드 편집기
 ui-bld-select-layer = 필드를 편집할 계층을 선택하십시오.
 ui-bld-auto = Auto
-ui-bld-manual = Manual
 ui-bld-gen = Gen
 ui-bld-computed = 빌드 시 계산
 ui-bld-nsap-parts = AFI { $afi } · 영역 { $area } · 시스템 ID { $sys } · NSEL { $nsel }
@@ -893,6 +892,26 @@ ui-bld-help-redo = 다시 실행
 ui-bld-help-hex = 캐럿 위치 바이트에 16진수 입력
 ui-bld-help-caret = 16진 캐럿 이동
 ui-bld-suggest-prev = 위에 계층 추가
+ui-bld-irr-allow = 비정형 허용
+ui-bld-irr-hint = 끔(기본값): 프로토콜 정의를 따르는 패킷만 만듭니다. 길이·체크섬 같은 자동 계산 필드는 고정되고, 규격을 벗어난 값은 오류가 되어 저장할 수 없습니다. 켬: 자동 계산 필드를 덮어쓸 수 있고 규격 위반은 경고로만 표시됩니다.
+ui-bld-irr-count = 규격 외 { $count }건
+ui-bld-irr-blocked = 규격을 벗어난 값이 { $count }건 있습니다. 수정하거나 '비정형 허용'을 켜세요.
+ui-bld-irr-auto-on = 규격을 벗어난 값이 있는 템플릿이므로 '비정형 허용'을 켰습니다.
+ui-bld-irr-auto-override = { $field }은(는) 자동 계산 필드인데 수동 값 또는 생성기로 덮어써져 있습니다.
+ui-bld-irr-bad-fcs = FCS(CRC-32)를 일부러 잘못된 값으로 했습니다 (packet.fcs: bad).
+ui-bld-irr-hex-locked = { $field }은(는) 자동 계산 필드입니다. Hex 보기에서 바꾸려면 '비정형 허용'을 켜세요.
+ui-bld-tag-auto = 자동 계산
+ui-bld-tag-default = 기본값 (입력하면 수동 값이 됩니다)
+ui-bld-tag-manual = 수동 값
+ui-bld-tag-gen = 생성 (패킷마다 변함)
+ui-bld-tag-locked = 비정형 허용 시에만 덮어쓰기 가능
+ui-bld-to-auto = 자동 계산으로 되돌리기
+ui-bld-to-default = 기본값으로 되돌리기
+ui-bld-override = 덮어쓰기
+ui-bld-gen-hint = 범위·목록·카운터 등으로 패킷마다 값을 바꿉니다
+ui-bld-json-error = 올바른 JSON이 아닙니다: { $error }
+ui-bld-enum-other = 기타 (숫자)…
+ui-bld-quick-start = 자주 쓰는 구성으로 시작
 
 # --- P1 이중화 / 멀티캐스트 프로토콜 필드 설명 ---
 vrrp-version = VRRP 버전(2 = RFC 3768, 3 = RFC 5798).

@@ -845,7 +845,6 @@ ui-bld-removed = Couche supprimée.
 ui-bld-fields = Éditeur de champs
 ui-bld-select-layer = Sélectionnez une couche pour modifier ses champs.
 ui-bld-auto = Auto
-ui-bld-manual = Manuel
 ui-bld-gen = Gén.
 ui-bld-computed = calculé à la construction
 ui-bld-nsap-parts = AFI { $afi } · zone { $area } · ID système { $sys } · NSEL { $nsel }
@@ -893,6 +892,26 @@ ui-bld-help-redo = Rétablir
 ui-bld-help-hex = Saisir de l'hexadécimal sur l'octet du curseur
 ui-bld-help-caret = Déplacer le curseur hexadécimal
 ui-bld-suggest-prev = Ajouter une couche au-dessus
+ui-bld-irr-allow = Autoriser l’irrégulier
+ui-bld-irr-hint = Désactivé (par défaut) : uniquement des paquets conformes aux définitions. Les champs calculés comme les longueurs et sommes de contrôle restent verrouillés et les valeurs hors spécification sont des erreurs qui empêchent l’enregistrement. Activé : les champs calculés peuvent être remplacés et les écarts ne sont que des avertissements.
+ui-bld-irr-count = { $count } hors spécification
+ui-bld-irr-blocked = { $count } valeurs hors spécification. Corrigez-les ou activez « Autoriser l’irrégulier ».
+ui-bld-irr-auto-on = Ce modèle contient des valeurs hors spécification ; « Autoriser l’irrégulier » a été activé.
+ui-bld-irr-auto-override = { $field } est calculé mais remplacé par une valeur manuelle ou un générateur.
+ui-bld-irr-bad-fcs = La FCS (CRC-32) est volontairement fausse (packet.fcs: bad).
+ui-bld-irr-hex-locked = { $field } est calculé. Activez « Autoriser l’irrégulier » pour le modifier dans la vue hex.
+ui-bld-tag-auto = Calculé
+ui-bld-tag-default = Par défaut (saisir pour définir une valeur manuelle)
+ui-bld-tag-manual = Valeur manuelle
+ui-bld-tag-gen = Généré (varie par paquet)
+ui-bld-tag-locked = modifiable seulement en mode irrégulier
+ui-bld-to-auto = Revenir au calcul
+ui-bld-to-default = Revenir à la valeur par défaut
+ui-bld-override = Remplacer
+ui-bld-gen-hint = Faire varier la valeur par paquet : plage, liste, compteur…
+ui-bld-json-error = JSON invalide : { $error }
+ui-bld-enum-other = Autre (nombre)…
+ui-bld-quick-start = Partir d’une pile courante
 
 # --- P1 : descriptions des champs des protocoles de redondance / multicast ---
 vrrp-version = Version VRRP (2 = RFC 3768, 3 = RFC 5798).
