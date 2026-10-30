@@ -845,7 +845,6 @@ ui-bld-removed = Schicht entfernt.
 ui-bld-fields = Feldeditor
 ui-bld-select-layer = Wählen Sie eine Schicht, um ihre Felder zu bearbeiten.
 ui-bld-auto = Auto
-ui-bld-manual = Manual
 ui-bld-gen = Gen
 ui-bld-computed = beim Erstellen berechnet
 ui-bld-nsap-parts = AFI { $afi } · Area { $area } · System-ID { $sys } · NSEL { $nsel }
@@ -893,6 +892,26 @@ ui-bld-help-redo = Wiederholen
 ui-bld-help-hex = Hex über das Byte am Cursor tippen
 ui-bld-help-caret = Hex-Cursor bewegen
 ui-bld-suggest-prev = Schicht darüber hinzufügen
+ui-bld-irr-allow = Irreguläre erlauben
+ui-bld-irr-hint = Aus (Standard): nur Pakete gemäß den Protokolldefinitionen. Berechnete Felder wie Längen und Prüfsummen bleiben gesperrt, Werte außerhalb der Spezifikation sind Fehler und verhindern das Speichern. An: berechnete Felder können überschrieben werden, Abweichungen sind nur Warnungen.
+ui-bld-irr-count = { $count } außerhalb der Spezifikation
+ui-bld-irr-blocked = { $count } Werte außerhalb der Spezifikation. Korrigieren Sie sie oder aktivieren Sie „Irreguläre erlauben“.
+ui-bld-irr-auto-on = Diese Vorlage enthält Werte außerhalb der Spezifikation, daher wurde „Irreguläre erlauben“ aktiviert.
+ui-bld-irr-auto-override = { $field } wird berechnet, ist aber durch einen manuellen Wert oder Generator überschrieben.
+ui-bld-irr-bad-fcs = Die FCS (CRC-32) ist absichtlich falsch (packet.fcs: bad).
+ui-bld-irr-hex-locked = { $field } wird berechnet. Aktivieren Sie „Irreguläre erlauben“, um es in der Hex-Ansicht zu ändern.
+ui-bld-tag-auto = Berechnet
+ui-bld-tag-default = Standardwert (Eingabe setzt einen manuellen Wert)
+ui-bld-tag-manual = Manueller Wert
+ui-bld-tag-gen = Generiert (je Paket anders)
+ui-bld-tag-locked = nur mit „Irreguläre erlauben“ überschreibbar
+ui-bld-to-auto = Zurück zu berechnet
+ui-bld-to-default = Zurück zum Standardwert
+ui-bld-override = Überschreiben
+ui-bld-gen-hint = Wert je Paket variieren: Bereich, Liste, Zähler …
+ui-bld-json-error = Kein gültiges JSON: { $error }
+ui-bld-enum-other = Andere (Zahl) …
+ui-bld-quick-start = Mit einem gängigen Stapel beginnen
 
 # --- P1 Beschreibungen der Redundanz-/Multicast-Protokollfelder ---
 vrrp-version = VRRP-Version (2 = RFC 3768, 3 = RFC 5798).

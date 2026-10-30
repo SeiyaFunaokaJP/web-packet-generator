@@ -73,8 +73,13 @@ Everything below is the initial development towards 1.0. No version has been tag
 - Playwright end-to-end tests of the UI, including smoke tests of the SNMP, terminal and receive screens (M4, M9, M12).
 - Field descriptions of the P0 protocols (Ethernet II, 802.3, LLC, SNAP, 802.1Q / 802.1ad, IPv4, IPv6 and
   its extension headers, ICMPv4 / ICMPv6, NDP, TCP, UDP, payload) in all eight languages; the packet
-  builder shows every field's description as a tooltip on the field name, and the generated protocol
+  builder shows every field's description under the field name, and the generated protocol
   reference lists them (M11).
+- Packet builder is strict by default: computed fields (lengths, checksums, counts, padding) stay locked
+  and out-of-spec findings are errors that block Save / New job; an "Allow irregular" switch unlocks
+  them for malformed test traffic (and turns on by itself for templates that are already out of spec).
+  Every field shows an input prefilled with its default, enums get a picker, the field editor takes the
+  widest column, and an empty builder offers common stacks (Ethernet / IPv4 / UDP, ...).
 - UI, CLI, API and error messages in Simplified Chinese, Traditional Chinese, Korean, German, French and
   Spanish besides Japanese and English, picked from the browser language, `Accept-Language` or `LANG`
   (Chinese by script and region), with a language menu in the header; the manual and the bundled

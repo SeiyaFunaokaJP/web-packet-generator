@@ -845,7 +845,6 @@ ui-bld-removed = Layer removed.
 ui-bld-fields = Field editor
 ui-bld-select-layer = Select a layer to edit its fields.
 ui-bld-auto = Auto
-ui-bld-manual = Manual
 ui-bld-gen = Gen
 ui-bld-computed = computed on build
 ui-bld-nsap-parts = AFI { $afi } · area { $area } · system ID { $sys } · NSEL { $nsel }
@@ -893,6 +892,26 @@ ui-bld-help-redo = Redo
 ui-bld-help-hex = Type hex over the caret byte
 ui-bld-help-caret = Move the hex caret
 ui-bld-suggest-prev = Add layer above
+ui-bld-irr-allow = Allow irregular
+ui-bld-irr-hint = Off (the default): only packets that follow the protocol definitions. Computed fields such as lengths and checksums stay locked, and out-of-spec values are errors that block saving. On: computed fields can be overridden and out-of-spec values are only warnings.
+ui-bld-irr-count = { $count } out of spec
+ui-bld-irr-blocked = { $count } out-of-spec values. Fix them or turn on “Allow irregular”.
+ui-bld-irr-auto-on = This template has out-of-spec values, so “Allow irregular” was turned on.
+ui-bld-irr-auto-override = { $field } is computed but overridden by a manual value or a generator.
+ui-bld-irr-bad-fcs = The FCS (CRC-32) is deliberately wrong (packet.fcs: bad).
+ui-bld-irr-hex-locked = { $field } is computed. Turn on “Allow irregular” to change it in the hex view.
+ui-bld-tag-auto = Computed
+ui-bld-tag-default = Default (type to set a manual value)
+ui-bld-tag-manual = Manual value
+ui-bld-tag-gen = Generated (varies per packet)
+ui-bld-tag-locked = override only with irregular allowed
+ui-bld-to-auto = Back to computed
+ui-bld-to-default = Back to default
+ui-bld-override = Override
+ui-bld-gen-hint = Vary the value per packet with a range, list, counter…
+ui-bld-json-error = Not valid JSON: { $error }
+ui-bld-enum-other = Other (number)…
+ui-bld-quick-start = Start from a common stack
 
 # --- P1 redundancy / multicast protocol field descriptions ---
 vrrp-version = VRRP version (2 = RFC 3768, 3 = RFC 5798).

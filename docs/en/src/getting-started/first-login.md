@@ -24,7 +24,9 @@ While no password exists wpg accepts connections from the local machine only and
 After logging in you land on the dashboard: interface state, running jobs and recent statistics. Then:
 
 1. **Templates**: the bundled library (`examples`, `protocols`, `scenarios`, `malformed`) is listed here, searchable by tag (`protocol:ipv4`, `layer:l3`, `scenario`, `malformed`). Open one, or duplicate it to make your own.
-2. **Builder**: stack layers, edit fields (Auto/Manual, generators) and watch the hex dump and field tree update.
+2. **Builder**: stack layers, edit fields (Auto/Manual, generators) and watch the hex dump and field tree update. An empty builder offers common stacks such as “Ethernet II / IPv4 / UDP”, and every field shows an input prefilled with its default (MAC address, IP address, ...). Typing makes it a manual value; ↺ goes back to the default.
+   - By default the builder only makes packets that follow the protocol definitions. Computed fields such as lengths and checksums stay locked, and out-of-spec values (a length or checksum that does not match, a value outside its constraints, ...) are shown as errors under the field and in the toolbar, and block saving and creating a job.
+   - For malformed test traffic, turn on **Allow irregular** in the toolbar: computed fields get an “Override” button and out-of-spec values are only warnings. The switch is remembered per browser and turns on by itself when you open a template that is already out of spec (such as the `malformed` ones).
 3. **Jobs**: pick templates, an interface, a rate and a count, and start. A dry run writes a pcapng instead of sending.
 4. **Settings**: language (Japanese, English, Simplified Chinese, Traditional Chinese, Korean, German, French, Spanish), theme, template library paths.
 

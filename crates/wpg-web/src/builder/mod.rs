@@ -11,12 +11,14 @@
 //! | [`tree`] | Bottom: field tree from the built layout |
 //! | [`preview`] | In-browser build (`wpg-core` WASM), cross-checked against `POST /api/render` |
 //! | [`proto`] | Catalog / binding helpers |
+//! | [`irregular`] | "Allow irregular packets" switch: strict by default, out-of-spec findings |
 //!
 //! Routes: `/builder` (new / restored draft), `/builder?template=<id>` (open).
 
 mod dnd;
 mod fields;
 mod hex;
+mod irregular;
 mod palette;
 pub(crate) mod preview;
 pub(crate) mod proto;
@@ -36,11 +38,36 @@ use crate::i18n::{tr, use_i18n};
 use dnd::{DndAnnounce, DragCtx};
 use fields::{FieldEditor, SendEstimate};
 use hex::HexView;
+use irregular::Issue;
 use palette::Palette;
 use preview::{build_preview, PreviewCtx};
 use stack::Stack;
 use state::{template_from_value, template_to_value, Builder};
 use tree::TreeView;
+
+/// Out-of-spec findings of the current template and its last build (context).
+#[derive(Clone, Copy)]
+pub(crate) struct Issues(pub(crate) Memo<Vec<Issue>>);
+
+impl Issues {
+    pub(crate) fn use_ctx() -> Issues {
+        expect_context::<Issues>()
+    }
+}
+
+/// Turns "allow irregular" on when `template` (just opened or restored) is already
+/// out of spec, so opening a malformed-packet template does not flag it as broken.
+fn allow_irregular_if_needed(builder: Builder, template: &wpg_template::Template) -> bool {
+    if builder.allow_irregular.get_untracked() || template.layers.is_empty() {
+        return false;
+    }
+    let found = irregular::issues(template, &build_preview(template, 0));
+    if found.is_empty() {
+        return false;
+    }
+    builder.set_irregular(true);
+    true
+}
 
 /// `/builder`.
 #[component]
@@ -56,6 +83,18 @@ pub(crate) fn BuilderPage() -> impl IntoView {
     provide_context(builder);
     provide_context(dnd);
     provide_context(pv);
+    let issues = Memo::new(move |_| {
+        builder
+            .template
+            .with(|t| pv.preview.with(|p| irregular::issues(t, p)))
+    });
+    provide_context(Issues(issues));
+    if builder
+        .template
+        .with_untracked(|t| allow_irregular_if_needed(builder, t))
+    {
+        toasts.ok(i18n.t("ui-bld-irr-auto-on"));
+    }
 
     // Load from the server when opening ?template=<id> and no local draft was restored.
     if let Some(id) = id.clone() {
@@ -64,6 +103,9 @@ pub(crate) fn BuilderPage() -> impl IntoView {
                 match crate::api::template(&id).await {
                     Ok(d) => {
                         if let Ok(t) = template_from_value(&d.template) {
+                            if allow_irregular_if_needed(builder, &t) {
+                                toasts.ok(i18n.t("ui-bld-irr-auto-on"));
+                            }
                             builder.replace(t, Some(id));
                         }
                     }
@@ -145,14 +187,14 @@ pub(crate) fn BuilderPage() -> impl IntoView {
         <div class="flex min-h-0 flex-col gap-3">
             <Toolbar recompute=recompute />
             <DndAnnounce />
-            <div class="grid min-h-0 gap-3 lg:grid-cols-[14rem_minmax(0,1fr)_20rem]" style="height:min(62vh,40rem)">
+            <div class="grid min-h-0 gap-3 lg:grid-cols-[13rem_15rem_minmax(0,1fr)]" style="height:min(78vh,56rem)">
                 <div class="min-h-0 rounded-lg border border-slate-200 bg-slate-50 p-2 max-lg:hidden dark:border-slate-800 dark:bg-slate-900/40">
                     <Palette />
                 </div>
                 <div class="min-h-0 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                     <Stack />
                 </div>
-                <div class="flex min-h-0 flex-col rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                <div class="@container flex min-h-0 flex-col rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                     <div class="min-h-0 flex-1">
                         <FieldEditor />
                     </div>
@@ -180,7 +222,19 @@ fn Toolbar(recompute: RwSignal<u32>) -> impl IntoView {
     let navigate = use_navigate();
     let builder = Builder::use_ctx();
     let pv = PreviewCtx::use_ctx();
+    let issues = Issues::use_ctx().0;
     let help_open = RwSignal::new(false);
+    // In strict mode an out-of-spec packet cannot be saved or sent.
+    let blocked = move || {
+        let n = issues.with_untracked(Vec::len);
+        let strict = !builder.allow_irregular.get_untracked();
+        if strict && n > 0 {
+            toasts.error(i18n.ta("ui-bld-irr-blocked", &[("count", n.to_string())]));
+            true
+        } else {
+            false
+        }
+    };
     let lint_open = RwSignal::new(None::<Vec<crate::api::LintIssue>>);
     let busy = RwSignal::new(false);
 
@@ -197,6 +251,9 @@ fn Toolbar(recompute: RwSignal<u32>) -> impl IntoView {
             .with_untracked(|t| t.meta.name.trim().is_empty())
         {
             toasts.error(i18n.t("ui-bld-need-name"));
+            return;
+        }
+        if blocked() {
             return;
         }
         busy.set(true);
@@ -248,6 +305,7 @@ fn Toolbar(recompute: RwSignal<u32>) -> impl IntoView {
     };
 
     let new_job = move || match builder.server_id.get_untracked() {
+        _ if blocked() => {}
         Some(id) => navigate(
             &format!("/jobs?new={}", crate::api::enc(&id)),
             NavigateOptions::default(),
@@ -287,6 +345,38 @@ fn Toolbar(recompute: RwSignal<u32>) -> impl IntoView {
         }
     };
 
+    // "Allow irregular" switch with the count of out-of-spec findings.
+    let irregular_switch = move || {
+        let on = builder.allow_irregular.get();
+        let n = issues.with(Vec::len);
+        let (track, knob) = if on {
+            ("bg-amber-500", "translate-x-4")
+        } else {
+            ("bg-slate-300 dark:bg-slate-600", "translate-x-0")
+        };
+        let badge = (n > 0).then(|| {
+            let cls = if on {
+                "rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+            } else {
+                "rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800 dark:bg-rose-500/15 dark:text-rose-300"
+            };
+            view! { <span class=cls role="status">{i18n.ta("ui-bld-irr-count", &[("count", n.to_string())])}</span> }
+        });
+        view! {
+            <button type="button" role="switch" aria-checked=on.to_string()
+                class="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+                title=i18n.t("ui-bld-irr-hint")
+                on:click=move |_| builder.set_irregular(!on)
+            >
+                <span class=format!("relative inline-block h-4 w-8 rounded-full transition-colors {track}")>
+                    <span class=format!("absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform {knob}")></span>
+                </span>
+                {tr("ui-bld-irr-allow")}
+            </button>
+            {badge}
+        }
+    };
+
     let can_undo = move || builder.history.with(state::History::can_undo);
     let can_redo = move || builder.history.with(state::History::can_redo);
 
@@ -310,6 +400,8 @@ fn Toolbar(recompute: RwSignal<u32>) -> impl IntoView {
                     <Icon name=IconName::Refresh class="h-4 w-4" />
                 </button>
             </div>
+
+            <div class="flex items-center gap-1">{irregular_switch}</div>
 
             <div class="ml-auto flex flex-wrap items-center gap-2">
                 {parity_badge}

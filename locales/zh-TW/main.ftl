@@ -845,7 +845,6 @@ ui-bld-removed = 已移除層。
 ui-bld-fields = 欄位編輯器
 ui-bld-select-layer = 選擇一個層以編輯其欄位。
 ui-bld-auto = 自動
-ui-bld-manual = 手動
 ui-bld-gen = 產生器
 ui-bld-computed = 建構時計算
 ui-bld-nsap-parts = AFI { $afi } · 區域 { $area } · 系統 ID { $sys } · NSEL { $nsel }
@@ -893,6 +892,26 @@ ui-bld-help-redo = 重做
 ui-bld-help-hex = 在游標所在位元組輸入十六進位值
 ui-bld-help-caret = 移動十六進位游標
 ui-bld-suggest-prev = 在上方新增層
+ui-bld-irr-allow = 允許不規則
+ui-bld-irr-hint = 關閉（預設）：只能建立符合協定定義的封包。長度、檢查碼等自動計算欄位會鎖定，超出規範的值視為錯誤，無法儲存。開啟：可覆寫自動計算欄位，超出規範的值僅作為警告。
+ui-bld-irr-count = { $count } 處不符合規範
+ui-bld-irr-blocked = 有 { $count } 個值不符合規範。請修正，或開啟「允許不規則」。
+ui-bld-irr-auto-on = 此範本含有不符合規範的值，已開啟「允許不規則」。
+ui-bld-irr-auto-override = { $field } 是自動計算欄位，但被手動值或產生器覆寫。
+ui-bld-irr-bad-fcs = FCS (CRC-32) 被刻意設為錯誤值 (packet.fcs: bad)。
+ui-bld-irr-hex-locked = { $field } 是自動計算欄位。要在 Hex 檢視中修改，請開啟「允許不規則」。
+ui-bld-tag-auto = 自動計算
+ui-bld-tag-default = 預設值（輸入後成為手動值）
+ui-bld-tag-manual = 手動值
+ui-bld-tag-gen = 產生（每個封包不同）
+ui-bld-tag-locked = 僅在允許不規則時可覆寫
+ui-bld-to-auto = 還原為自動計算
+ui-bld-to-default = 還原為預設值
+ui-bld-override = 覆寫
+ui-bld-gen-hint = 以範圍、清單、計數器等讓每個封包取不同的值
+ui-bld-json-error = 不是有效的 JSON：{ $error }
+ui-bld-enum-other = 其他（數值）…
+ui-bld-quick-start = 從常用結構開始
 
 # --- P1 備援 / 多點傳播協定欄位說明 ---
 vrrp-version = VRRP 版本 (2 = RFC 3768，3 = RFC 5798)。

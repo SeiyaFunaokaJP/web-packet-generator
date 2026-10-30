@@ -1,19 +1,22 @@
-//! Per-field editor (spec §2.5): one row per `FieldType` with an Auto / Manual
-//! toggle and a generator editor. Manual values are parsed live through
-//! `wpg_core::notation` (out-of-spec values are accepted so malformed packets can be
-//! built, with the constraint diagnostics shown inline). Generators show a live
-//! "expands to N" estimate from the stream cardinality; [`SendEstimate`] turns it
-//! into a send time at the template's `tx.rate`.
+//! Per-field editor (spec §2.5): one row per field with a value editor for its
+//! `FieldType`, prefilled with the value the packet is built with, and a generator
+//! editor. Manual values are parsed live through `wpg_core::notation`. Out-of-spec
+//! findings ([`super::irregular`]) are shown on the row: as errors in the default
+//! strict mode, as warnings once irregular packets are allowed. Generators show a
+//! live "expands to N" estimate from the stream cardinality; [`SendEstimate`] turns
+//! it into a send time at the template's `tx.rate`.
 
 use leptos::prelude::*;
 use wpg_core::notation::{format_value, nsap_parts, parse_generator, parse_nsap};
-use wpg_core::{FieldDef, FieldType, Generator, Length};
+use wpg_core::{FieldDef, FieldType, FieldValue, Generator, Length};
 use wpg_template::{parse_text, FieldInput, GeneratorSpec};
 
+use super::irregular::{self, Issue};
 use super::preview::{format_count, format_size, gen_cardinality, PreviewCtx};
 use super::proto;
 use super::rate::{estimate_secs, format_secs, EstRate};
 use super::state::{edit, Builder};
+use super::Issues;
 use crate::components::{INPUT, INPUT_INVALID, LABEL};
 use crate::i18n::{tr, use_i18n};
 
@@ -86,7 +89,7 @@ pub(crate) fn FieldEditor() -> impl IntoView {
         view! {
             <section aria-label=tr("ui-bld-fields") class="flex h-full min-h-0 flex-col">
                 <div class="mb-2 flex items-baseline justify-between gap-2">
-                    <h2 class="truncate text-sm font-semibold">{name} <span class="font-mono text-xs text-slate-400">{proto_id.clone()}</span></h2>
+                    <h2 class="truncate text-sm font-semibold">{name} <span class="ml-1 font-mono text-xs text-slate-400">{proto_id.clone()}</span></h2>
                     <StreamEstimate />
                 </div>
                 <div class="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
@@ -172,15 +175,25 @@ pub(crate) fn SendEstimate() -> impl IntoView {
     }
 }
 
-/// One field row (mode toggle + editor).
+/// One field row: name + description on the left, the value on the right.
+///
+/// Ordinary fields always show an input prefilled with the value the packet is
+/// built with (the definition default until edited); typing makes it Manual and
+/// ↺ resets it. Computed fields show their Auto value; the locked ones
+/// ([`irregular::is_locked`]) can only be overridden in irregular mode.
 fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
+    let i18n = use_i18n();
+    let issues = Issues::use_ctx().0;
     let name = fd.name.clone();
     let ty = fd.ty.clone();
-    let has_auto = fd.auto.is_some();
+    let computed = irregular::is_computed(fd);
+    let locked = irregular::is_locked(fd);
     let can_gen = can_generate(&ty);
+    let allow = builder.allow_irregular;
+    // May the user change this field right now?
+    let editable = move || !locked || allow.get();
 
     let n_mode = name.clone();
-    let ty_pad = matches!(ty, FieldType::Padding { .. });
     let mode = Memo::new(move |_| {
         builder.template.with(|t| {
             let Some(l) = t.layers.get(layer) else {
@@ -188,16 +201,21 @@ fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
             };
             if l.generators.contains_key(&n_mode) {
                 Mode::Gen
-            } else if let Some(inp) = l.fields.get(&n_mode) {
-                if inp.is_auto() {
-                    Mode::Auto
-                } else {
-                    Mode::Manual
-                }
+            } else if l.fields.get(&n_mode).is_some_and(|inp| !inp.is_auto()) {
+                Mode::Manual
             } else {
-                let _ = (has_auto, ty_pad);
                 Mode::Auto
             }
+        })
+    });
+
+    let n_issue = name.clone();
+    let row_issues = Memo::new(move |_| {
+        issues.with(|v| {
+            v.iter()
+                .filter(|i| i.is_for(layer, &n_issue))
+                .cloned()
+                .collect::<Vec<_>>()
         })
     });
 
@@ -218,9 +236,9 @@ fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
             edit::set_field(t, layer, &n, FieldInput::Str(seed));
         });
     };
-    let n_auto = name.clone();
-    let to_auto = move |_| {
-        let n = n_auto.clone();
+    let n_reset = name.clone();
+    let reset = move |_| {
+        let n = n_reset.clone();
         builder.edit(false, move |t| {
             edit::clear_generator(t, layer, &n);
             edit::clear_field(t, layer, &n);
@@ -250,61 +268,140 @@ fn field_row(builder: Builder, layer: usize, fd: &FieldDef) -> impl IntoView {
         builder.sel_field.set(Some(n_sel.clone()));
         builder.range.set(range);
     };
+    let n_cur = name.clone();
+    let selected = move || {
+        builder
+            .sel_field
+            .with(|f| f.as_deref() == Some(n_cur.as_str()))
+    };
+
+    let strict_error = move || !allow.get() && row_issues.with(|v| !v.is_empty());
+    let row_class = move || {
+        let base = "rounded-md border p-2.5 transition-colors";
+        if strict_error() {
+            format!(
+                "{base} border-rose-300 bg-rose-50/60 dark:border-rose-500/50 dark:bg-rose-500/10"
+            )
+        } else if selected() {
+            format!("{base} border-sky-400 bg-sky-50/50 dark:border-sky-500/60 dark:bg-sky-500/5")
+        } else {
+            format!("{base} border-slate-200 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700")
+        }
+    };
 
     let tybadge = short_type(&ty);
-    let btn = "rounded px-1.5 py-0.5 text-[11px] font-medium";
-    let active = "bg-sky-600 text-white";
-    let idle =
-        "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300";
     let name_h = name.clone();
     let name_group = name.clone();
-    let fd_manual = fd.clone();
+    let fd_value = fd.clone();
     let fd_gen = fd.clone();
     let name_auto = name.clone();
-    // Localised field description (`desc = "..."` in the protocol definition) as a
-    // tooltip on the field name; `None` for fields without one.
-    let i18n = use_i18n();
+    // Localised field description (`desc = "..."` in the protocol definition),
+    // shown under the name; `None` for fields without one.
     let desc_key = fd.description_key.clone();
-    let has_desc = desc_key.is_some();
     let description = move || desc_key.as_deref().map(|k| i18n.t(k));
-    let name_class = if has_desc {
-        "min-w-0 flex-1 truncate text-sm font-medium underline decoration-dotted decoration-slate-400 underline-offset-2 cursor-help"
-    } else {
-        "min-w-0 flex-1 truncate text-sm font-medium"
+
+    // Value area for the current mode. An override left over from irregular mode
+    // stays visible (with its error) but read-only until it is reset or the mode is
+    // switched back on.
+    let body = move || match mode.get() {
+        Mode::Gen => generator_editor(builder, layer, &fd_gen),
+        Mode::Auto if computed => auto_view(layer, name_auto.clone()).into_any(),
+        Mode::Auto | Mode::Manual => value_editor(builder, layer, &fd_value, !editable()),
+    };
+
+    // Where the value comes from.
+    let tag = move || {
+        let (key, cls) = match mode.get() {
+            Mode::Auto if computed => ("ui-bld-tag-auto", "text-sky-700 dark:text-sky-400"),
+            Mode::Auto => ("ui-bld-tag-default", "text-slate-400"),
+            Mode::Manual => (
+                "ui-bld-tag-manual",
+                "text-emerald-700 dark:text-emerald-400",
+            ),
+            Mode::Gen => ("ui-bld-tag-gen", "text-violet-700 dark:text-violet-400"),
+        };
+        let lock = (mode.get() == Mode::Auto && locked && !allow.get()).then(|| {
+            view! { <span class="text-slate-400">{" · "}{tr("ui-bld-tag-locked")}</span> }
+        });
+        view! { <p class=format!("text-[11px] {cls}")>{move || i18n.t(key)}{lock}</p> }
+    };
+
+    let action = "inline-flex h-8 items-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-xs font-medium text-slate-600 hover:border-sky-500 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300";
+    let actions = move || {
+        let m = mode.get();
+        let edit_ok = editable();
+        let reset_key = if computed {
+            "ui-bld-to-auto"
+        } else {
+            "ui-bld-to-default"
+        };
+        view! {
+            {(m != Mode::Auto).then(|| view! {
+                <button type="button" class=action title=move || i18n.t(reset_key) aria-label=move || i18n.t(reset_key) on:click=reset.clone()>"↺"</button>
+            })}
+            {(m == Mode::Auto && computed && edit_ok).then(|| view! {
+                <button type="button" class=action on:click=to_manual.clone()>{tr("ui-bld-override")}</button>
+            })}
+            {(can_gen && m != Mode::Gen && edit_ok).then(|| view! {
+                <button type="button" class=action title=move || i18n.t("ui-bld-gen-hint") on:click=to_gen.clone()>{tr("ui-bld-gen")}</button>
+            })}
+        }
+    };
+
+    let issue_list = move || {
+        let strict = !allow.get();
+        let cls = if strict {
+            "text-rose-600 dark:text-rose-400"
+        } else {
+            "text-amber-600 dark:text-amber-400"
+        };
+        row_issues
+            .get()
+            .into_iter()
+            .map(|i| {
+                let msg = issue_text(i18n, &i);
+                view! { <p class=format!("text-[11px] {cls}") role=strict.then_some("alert")>{msg}</p> }
+            })
+            .collect_view()
     };
 
     view! {
-        <div class="rounded-md border border-slate-200 p-2 dark:border-slate-800" role="group" aria-label=name_group on:click=select_field>
-            <div class="flex items-center gap-2">
-                <span class=name_class title=description>{name_h}</span>
-                <code class="shrink-0 rounded bg-slate-100 px-1 font-mono text-[10px] text-slate-500 dark:bg-slate-800">{tybadge}</code>
-                <div class="flex shrink-0 gap-0.5" on:click=|ev| ev.stop_propagation()>
-                    {has_auto.then(|| {
-                        let cls = move || format!("{btn} {}", if mode.get() == Mode::Auto { active } else { idle });
-                        view! { <button type="button" class=cls on:click=to_auto>{tr("ui-bld-auto")}</button> }
-                    })}
-                    {
-                        let cls = move || format!("{btn} {}", if mode.get() == Mode::Manual { active } else { idle });
-                        view! { <button type="button" class=cls on:click=to_manual>{tr("ui-bld-manual")}</button> }
-                    }
-                    {can_gen.then(|| {
-                        let cls = move || format!("{btn} {}", if mode.get() == Mode::Gen { active } else { idle });
-                        view! { <button type="button" class=cls on:click=to_gen>{tr("ui-bld-gen")}</button> }
-                    })}
+        <div class=row_class role="group" aria-label=name_group on:click=select_field>
+            <div class="grid gap-x-3 gap-y-1.5 @lg:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)]">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="truncate font-mono text-sm font-medium">{name_h}</span>
+                        <code class="shrink-0 rounded bg-slate-100 px-1 font-mono text-[10px] text-slate-500 dark:bg-slate-800">{tybadge}</code>
+                    </div>
+                    {move || description().map(|d| { let title = d.clone(); view! { <p class="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-500" title=title>{d}</p> } })}
                 </div>
-            </div>
-            <div class="mt-1.5" on:click=|ev| ev.stop_propagation()>
-                {move || match mode.get() {
-                    Mode::Manual => manual_editor(builder, layer, &fd_manual).into_any(),
-                    Mode::Gen => generator_editor(builder, layer, &fd_gen).into_any(),
-                    Mode::Auto => auto_view(layer, name_auto.clone()).into_any(),
-                }}
+                <div class="min-w-0 space-y-1" on:click=|ev| ev.stop_propagation()>
+                    <div class="flex items-start gap-1.5">
+                        <div class="min-w-0 flex-1">{body}</div>
+                        <div class="flex shrink-0 gap-1">{actions}</div>
+                    </div>
+                    {tag}
+                    {issue_list}
+                </div>
             </div>
         </div>
     }
 }
 
-/// Read-only Auto / default value from the last build.
+/// The localised text of an out-of-spec finding.
+pub(crate) fn issue_text(i18n: crate::i18n::I18n, i: &Issue) -> String {
+    if i.key.is_empty() {
+        return i.fallback.clone();
+    }
+    let msg = i18n.t_dyn(&i.key, &i.args);
+    if msg == i.key && !i.fallback.is_empty() {
+        i.fallback.clone()
+    } else {
+        msg
+    }
+}
+
+/// Read-only Auto value from the last build.
 fn auto_view(layer: usize, field: String) -> impl IntoView {
     let i18n = use_i18n();
     let pv = PreviewCtx::use_ctx();
@@ -320,32 +417,72 @@ fn auto_view(layer: usize, field: String) -> impl IntoView {
                 })
                 .map(|(proto, v)| {
                     proto::field_type(&proto, &field)
-                        .map_or_else(|| format!("{v:?}"), |t| format_value(v, &t))
+                        .map_or_else(|| format!("{v:?}"), |t| auto_text(v, &t))
                 })
         });
         view! {
-            <p class="font-mono text-xs text-slate-500">{text.unwrap_or_else(|| i18n.t("ui-bld-computed"))}</p>
+            <div class="flex min-h-8 items-center truncate rounded-md border border-dashed border-slate-300 bg-slate-50 px-2.5 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                {text.unwrap_or_else(|| i18n.t("ui-bld-computed"))}
+            </div>
         }
     }
 }
 
-/// Manual value editor for the field's type.
-fn manual_editor(builder: Builder, layer: usize, fd: &FieldDef) -> AnyView {
+/// A computed value for display: enums as `name (0x…)`, other types as notation.
+fn auto_text(v: &FieldValue, ty: &FieldType) -> String {
+    if let FieldType::Enum { variants, .. } = ty {
+        if let Some(n) = v.as_u64() {
+            return variants
+                .iter()
+                .find(|x| x.value == n)
+                .map_or_else(|| format!("{n:#x}"), |x| format!("{} ({n:#x})", x.name));
+        }
+    }
+    format_value(v, ty)
+}
+
+/// Monospace value input.
+const VALUE: &str = "block w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 font-mono text-sm shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none read-only:bg-slate-50 read-only:text-slate-500 disabled:bg-slate-50 disabled:text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:read-only:bg-slate-950";
+/// Invalid monospace value input.
+const VALUE_INVALID: &str = "block w-full rounded-md border border-rose-500 bg-white px-2.5 py-1.5 font-mono text-sm shadow-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500 focus:outline-none dark:bg-slate-900 dark:text-slate-100";
+
+/// The value editor for the field's type, prefilled with the Manual value or, until
+/// one is set, with the value the packet is built with. Any edit sets Manual.
+fn value_editor(builder: Builder, layer: usize, fd: &FieldDef, read_only: bool) -> AnyView {
+    let i18n = use_i18n();
     let ty = fd.ty.clone();
     let name = fd.name.clone();
 
+    // The Manual text, or the built (default) value.
     let n_val = name.clone();
+    let ty_val = ty.clone();
+    let pv = PreviewCtx::use_ctx();
     let value = Memo::new(move |_| {
-        builder.template.with(|t| {
+        let manual = builder.template.with(|t| {
             t.layers
                 .get(layer)
                 .and_then(|l| l.fields.get(&n_val))
+                .filter(|i| !i.is_auto())
                 .and_then(FieldInput::scalar_text)
+        });
+        manual.unwrap_or_else(|| {
+            pv.preview
+                .with(|p| {
+                    p.field_value(layer, &n_val)
+                        .map(|v| format_value(v, &ty_val))
+                })
                 .unwrap_or_default()
         })
     });
+    let n_set = name.clone();
+    let set = move |text: String| {
+        let n = n_set.clone();
+        builder.edit(true, move |t| {
+            edit::set_field(t, layer, &n, FieldInput::Str(text));
+        });
+    };
 
-    // Flags: checkboxes + raw value.
+    // Flags: one checkbox per bit.
     if let FieldType::Flags { flags, .. } = &ty {
         let flags = flags.clone();
         let ty_cur = ty.clone();
@@ -356,30 +493,30 @@ fn manual_editor(builder: Builder, layer: usize, fd: &FieldDef) -> AnyView {
                 .unwrap_or(0)
         });
         return view! {
-            <div class="flex flex-wrap gap-2">
+            <div class="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1">
                 {flags.into_iter().map(|fb| {
                     let bit = fb.bit;
-                    let n = name.clone();
+                    let set = set.clone();
                     view! {
-                        <label class="flex items-center gap-1 text-xs">
-                            <input type="checkbox" prop:checked=move || cur.get() & (1u64 << bit) != 0
+                        <label class="flex items-center gap-1.5 font-mono text-sm">
+                            <input type="checkbox" class="h-4 w-4" disabled=read_only
+                                prop:checked=move || cur.get() & (1u64 << bit) != 0
                                 on:change=move |ev| {
-                                    let on = event_target_checked(&ev);
                                     let mut v = cur.get_untracked();
-                                    if on { v |= 1u64 << bit; } else { v &= !(1u64 << bit); }
-                                    let n = n.clone();
-                                    builder.edit(true, move |t| edit::set_field(t, layer, &n, FieldInput::Str(format!("{v:#x}"))));
+                                    if event_target_checked(&ev) { v |= 1u64 << bit; } else { v &= !(1u64 << bit); }
+                                    set(format!("{v:#x}"));
                                 }
                             />
                             {fb.name}
                         </label>
                     }
                 }).collect_view()}
+                <span class="font-mono text-[11px] text-slate-400">{move || format!("= {:#x}", cur.get())}</span>
             </div>
         }.into_any();
     }
 
-    // TLV / list: structured JSON editor.
+    // TLV / list: structured JSON editor (the last valid value is kept).
     if matches!(ty, FieldType::Tlv(_) | FieldType::List { .. }) {
         let n_json = name.clone();
         let json = Memo::new(move |_| {
@@ -388,23 +525,33 @@ fn manual_editor(builder: Builder, layer: usize, fd: &FieldDef) -> AnyView {
                     .get(layer)
                     .and_then(|l| l.fields.get(&n_json))
                     .map(|inp| serde_json::to_string_pretty(inp).unwrap_or_default())
-                    .unwrap_or_else(|| "[]".into())
+                    .unwrap_or_default()
             })
         });
+        let bad = RwSignal::new(None::<String>);
         let n_set = name.clone();
         return view! {
-            <textarea
-                class="h-24 w-full resize-y rounded border border-slate-300 bg-slate-50 p-1.5 font-mono text-[11px] dark:border-slate-700 dark:bg-slate-950"
-                spellcheck="false"
-                prop:value=move || json.get()
-                on:input=move |ev| {
-                    let text = event_target_value(&ev);
-                    if let Ok(inp) = serde_json::from_str::<FieldInput>(&text) {
-                        let n = n_set.clone();
-                        builder.edit(true, move |t| edit::set_field(t, layer, &n, inp));
+            <div>
+                <textarea
+                    class=move || format!("{} h-32 resize-y text-xs", if bad.with(Option::is_some) { VALUE_INVALID } else { VALUE })
+                    spellcheck="false"
+                    placeholder="[]"
+                    readonly=read_only
+                    prop:value=move || json.get()
+                    on:input=move |ev| {
+                        let text = event_target_value(&ev);
+                        match serde_json::from_str::<FieldInput>(&text) {
+                            Ok(inp) => {
+                                bad.set(None);
+                                let n = n_set.clone();
+                                builder.edit(true, move |t| edit::set_field(t, layer, &n, inp));
+                            }
+                            Err(e) => bad.set(Some(e.to_string())),
+                        }
                     }
-                }
-            ></textarea>
+                ></textarea>
+                {move || bad.get().map(|e| view! { <p class="mt-0.5 text-[11px] text-rose-600" role="alert">{i18n.ta("ui-bld-json-error", &[("error", e)])}</p> })}
+            </div>
         }.into_any();
     }
 
@@ -418,28 +565,108 @@ fn manual_editor(builder: Builder, layer: usize, fd: &FieldDef) -> AnyView {
         }
     });
     let placeholder = placeholder_for(&ty);
+    let cls = move || {
+        if err.get().is_some() {
+            VALUE_INVALID
+        } else {
+            VALUE
+        }
+    };
+    let error = move || {
+        err.get()
+            .map(|e| view! { <p class="mt-0.5 text-[11px] text-rose-600" role="alert">{e}</p> })
+    };
+
+    // Enum: a picker of the named values, plus free entry for any other number.
+    if let FieldType::Enum { variants, .. } = &ty {
+        let variants = variants.clone();
+        let ty_cur = ty.clone();
+        let vs = variants.clone();
+        let current = Memo::new(move |_| {
+            let n = parse_text(&value.get(), &ty_cur)
+                .ok()
+                .and_then(|v| v.as_u64());
+            n.and_then(|n| vs.iter().find(|v| v.value == n).map(|v| v.name.clone()))
+        });
+        let custom = RwSignal::new(false);
+        let show_text = move || custom.get() || current.with(Option::is_none);
+        let set_pick = set.clone();
+        return view! {
+            <div>
+                <div class="flex gap-1.5">
+                    <select
+                        class=format!("{VALUE} min-w-0 flex-1")
+                        disabled=read_only
+                        on:change=move |ev| {
+                            let v = event_target_value(&ev);
+                            if v.is_empty() {
+                                custom.set(true);
+                            } else {
+                                custom.set(false);
+                                set_pick(v);
+                            }
+                        }
+                    >
+                        {variants.into_iter().map(|v| {
+                            let label = format!("{} ({:#x})", v.name, v.value);
+                            let n = v.name.clone();
+                            view! { <option value=v.name selected=move || !show_text() && current.get().as_deref() == Some(n.as_str())>{label}</option> }
+                        }).collect_view()}
+                        <option value="" selected=show_text>{move || i18n.t("ui-bld-enum-other")}</option>
+                    </select>
+                    {move || show_text().then(|| {
+                        let set = set.clone();
+                        view! {
+                            <input type="text" class=move || format!("{} w-32 shrink-0", cls()) placeholder="0x…" readonly=read_only
+                                prop:value=move || value.get()
+                                on:input=move |ev| set(event_target_value(&ev)) />
+                        }
+                    })}
+                </div>
+                {error}
+            </div>
+        }.into_any();
+    }
+
+    // Byte strings: a multi-line box.
+    if matches!(
+        ty,
+        FieldType::Bytes { .. } | FieldType::Raw | FieldType::CString
+    ) {
+        return view! {
+            <div>
+                <textarea
+                    class=move || format!("{} h-16 resize-y", cls())
+                    spellcheck="false"
+                    placeholder=placeholder
+                    readonly=read_only
+                    prop:value=move || value.get()
+                    on:input=move |ev| set(event_target_value(&ev))
+                ></textarea>
+                {error}
+            </div>
+        }
+        .into_any();
+    }
+
     let hint = matches!(ty, FieldType::Nsap).then(|| nsap_hint(value));
-    let n_set = name.clone();
-    let datalist_id = format!("dl-{layer}-{name}");
     view! {
         <div>
             <input
                 type="text"
-                list=datalist_id.clone()
-                class=move || if err.get().is_some() { INPUT_INVALID } else { INPUT }
+                class=cls
+                spellcheck="false"
+                autocomplete="off"
                 placeholder=placeholder
+                readonly=read_only
                 prop:value=move || value.get()
-                on:input=move |ev| {
-                    let text = event_target_value(&ev);
-                    let n = n_set.clone();
-                    builder.edit(true, move |t| edit::set_field(t, layer, &n, FieldInput::Str(text)));
-                }
+                on:input=move |ev| set(event_target_value(&ev))
             />
-            {enum_datalist(&ty, datalist_id)}
             {hint}
-            {move || err.get().map(|e| view! { <p class="mt-0.5 text-[11px] text-rose-600" role="alert">{e}</p> })}
+            {error}
         </div>
-    }.into_any()
+    }
+    .into_any()
 }
 
 /// NSAP structure under the input: AFI / area / system ID / NSEL of the typed
@@ -471,22 +698,6 @@ fn hex_groups(b: &[u8]) -> String {
         .map(|c| c.iter().map(|x| format!("{x:02x}")).collect::<String>())
         .collect::<Vec<_>>()
         .join(".")
-}
-
-/// A `<datalist>` of enum variant names (empty for other types).
-fn enum_datalist(ty: &FieldType, id: String) -> impl IntoView {
-    let variants = if let FieldType::Enum { variants, .. } = ty {
-        variants.iter().map(|v| v.name.clone()).collect::<Vec<_>>()
-    } else {
-        Vec::new()
-    };
-    (!variants.is_empty()).then(|| {
-        view! {
-            <datalist id=id>
-                {variants.into_iter().map(|n| view! { <option value=n></option> }).collect_view()}
-            </datalist>
-        }
-    })
 }
 
 fn placeholder_for(ty: &FieldType) -> &'static str {

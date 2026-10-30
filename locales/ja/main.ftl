@@ -845,7 +845,6 @@ ui-bld-removed = レイヤを削除しました。
 ui-bld-fields = フィールド編集
 ui-bld-select-layer = 編集するレイヤを選択してください。
 ui-bld-auto = 自動
-ui-bld-manual = 手動
 ui-bld-gen = 生成
 ui-bld-computed = ビルド時に計算
 ui-bld-nsap-parts = AFI { $afi } · エリア { $area } · システム ID { $sys } · NSEL { $nsel }
@@ -893,6 +892,26 @@ ui-bld-help-redo = やり直し
 ui-bld-help-hex = キャレット位置のバイトを Hex 入力
 ui-bld-help-caret = Hex キャレットを移動
 ui-bld-suggest-prev = 上位レイヤを追加
+ui-bld-irr-allow = イレギュラーを許可
+ui-bld-irr-hint = オフ (既定) では規格どおりのパケットだけを作れます。長さ・チェックサムなどの自動計算フィールドは固定され、規格外の値はエラーになり保存できません。オンにすると自動計算フィールドを上書きでき、規格外の値は警告として扱います。
+ui-bld-irr-count = 規格外 { $count } 件
+ui-bld-irr-blocked = 規格外の値が { $count } 件あります。修正するか、「イレギュラーを許可」をオンにしてください。
+ui-bld-irr-auto-on = 規格外の値を含むテンプレートなので「イレギュラーを許可」をオンにしました。
+ui-bld-irr-auto-override = { $field } は自動計算フィールドですが、手動の値または生成で上書きされています。
+ui-bld-irr-bad-fcs = FCS (CRC-32) を故意に誤った値にしています (packet.fcs: bad)。
+ui-bld-irr-hex-locked = { $field } は自動計算フィールドです。Hex で書き換えるには「イレギュラーを許可」をオンにしてください。
+ui-bld-tag-auto = 自動計算
+ui-bld-tag-default = 既定値 (入力すると手動の値になります)
+ui-bld-tag-manual = 手動の値
+ui-bld-tag-gen = 生成 (パケットごとに変化)
+ui-bld-tag-locked = イレギュラー許可時のみ上書き可
+ui-bld-to-auto = 自動計算に戻す
+ui-bld-to-default = 既定値に戻す
+ui-bld-override = 上書き
+ui-bld-gen-hint = 範囲・リスト・カウンタなどでパケットごとに値を変える
+ui-bld-json-error = JSON として解釈できません: { $error }
+ui-bld-enum-other = その他 (数値で指定)…
+ui-bld-quick-start = よく使う構成から始める
 
 # --- P1 冗長 / マルチキャストプロトコルのフィールド説明 ---
 vrrp-version = VRRP バージョン (2 = RFC 3768、3 = RFC 5798)。

@@ -43,7 +43,7 @@ ipv4 / tcp / bgp                 # a KEEPALIVE is the header alone (type 4 is th
 
 ## Limits and approximations
 
-- **OSPFv2 authentication**: the checksum leaves out the 64-bit authentication field, so it is exact for null and simple-password authentication. With cryptographic authentication (AuType 2) set the checksum to 0 by hand. The cryptographic-auth trailer after the packet is not modelled.
+- **OSPFv2 authentication**: the checksum leaves out the 64-bit authentication field, so it is exact for null and simple-password authentication. With cryptographic authentication (AuType 2) set the checksum to 0 by hand (in the builder, turn on “Allow irregular” to override it). The cryptographic-auth trailer after the packet is not modelled.
 - **One typed LSA per LSU**: there is no repeated-layer construct, so no further LSA can follow a typed LSA body.
 - **LS types sharing a body**: OSPFv2 types 3 / 4 and 5 / 7, and OSPFv3 `0x4005` / `0x2007`, have the same body layout, so Auto announces the first type. For the other one set `ls_type` by hand (a next-protocol mismatch warning results, but the packet can be sent).
 - OSPFv2 TOS entries (router-link `num_tos` > 0, summary / external TOS metrics) and the OSPFv3 prefix lists are not typed; they stay opaque `prefixes` / `address_prefix` octets.

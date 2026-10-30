@@ -845,7 +845,6 @@ ui-bld-removed = Capa eliminada.
 ui-bld-fields = Editor de campos
 ui-bld-select-layer = Seleccione una capa para editar sus campos.
 ui-bld-auto = Auto
-ui-bld-manual = Manual
 ui-bld-gen = Gen
 ui-bld-computed = se calcula al construir
 ui-bld-nsap-parts = AFI { $afi } · área { $area } · system ID { $sys } · NSEL { $nsel }
@@ -893,6 +892,26 @@ ui-bld-help-redo = Rehacer
 ui-bld-help-hex = Escribir hex sobre el byte del cursor
 ui-bld-help-caret = Mover el cursor hex
 ui-bld-suggest-prev = Añadir capa encima
+ui-bld-irr-allow = Permitir irregulares
+ui-bld-irr-hint = Desactivado (predeterminado): solo paquetes conformes a las definiciones. Los campos calculados como longitudes y sumas de verificación quedan bloqueados y los valores fuera de especificación son errores que impiden guardar. Activado: los campos calculados se pueden sobrescribir y las desviaciones son solo advertencias.
+ui-bld-irr-count = { $count } fuera de especificación
+ui-bld-irr-blocked = { $count } valores fuera de especificación. Corríjalos o active «Permitir irregulares».
+ui-bld-irr-auto-on = Esta plantilla tiene valores fuera de especificación, así que se activó «Permitir irregulares».
+ui-bld-irr-auto-override = { $field } es calculado, pero está sobrescrito por un valor manual o un generador.
+ui-bld-irr-bad-fcs = La FCS (CRC-32) es incorrecta a propósito (packet.fcs: bad).
+ui-bld-irr-hex-locked = { $field } es calculado. Active «Permitir irregulares» para cambiarlo en la vista hex.
+ui-bld-tag-auto = Calculado
+ui-bld-tag-default = Predeterminado (escriba para fijar un valor manual)
+ui-bld-tag-manual = Valor manual
+ui-bld-tag-gen = Generado (cambia por paquete)
+ui-bld-tag-locked = solo se sobrescribe con irregulares permitidos
+ui-bld-to-auto = Volver a calculado
+ui-bld-to-default = Volver al predeterminado
+ui-bld-override = Sobrescribir
+ui-bld-gen-hint = Variar el valor por paquete: rango, lista, contador…
+ui-bld-json-error = JSON no válido: { $error }
+ui-bld-enum-other = Otro (número)…
+ui-bld-quick-start = Empezar con una pila habitual
 
 # --- Descripciones de campos de protocolos de redundancia / multidifusión P1 ---
 vrrp-version = Versión de VRRP (2 = RFC 3768, 3 = RFC 5798).

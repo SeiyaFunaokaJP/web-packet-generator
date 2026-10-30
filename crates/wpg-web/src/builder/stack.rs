@@ -1,7 +1,8 @@
 //! Layer stack panel (spec §2.5): add / remove / reorder / duplicate layers by
 //! drag & drop or keyboard, select a layer to drive the field editor and hex/tree
 //! highlight, and next-layer suggestions from the binding table (with a one-click
-//! "fix parent next-protocol").
+//! "fix parent next-protocol"). An empty stack offers ready-made stacks
+//! ([`QUICK_STACKS`]) so the usual MAC / IP / port fields are there to fill in.
 
 use leptos::prelude::*;
 use wpg_template::{FieldInput, Template};
@@ -11,6 +12,15 @@ use super::proto;
 use super::state::{edit, Builder};
 use crate::components::{Icon, IconName, BTN_GHOST};
 use crate::i18n::{tr, use_i18n};
+
+/// Common stacks offered on an empty builder, outermost first.
+const QUICK_STACKS: &[&[&str]] = &[
+    &["ethernet2", "ipv4", "udp", "payload"],
+    &["ethernet2", "ipv4", "tcp", "payload"],
+    &["ethernet2", "ipv4", "icmpv4"],
+    &["ethernet2", "ipv6", "udp", "payload"],
+    &["ethernet2", "arp"],
+];
 
 /// A one-line summary of a layer's set fields / generators / auto fields.
 fn layer_summary(t: &Template, layer: usize) -> String {
@@ -241,7 +251,31 @@ pub(crate) fn Stack() -> impl IntoView {
                                 }
                                 dnd.clear();
                             }
-                        >{tr("ui-bld-empty")}</div>
+                        >
+                            <p>{tr("ui-bld-empty")}</p>
+                            <p class="mt-4 mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{tr("ui-bld-quick-start")}</p>
+                            <div class="flex flex-col items-stretch gap-1.5">
+                                {QUICK_STACKS.iter().map(|ids| {
+                                    let label = ids
+                                        .iter()
+                                        .map(|id| proto::def(id).map_or_else(|| (*id).to_owned(), |d| d.name.clone()))
+                                        .collect::<Vec<_>>()
+                                        .join(" / ");
+                                    view! {
+                                        <button type="button" class="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 hover:border-sky-500 hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                            on:click=move |_| {
+                                                builder.edit(false, |t| {
+                                                    for id in *ids {
+                                                        edit::add_layer(t, id, None);
+                                                    }
+                                                });
+                                                builder.select_layer(Some(0));
+                                            }
+                                        >{label}</button>
+                                    }
+                                }).collect_view()}
+                            </div>
+                        </div>
                     }
                 >
                     <ul class="space-y-0.5">{rows}</ul>
