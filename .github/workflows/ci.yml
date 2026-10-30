@@ -189,6 +189,7 @@ jobs:
         run: |
           ./scripts/deploy.sh ubuntu@192.0.2.10 --service --iface eth1 --binary /bin/true --dry-run
           ./scripts/deploy.sh ubuntu@192.0.2.10 --service --build-on-host --source git --git-ref main --terminal --snmp-trap --dry-run
+          ./scripts/deploy.sh ubuntu@192.0.2.10 --service --iface eth1 --binary /bin/true --dhcp-iface eth2 --dhcp-iface-addr 192.168.100.1/24,2001:db8:1::1/64 --dry-run
           # An answer file with two hosts, checked without connecting.
           printf 'user=ubuntu\nbinary_source=file\nbinary_file=/bin/true\n[host a]\nhost=192.0.2.11\n[host b]\nhost=192.0.2.12\nifaces=eth1\n' >"$RUNNER_TEMP/deploy.conf"
           ./scripts/deploy.sh --config "$RUNNER_TEMP/deploy.conf" --check-config --json | python3 -m json.tool

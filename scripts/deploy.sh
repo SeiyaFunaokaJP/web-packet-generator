@@ -1198,6 +1198,37 @@ wizard() {
     if [ "$use_prev" -eq 0 ] && [ "$service" -eq 1 ]; then
         ask_yn terminal "Web ターミナルを有効にしますか? (対応する wpg のみ)" "Enable the web terminal? (newer wpg only)" "$terminal"
         ask_yn snmp_trap "SNMP トラップ受信 (UDP 162) を有効にしますか? (対応する wpg のみ)" "Enable the SNMP trap receiver (UDP 162)? (newer wpg only)" "$snmp_trap"
+        # DHCP server: pin its interface (empty = chosen on the screen), never
+        # the management one (it would hand out addresses on that LAN).
+        mgmt="$(probe MGMT_IFACE)"
+        while :; do
+            ask v "DHCP サーバーが応答するインタフェース (空 / - = 画面で選択。対応する wpg のみ)" "Interface the DHCP server answers on (empty / - = chosen on the screen; newer wpg only)" "$dhcp_iface"
+            v="${v// /}"
+            [ "$v" != - ] || v=""
+            case "$v" in *[!A-Za-z0-9_.:@-]*) say "  インタフェース名が正しくありません。" "  Not a valid interface name."; continue ;; esac
+            if [ -n "$v" ] && [ "$v" = "$mgmt" ]; then
+                say "  $v は管理用 (SSH 接続中) です。試験用のインタフェースを指定してください。" "  $v is the management interface (this SSH session); pick a test interface."
+                continue
+            fi
+            dhcp_iface="$v"
+            break
+        done
+        if [ -n "$dhcp_iface" ]; then
+            while :; do
+                ask v "$dhcp_iface の固定 IP (address/len をカンマ区切り。例 192.168.100.1/24,2001:db8:1::1/64。空 / - = 設定しない)" "Static addresses for $dhcp_iface (address/len, comma separated, e.g. 192.168.100.1/24,2001:db8:1::1/64; empty / - = none)" "$(IFS=,; echo "${dhcp_addrs[*]}")"
+                dhcp_addrs=()
+                [ "$v" = - ] || IFS=', ' read -r -a dhcp_addrs <<<"$v"
+                local bad=0
+                for a in "${dhcp_addrs[@]}"; do
+                    case "$a" in */*[0-9]) ;; *) bad=1 ;; esac
+                    case "$a" in *[!0-9A-Fa-f.:/]*) bad=1 ;; esac
+                done
+                [ "$bad" -eq 0 ] && break
+                say "  192.168.100.1/24 のように address/len で入力してください。" "  Use address/len, e.g. 192.168.100.1/24."
+            done
+        else
+            dhcp_addrs=()
+        fi
     fi
 
     # 8. admin password
