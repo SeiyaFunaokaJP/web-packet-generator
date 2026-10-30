@@ -17,6 +17,7 @@
 | [0009](0009-minimum-os.md) | 最低対応 OS | Accepted | 2026-09-29 |
 | [0010](0010-snmp-manager.md) | SNMP マネージャ機能 (wpg-snmp) | Accepted | 2026-10-27 |
 | [0011](0011-web-terminal.md) | Web ターミナル (ブラウザからの SSH / Telnet) | Accepted | 2026-10-27 |
+| [0012](0012-dhcp-server.md) | DHCP サーバー機能 (wpg-dhcp) | Accepted | 2026-10-29 |
 
 ## 追加手順
 

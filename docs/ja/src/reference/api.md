@@ -82,6 +82,14 @@ wpg-server は `/api` 以下で REST (JSON) API を提供し、リアルタイ�
 | snmp | [`GET /api/snmp/traps`](#op-get-api-snmp-traps) | Received notifications, newest first (also pushed as `snmp_trap` events on the WebSocket). |
 | snmp | [`DELETE /api/snmp/traps`](#op-delete-api-snmp-traps) | Forgets the received notifications. |
 | snmp | [`POST /api/snmp/walk`](#op-post-api-snmp-walk) | Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the result are also returned as rows × columns. |
+| dhcp | [`GET /api/dhcp`](#op-get-api-dhcp) | State, settings and counters. |
+| dhcp | [`PUT /api/dhcp`](#op-put-api-dhcp) | Saves the settings; a running server restarts with them. |
+| dhcp | [`GET /api/dhcp/activity`](#op-get-api-dhcp-activity) | Recent requests and replies, newest first (`wpg_dhcp::Activity`). |
+| dhcp | [`DELETE /api/dhcp/activity`](#op-delete-api-dhcp-activity) | Clears the activity log. |
+| dhcp | [`GET /api/dhcp/leases`](#op-get-api-dhcp-leases) | Leases (`wpg_dhcp::Lease`: `kind` `v4` / `na` / `pd`, `addr`, `plen`, `client`, `iaid`, `mac`, `hostname`, `state`, `expires`, `updated`). |
+| dhcp | [`DELETE /api/dhcp/leases`](#op-delete-api-dhcp-leases) | Deletes one lease (`key`) or all of them. The client keeps using the address until it renews. |
+| dhcp | [`POST /api/dhcp/start`](#op-post-api-dhcp-start) | Starts (or restarts) the server; it also starts at boot until stopped. |
+| dhcp | [`POST /api/dhcp/stop`](#op-post-api-dhcp-stop) | Stops the server (and its start at boot). |
 
 ### `auth`
 
@@ -1329,6 +1337,127 @@ Walks a subtree (GetBulk on v2c / v3, GetNext on v1); conceptual tables in the r
 | `502` | `snmp_error` | `application/json` [`ErrorBody`](#schema-errorbody) |
 | `504` | `snmp_error`: no response | `application/json` [`ErrorBody`](#schema-errorbody) |
 
+### `dhcp`
+
+DHCP server tool: DHCPv4 / DHCPv6 (IA_NA, IA_PD) pools and options, router advertisements, leases, activity
+
+<a id="op-get-api-dhcp"></a>
+
+#### `GET /api/dhcp`
+
+State, settings and counters.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | State | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
+| `404` | `dhcp.enabled = false` | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-put-api-dhcp"></a>
+
+#### `PUT /api/dhcp`
+
+Saves the settings; a running server restarts with them.
+
+**リクエスト本文**: `application/json` [`DhcpUpdate`](#schema-dhcpupdate)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Saved | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
+| `400` | Invalid settings (`details`: `[{ field, message }]`) | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `403` | `policy_violation`: interface not in `tx.allowed_ifaces` | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `backend_error`: the restart failed | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-get-api-dhcp-activity"></a>
+
+#### `GET /api/dhcp/activity`
+
+Recent requests and replies, newest first (`wpg_dhcp::Activity`).
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `limit` | path | `integer` \| `null` | はい | Most entries returned (newest first; default 200). |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Activity | `application/json` `object``[]` |
+
+<a id="op-delete-api-dhcp-activity"></a>
+
+#### `DELETE /api/dhcp/activity`
+
+Clears the activity log.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Cleared |   |
+
+<a id="op-get-api-dhcp-leases"></a>
+
+#### `GET /api/dhcp/leases`
+
+Leases (`wpg_dhcp::Lease`: `kind` `v4` / `na` / `pd`, `addr`, `plen`, `client`, `iaid`, `mac`, `hostname`, `state`, `expires`, `updated`).
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Leases | `application/json` `object``[]` |
+
+<a id="op-delete-api-dhcp-leases"></a>
+
+#### `DELETE /api/dhcp/leases`
+
+Deletes one lease (`key`) or all of them. The client keeps using the address until it renews.
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `key` | path | `string` \| `null` | はい | The lease (`192.168.100.10`, `2001:db8::10`, `2001:db8:100::/56`); absent: every lease. |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Deleted |   |
+| `404` | No such lease | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-dhcp-start"></a>
+
+#### `POST /api/dhcp/start`
+
+Starts (or restarts) the server; it also starts at boot until stopped.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Running | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
+| `400` | No / unknown interface, invalid settings | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `502` | `backend_error`: sockets (ports 67 / 547 need CAP_NET_BIND_SERVICE, RA CAP_NET_RAW; Linux only) | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-dhcp-stop"></a>
+
+#### `POST /api/dhcp/stop`
+
+Stops the server (and its start at boot).
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Stopped | `application/json` [`DhcpStatus`](#schema-dhcpstatus) |
+
 ## スキーマ
 
 上記で参照しているリクエスト・レスポンス本文の型です。
@@ -1490,6 +1619,39 @@ Selects the jobs whose `stats` / `job_state` events are sent.
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
 | `start` | `boolean` |   | Start immediately (default `true`); `false` leaves it in state `created`. |
+
+<a id="schema-dhcpstatus"></a>
+
+### `DhcpStatus`
+
+`GET /api/dhcp`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `added_addresses` | `string``[]` |   | Addresses this server put on the interface (removed when it stops). |
+| `enabled` | `boolean` | はい | `dhcp.enabled`. |
+| `error` | `string` \| `null` |   | Why the last start (at boot) failed. |
+| `iface` | `string` | はい | Interface used (pinned or chosen; empty: none chosen yet). |
+| `leases` | `integer` | はい | Leases in the table. |
+| `pinned_iface` | `string` \| `null` |   | `dhcp.iface` (fixed at deploy time); the screen cannot change it. |
+| `running` | `boolean` | はい | Answering. |
+| `server_duid` | `string` \| `null` |   | DHCPv6 server DUID in use. |
+| `server_ip` | `string` \| `null` |   | DHCPv4 server identifier in use. |
+| `settings` | `object` | はい | Pools and options (`wpg_dhcp::Settings`). |
+| `started_ms` | `integer` \| `null` |   | Start time (milliseconds since the Unix epoch). |
+| `stats` | `object` | はい | Packet counters of the running server. |
+| `supported` | `boolean` | はい | Built for Linux (elsewhere the server cannot start). |
+
+<a id="schema-dhcpupdate"></a>
+
+### `DhcpUpdate`
+
+`PUT /api/dhcp` body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `iface` | `string` \| `null` |   | Interface to answer on (ignored when `dhcp.iface` pins one; must be allowed by `tx.allowed_ifaces`). |
+| `settings` | `object` | はい | Pools and options (`wpg_dhcp::Settings`: `v4`, `v6`). |
 
 <a id="schema-endreason"></a>
 
@@ -2193,6 +2355,25 @@ The SNMP trap receiver got a notification (also listed by
 |---|---|---|---|
 | `trap` | [`TrapOut`](#schema-trapout) | はい | The rendered notification. |
 | `type` | `"snmp_trap"` | はい |   |
+
+#### `type: "dhcp_activity"`
+
+The DHCP server handled a request or sent a router advertisement
+(also listed by `GET /api/dhcp/activity`).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `activity` | `object` | はい | The exchange (`wpg_dhcp::Activity`). |
+| `type` | `"dhcp_activity"` | はい |   |
+
+#### `type: "dhcp_state"`
+
+The DHCP server started / stopped, its settings changed or leases
+expired / were deleted: reload `GET /api/dhcp`.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `type` | `"dhcp_state"` | はい |   |
 
 <a id="schema-setuprequest"></a>
 

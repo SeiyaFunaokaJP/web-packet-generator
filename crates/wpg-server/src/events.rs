@@ -63,6 +63,16 @@ pub enum ServerEvent {
         #[schema(value_type = crate::snmp::TrapOut)]
         trap: Box<crate::snmp::TrapOut>,
     },
+    /// The DHCP server handled a request or sent a router advertisement
+    /// (also listed by `GET /api/dhcp/activity`).
+    DhcpActivity {
+        /// The exchange (`wpg_dhcp::Activity`).
+        #[schema(value_type = Object)]
+        activity: Box<wpg_dhcp::Activity>,
+    },
+    /// The DHCP server started / stopped, its settings changed or leases
+    /// expired / were deleted: reload `GET /api/dhcp`.
+    DhcpState,
 }
 
 impl ServerEvent {

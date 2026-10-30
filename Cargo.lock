@@ -5934,6 +5934,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "wpg-dhcp"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "socket2",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "wpg-core",
+ "wpg-protocols",
+]
+
+[[package]]
 name = "wpg-golden-tests"
 version = "0.1.0"
 dependencies = [
@@ -6037,6 +6051,7 @@ dependencies = [
  "utoipa-swagger-ui",
  "uuid",
  "wpg-core",
+ "wpg-dhcp",
  "wpg-i18n",
  "wpg-log",
  "wpg-protocols",

@@ -17,6 +17,7 @@
 //! * [`jobs`]: job manager on top of `wpg-tx` with the transmit policy;
 //! * [`terminal`]: the web terminal (SSH / Telnet bridged over a WebSocket);
 //! * [`snmp`]: the SNMP manager tool (MIBs, trap receiver, pcap recording);
+//! * [`dhcp`]: the DHCPv4 / DHCPv6 server tool (settings, leases, activity);
 //! * [`state::AppState`]: what the handlers share.
 
 use std::net::SocketAddr;
@@ -37,6 +38,7 @@ pub mod api;
 pub mod auth;
 pub mod config;
 pub mod db;
+pub mod dhcp;
 pub mod error;
 pub mod events;
 pub mod jobs;
@@ -201,6 +203,7 @@ impl Server {
         }
         let listener = tokio::net::TcpListener::bind(bind).await?;
         state.snmp.start_from_config().await;
+        state.dhcp.start_from_config().await;
         Ok(Self {
             listener,
             state,
@@ -247,6 +250,7 @@ impl Server {
             signal_state.jobs.shutdown().await;
             signal_state.rx.shutdown().await;
             signal_state.snmp.stop_receiver().await;
+            signal_state.dhcp.stop(false).await;
         };
         let res = match self.tls {
             None => {

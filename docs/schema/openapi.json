@@ -437,6 +437,114 @@
         ],
         "description": "`POST /api/jobs` body: a [`JobSpec`] plus `start`."
       },
+      "DhcpStatus": {
+        "description": "`GET /api/dhcp`.",
+        "properties": {
+          "added_addresses": {
+            "description": "Addresses this server put on the interface (removed when it stops).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "enabled": {
+            "description": "`dhcp.enabled`.",
+            "type": "boolean"
+          },
+          "error": {
+            "description": "Why the last start (at boot) failed.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "iface": {
+            "description": "Interface used (pinned or chosen; empty: none chosen yet).",
+            "type": "string"
+          },
+          "leases": {
+            "description": "Leases in the table.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pinned_iface": {
+            "description": "`dhcp.iface` (fixed at deploy time); the screen cannot change it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "running": {
+            "description": "Answering.",
+            "type": "boolean"
+          },
+          "server_duid": {
+            "description": "DHCPv6 server DUID in use.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "server_ip": {
+            "description": "DHCPv4 server identifier in use.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "settings": {
+            "description": "Pools and options (`wpg_dhcp::Settings`).",
+            "type": "object"
+          },
+          "started_ms": {
+            "description": "Start time (milliseconds since the Unix epoch).",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "stats": {
+            "description": "Packet counters of the running server.",
+            "type": "object"
+          },
+          "supported": {
+            "description": "Built for Linux (elsewhere the server cannot start).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "supported",
+          "iface",
+          "running",
+          "settings",
+          "stats",
+          "leases"
+        ],
+        "type": "object"
+      },
+      "DhcpUpdate": {
+        "description": "`PUT /api/dhcp` body.",
+        "properties": {
+          "iface": {
+            "description": "Interface to answer on (ignored when `dhcp.iface` pins one; must be\nallowed by `tx.allowed_ifaces`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "settings": {
+            "description": "Pools and options (`wpg_dhcp::Settings`: `v4`, `v6`).",
+            "type": "object"
+          }
+        },
+        "required": [
+          "settings"
+        ],
+        "type": "object"
+      },
       "EndReason": {
         "description": "Why a job ended normally (mirrors `wpg_tx::job::FinishReason`).",
         "enum": [
@@ -2260,6 +2368,41 @@
             },
             "required": [
               "trap",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The DHCP server handled a request or sent a router advertisement\n(also listed by `GET /api/dhcp/activity`).",
+            "properties": {
+              "activity": {
+                "description": "The exchange (`wpg_dhcp::Activity`).",
+                "type": "object"
+              },
+              "type": {
+                "enum": [
+                  "dhcp_activity"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "activity",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The DHCP server started / stopped, its settings changed or leases\nexpired / were deleted: reload `GET /api/dhcp`.",
+            "properties": {
+              "type": {
+                "enum": [
+                  "dhcp_state"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
               "type"
             ],
             "type": "object"
@@ -4501,6 +4644,269 @@
         "summary": "Stops a running capture (asynchronously; watch `capture_state`).",
         "tags": [
           "captures"
+        ]
+      }
+    },
+    "/api/dhcp": {
+      "get": {
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DhcpStatus"
+                }
+              }
+            },
+            "description": "State"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`dhcp.enabled = false`"
+          }
+        },
+        "summary": "State, settings and counters.",
+        "tags": [
+          "dhcp"
+        ]
+      },
+      "put": {
+        "operationId": "update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DhcpUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DhcpStatus"
+                }
+              }
+            },
+            "description": "Saved"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid settings (`details`: `[{ field, message }]`)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`policy_violation`: interface not in `tx.allowed_ifaces`"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`backend_error`: the restart failed"
+          }
+        },
+        "summary": "Saves the settings; a running server restarts with them.",
+        "tags": [
+          "dhcp"
+        ]
+      }
+    },
+    "/api/dhcp/activity": {
+      "delete": {
+        "operationId": "clear_activity",
+        "responses": {
+          "204": {
+            "description": "Cleared"
+          }
+        },
+        "summary": "Clears the activity log.",
+        "tags": [
+          "dhcp"
+        ]
+      },
+      "get": {
+        "operationId": "activity",
+        "parameters": [
+          {
+            "description": "Most entries returned (newest first; default 200).",
+            "in": "path",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Activity"
+          }
+        },
+        "summary": "Recent requests and replies, newest first (`wpg_dhcp::Activity`).",
+        "tags": [
+          "dhcp"
+        ]
+      }
+    },
+    "/api/dhcp/leases": {
+      "delete": {
+        "operationId": "delete_leases",
+        "parameters": [
+          {
+            "description": "The lease (`192.168.100.10`, `2001:db8::10`, `2001:db8:100::/56`);\nabsent: every lease.",
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such lease"
+          }
+        },
+        "summary": "Deletes one lease (`key`) or all of them. The client keeps using the\naddress until it renews.",
+        "tags": [
+          "dhcp"
+        ]
+      },
+      "get": {
+        "operationId": "leases",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Leases"
+          }
+        },
+        "summary": "Leases (`wpg_dhcp::Lease`: `kind` `v4` / `na` / `pd`, `addr`, `plen`,\n`client`, `iaid`, `mac`, `hostname`, `state`, `expires`, `updated`).",
+        "tags": [
+          "dhcp"
+        ]
+      }
+    },
+    "/api/dhcp/start": {
+      "post": {
+        "operationId": "start",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DhcpStatus"
+                }
+              }
+            },
+            "description": "Running"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No / unknown interface, invalid settings"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`backend_error`: sockets (ports 67 / 547 need CAP_NET_BIND_SERVICE, RA CAP_NET_RAW; Linux only)"
+          }
+        },
+        "summary": "Starts (or restarts) the server; it also starts at boot until stopped.",
+        "tags": [
+          "dhcp"
+        ]
+      }
+    },
+    "/api/dhcp/stop": {
+      "post": {
+        "operationId": "stop",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DhcpStatus"
+                }
+              }
+            },
+            "description": "Stopped"
+          }
+        },
+        "summary": "Stops the server (and its start at boot).",
+        "tags": [
+          "dhcp"
         ]
       }
     },
@@ -7047,6 +7453,10 @@
     {
       "description": "SNMP manager tool: Get / Walk / Set / traps, MIBs, trap receiver, pcap recording",
       "name": "snmp"
+    },
+    {
+      "description": "DHCP server tool: DHCPv4 / DHCPv6 (IA_NA, IA_PD) pools and options, router advertisements, leases, activity",
+      "name": "dhcp"
     }
   ]
 }

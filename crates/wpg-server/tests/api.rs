@@ -888,6 +888,11 @@ async fn openapi_lists_every_route() {
         ("/api/snmp/traps", &["get", "delete"]),
         ("/api/snmp/capture", &["get", "post"]),
         ("/api/snmp/capture/download", &["get"]),
+        ("/api/dhcp", &["get", "put"]),
+        ("/api/dhcp/start", &["post"]),
+        ("/api/dhcp/stop", &["post"]),
+        ("/api/dhcp/leases", &["get", "delete"]),
+        ("/api/dhcp/activity", &["get", "delete"]),
     ];
     for (path, methods) in expected {
         let item = paths

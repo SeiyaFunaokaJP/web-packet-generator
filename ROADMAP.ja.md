@@ -159,6 +159,7 @@ DPDK、実機の CML2) は仮想環境以外で未確認で、macOS での pcap 
 
 - [x] SNMP マネージャ (Get / Walk / Set / Trap、v1 / v2c / v3、MIB アップロード、pcap 保存。ADR-0010)
 - [x] Web ターミナル (SSH / Telnet、踏み台経由 (ProxyJump)。ADR-0011)
+- [x] DHCP サーバー (DHCPv4、DHCPv6 の IA_NA / IA_PD、ルーター広告、デプロイ時に指定した IF で応答、IF の固定 IP。ADR-0012)
 - [x] 対話式デプロイウィザードと無人実行 (Windows の `deploy.bat` / `deploy.ps1`、`deploy.sh`。回答ファイル、複数ホスト、定期実行)
 
 ## 1.0 以降

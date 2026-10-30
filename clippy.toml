@@ -8,5 +8,7 @@ doc-valid-idents = [
     # SNMP (wpg-snmp)
     "SNMPv1", "SNMPv2", "SNMPv2c", "SNMPv3", "SMIv1", "SMIv2", "GetNext", "GetBulk",
     "TimeTicks", "IpAddress",
+    # DHCP (wpg-dhcp)
+    "DHCPv4", "DHCPv6",
 ]
 too-many-arguments-threshold = 8

@@ -54,6 +54,7 @@ const ENV_SECTIONS: &[&str] = &[
     "log",
     "terminal",
     "snmp",
+    "dhcp",
 ];
 
 /// The whole configuration (`wpg.toml`).
@@ -82,6 +83,8 @@ pub struct Config {
     pub terminal: TerminalConfig,
     /// SNMP manager tool (ADR-0010).
     pub snmp: SnmpConfig,
+    /// DHCP server (ADR-0012).
+    pub dhcp: DhcpConfig,
 }
 
 /// `[server]`.
@@ -242,6 +245,28 @@ pub struct SnmpConfig {
     pub mib_dir: PathBuf,
 }
 
+/// `[dhcp]`: the DHCPv4 / DHCPv6 server of the DHCP screen. Pools and options
+/// are edited on the screen and kept in `<data_dir>/dhcp.json`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct DhcpConfig {
+    /// Enables the DHCP screen and the `/api/dhcp` endpoints.
+    pub enabled: bool,
+    /// Interface the server answers on, e.g. `eth1` (`scripts/deploy.sh
+    /// --dhcp-iface`). Empty: chosen on the screen among the interfaces
+    /// jobs may use (`tx.allowed_ifaces`).
+    pub iface: String,
+}
+
+impl Default for DhcpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            iface: String::new(),
+        }
+    }
+}
+
 impl Default for SnmpConfig {
     fn default() -> Self {
         Self {
@@ -295,6 +320,7 @@ impl Default for Config {
             log: LogConfig::default(),
             terminal: TerminalConfig::default(),
             snmp: SnmpConfig::default(),
+            dhcp: DhcpConfig::default(),
         }
     }
 }
@@ -913,6 +939,14 @@ trap_listen = ""
 # Directory of uploaded MIB files. Empty: <data_dir>/mibs
 mib_dir = ""
 
+[dhcp]
+# DHCP screen and API (DHCPv4 / DHCPv6 server, Linux only). Pools and options
+# are edited on the screen and kept in <data_dir>/dhcp.json.
+enabled = true
+# Interface the server answers on, e.g. "eth1". Empty: chosen on the screen
+# among tx.allowed_ifaces. Ports 67 / 547 need root or CAP_NET_BIND_SERVICE.
+iface = ""
+
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".
 level = "info"
@@ -1140,6 +1174,15 @@ mod tests {
             "terminal.max_sessions".into(),
             "config-issue-zero".into()
         )));
+    }
+
+    #[test]
+    fn dhcp_section() {
+        let c = Config::from_toml_str("[dhcp]\nenabled = false\niface = \"eth1\"\n").unwrap();
+        assert!(!c.dhcp.enabled);
+        assert_eq!(c.dhcp.iface, "eth1");
+        assert!(Config::default().dhcp.enabled);
+        assert!(Config::from_toml_str("[dhcp]\npool = 1\n").is_err());
     }
 
     #[test]

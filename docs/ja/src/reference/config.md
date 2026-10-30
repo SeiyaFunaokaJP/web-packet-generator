@@ -22,6 +22,15 @@
 | `password_hash` | `string` |   | `WPG_AUTH__PASSWORD_HASH` | 管理者パスワードの argon2id PHC 文字列。`wpg config set-password` が書き込みます。 |
 | `session_ttl_secs` | `integer` | `86400` | `WPG_AUTH__SESSION_TTL_SECS` | セッションの有効期間 (秒)。リクエストのたびに延長されます。 |
 
+### `[dhcp]`
+
+DHCP サーバーツール（1 つのインタフェースで DHCPv4 / DHCPv6。プールとオプションは DHCP 画面で編集）。
+
+| キー | 型 | 既定値 | 環境変数 | 説明 |
+|---|---|---|---|---|
+| `enabled` | `boolean` | `true` | `WPG_DHCP__ENABLED` | DHCP 画面と `/api/dhcp` を有効にします。 |
+| `iface` | `string` | `""` | `WPG_DHCP__IFACE` | DHCP サーバーが応答するインタフェース（例 `eth1`。`deploy.sh --dhcp-iface` で設定）。空なら画面で `tx.allowed_ifaces` から選びます。 |
+
 ### `[log]`
 
 ログ。
@@ -184,6 +193,14 @@ enabled = true
 trap_listen = ""
 # Directory of uploaded MIB files. Empty: <data_dir>/mibs
 mib_dir = ""
+
+[dhcp]
+# DHCP screen and API (DHCPv4 / DHCPv6 server, Linux only). Pools and options
+# are edited on the screen and kept in <data_dir>/dhcp.json.
+enabled = true
+# Interface the server answers on, e.g. "eth1". Empty: chosen on the screen
+# among tx.allowed_ifaces. Ports 67 / 547 need root or CAP_NET_BIND_SERVICE.
+iface = ""
 
 [log]
 # Filter directives (RUST_LOG overrides this), e.g. "info" or "wpg_tx=debug,info".

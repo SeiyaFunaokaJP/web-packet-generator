@@ -161,6 +161,7 @@ backend is not yet confirmed on macOS, and the first release has not been publis
 
 - [x] SNMP manager (Get / Walk / Set / traps, v1 / v2c / v3, MIB upload, pcap recording; ADR-0010)
 - [x] Web terminal (SSH / Telnet, jump hosts (ProxyJump); ADR-0011)
+- [x] DHCP server (DHCPv4, DHCPv6 IA_NA / IA_PD, router advertisements, answering on the interface chosen at deploy time, static interface addresses; ADR-0012)
 - [x] Interactive deploy wizard and unattended deploys (Windows `deploy.bat` / `deploy.ps1`, `deploy.sh`; answer files, several hosts, scheduled runs)
 
 ## After 1.0

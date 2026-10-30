@@ -1,0 +1,27 @@
+[package]
+name = "wpg-dhcp"
+description = "DHCPv4 / DHCPv6 (IA_NA, IA_PD) server and router advertisements for wpg test networks"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["sync", "time"] }
+# SO_BINDTODEVICE, multicast membership and the raw ICMPv6 socket of the
+# router advertisements.
+socket2 = { version = "0.6", features = ["all"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+wpg-core.workspace = true
+wpg-protocols.workspace = true
+
+[lints]
+workspace = true
