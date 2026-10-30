@@ -205,6 +205,8 @@ scripts/deploy.sh ubuntu@192.0.2.10 --service --dry-run
 | `--ask-password` | SSH パスワードを 1 回聞き、デプロイ用の鍵 `~/.ssh/wpg_deploy_ed25519` をホストに登録します。 |
 | `--sudo-password` | sudo パスワードを先に聞き、`sudo -S` に標準入力で渡します (既定では sudo が SSH の端末で聞きます)。 |
 | `--terminal`、`--snmp-trap` | Web ターミナル / SNMP トラップ受信を有効にします (後述)。 |
+| `--dhcp-iface <名前>` | DHCP サーバーが応答するインタフェースを固定します (`/etc/wpg/wpg.env` の `WPG_DHCP__IFACE`。`--service` と併用)。[DHCP サーバー](dhcp.md) を参照。 |
+| `--dhcp-iface-addr <アドレス/長さ>` | `--dhcp-iface` の固定 IP (複数可、カンマ区切り可。例 `192.168.100.1/24,2001:db8:1::1/64`)。`/etc/netplan/90-wpg-<IF>.yaml` を書いて `netplan apply` します。デフォルトルートのある IF には設定しません。 |
 | `--no-templates` | サンプルテンプレートを `/usr/local/share/wpg/templates` にコピーしません。 |
 | `--no-healthcheck` | ヘルスチェックを省略します。 |
 | `--rollback` | `/usr/local/bin/wpg` と `wpg.prev` を入れ替えてサービスを再起動します。2 回実行すると元に戻ります。 |
@@ -240,6 +242,7 @@ scripts/deploy.sh ubuntu@192.0.2.10 --service --dry-run
 | `-Bind`、`-Iface` | 待ち受けアドレス、送信を許可するインタフェース。 |
 | `-NoService` | サービスを入れません (既定は入れます)。 |
 | `-Terminal`、`-SnmpTrap` | Web ターミナル / SNMP トラップ受信。 |
+| `-DhcpIface`、`-DhcpIfaceAddr` | DHCP サーバーのインタフェースと固定 IP (`--dhcp-iface` / `--dhcp-iface-addr` と同じ)。 |
 | `-Rollback`、`-NoTemplates`、`-NoHealthcheck` | deploy.sh と同じ。 |
 | `-ProfilePath`、`-Lang ja\|en`、`-LogFile` | 回答ファイル、表示言語、ログファイル。 |
 | `-Interactive`、`-Yes`、`-DryRun` | パラメータを既定値にしてウィザードを起動 / 何も質問しない (確認もパスワードも) / 接続と確認だけ行い、ビルドとインストールはしない。 |
@@ -310,6 +313,7 @@ scripts/deploy.sh --config deploy.wpg.conf --check-config              # 読み�
 | `ifaces` | (すべて) | 送信を許可するインタフェース (カンマ区切り)。 |
 | `service` | `1` | systemd サービスとして入れる。 |
 | `terminal`、`snmp_trap` | `0` | Web ターミナル / SNMP トラップ受信。 |
+| `dhcp_iface`、`dhcp_iface_addr` | 空 | DHCP サーバーのインタフェースと固定 IP (カンマ区切り)。 |
 | `templates`、`healthcheck` | `1` | サンプルテンプレートのコピー / ヘルスチェック。 |
 | `allow_insecure` | `0` | パスワード無しでループバック以外で待ち受ける。 |
 | `prefix` | `/usr/local` | ホスト側のインストール先。 |

@@ -17,6 +17,8 @@ templates=""
 password_file=""
 terminal=0
 snmp_trap=0
+dhcp_iface=""
+dhcp_addrs=()
 ifaces=()
 stamp_source=""
 stamp_settings=""
@@ -38,6 +40,8 @@ while [ "$#" -gt 0 ]; do
         --iface) ifaces+=("$2"); shift ;;
         --terminal) terminal=1 ;;
         --snmp-trap) snmp_trap=1 ;;
+        --dhcp-iface) dhcp_iface="$2"; shift ;;
+        --dhcp-iface-addr) dhcp_addrs+=("$2"); shift ;;
         --stamp-source) stamp_source="$2"; shift ;;
         --stamp-settings) stamp_settings="$2"; shift ;;
         --stamp-tool) stamp_tool="$2"; shift ;;
@@ -213,9 +217,59 @@ if [ "$dpdk" -eq 1 ]; then
     info "binding NICs to vfio-pci is left to you: dpdk-devbind.py --bind=vfio-pci <pci-addr> (see 'wpg doctor')"
 fi
 
+# ---- DHCP interface: static addresses -----------------------------------------
+# --dhcp-iface-addr: a netplan file for the DHCP interface (persistent; the
+# DHCP screen can also add addresses while the server runs, not persistent).
+if [ -n "$dhcp_iface" ]; then
+    ip link show dev "$dhcp_iface" >/dev/null 2>&1 || warn "--dhcp-iface: no interface $dhcp_iface on this host (yet)"
+fi
+if [ "${#dhcp_addrs[@]}" -gt 0 ]; then
+    ip link show dev "$dhcp_iface" >/dev/null 2>&1 || die "--dhcp-iface-addr: no interface $dhcp_iface"
+    # Never renumber the interface this deploy (or the default route) uses.
+    if ip -o route show default 2>/dev/null | grep -Eq " dev $dhcp_iface( |\$)"; then
+        die "$dhcp_iface carries the default route; refusing to change its addresses (pick the test interface)"
+    fi
+    ssh_ip="$(printf '%s' "${SSH_CONNECTION:-}" | awk '{print $3}')"
+    if [ -n "$ssh_ip" ] && ip -o addr show dev "$dhcp_iface" 2>/dev/null | grep -Fq " $ssh_ip/"; then
+        die "$dhcp_iface carries this SSH session ($ssh_ip); refusing to change its addresses"
+    fi
+    if command -v netplan >/dev/null 2>&1; then
+        np="/etc/netplan/90-wpg-$dhcp_iface.yaml"
+        {
+            echo "# Written by scripts/deploy.sh --dhcp-iface-addr; rewritten on every deploy."
+            echo "# Delete this file and run 'sudo netplan apply' to undo."
+            echo "network:"
+            echo "  version: 2"
+            echo "  ethernets:"
+            echo "    $dhcp_iface:"
+            echo "      dhcp4: false"
+            echo "      dhcp6: false"
+            echo "      accept-ra: false"
+            echo "      addresses:"
+            for a in "${dhcp_addrs[@]}"; do echo "        - \"$a\""; done
+        } >"$np.new"
+        chmod 0600 "$np.new"
+        mv -f "$np.new" "$np"
+        if netplan generate && netplan apply; then
+            info "static addresses on $dhcp_iface: ${dhcp_addrs[*]} ($np)"
+        else
+            warn "netplan apply failed; check $np"
+        fi
+    else
+        warn "netplan not found: the addresses of $dhcp_iface are set until the next reboot"
+        ip link set dev "$dhcp_iface" up
+        for a in "${dhcp_addrs[@]}"; do
+            ip addr replace "$a" dev "$dhcp_iface" || warn "ip addr replace $a dev $dhcp_iface failed"
+        done
+    fi
+fi
+
 # ---- systemd service --------------------------------------------------------
 if [ "$service" -eq 0 ] && [ "$((terminal + snmp_trap))" -gt 0 ]; then
     warn "--terminal / --snmp-trap only configure the service (/etc/wpg/wpg.toml); ignored without --service"
+fi
+if [ "$service" -eq 0 ] && [ -n "$dhcp_iface" ]; then
+    warn "--dhcp-iface only configures the service (/etc/wpg/wpg.env); ignored without --service"
 fi
 if [ "$service" -eq 1 ]; then
     have_systemd || die "systemd is not running on this host; start 'wpg serve' another way"
@@ -258,6 +312,9 @@ if [ "$service" -eq 1 ]; then
         if [ -s "$etc/password" ]; then
             echo "WPG_AUTH__PASSWORD_FILE=$etc/password"
         fi
+        if [ -n "$dhcp_iface" ]; then
+            echo "WPG_DHCP__IFACE=$dhcp_iface"
+        fi
         echo "WPG_LOG__ANSI=false"
     } >"$etc/wpg.env.new"
     chmod 0640 "$etc/wpg.env.new"
@@ -280,13 +337,14 @@ if [ "$service" -eq 1 ]; then
         rm -f /etc/systemd/system/wpg.service.d/allow-insecure.conf
     fi
 
-    # Port 162 (SNMP traps) is privileged: give the service CAP_NET_BIND_SERVICE when a
-    # trap listener is configured, as a drop-in so that wpg.service stays as shipped.
-    if grep -Eq '^[[:space:]]*trap_listen[[:space:]]*=' "$etc/wpg.toml" 2>/dev/null; then
+    # Ports 162 (SNMP traps), 67 / 547 (DHCP) are privileged: give the service
+    # CAP_NET_BIND_SERVICE when a trap listener or a DHCP interface is configured,
+    # as a drop-in so that wpg.service stays as shipped.
+    if [ -n "$dhcp_iface" ] || grep -Eq '^[[:space:]]*trap_listen[[:space:]]*=' "$etc/wpg.toml" 2>/dev/null; then
         mkdir -p /etc/systemd/system/wpg.service.d
         printf '[Service]\nAmbientCapabilities=CAP_NET_BIND_SERVICE\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n' \
             >/etc/systemd/system/wpg.service.d/bind-service.conf
-        info "drop-in wpg.service.d/bind-service.conf: CAP_NET_BIND_SERVICE for the SNMP trap port"
+        info "drop-in wpg.service.d/bind-service.conf: CAP_NET_BIND_SERVICE for the SNMP trap / DHCP ports"
     else
         rm -f /etc/systemd/system/wpg.service.d/bind-service.conf
     fi

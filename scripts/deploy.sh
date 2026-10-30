@@ -31,6 +31,9 @@
 #   --ssh-opt <opt>         extra ssh / scp -o option (repeatable)
 #   --terminal              enable the web terminal ([terminal], only in a new wpg.toml)
 #   --snmp-trap             enable the SNMP trap receiver on UDP 162 ([snmp] trap_listen)
+#   --dhcp-iface <name>     interface the DHCP server answers on ([dhcp] iface; with --service)
+#   --dhcp-iface-addr <a/n> static address for --dhcp-iface (repeatable, e.g. 192.168.100.1/24,
+#                           2001:db8:1::1/64): written to /etc/netplan/90-wpg-<iface>.yaml
 #   --no-templates          do not copy the sample templates
 #   --no-healthcheck        skip GET /api/health after starting the service
 #   --rollback              restore the binary saved by the previous deploy and restart
@@ -122,6 +125,8 @@ sudo_mode="tty"
 ask_sudo=0
 terminal=0
 snmp_trap=0
+dhcp_iface=""
+dhcp_addrs=()
 profile="${XDG_CONFIG_HOME:-$HOME/.config}/wpg/deploy.conf"
 lang=""
 lang_cli=0
@@ -155,6 +160,7 @@ sudo_password_file=""
 dpapi_keys=()
 cli_bin=""
 cli_iface=0
+cli_dhcp_addr=0
 result_status="ok"
 version_before=""
 version_after=""
@@ -377,6 +383,8 @@ apply_kv() { # <key> <value> <base dir> <where>
         prefix) [ -z "$v" ] || prefix="$v" ;;
         bind) [ -z "$v" ] || bind="$v" ;;
         ifaces) ifaces=(); IFS=', ' read -r -a ifaces <<<"$v" ;;
+        dhcp_iface) dhcp_iface="$v" ;;
+        dhcp_iface_addr) dhcp_addrs=(); IFS=', ' read -r -a dhcp_addrs <<<"$v" ;;
         service | terminal | snmp_trap | templates | healthcheck | allow_insecure | skip_if_current | dpdk)
             b="$(truthy "$v")" || cfg_err "$where: $k must be 1 or 0: $v"
             printf -v "$k" '%s' "$b"
@@ -423,7 +431,7 @@ load_answers() {
             [ -z "$cur" ] || [ "$k" != host ] || sec_host=1
         elif [ -n "$cur" ]; then
             # Other sections: only check the key names.
-            case "$k" in host | user | ssh_port | port | identity | binary_source | binary_file | source | git_url | git_ref | release_tag | prefix | bind | ifaces | service | terminal | snmp_trap | templates | healthcheck | allow_insecure | skip_if_current | dpdk | hugepages | admin_password_file | ssh_password_file | sudo_password_file | ssh_password_dpapi | sudo_password_dpapi | admin_password_dpapi | name | parallel | lang) ;;
+            case "$k" in host | user | ssh_port | port | identity | binary_source | binary_file | source | git_url | git_ref | release_tag | prefix | bind | ifaces | dhcp_iface | dhcp_iface_addr | service | terminal | snmp_trap | templates | healthcheck | allow_insecure | skip_if_current | dpdk | hugepages | admin_password_file | ssh_password_file | sudo_password_file | ssh_password_dpapi | sudo_password_dpapi | admin_password_dpapi | name | parallel | lang) ;;
                 *) cfg_err "$file:$n: unknown key '$k'" ;;
             esac
         fi
@@ -488,6 +496,12 @@ while [ "$#" -gt 0 ]; do
         --ssh-opt) need_value "$1" "$#"; ssh_opts+=(-o "$2"); shift ;;
         --terminal) terminal=1 ;;
         --snmp-trap) snmp_trap=1 ;;
+        --dhcp-iface) need_value "$1" "$#"; dhcp_iface="$2"; shift ;;
+        --dhcp-iface-addr)
+            need_value "$1" "$#"
+            if [ "$cli_dhcp_addr" -eq 0 ]; then dhcp_addrs=(); cli_dhcp_addr=1; fi
+            IFS=", " read -r -a _a <<<"$2"; dhcp_addrs+=("${_a[@]}"); shift
+            ;;
         --no-templates) templates=0 ;;
         --no-healthcheck) healthcheck=0 ;;
         --rollback) rollback=1 ;;
@@ -661,6 +675,8 @@ write_answers() { # <file> [automation]
             echo "service=$service"
             echo "terminal=$terminal"
             echo "snmp_trap=$snmp_trap"
+            echo "dhcp_iface=$dhcp_iface"
+            echo "dhcp_iface_addr=$(IFS=,; echo "${dhcp_addrs[*]}")"
         } >"$1"
     )
 }
@@ -882,6 +898,10 @@ compute_source_id() {
 settings_id() {
     printf 'bind=%s;ifaces=%s;service=%s;terminal=%s;snmp_trap=%s;templates=%s;allow_insecure=%s;prefix=%s;dpdk=%s' \
         "$bind" "$(IFS=,; echo "${ifaces[*]}")" "$service" "$terminal" "$snmp_trap" "$templates" "$allow_insecure" "$prefix" "$dpdk"
+    # Only when used, so that hosts deployed before these options stay "current".
+    if [ -n "$dhcp_iface" ]; then
+        printf ';dhcp_iface=%s;dhcp_iface_addr=%s' "$dhcp_iface" "$(IFS=,; echo "${dhcp_addrs[*]}")"
+    fi
 }
 
 # Is the host already running <source_id> with these settings (and healthy)?
@@ -951,6 +971,9 @@ show_summary() {
     printf '  %-22s %s\n' "$(m "管理者パスワード" "Admin password")" "$( [ -n "$admin_pw$password_file" ] && m "設定する" "set" || m "変更しない" "unchanged")"
     printf '  %-22s %s\n' "$(m "Web ターミナル" "Web terminal")" "$( [ "$terminal" -eq 1 ] && m "有効" "on" || m "無効" "off")"
     printf '  %-22s %s\n' "$(m "SNMP トラップ受信" "SNMP traps")" "$( [ "$snmp_trap" -eq 1 ] && m "有効 (UDP 162)" "on (UDP 162)" || m "無効" "off")"
+    if [ -n "$dhcp_iface" ]; then
+        printf '  %-22s %s\n' "$(m "DHCP サーバー" "DHCP server")" "$dhcp_iface $( [ "${#dhcp_addrs[@]}" -gt 0 ] && (IFS=,; echo "(${dhcp_addrs[*]})"))"
+    fi
 }
 
 wizard() {
@@ -1054,7 +1077,7 @@ wizard() {
         # deploy-remote.sh restarts an enabled service itself; --service would also
         # rewrite wpg.env. Check the health only when the listen address is known.
         [ "$(probe SERVICE)" != absent ] && [ "$use_prev" -eq 1 ] && rollback_health=1
-        service=0 terminal=0 snmp_trap=0 admin_pw=""
+        service=0 terminal=0 snmp_trap=0 dhcp_iface="" dhcp_addrs=() admin_pw=""
         return 0
     fi
 
@@ -1505,6 +1528,12 @@ case "$port" in '' | *[!0-9]*) cfg_err "--bind must end in a port number" ;; esa
 for i in "${ifaces[@]}"; do
     case "$i" in '' | *[!A-Za-z0-9_.:@-]*) cfg_err "invalid interface name: $i" ;; esac
 done
+case "$dhcp_iface" in *[!A-Za-z0-9_.:@-]*) cfg_err "invalid interface name: $dhcp_iface" ;; esac
+for a in "${dhcp_addrs[@]}"; do
+    case "$a" in */*) ;; *) cfg_err "--dhcp-iface-addr needs address/length: $a" ;; esac
+    case "$a" in *[!0-9A-Fa-f.:/]*) cfg_err "invalid --dhcp-iface-addr: $a" ;; esac
+done
+[ "${#dhcp_addrs[@]}" -eq 0 ] || [ -n "$dhcp_iface" ] || cfg_err "--dhcp-iface-addr needs --dhcp-iface"
 [ -z "$password_file" ] || [ -r "$password_file" ] || cfg_err "cannot read $password_file"
 [ "$build_on_host" -eq 0 ] || [ -z "$binary$release_tag" ] || cfg_err "--build-on-host cannot be combined with --binary / --release-tag"
 if [ "$bin_choice" = file ] && [ "$managed" -eq 1 ]; then
@@ -1520,6 +1549,7 @@ if [ "$check_config" -eq 1 ]; then
     printf '  %-16s %s\n' name "${label:-${host#*@}}" host "$host" ssh_port "${ssh_port:-22}" identity "${identity:--}" \
         binary "$(summary_binary)" bind "$bind" ifaces "$( [ "${#ifaces[@]}" -gt 0 ] && (IFS=,; echo "${ifaces[*]}") || echo all)" \
         service "$service" terminal "$terminal" snmp_trap "$snmp_trap" templates "$templates" healthcheck "$healthcheck" \
+        dhcp_iface "${dhcp_iface:--}" dhcp_iface_addr "$( [ "${#dhcp_addrs[@]}" -gt 0 ] && (IFS=,; echo "${dhcp_addrs[*]}") || echo -)" \
         prefix "$prefix" ssh_password "$(secret_src WPG_DEPLOY_SSH_PASSWORD "$ssh_password_file")" \
         sudo_password "$(secret_src WPG_DEPLOY_SUDO_PASSWORD "$sudo_password_file")" \
         admin_password "$(secret_src WPG_DEPLOY_ADMIN_PASSWORD "$password_file")"
@@ -1582,7 +1612,7 @@ if [ "$managed" -eq 1 ]; then
         fi
     elif [ "$(probe SERVICE)" != absent ] && [ -n "$probe_out" ]; then
         rollback_health=1
-        service=0 terminal=0 snmp_trap=0
+        service=0 terminal=0 snmp_trap=0 dhcp_iface=""
     fi
     if [ "$yes" -eq 0 ]; then
         show_summary
@@ -1737,6 +1767,10 @@ fi
 [ "$allow_insecure" -eq 1 ] && remote_args+=(--allow-insecure)
 [ "$terminal" -eq 1 ] && remote_args+=(--terminal)
 [ "$snmp_trap" -eq 1 ] && remote_args+=(--snmp-trap)
+if [ -n "$dhcp_iface" ] && [ "$rollback" -eq 0 ]; then
+    remote_args+=(--dhcp-iface "$dhcp_iface")
+    for a in "${dhcp_addrs[@]}"; do remote_args+=(--dhcp-iface-addr "$a"); done
+fi
 [ "$templates" -eq 1 ] && [ "$rollback" -eq 0 ] && remote_args+=(--templates "$stage/templates")
 [ -z "$password_file" ] || remote_args+=(--password-file "$stage/password")
 for i in "${ifaces[@]}"; do remote_args+=(--iface "$i"); done
