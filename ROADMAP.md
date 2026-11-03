@@ -166,17 +166,17 @@ backend is not yet confirmed on macOS, and the first release has not been publis
 
 ## M13: Easier to use, build and extend
 
-Wave 1 (in progress):
+Wave 1 (done):
 
-- [ ] Builder: "New job" saves unsaved edits first; restored drafts are marked and can be discarded; palette errors and empty searches are shown; a calmer toolbar
-- [ ] Jobs: forms warn before discarding changes; "Run again" and "Edit as new job" for finished jobs; shorter job form with sensible defaults
-- [ ] First run: a "Get started" card and actionable empty states; clearer template cards; dismissable error toasts; visible user-protocol load errors
-- [ ] One setup command per OS (`scripts/setup.sh` / `setup.ps1`), a justfile that works on Windows, an accurate README quick start, and build scripts checked in CI
-- [ ] The release binary always embeds the freshly built web UI; `wpg serve` and `wpg doctor` say when it is missing; doctor checks the macOS pcap backend
-- [ ] Every CLI command reads `wpg.toml` (`--config`); `--json` for render and template commands; `-o -` for render; exit code 3 for template errors
-- [ ] `wpg protocols list / show / check` and reloading user-defined protocols without restarting the server
+- [x] Builder: "New job" saves unsaved edits first; restored drafts are marked and can be discarded; palette errors and empty searches are shown; a calmer toolbar
+- [x] Jobs: forms warn before discarding changes; "Run again" and "Edit as new job" for finished jobs; shorter job form with sensible defaults
+- [x] First run: a "Get started" card and actionable empty states; clearer template cards; dismissable error toasts; visible user-protocol load errors
+- [x] One setup command per OS (`scripts/setup.sh` / `setup.ps1`), a justfile that works on Windows, an accurate README quick start, and build scripts checked in CI
+- [x] The release binary always embeds the freshly built web UI; `wpg serve` and `wpg doctor` say when it is missing; doctor checks the macOS pcap backend
+- [x] Every CLI command reads `wpg.toml` (`--config`); `--json` for render and template commands; `-o -` for render; exit code 3 for template errors
+- [x] `wpg protocols list / show / check` and reloading user-defined protocols without restarting the server
 
-Wave 2 (planned):
+Wave 2 (in progress):
 
 - [ ] API tokens for scripts (`Authorization: Bearer`) and `wpg remote` to drive a running server
 - [ ] Field overrides from the CLI (`--set LAYER.FIELD=VALUE`) and a variables file (`--vars-file`)
