@@ -208,6 +208,14 @@ pub(crate) struct SendArgs {
     /// Expansion strategy: auto, prerender or onthefly.
     #[arg(long, default_value = "auto")]
     pub(crate) plan: String,
+    /// `auto` pre-renders only streams up to this many bytes (default:
+    /// `tx.prerender_max_bytes`, 256 MiB).
+    #[arg(long, value_name = "BYTES")]
+    pub(crate) prerender_max_bytes: Option<u64>,
+    /// `auto` pre-renders only streams up to this many packets (default:
+    /// `tx.prerender_max_packets`, 100M).
+    #[arg(long, value_name = "N")]
+    pub(crate) prerender_max_packets: Option<u64>,
     /// Print the final report as JSON on stdout.
     #[arg(long)]
     pub(crate) json: bool,
@@ -476,7 +484,7 @@ fn main() -> ExitCode {
         Command::Template(args) => cmd::template::run(args),
         Command::Ifaces(args) => cmd::ifaces::run(&args),
         Command::Doctor(args) => cmd::doctor::run(&args),
-        Command::Bench(args) => cmd::bench::run(args),
+        Command::Bench(args) => cmd::bench::run(args, &config.unwrap_or_default().tx),
         Command::Capture(args) => cmd::capture::run(args),
         Command::Config(args) => cmd::config::run(args),
         Command::Protocols(args) => cmd::protocols::run(&args),

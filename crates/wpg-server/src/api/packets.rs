@@ -14,16 +14,13 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use utoipa::ToSchema;
-use wpg_core::stream::{Expansion, PlanConfig};
+use wpg_core::stream::{Expansion, PlanConfig, PlanHint};
 use wpg_i18n::Locale;
 use wpg_template::{apply_overrides, compile, lint, LintLevel, Template};
 
 use crate::error::{codes, ApiError, ApiJson, ApiResult};
 use crate::localize::{diagnostic_json, lint_issue_json, request_locale, tr};
 use crate::state::AppState;
-
-/// Most packets one preview returns.
-pub const MAX_PREVIEW: u64 = 256;
 
 /// Parses a template given as an object (JSON form) or a string (YAML text).
 ///
@@ -82,7 +79,8 @@ pub struct RenderRequest {
     /// Variable values.
     #[serde(default)]
     pub vars: BTreeMap<String, String>,
-    /// Packets to render (1..=256, default 1).
+    /// Packets to render (1..=`server.preview_max`, default 1; 256 unless
+    /// configured).
     #[serde(default)]
     pub count: Option<u64>,
     /// Stream index of the first packet (default 0).
@@ -135,11 +133,13 @@ pub async fn render(
 ) -> ApiResult<Json<RenderResponse>> {
     let locale = request_locale(&headers);
     let count = req.count.unwrap_or(1);
-    if count == 0 || count > MAX_PREVIEW {
-        return Err(ApiError::bad_request("api-error-count-range", count).arg("max", MAX_PREVIEW));
+    let max = st.config.server.preview_max;
+    if count == 0 || count > max {
+        return Err(ApiError::bad_request("api-error-count-range", count).arg("max", max));
     }
     let catalog = st.catalog();
-    tokio::task::spawn_blocking(move || render_blocking(&req, count, catalog, locale))
+    let pcfg = st.config.tx.plan_config(PlanHint::Auto);
+    tokio::task::spawn_blocking(move || render_blocking(&req, count, catalog, &pcfg, locale))
         .await
         .map_err(ApiError::internal)?
         .map(Json)
@@ -149,6 +149,7 @@ fn render_blocking(
     req: &RenderRequest,
     count: u64,
     catalog: &'static wpg_protocols::Catalog,
+    pcfg: &PlanConfig,
     locale: Locale,
 ) -> ApiResult<RenderResponse> {
     let template = template_from_value(&req.template)?;
@@ -182,7 +183,7 @@ fn render_blocking(
                 .collect(),
         });
     }
-    let plan = exp.plan(first_len.unwrap_or(0), &PlanConfig::default());
+    let plan = exp.plan(first_len.unwrap_or(0), pcfg);
     Ok(RenderResponse {
         packets,
         cardinality,

@@ -2093,7 +2093,7 @@
         "description": "`POST /api/render` request.",
         "properties": {
           "count": {
-            "description": "Packets to render (1..=256, default 1).",
+            "description": "Packets to render (1..=`server.preview_max`, default 1; 256 unless\nconfigured).",
             "format": "int64",
             "minimum": 0,
             "type": [

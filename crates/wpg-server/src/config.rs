@@ -102,6 +102,12 @@ pub struct ServerConfig {
     /// Public URL of the server when it sits behind a reverse proxy
     /// (`https://wpg.example.net`), used for absolute links.
     pub base_url: Option<String>,
+    /// Most packets one preview request (`POST /api/render`) may ask for.
+    pub preview_max: u64,
+    /// Finished jobs kept in memory and listed by the Jobs screen / API.
+    pub job_history: usize,
+    /// Finished jobs kept in the database; the oldest are deleted beyond this.
+    pub job_history_db: usize,
 }
 
 /// `[server.tls]`.
@@ -179,7 +185,7 @@ pub struct ProtocolsConfig {
 }
 
 /// `[tx]`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct TxConfig {
     /// Interfaces jobs may transmit on; empty = all (spec §2.6 "送出先インタフェース
@@ -195,6 +201,60 @@ pub struct TxConfig {
     /// (wpg adds `-l <first CPU>` and `--in-memory` unless given). EAL starts once
     /// per process, with the first `dpdk` job.
     pub dpdk_eal_args: Vec<String>,
+    /// Pre-render a stream (all frames built before sending) only when
+    /// `packets * frame length` is at most this many bytes; larger streams are
+    /// built on the fly. `0` never pre-renders unless asked to.
+    pub prerender_max_bytes: u64,
+    /// Pre-render a stream only when it has at most this many packets.
+    pub prerender_max_packets: u64,
+    /// Memory of one TX ring (`afpacket`) or UMEM (`afxdp`) per worker, in bytes;
+    /// the ring depth is reduced to fit.
+    pub ring_bytes: u64,
+}
+
+impl Default for TxConfig {
+    fn default() -> Self {
+        Self {
+            allowed_ifaces: Vec::new(),
+            max_rate: None,
+            default_backend: None,
+            dpdk_eal_args: Vec::new(),
+            prerender_max_bytes: wpg_core::stream::DEFAULT_PRERENDER_MAX_BYTES,
+            prerender_max_packets: wpg_core::stream::DEFAULT_PRERENDER_MAX_PACKETS,
+            ring_bytes: wpg_tx::DEFAULT_RING_BYTES as u64,
+        }
+    }
+}
+
+/// Allowed range of `tx.prerender_max_bytes` (up to 1 TiB).
+pub const PRERENDER_MAX_BYTES_RANGE: (u64, u64) = (0, 1 << 40);
+/// Allowed range of `tx.prerender_max_packets`.
+pub const PRERENDER_MAX_PACKETS_RANGE: (u64, u64) = (0, 10_000_000_000);
+/// Allowed range of `tx.ring_bytes` (1 MiB to 1 GiB).
+pub const RING_BYTES_RANGE: (u64, u64) = (1 << 20, 1 << 30);
+/// Allowed range of `server.preview_max`.
+pub const PREVIEW_MAX_RANGE: (u64, u64) = (1, 100_000);
+/// Allowed range of `server.job_history`.
+pub const JOB_HISTORY_RANGE: (u64, u64) = (1, 100_000);
+/// Allowed range of `server.job_history_db`.
+pub const JOB_HISTORY_DB_RANGE: (u64, u64) = (1, 10_000_000);
+
+impl TxConfig {
+    /// Pre-render thresholds of this configuration with `hint`.
+    #[must_use]
+    pub fn plan_config(&self, hint: wpg_core::stream::PlanHint) -> wpg_core::stream::PlanConfig {
+        wpg_core::stream::PlanConfig {
+            threshold_bytes: self.prerender_max_bytes,
+            max_prerender_packets: self.prerender_max_packets,
+            hint,
+        }
+    }
+
+    /// `ring_bytes` for [`wpg_tx::TxOptions::ring_bytes`] (saturating on 32-bit).
+    #[must_use]
+    pub fn ring_bytes_usize(&self) -> usize {
+        usize::try_from(self.ring_bytes).unwrap_or(usize::MAX)
+    }
 }
 
 /// `[terminal]`: the web terminal (ADR-0011, spec §2.6 "Web ターミナル").
@@ -284,6 +344,9 @@ impl Default for ServerConfig {
             tls: None,
             self_signed_tls: false,
             base_url: None,
+            preview_max: 256,
+            job_history: 100,
+            job_history_db: 1000,
         }
     }
 }
@@ -706,6 +769,7 @@ impl Config {
                 Some(_) => {}
             }
         }
+        self.validate_limits(&mut out);
         self.validate_terminal(&mut out);
         let listen = self.snmp.trap_listen.trim();
         if !listen.is_empty() {
@@ -735,6 +799,54 @@ impl Config {
             ));
         }
         out
+    }
+
+    /// Ranges of the size / count limits.
+    fn validate_limits(&self, out: &mut Vec<ConfigIssue>) {
+        let s = &self.server;
+        let t = &self.tx;
+        let as_u64 = |v: usize| u64::try_from(v).unwrap_or(u64::MAX);
+        for (key, value, (min, max)) in [
+            (
+                "tx.prerender_max_bytes",
+                t.prerender_max_bytes,
+                PRERENDER_MAX_BYTES_RANGE,
+            ),
+            (
+                "tx.prerender_max_packets",
+                t.prerender_max_packets,
+                PRERENDER_MAX_PACKETS_RANGE,
+            ),
+            ("tx.ring_bytes", t.ring_bytes, RING_BYTES_RANGE),
+            ("server.preview_max", s.preview_max, PREVIEW_MAX_RANGE),
+            (
+                "server.job_history",
+                as_u64(s.job_history),
+                JOB_HISTORY_RANGE,
+            ),
+            (
+                "server.job_history_db",
+                as_u64(s.job_history_db),
+                JOB_HISTORY_DB_RANGE,
+            ),
+        ] {
+            if !(min..=max).contains(&value) {
+                out.push(ConfigIssue::new(
+                    IssueLevel::Error,
+                    key,
+                    "config-issue-out-of-range",
+                    format!("{value}; {min}–{max}"),
+                ));
+            }
+        }
+        if s.job_history_db < s.job_history {
+            out.push(ConfigIssue::new(
+                IssueLevel::Warning,
+                "server.job_history_db",
+                "config-issue-job-history-db-smaller",
+                format!("{} < {}", s.job_history_db, s.job_history),
+            ));
+        }
     }
 
     fn validate_terminal(&self, out: &mut Vec<ConfigIssue>) {
@@ -883,6 +995,12 @@ bind = "127.0.0.1:8080"
 # Serve HTTPS with a self-signed certificate generated into <data_dir>/tls/
 # (same as `wpg serve --tls`). Ignored when [server.tls] is set.
 self_signed_tls = false
+# Most packets one preview request may render (1-100000).
+preview_max = 256
+# Finished jobs listed on the Jobs screen (kept in memory, 1-100000) and kept in
+# the database (1-10000000; older ones are deleted).
+job_history = 100
+job_history_db = 1000
 
 # TLS certificate chain and private key (PEM) to serve HTTPS with.
 # [server.tls]
@@ -928,6 +1046,16 @@ allowed_ifaces = []
 # "--in-memory" unless given). EAL starts with the first dpdk job; changing them
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
+# Streams are pre-rendered (every frame built before sending) when they have at
+# most prerender_max_packets packets and packets * frame length is at most
+# prerender_max_bytes (default 256 MiB, up to 1 TiB); larger ones are built on
+# the fly. `wpg send --prerender-max-bytes / --prerender-max-packets` override.
+prerender_max_bytes = 268435456
+prerender_max_packets = 100000000
+# Memory of one afpacket TX ring / afxdp UMEM per worker in bytes (1 MiB-1 GiB,
+# default 16 MiB); --ring-depth is reduced to fit. Locked memory: raise
+# `ulimit -l` / LimitMEMLOCK for large values.
+ring_bytes = 16777216
 
 [snmp]
 # SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).
@@ -1122,6 +1250,100 @@ mod tests {
         assert!(keys.contains(&(IssueLevel::Error, "tx.default_backend".into())));
         assert!(keys.contains(&(IssueLevel::Warning, "server.bind".into())));
         assert!(keys.contains(&(IssueLevel::Error, "log.level".into())));
+    }
+
+    #[test]
+    fn limit_keys_parse_and_default() {
+        let c = Config::default();
+        assert_eq!(c.tx.prerender_max_bytes, 256 * 1024 * 1024);
+        assert_eq!(c.tx.prerender_max_packets, 100_000_000);
+        assert_eq!(c.tx.ring_bytes, 16 << 20);
+        assert_eq!(c.server.preview_max, 256);
+        assert_eq!(c.server.job_history, 100);
+        assert_eq!(c.server.job_history_db, 1000);
+        assert_eq!(
+            c.tx.plan_config(wpg_core::stream::PlanHint::Auto),
+            wpg_core::stream::PlanConfig::default()
+        );
+        let c = Config::from_toml_str(
+            "[tx]\nprerender_max_bytes = 1048576\nprerender_max_packets = 10\n\
+             ring_bytes = 67108864\n[server]\npreview_max = 1000\njob_history = 5\n\
+             job_history_db = 50\n",
+        )
+        .unwrap();
+        assert_eq!(c.tx.prerender_max_bytes, 1 << 20);
+        assert_eq!(c.tx.prerender_max_packets, 10);
+        assert_eq!(c.tx.ring_bytes_usize(), 64 << 20);
+        assert_eq!(c.server.preview_max, 1000);
+        assert_eq!((c.server.job_history, c.server.job_history_db), (5, 50));
+        let p = c.tx.plan_config(wpg_core::stream::PlanHint::Auto);
+        assert_eq!((p.threshold_bytes, p.max_prerender_packets), (1 << 20, 10));
+        assert!(Config::from_toml_str("[tx]\nring_bytes = -1\n").is_err());
+        assert!(Config::from_toml_str("[server]\npreview_max = \"many\"\n").is_err());
+    }
+
+    #[test]
+    #[allow(clippy::result_large_err)] // figment's Jail API
+    fn limit_keys_from_env() {
+        figment::Jail::expect_with(|jail| {
+            jail.set_env("WPG_TX__PRERENDER_MAX_BYTES", "1024");
+            jail.set_env("WPG_TX__RING_BYTES", "33554432");
+            jail.set_env("WPG_SERVER__PREVIEW_MAX", "16");
+            jail.set_env("WPG_SERVER__JOB_HISTORY_DB", "20");
+            let c = Config::load(None, &Overrides::default()).unwrap();
+            assert_eq!(c.tx.prerender_max_bytes, 1024);
+            assert_eq!(c.tx.ring_bytes, 32 << 20);
+            assert_eq!(c.server.preview_max, 16);
+            assert_eq!(c.server.job_history_db, 20);
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn limit_validation() {
+        let mut c = Config::default();
+        c.templates.library_paths = vec![];
+        assert!(c.validate().is_empty(), "{:?}", c.validate());
+        // 0 thresholds are allowed (never pre-render automatically)
+        c.tx.prerender_max_bytes = 0;
+        c.tx.prerender_max_packets = 0;
+        assert!(c.validate().is_empty(), "{:?}", c.validate());
+        c.tx.prerender_max_bytes = (1 << 40) + 1;
+        c.tx.ring_bytes = 4096;
+        c.server.preview_max = 0;
+        c.server.job_history = 0;
+        c.server.job_history_db = 0;
+        let issues = c.validate();
+        let errors: Vec<&str> = issues
+            .iter()
+            .filter(|i| i.message_key == "config-issue-out-of-range")
+            .map(|i| i.key.as_str())
+            .collect();
+        assert_eq!(
+            errors,
+            [
+                "tx.prerender_max_bytes",
+                "tx.ring_bytes",
+                "server.preview_max",
+                "server.job_history",
+                "server.job_history_db"
+            ],
+            "{issues:?}"
+        );
+        let ring = issues.iter().find(|i| i.key == "tx.ring_bytes").unwrap();
+        assert_eq!(ring.level, IssueLevel::Error);
+        assert_eq!(ring.detail, "4096; 1048576–1073741824");
+        c = Config::default();
+        c.templates.library_paths = vec![];
+        c.tx.ring_bytes = 2 << 30;
+        assert_eq!(c.validate().len(), 1);
+        c.tx.ring_bytes = 1 << 30;
+        c.server.job_history = 500;
+        c.server.job_history_db = 200;
+        let issues = c.validate();
+        assert_eq!(issues.len(), 1, "{issues:?}");
+        assert_eq!(issues[0].level, IssueLevel::Warning);
+        assert_eq!(issues[0].message_key, "config-issue-job-history-db-smaller");
     }
 
     #[test]

@@ -157,6 +157,12 @@ Options:
 
           [default: auto]
 
+      --prerender-max-bytes <BYTES>
+          `auto` pre-renders only streams up to this many bytes (default: `tx.prerender_max_bytes`, 256 MiB)
+
+      --prerender-max-packets <N>
+          `auto` pre-renders only streams up to this many packets (default: `tx.prerender_max_packets`, 100M)
+
       --json
           Print the final report as JSON on stdout
 
@@ -185,6 +191,9 @@ Options:
 
       --ring-depth <N>
           TX ring depth in frames (`afpacket`)
+
+      --ring-bytes <BYTES>
+          Memory of one TX ring / UMEM per worker in bytes (`afpacket`, `afxdp`; default: `tx.ring_bytes`, 16 MiB)
 
       --pin-core <CORE>
           Pin the TX thread to this CPU core (Linux; the first worker)
@@ -729,6 +738,9 @@ Options:
 
       --ring-depth <N>
           TX ring depth in frames (`afpacket`)
+
+      --ring-bytes <BYTES>
+          Memory of one TX ring / UMEM per worker in bytes (`afpacket`, `afxdp`; default: `tx.ring_bytes`, 16 MiB)
 
       --pin-core <CORE>
           Pin the TX thread to this CPU core (Linux; the first worker)

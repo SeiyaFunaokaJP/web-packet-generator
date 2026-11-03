@@ -114,6 +114,9 @@ impl From<Vec<u8>> for Frame {
     }
 }
 
+/// Default of [`TxOptions::ring_bytes`] (16 MiB, `tx.ring_bytes`).
+pub const DEFAULT_RING_BYTES: usize = 16 << 20;
+
 /// Options passed to [`TxBackend::open`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TxOptions {
@@ -121,6 +124,9 @@ pub struct TxOptions {
     pub batch_size: usize,
     /// TX ring depth (backends with rings only).
     pub ring_depth: usize,
+    /// Upper bound for the memory of one TX ring (`afpacket`) or UMEM (`afxdp`),
+    /// in bytes; `ring_depth` is clamped to fit ([`DEFAULT_RING_BYTES`]).
+    pub ring_bytes: usize,
     /// CPU core to pin the TX thread to.
     pub pin_core: Option<usize>,
     /// Bypass the kernel qdisc layer (`PACKET_QDISC_BYPASS`, `afpacket` only). Faster,
@@ -176,6 +182,7 @@ impl Default for TxOptions {
         Self {
             batch_size: 64,
             ring_depth: 4096,
+            ring_bytes: DEFAULT_RING_BYTES,
             pin_core: None,
             qdisc_bypass: false,
             tx_ring: true,
