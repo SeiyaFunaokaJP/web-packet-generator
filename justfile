@@ -82,7 +82,6 @@ ci: fmt-check lint check-wasm test
 # Browser end-to-end tests of the web UI (requires: trunk, Node.js 20+; see e2e/README.md).
 e2e:
     cd crates/wpg-web && trunk build --release
-    touch crates/wpg-server/src/lib.rs
     cargo build -p wpg-cli
     cd e2e && npm ci && npx playwright install chromium && npx playwright test
 
@@ -90,7 +89,6 @@ e2e:
 # (requires what `e2e` does, plus ffmpeg for the GIF; see e2e/README.md).
 screenshots:
     cd crates/wpg-web && trunk build --release
-    touch crates/wpg-server/src/lib.rs
     cargo build -p wpg-cli
     cd e2e && npm ci && npx playwright install chromium && npx playwright test -c screenshots.config.ts
 

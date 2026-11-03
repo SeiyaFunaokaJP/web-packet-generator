@@ -3,7 +3,7 @@
 All notable changes to wpg are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/). Entries are written in English; the milestone numbers
-(M0 to M12) refer to [ROADMAP.md](ROADMAP.md).
+(M0 to M13) refer to [ROADMAP.md](ROADMAP.md).
 
 When you cut a release, move the entries under **Unreleased** into a new version section, add the upgrade
 notes (template schema, database, configuration; see the "Upgrading" page of the manual) and follow the
@@ -152,6 +152,27 @@ Everything below is the initial development towards 1.0. No version has been tag
   a wizard question that refuses the management interface): `WPG_DHCP__IFACE`, a netplan file and a
   `CAP_NET_BIND_SERVICE` drop-in. The uploaded binary is made executable before it is run (scp from
   Windows drops the execute bit).
+
+#### Usability, build and extensibility (M13)
+
+- Builder: "New job" saves unsaved edits first and asks for a name when needed; restored drafts are
+  marked and can be discarded; palette load errors, empty searches and an "Add layer" button on narrow
+  screens; a quieter toolbar with a More menu, "Packet 1 of N" and a parity badge only on a mismatch.
+- Jobs: forms ask before discarding changes; finished jobs offer "Run again" and "Edit as new job" and link
+  their templates; the job form preselects the interface, folds advanced settings and writes to a file with
+  a checkbox.
+- First run: a "Get started" card on the dashboard, empty states with next steps, template cards with
+  visible Send / Open actions, dismissable error toasts mirrored in the logs panel, and visible errors when
+  user-defined protocols fail to load.
+- `scripts/setup.sh` / `setup.ps1` and `just setup`, with the trunk and Npcap SDK versions pinned in
+  `scripts/versions.env`; Windows variants of the justfile recipes; `just check` and `just ci`; build
+  scripts build only `wpg-cli` and run on three OSes in CI.
+- The server rebuilds when the web UI is rebuilt; `wpg serve` and `wpg doctor` report a missing web UI,
+  and doctor checks the pcap backend on macOS and skips the libpcap check when pcap is not built in.
+- Global `--config` / `WPG_CONFIG` read by every command (`[protocols] dirs`, `[tx] default_backend` and
+  `max_rate` in `send`); `--json` for `render` and `template lint / show / list`; `render -o -`; exit
+  status 3 for template errors.
+- `wpg protocols list / show / check` and `POST /api/protocols/reload` with a Reload button in Settings.
 
 #### Documentation
 
