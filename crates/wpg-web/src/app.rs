@@ -71,18 +71,22 @@ pub(crate) fn App() -> impl IntoView {
     api::set_locale(i18n.current());
     api::set_unauthorized_hook(move || auth.refresh_later());
     auth.refresh_later();
+    // User-defined protocols of the server join the in-browser catalog
+    // (preview, field editor, capture tree) once per page load and again
+    // whenever the server reloads them (`protocols_changed`).
+    let extensions_loaded = StoredValue::new(None::<u64>);
+    Effect::new(move |_| {
+        let rev = live.protocols_rev.get();
+        if auth.phase.with(AuthPhase::allows_app) && extensions_loaded.get_value() != Some(rev) {
+            extensions_loaded.set_value(Some(rev));
+            leptos::task::spawn_local(load_protocol_extensions());
+        }
+    });
     // The event stream needs a session: connect once the app may be shown, and
     // skip the back-off whenever that becomes true again (after a login).
     let ws_started = StoredValue::new(false);
-    let extensions_loaded = StoredValue::new(false);
     Effect::new(move |_| {
         if auth.phase.with(AuthPhase::allows_app) {
-            // User-defined protocols of the server join the in-browser catalog
-            // (preview, field editor, capture tree) once per page load.
-            if !extensions_loaded.get_value() {
-                extensions_loaded.set_value(true);
-                leptos::task::spawn_local(load_protocol_extensions());
-            }
             if ws_started.get_value() {
                 ws::reconnect_now();
             } else {
@@ -120,7 +124,6 @@ pub(crate) fn App() -> impl IntoView {
 /// [`wpg_protocols::catalog`].
 async fn load_protocol_extensions() {
     match api::protocol_extensions().await {
-        Ok(exts) if exts.is_empty() => {}
         Ok(exts) => {
             if let Err(e) = wpg_protocols::extension::install(exts) {
                 leptos::logging::warn!("user-defined protocols: {e}");

@@ -32,7 +32,11 @@ pub(crate) fn Palette() -> impl IntoView {
     let dnd = DragCtx::use_ctx();
     let query = RwSignal::new(String::new());
 
-    let protocols = LocalResource::new(|| async move { api::protocols().await });
+    let live = crate::ws::use_live();
+    let protocols = LocalResource::new(move || {
+        live.protocols_rev.track();
+        async move { api::protocols().await }
+    });
 
     // Appends a layer after the current selection and selects it.
     let add = move |id: String| {

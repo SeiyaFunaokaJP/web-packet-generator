@@ -14,17 +14,18 @@ Web Packet Generator
 Usage: wpg [OPTIONS] <COMMAND>
 
 Commands:
-  serve     Start the web UI / API server
-  send      Send a template headlessly
-  render    Render a template to a pcapng file without transmitting
-  import    Convert a pcap/pcapng capture into a template
-  template  Template tools (lint, list, migrate, export, import)
-  ifaces    List network interfaces usable for transmission
-  doctor    Diagnose privileges, drivers, hugepages and Npcap
-  bench     Measure transmit performance
-  capture   Receive: counters, the first frames, pcapng output, signature verification
-  config    Configuration file tools (init, show, validate)
-  help      Print this message or the help of the given subcommand(s)
+  serve      Start the web UI / API server
+  send       Send a template headlessly
+  render     Render a template to a pcapng file without transmitting
+  import     Convert a pcap/pcapng capture into a template
+  template   Template tools (lint, list, migrate, export, import)
+  ifaces     List network interfaces usable for transmission
+  doctor     Diagnose privileges, drivers, hugepages and Npcap
+  bench      Measure transmit performance
+  capture    Receive: counters, the first frames, pcapng output, signature verification
+  config     Configuration file tools (init, show, validate)
+  protocols  Protocol tools (list, show, check user-defined protocol files)
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
       --protocols-dir <DIR>
@@ -938,6 +939,108 @@ Options:
 
   -h, --help
           Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols`
+
+```text
+Protocol tools (list, show, check user-defined protocol files)
+
+Usage: wpg protocols [OPTIONS] <COMMAND>
+
+Commands:
+  list   List the protocols: built-in ones and those of `--protocols-dir`
+  show   Print a protocol definition, as an extension file to start a new protocol from (change its `id` first)
+  check  Check user-defined protocol files (exit status 1 on errors)
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols list`
+
+```text
+List the protocols: built-in ones and those of `--protocols-dir`
+
+Usage: wpg protocols list [OPTIONS]
+
+Options:
+      --json
+          Output JSON
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols show`
+
+```text
+Print a protocol definition, as an extension file to start a new protocol from (change its `id` first)
+
+Usage: wpg protocols show [OPTIONS] <ID>
+
+Arguments:
+  <ID>
+          Protocol id (`udp`, `ipv4`, ...)
+
+Options:
+      --json
+          Output the definition as JSON instead of YAML
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols check`
+
+```text
+Check user-defined protocol files (exit status 1 on errors).
+
+The files are checked together, with the built-in protocols and the other files of `--protocols-dir`.
+
+Usage: wpg protocols check [OPTIONS] <PATHS>...
+
+Arguments:
+  <PATHS>...
+          Extension files (`*.yaml`) or directories holding them
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help (see a summary with '-h')
 
   -V, --version
           Print version

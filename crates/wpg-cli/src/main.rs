@@ -58,6 +58,8 @@ enum Command {
     Capture(cmd::capture::CaptureArgs),
     /// Configuration file tools (init, show, validate).
     Config(ConfigArgs),
+    /// Protocol tools (list, show, check user-defined protocol files).
+    Protocols(cmd::protocols::ProtocolsArgs),
     /// Documentation tools for contributors (generate the reference pages).
     #[command(hide = true)]
     Docs(DocsArgs),
@@ -411,6 +413,7 @@ impl Command {
             Command::Bench(_) => "bench",
             Command::Capture(_) => "capture",
             Command::Config(_) => "config",
+            Command::Protocols(_) => "protocols",
             Command::Docs(_) => "docs",
         }
     }
@@ -480,6 +483,7 @@ fn main() -> ExitCode {
         Command::Bench(args) => cmd::bench::run(args),
         Command::Capture(args) => cmd::capture::run(args),
         Command::Config(args) => cmd::config::run(args),
+        Command::Protocols(args) => cmd::protocols::run(&args),
         Command::Docs(args) => cmd::docs::run(&args),
     }
 }
@@ -602,6 +606,9 @@ mod tests {
             &["wpg", "config", "init", "--path", "w.toml", "--force"],
             &["wpg", "config", "show", "--config", "w.toml"],
             &["wpg", "config", "validate"],
+            &["wpg", "protocols", "list", "--json"],
+            &["wpg", "protocols", "show", "udp", "--json"],
+            &["wpg", "protocols", "check", "p.d", "x.yaml"],
             &["wpg", "docs", "gen", "--root", "..", "--check"],
             &["wpg", "bench", "--backend", "null"],
             &[

@@ -54,6 +54,9 @@ pub mod codes {
     /// An SNMP request failed (no response, Report PDU, authentication);
     /// `details.kind` = `timeout`, `report` or `error`.
     pub const SNMP: &str = "snmp_error";
+    /// A user-defined protocol file does not load; `details.file`,
+    /// `details.reason`.
+    pub const INVALID_PROTOCOLS: &str = "invalid_protocols";
     /// Anything else.
     pub const INTERNAL: &str = "internal";
 }

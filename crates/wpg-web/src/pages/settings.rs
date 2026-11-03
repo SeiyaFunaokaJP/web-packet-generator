@@ -1,4 +1,5 @@
-//! `/settings`: language, theme, account, client settings, about, doctor report.
+//! `/settings`: language, theme, account, client settings, about, user-defined
+//! protocols, doctor report.
 
 use leptos::prelude::*;
 
@@ -140,6 +141,8 @@ pub(crate) fn SettingsPage() -> impl IntoView {
                     }.into_any(),
                 }}
             </section>
+
+            <UserProtocols />
         </div>
 
         <section id="doctor" aria-labelledby="set-doctor" class="mt-6">
@@ -193,6 +196,53 @@ pub(crate) fn SettingsPage() -> impl IntoView {
                     </div>
                 }.into_any(),
             }}
+        </section>
+    }
+}
+
+/// Count of the server's user-defined protocols and a button that makes the
+/// server read its protocol directories again.
+#[component]
+fn UserProtocols() -> impl IntoView {
+    let i18n = use_i18n();
+    let live = use_live();
+    let toasts = use_toasts();
+    let busy = RwSignal::new(false);
+    let loaded = LocalResource::new(move || {
+        live.protocols_rev.track();
+        async move {
+            api::protocol_extensions()
+                .await
+                .map(|exts| exts.iter().map(|e| e.protocols.len()).sum::<usize>())
+        }
+    });
+    let reload = move |_| {
+        busy.set(true);
+        leptos::task::spawn_local(async move {
+            match api::reload_protocols().await {
+                Ok(count) => {
+                    toasts
+                        .ok(i18n.ta("ui-set-protocols-reloaded", &[("count", count.to_string())]));
+                }
+                Err(e) => toasts.error(e.message(i18n)),
+            }
+            busy.set(false);
+        });
+    };
+    view! {
+        <section aria-labelledby="set-protocols" class=format!("{CARD} space-y-3")>
+            <h2 id="set-protocols" class="font-semibold">{tr("ui-set-protocols")}</h2>
+            {move || match loaded.get() {
+                None => view! { <Loading /> }.into_any(),
+                Some(Err(e)) => view! { <ErrorBox error=e /> }.into_any(),
+                Some(Ok(n)) => view! {
+                    <p class="text-sm">{move || i18n.ta("ui-set-protocols-count", &[("count", n.to_string())])}</p>
+                }.into_any(),
+            }}
+            <button type="button" class=BTN on:click=reload disabled=move || busy.get()>
+                <Icon name=IconName::Refresh class="h-4 w-4" />
+                {tr("ui-set-protocols-reload")}
+            </button>
         </section>
     }
 }

@@ -93,6 +93,9 @@ pub(crate) struct Live {
     pub(crate) dhcp_rev: RwSignal<u64>,
     /// Bumped on every `dhcp_activity`: the activity log and leases refetch.
     pub(crate) dhcp_activity_rev: RwSignal<u64>,
+    /// Bumped on every `protocols_changed`: the user-defined protocols and the
+    /// palette refetch.
+    pub(crate) protocols_rev: RwSignal<u64>,
     log_seq: StoredValue<u64>,
 }
 
@@ -111,6 +114,7 @@ impl Live {
             snmp_rev: RwSignal::new(0),
             dhcp_rev: RwSignal::new(0),
             dhcp_activity_rev: RwSignal::new(0),
+            protocols_rev: RwSignal::new(0),
             log_seq: StoredValue::new(0),
         }
     }
@@ -159,6 +163,7 @@ impl Live {
             ServerEvent::SnmpTrap { .. } => self.snmp_rev.update(|r| *r += 1),
             ServerEvent::DhcpState => self.dhcp_rev.update(|r| *r += 1),
             ServerEvent::DhcpActivity { .. } => self.dhcp_activity_rev.update(|r| *r += 1),
+            ServerEvent::ProtocolsChanged => self.protocols_rev.update(|r| *r += 1),
             ServerEvent::Unknown => {}
         }
     }

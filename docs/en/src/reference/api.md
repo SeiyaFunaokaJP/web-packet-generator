@@ -18,7 +18,8 @@ wpg-server serves a REST (JSON) API under `/api` and pushes live statistics, job
 | system | [`GET /api/system/ifaces`](#op-get-api-system-ifaces) | Network interfaces with `usable` (up, running, not loopback) and `allowed` (by `tx.allowed_ifaces`). |
 | system | [`GET /api/version`](#op-get-api-version) | Build information. |
 | protocols | [`GET /api/protocols`](#op-get-api-protocols) | The catalog in palette order. |
-| protocols | [`GET /api/protocols/extensions`](#op-get-api-protocols-extensions) | The user-defined protocol files loaded at startup (`[protocols] dirs`, `--protocols-dir`): their definitions and bindings, so that the web UI can add them to its in-browser catalog. Empty without extensions. |
+| protocols | [`GET /api/protocols/extensions`](#op-get-api-protocols-extensions) | The user-defined protocol files in use (`[protocols] dirs`, `--protocols-dir`; loaded at startup or by `POST /api/protocols/reload`): their definitions and bindings, so that the web UI can add them to its in-browser catalog. Empty without extensions. |
+| protocols | [`POST /api/protocols/reload`](#op-post-api-protocols-reload) | Reads the user-defined protocol directories of the server again (`[protocols] dirs`, `--protocols-dir`) and switches the catalog to what they hold now; WebSocket clients get a `protocols_changed` event. Jobs that are already running keep the catalog they started with. On an error nothing changes. Admin only. |
 | protocols | [`GET /api/protocols/{id}`](#op-get-api-protocols-id) | The full definition (`wpg_core::ProtocolDef`): fields with types, defaults, auto computations and bindings. Every `description_key` gets a localised `description` next to it. |
 | packets | [`POST /api/lint`](#op-post-api-lint) | Checks a template (`wpg template lint`). A template that does not even parse is reported as a single error at path `""`. |
 | packets | [`POST /api/parse`](#op-post-api-parse) | Decodes raw bytes into layers (Hex paste import). |
@@ -246,13 +247,27 @@ The catalog in palette order.
 
 #### `GET /api/protocols/extensions`
 
-The user-defined protocol files loaded at startup (`[protocols] dirs`, `--protocols-dir`): their definitions and bindings, so that the web UI can add them to its in-browser catalog. Empty without extensions.
+The user-defined protocol files in use (`[protocols] dirs`, `--protocols-dir`; loaded at startup or by `POST /api/protocols/reload`): their definitions and bindings, so that the web UI can add them to its in-browser catalog. Empty without extensions.
 
 **Responses**
 
 | Status | Description | Body |
 |---|---|---|
 | `200` | Extension files (`protocols`, `bind`, `source`) | `application/json` `object``[]` |
+
+<a id="op-post-api-protocols-reload"></a>
+
+#### `POST /api/protocols/reload`
+
+Reads the user-defined protocol directories of the server again (`[protocols] dirs`, `--protocols-dir`) and switches the catalog to what they hold now; WebSocket clients get a `protocols_changed` event. Jobs that are already running keep the catalog they started with. On an error nothing changes. Admin only.
+
+**Responses**
+
+| Status | Description | Body |
+|---|---|---|
+| `200` | Loaded files | `application/json` [`ReloadResult`](#schema-reloadresult) |
+| `403` | `forbidden`: not an admin | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `422` | `invalid_protocols`: a file does not load (`details.file`, `details.reason`) | `application/json` [`ErrorBody`](#schema-errorbody) |
 
 <a id="op-get-api-protocols-id"></a>
 
@@ -1683,6 +1698,18 @@ Error object.
 | `details` | `any` |   | Extra data, e.g. the lint issues of an invalid template. |
 | `message` | `string` | yes | Human readable message in the language of `Accept-Language`. |
 
+<a id="schema-extensionfile"></a>
+
+### `ExtensionFile`
+
+One loaded extension file.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `bindings` | `integer` | yes | Number of its `bind` entries. |
+| `protocols` | `string``[]` | yes | Ids of the protocols it defines. |
+| `source` | `string` | yes | The file. |
+
 <a id="schema-favorite"></a>
 
 ### `Favorite`
@@ -2220,6 +2247,17 @@ A v3 user of the receiver.
 | `priv_protocol` | `string` \| `null` |   | Privacy protocol (default `AES`). |
 | `user` | `string` | yes | User name. |
 
+<a id="schema-reloadresult"></a>
+
+### `ReloadResult`
+
+Result of `POST /api/protocols/reload`.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `dirs` | `string``[]` | yes | Directories that were read. |
+| `files` | [`ExtensionFile`](#schema-extensionfile)`[]` | yes | The files now in use, in load order. |
+
 <a id="schema-renderrequest"></a>
 
 ### `RenderRequest`
@@ -2374,6 +2412,15 @@ expired / were deleted: reload `GET /api/dhcp`.
 | Key | Type | Required | Description |
 |---|---|---|---|
 | `type` | `"dhcp_state"` | yes |   |
+
+#### `type: "protocols_changed"`
+
+The user-defined protocols were reloaded (`POST /api/protocols/reload`):
+fetch `GET /api/protocols` and `GET /api/protocols/extensions` again.
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `type` | `"protocols_changed"` | yes |   |
 
 <a id="schema-setuprequest"></a>
 

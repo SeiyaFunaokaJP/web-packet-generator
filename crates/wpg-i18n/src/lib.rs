@@ -447,6 +447,8 @@ mod tests {
                     "found",
                     // user-defined protocols
                     "file",
+                    "protocols",
+                    "bindings",
                     // web terminal jump hosts
                     "host",
                     "hop",

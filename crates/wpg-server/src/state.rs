@@ -64,8 +64,6 @@ pub enum StateError {
 pub struct AppState {
     /// Effective configuration.
     pub config: Arc<Config>,
-    /// Protocol catalog.
-    pub catalog: &'static Catalog,
     /// Template store.
     pub templates: TemplateStore,
     /// Job manager.
@@ -119,7 +117,6 @@ impl AppState {
     pub fn new(config: Config) -> Result<Self, StateError> {
         let config = Arc::new(config);
         let events = bus();
-        let catalog = wpg_protocols::catalog();
         std::fs::create_dir_all(&config.data_dir).map_err(|source| StoreError::Io {
             path: config.data_dir.display().to_string(),
             source,
@@ -139,7 +136,6 @@ impl AppState {
         let jobs = JobManager::new(
             Arc::clone(&config),
             templates.clone(),
-            catalog,
             events.clone(),
             db.clone(),
         );
@@ -150,7 +146,6 @@ impl AppState {
         let (shutdown_tx, shutdown) = watch::channel(false);
         Ok(Self {
             config,
-            catalog,
             templates,
             jobs,
             rx,
@@ -167,6 +162,14 @@ impl AppState {
             ifaces: Arc::new(Mutex::new(IfaceCache::default())),
             dev: false,
         })
+    }
+
+    /// The protocol catalog: built-ins plus the user-defined protocols currently
+    /// installed (`POST /api/protocols/reload` switches it; references taken
+    /// earlier stay valid).
+    #[must_use]
+    pub fn catalog(&self) -> &'static Catalog {
+        wpg_protocols::catalog()
     }
 
     /// Enables development mode (CORS for the Trunk dev server).

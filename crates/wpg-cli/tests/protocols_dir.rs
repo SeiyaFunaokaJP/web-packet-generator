@@ -80,3 +80,126 @@ fn broken_extension_is_an_error() {
         "{err}"
     );
 }
+
+fn run_ok(c: &mut Command) -> String {
+    let out = c.output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8(out.stdout).unwrap()
+}
+
+#[test]
+fn protocols_list_marks_the_source() {
+    let text = run_ok(wpg().args([
+        "protocols",
+        "list",
+        "--protocols-dir",
+        "examples/protocols.d",
+    ]));
+    let line = text.lines().find(|l| l.starts_with("udp ")).unwrap();
+    assert!(line.contains("built-in"), "{line}");
+    let line = text.lines().find(|l| l.starts_with("acme_tlm ")).unwrap();
+    assert!(line.contains("acme-telemetry.yaml"), "{line}");
+
+    let json = run_ok(wpg().args([
+        "--protocols-dir",
+        "examples/protocols.d",
+        "protocols",
+        "list",
+        "--json",
+    ]));
+    let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let rows = v.as_array().unwrap();
+    let udp = rows.iter().find(|r| r["id"] == "udp").unwrap();
+    assert!(udp["source"].is_null());
+    assert_eq!(udp["layer"], "l4");
+    let acme = rows.iter().find(|r| r["id"] == "acme_tlm").unwrap();
+    assert!(acme["source"]
+        .as_str()
+        .unwrap()
+        .ends_with("acme-telemetry.yaml"));
+}
+
+#[test]
+fn protocols_show_is_a_starting_point() {
+    let yaml = run_ok(wpg().args(["protocols", "show", "udp"]));
+    assert!(yaml.starts_with("protocols:"), "{yaml}");
+    // Renamed, the output is a valid extension file.
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("my.yaml");
+    std::fs::write(&file, yaml.replace("id: udp", "id: my_udp")).unwrap();
+    let out = run_ok(wpg().args(["protocols", "check"]).arg(&file));
+    assert!(out.contains("my.yaml") && out.contains("OK"), "{out}");
+
+    let json = run_ok(wpg().args(["protocols", "show", "ipv4", "--json"]));
+    let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(v["id"], "ipv4");
+
+    let out = wpg()
+        .args(["protocols", "show", "no_such"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("no_such"));
+}
+
+#[test]
+fn protocols_check_reports_file_and_path() {
+    let out = run_ok(wpg().args(["protocols", "check", "examples/protocols.d"]));
+    assert!(out.contains("acme-telemetry.yaml"), "{out}");
+    // Checking the files of --protocols-dir does not clash with themselves.
+    run_ok(wpg().args([
+        "--protocols-dir",
+        "examples/protocols.d",
+        "protocols",
+        "check",
+        "examples/protocols.d/acme-telemetry.yaml",
+    ]));
+
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("bad.yaml"),
+        "bind:\n  - under: udp\n    value: 4789\n    protocol: vxlan\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("typo.yaml"),
+        "protocols:\n  - id: x\n    name: X\n    layer: l7\n    fields:\n      - name: a\n        type: { kind: uint, bitz: 8 }\n",
+    )
+    .unwrap();
+    let out = wpg()
+        .args(["protocols", "check"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("typo.yaml") && err.contains("protocols[0].fields[0]"),
+        "{err}"
+    );
+
+    std::fs::remove_file(dir.path().join("typo.yaml")).unwrap();
+    let out = wpg()
+        .args(["protocols", "check"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("bad.yaml") && err.contains("bind[0]") && err.contains("already bound"),
+        "{err}"
+    );
+
+    let empty = tempfile::tempdir().unwrap();
+    let out = wpg()
+        .args(["protocols", "check"])
+        .arg(empty.path())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1));
+}
