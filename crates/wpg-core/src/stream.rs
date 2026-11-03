@@ -445,12 +445,20 @@ pub enum PlanReason {
     },
 }
 
+/// Default of [`PlanConfig::threshold_bytes`] (256 MiB, `tx.prerender_max_bytes`).
+pub const DEFAULT_PRERENDER_MAX_BYTES: u64 = 256 * 1024 * 1024;
+
+/// Default of [`PlanConfig::max_prerender_packets`] (100M, spec §2.1,
+/// `tx.prerender_max_packets`).
+pub const DEFAULT_PRERENDER_MAX_PACKETS: u64 = 100_000_000;
+
 /// Tunables for [`Plan::decide`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlanConfig {
-    /// Pre-render only if `count * frame_len` is at most this (default 256 MiB).
+    /// Pre-render only if `count * frame_len` is at most this
+    /// ([`DEFAULT_PRERENDER_MAX_BYTES`]).
     pub threshold_bytes: u64,
-    /// Hard packet limit for pre-rendering (default 100M, spec §2.1).
+    /// Hard packet limit for pre-rendering ([`DEFAULT_PRERENDER_MAX_PACKETS`]).
     pub max_prerender_packets: u64,
     /// User override.
     pub hint: PlanHint,
@@ -459,8 +467,8 @@ pub struct PlanConfig {
 impl Default for PlanConfig {
     fn default() -> Self {
         PlanConfig {
-            threshold_bytes: 256 * 1024 * 1024,
-            max_prerender_packets: 100_000_000,
+            threshold_bytes: DEFAULT_PRERENDER_MAX_BYTES,
+            max_prerender_packets: DEFAULT_PRERENDER_MAX_PACKETS,
             hint: PlanHint::Auto,
         }
     }
@@ -784,6 +792,48 @@ mod tests {
             ..cfg
         };
         assert_eq!(Plan::decide(Some(1), 64, &otf).strategy, Strategy::OnTheFly);
+    }
+
+    #[test]
+    fn non_default_thresholds_change_the_plan() {
+        // 1M x 64 octets = 64 MB: pre-rendered by default.
+        let def = PlanConfig::default();
+        assert_eq!(
+            Plan::decide(Some(1_000_000), 64, &def).strategy,
+            Strategy::PreRender
+        );
+        let small = PlanConfig {
+            threshold_bytes: 1024 * 1024,
+            ..def
+        };
+        let p = Plan::decide(Some(1_000_000), 64, &small);
+        assert_eq!(p.strategy, Strategy::OnTheFly);
+        assert_eq!(
+            p.reason,
+            PlanReason::ExceedsMemoryThreshold {
+                threshold_bytes: 1024 * 1024
+            }
+        );
+        let few = PlanConfig {
+            max_prerender_packets: 10,
+            ..def
+        };
+        let p = Plan::decide(Some(11), 64, &few);
+        assert_eq!(p.reason, PlanReason::ExceedsPacketLimit { limit: 10 });
+        // Raising both pre-renders what the defaults stream on the fly.
+        let big = PlanConfig {
+            threshold_bytes: 64 * 1024 * 1024 * 1024,
+            max_prerender_packets: 1_000_000_000,
+            ..def
+        };
+        assert_eq!(
+            Plan::decide(Some(200_000_000), 64, &def).strategy,
+            Strategy::OnTheFly
+        );
+        assert_eq!(
+            Plan::decide(Some(200_000_000), 64, &big).strategy,
+            Strategy::PreRender
+        );
     }
 
     #[test]

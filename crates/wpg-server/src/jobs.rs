@@ -8,8 +8,8 @@
 //! starting it opens the backend via [`TxJob::start_on`]. A tokio task per running
 //! job samples [`JobHandle::stats`] every 100 ms and publishes
 //! [`ServerEvent::Stats`] / [`ServerEvent::JobState`]; when the job ends its
-//! [`JobReport`] is stored, kept in a ring of the last [`HISTORY_MAX`] finished
-//! jobs and persisted in the `job_history` table of the database ([`Db`]).
+//! [`JobReport`] is stored, kept in a ring of the last `server.job_history`
+//! finished jobs and persisted in the `job_history` table of the database ([`Db`]).
 //!
 //! Cancel safety: the manager owns every [`JobHandle`]; deleting a job, calling
 //! [`JobManager::shutdown`] or dropping the last clone of the manager stops the
@@ -23,7 +23,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use wpg_core::stream::{Expansion, Plan, PlanConfig, PlanHint};
+use wpg_core::stream::{Expansion, Plan, PlanHint};
 use wpg_protocols::Catalog;
 use wpg_template::{apply_overrides, compile, Compiled, Template};
 use wpg_tx::backend;
@@ -39,9 +39,6 @@ use crate::db::Db;
 use crate::error::{codes, ApiError};
 use crate::events::{EventBus, ServerEvent};
 use crate::store::{StoreError, TemplateStore};
-
-/// Finished jobs kept in memory.
-pub const HISTORY_MAX: usize = 100;
 
 /// Default statistics cadence.
 pub const SNAPSHOT_INTERVAL: Duration = Duration::from_millis(100);
@@ -568,10 +565,7 @@ impl Inner {
         } else {
             count.is_some() || duration.is_some()
         };
-        let pcfg = PlanConfig {
-            hint,
-            ..PlanConfig::default()
-        };
+        let pcfg = cfg.tx.plan_config(hint);
         let mut rendered = Vec::with_capacity(compiled.len());
         let mut plans = Vec::with_capacity(compiled.len());
         for mut c in compiled {
@@ -608,6 +602,7 @@ impl Inner {
         let opts = TxOptions {
             batch_size: batch,
             eal_args: cfg.tx.dpdk_eal_args.clone(),
+            ring_bytes: cfg.tx.ring_bytes_usize(),
             ..TxOptions::default()
         };
         let config = JobConfig {
@@ -657,9 +652,9 @@ impl Inner {
             let mut h = lock(&self.history);
             h.retain(|j| j.id != info.id);
             h.push_front(info.clone());
-            h.truncate(HISTORY_MAX);
+            h.truncate(self.config.server.job_history);
         }
-        if let Err(e) = self.db.save_job(info) {
+        if let Err(e) = self.db.save_job(info, self.config.server.job_history_db) {
             tracing::warn!("cannot persist job {} in the history: {e}", info.id);
         }
     }
@@ -689,17 +684,18 @@ impl Inner {
         self.evict_finished();
     }
 
-    /// Keeps at most [`HISTORY_MAX`] finished jobs in the live list.
+    /// Keeps at most `server.job_history` finished jobs in the live list.
     fn evict_finished(&self) {
+        let keep = self.config.server.job_history;
         let mut jobs = lock(&self.jobs);
         let mut done: Vec<(u64, String)> = jobs
             .values()
             .filter(|e| e.info.status.is_terminal() && e.handle.is_none())
             .map(|e| (e.info.finished.unwrap_or(0), e.info.id.clone()))
             .collect();
-        if done.len() > HISTORY_MAX {
+        if done.len() > keep {
             done.sort();
-            for (_, id) in done.iter().take(done.len() - HISTORY_MAX) {
+            for (_, id) in done.iter().take(done.len() - keep) {
                 jobs.remove(id);
             }
         }
@@ -788,7 +784,7 @@ impl JobManager {
             Err(e) => tracing::warn!("cannot import the old job history: {e}"),
         }
         let history: VecDeque<JobInfo> = db
-            .jobs(HISTORY_MAX)
+            .jobs(config.server.job_history)
             .unwrap_or_else(|e| {
                 tracing::warn!("cannot load the job history: {e}");
                 Vec::new()

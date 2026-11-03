@@ -18,7 +18,7 @@ use utoipa::ToSchema;
 
 use crate::jobs::JobInfo;
 
-/// Finished jobs kept in the database (the in-memory ring keeps fewer).
+/// Default of `server.job_history_db`: finished jobs kept in the database.
 pub const HISTORY_KEEP: usize = 1000;
 
 /// Login attempts older than this are purged (seconds).
@@ -482,12 +482,12 @@ impl Db {
 
     // ------------------------------------------------------------ job history
 
-    /// Inserts or replaces a finished job and trims the table to
-    /// [`HISTORY_KEEP`] rows.
+    /// Inserts or replaces a finished job and trims the table to the newest
+    /// `keep` rows (`server.job_history_db`).
     ///
     /// # Errors
     /// `SQLite` / JSON errors.
-    pub fn save_job(&self, info: &JobInfo) -> Result<(), DbError> {
+    pub fn save_job(&self, info: &JobInfo, keep: usize) -> Result<(), DbError> {
         let record = serde_json::to_string(info).map_err(|e| DbError::Decode(e.to_string()))?;
         self.with(|c| {
             c.execute(
@@ -505,7 +505,7 @@ impl Db {
             c.execute(
                 "DELETE FROM job_history WHERE id NOT IN
                  (SELECT id FROM job_history ORDER BY finished DESC, created DESC LIMIT ?1)",
-                [i64::try_from(HISTORY_KEEP).unwrap_or(i64::MAX)],
+                [i64::try_from(keep).unwrap_or(i64::MAX)],
             )?;
             Ok(())
         })
@@ -556,7 +556,7 @@ impl Db {
             else {
                 continue;
             };
-            self.save_job(&info)?;
+            self.save_job(&info, HISTORY_KEEP)?;
             n += 1;
         }
         let target = dir.with_file_name("history.imported");
@@ -735,14 +735,14 @@ mod tests {
         assert!(dir.path().join("history.imported").is_dir());
         assert_eq!(db.import_legacy_history(&legacy).unwrap(), 0);
 
-        db.save_job(&job("c", 2000)).unwrap();
+        db.save_job(&job("c", 2000), HISTORY_KEEP).unwrap();
         let ids: Vec<String> = db.jobs(10).unwrap().into_iter().map(|j| j.id).collect();
         assert_eq!(ids, ["b", "c", "a"]);
         assert_eq!(db.jobs(1).unwrap()[0], job("b", 3000));
         // replace
         let mut b = job("b", 3000);
         b.name = "renamed".into();
-        db.save_job(&b).unwrap();
+        db.save_job(&b, HISTORY_KEEP).unwrap();
         assert_eq!(db.jobs(1).unwrap()[0].name, "renamed");
         assert_eq!(db.jobs(10).unwrap().len(), 3);
     }

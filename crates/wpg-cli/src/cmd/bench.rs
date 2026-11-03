@@ -127,7 +127,7 @@ fn template_sources(
 
 /// Runs `wpg bench`.
 #[allow(clippy::needless_pass_by_value)] // uniform `cmd::*::run(args)` dispatch
-pub(crate) fn run(args: crate::BenchArgs) -> ExitCode {
+pub(crate) fn run(args: crate::BenchArgs, policy: &wpg_server::config::TxConfig) -> ExitCode {
     let locale = cli_locale();
     let backend = args.backend.clone().unwrap_or_else(|| "null".to_owned());
     let iface = match default_iface(args.iface.as_ref(), &backend, locale) {
@@ -146,7 +146,9 @@ pub(crate) fn run(args: crate::BenchArgs) -> ExitCode {
         Err(code) => return code,
     };
     let opts = BenchOptions {
-        tx: args.tuning.options(BenchOptions::default().tx.batch_size),
+        tx: args
+            .tuning
+            .options(BenchOptions::default().tx.batch_size, policy),
         workers,
         pin_cores: args.tuning.pin_cores_for(&iface, workers),
     };

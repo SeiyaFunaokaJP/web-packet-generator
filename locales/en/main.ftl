@@ -404,6 +404,8 @@ config-issue-bad-rate = invalid rate
 config-issue-unknown-backend = unknown backend
 config-issue-backend-unavailable = backend not available in this build / on this OS
 config-issue-bad-log-level = invalid log filter
+config-issue-out-of-range = outside the allowed range (value; minimum–maximum)
+config-issue-job-history-db-smaller = smaller than server.job_history: after a restart only this many jobs are listed
 config-level-error = error
 config-level-warning = warning
 config-issue-line = { $level }: { $key }: { $message }{ $detail }
@@ -1459,6 +1461,9 @@ docgen-config-server-tls-cert = PEM certificate chain.
 docgen-config-server-tls-key = PEM private key.
 docgen-config-server-self-signed-tls = Serve HTTPS with a self-signed certificate generated into `<data_dir>/tls/` (reused on later starts); `wpg serve --tls` sets it.
 docgen-config-server-base-url = Public URL of the server behind a reverse proxy (`https://wpg.example.net`), used for absolute links.
+docgen-config-server-preview-max = Most packets one preview request (`POST /api/render`) may render (1–100000).
+docgen-config-server-job-history = Finished jobs kept in memory and listed on the Jobs screen and by the API (1–100000).
+docgen-config-server-job-history-db = Finished jobs kept in the database; older ones are deleted (1–10000000).
 docgen-config-auth = Authentication.
 docgen-config-auth-password-hash = argon2id PHC string of the admin password; `wpg config set-password` writes it.
 docgen-config-auth-password-file = File holding the admin password: an argon2 PHC string, or plain text that is hashed at startup.
@@ -1473,6 +1478,9 @@ docgen-config-tx-allowed-ifaces = Interfaces jobs may send on; empty = all. The 
 docgen-config-tx-max-rate = Highest rate a job may request (`100kpps`, `1Gbps`); jobs without a rate are sent at this rate.
 docgen-config-tx-default-backend = Backend used when a job names none (`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`); unset = `afpacket` on Linux, else `pcap`, else `null`.
 docgen-config-tx-dpdk-eal-args = DPDK EAL arguments for the `dpdk` backend, e.g. `["-a", "0000:00:04.0"]`. wpg adds `-l <first CPU>` and `--in-memory` unless given. EAL starts once per process with the first `dpdk` job; changing them needs a restart.
+docgen-config-tx-prerender-max-bytes = Pre-render a stream (build every frame before sending) only when packets × frame length is at most this many bytes; larger streams are built on the fly. `0` never pre-renders unless `--plan prerender` asks for it. Up to 1 TiB; `wpg send --prerender-max-bytes` overrides.
+docgen-config-tx-prerender-max-packets = Pre-render a stream only when it has at most this many packets. `wpg send --prerender-max-packets` overrides.
+docgen-config-tx-ring-bytes = Memory of one `afpacket` TX ring or `afxdp` UMEM per worker, in bytes (1 MiB–1 GiB); the ring depth is reduced to fit. The memory is locked: raise `ulimit -l` for large values. `--ring-bytes` overrides.
 docgen-config-log = Logging.
 docgen-config-log-level = Filter directives (`RUST_LOG` overrides them), for example `info` or `wpg_tx=debug,info`.
 docgen-config-log-format = Line format: `pretty` (human readable) or `json` (one object per line).

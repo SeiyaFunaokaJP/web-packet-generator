@@ -60,6 +60,9 @@ HTTP リスナ。
 |---|---|---|---|---|
 | `base_url` | `string` |   | `WPG_SERVER__BASE_URL` | リバースプロキシ配下で公開する URL (`https://wpg.example.net`)。絶対リンクに使います。 |
 | `bind` | `string` | `"127.0.0.1:8080"` | `WPG_SERVER__BIND` | 待ち受けアドレス。パスワードがなく、セットアップ画面でユーザも作っていない間は、ループバックアドレスだけを受け付けます (`--allow-insecure` で解除)。 |
+| `job_history` | `integer` | `100` | `WPG_SERVER__JOB_HISTORY` | メモリに保持し、ジョブ画面と API に一覧表示する終了済みジョブ数 (1–100000)。 |
+| `job_history_db` | `integer` | `1000` | `WPG_SERVER__JOB_HISTORY_DB` | データベースに残す終了済みジョブ数。古いものから削除します (1–10000000)。 |
+| `preview_max` | `integer` | `256` | `WPG_SERVER__PREVIEW_MAX` | 1 回のプレビュー (`POST /api/render`) で生成できる最大パケット数 (1–100000)。 |
 | `self_signed_tls` | `boolean` | `false` | `WPG_SERVER__SELF_SIGNED_TLS` | `<data_dir>/tls/` に生成する自己署名証明書で HTTPS を提供します (次回以降も再利用)。`wpg serve --tls` と同じです。 |
 
 ### `[server.tls]`
@@ -112,6 +115,9 @@ Web ターミナル: ログインしたユーザのためにサーバが開く S
 | `default_backend` | `string` |   | `WPG_TX__DEFAULT_BACKEND` | ジョブがバックエンドを指定しないときのバックエンド (`null`、`pcapfile`、`afpacket`、`pcap`、`afxdp`、`dpdk`)。未設定なら Linux は `afpacket`、それ以外は `pcap`、使えなければ `null`。 |
 | `dpdk_eal_args` | `string[]` | `[]` | `WPG_TX__DPDK_EAL_ARGS` | `dpdk` バックエンドの DPDK EAL 引数 (例: `["-a", "0000:00:04.0"]`)。指定がなければ wpg が `-l <先頭の CPU>` と `--in-memory` を加えます。EAL はプロセスごとに最初の `dpdk` ジョブで 1 度だけ起動するため、変更には再起動が必要です。 |
 | `max_rate` | `string` |   | `WPG_TX__MAX_RATE` | ジョブが指定できる最大レート (`100kpps`、`1Gbps`)。レート指定のないジョブはこのレートで送出します。 |
+| `prerender_max_bytes` | `integer` | `268435456` | `WPG_TX__PRERENDER_MAX_BYTES` | パケット数 × フレーム長がこのバイト数以下のストリームだけを事前生成 (送出前に全フレームを生成) し、超えるものは送出しながら生成します。`0` は `--plan prerender` を指定しない限り事前生成しません。上限 1 TiB。`wpg send --prerender-max-bytes` で上書きできます。 |
+| `prerender_max_packets` | `integer` | `100000000` | `WPG_TX__PRERENDER_MAX_PACKETS` | パケット数がこの値以下のストリームだけを事前生成します。`wpg send --prerender-max-packets` で上書きできます。 |
+| `ring_bytes` | `integer` | `16777216` | `WPG_TX__RING_BYTES` | ワーカーごとの `afpacket` TX リング / `afxdp` UMEM のメモリ (バイト、1 MiB–1 GiB)。収まるようにリング深さを減らします。このメモリはロックされるため、大きな値では `ulimit -l` を引き上げてください。`--ring-bytes` で上書きできます。 |
 
 ## 設定例 (`wpg config init`)
 
@@ -138,6 +144,12 @@ bind = "127.0.0.1:8080"
 # Serve HTTPS with a self-signed certificate generated into <data_dir>/tls/
 # (same as `wpg serve --tls`). Ignored when [server.tls] is set.
 self_signed_tls = false
+# Most packets one preview request may render (1-100000).
+preview_max = 256
+# Finished jobs listed on the Jobs screen (kept in memory, 1-100000) and kept in
+# the database (1-10000000; older ones are deleted).
+job_history = 100
+job_history_db = 1000
 
 # TLS certificate chain and private key (PEM) to serve HTTPS with.
 # [server.tls]
@@ -183,6 +195,16 @@ allowed_ifaces = []
 # "--in-memory" unless given). EAL starts with the first dpdk job; changing them
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
+# Streams are pre-rendered (every frame built before sending) when they have at
+# most prerender_max_packets packets and packets * frame length is at most
+# prerender_max_bytes (default 256 MiB, up to 1 TiB); larger ones are built on
+# the fly. `wpg send --prerender-max-bytes / --prerender-max-packets` override.
+prerender_max_bytes = 268435456
+prerender_max_packets = 100000000
+# Memory of one afpacket TX ring / afxdp UMEM per worker in bytes (1 MiB-1 GiB,
+# default 16 MiB); --ring-depth is reduced to fit. Locked memory: raise
+# `ulimit -l` / LimitMEMLOCK for large values.
+ring_bytes = 16777216
 
 [snmp]
 # SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).

@@ -37,6 +37,10 @@ pub(crate) struct TxTuningArgs {
     /// TX ring depth in frames (`afpacket`).
     #[arg(long, value_name = "N")]
     pub(crate) ring_depth: Option<usize>,
+    /// Memory of one TX ring / UMEM per worker in bytes (`afpacket`, `afxdp`;
+    /// default: `tx.ring_bytes`, 16 MiB).
+    #[arg(long, value_name = "BYTES")]
+    pub(crate) ring_bytes: Option<usize>,
     /// Pin the TX thread to this CPU core (Linux; the first worker).
     #[arg(long, value_name = "CORE")]
     pub(crate) pin_core: Option<usize>,
@@ -74,11 +78,13 @@ pub(crate) struct TxTuningArgs {
 }
 
 impl TxTuningArgs {
-    pub(crate) fn options(&self, default_batch: usize) -> TxOptions {
+    /// Backend options; `policy` supplies the defaults of `--ring-bytes`.
+    pub(crate) fn options(&self, default_batch: usize, policy: &TxConfig) -> TxOptions {
         let d = TxOptions::default();
         TxOptions {
             batch_size: self.batch.unwrap_or(default_batch).max(1),
             ring_depth: self.ring_depth.unwrap_or(d.ring_depth),
+            ring_bytes: self.ring_bytes.unwrap_or_else(|| policy.ring_bytes_usize()),
             pin_core: self.pin_core,
             qdisc_bypass: self.qdisc_bypass,
             tx_ring: !self.no_tx_ring,
@@ -630,10 +636,12 @@ pub(crate) fn run(args: crate::SendArgs, policy: &TxConfig) -> ExitCode {
         }
     };
     let loop_stream = r.count.is_none() && r.duration.is_some();
-    let cfg = PlanConfig {
+    let cfg = plan_config(
+        policy,
         hint,
-        ..PlanConfig::default()
-    };
+        args.prerender_max_bytes,
+        args.prerender_max_packets,
+    );
     let (rendered, plan) = match Rendered::auto(compiled.packet, exp, catalog(), &cfg) {
         Ok(v) => v,
         Err(e) => {
@@ -656,7 +664,7 @@ pub(crate) fn run(args: crate::SendArgs, policy: &TxConfig) -> ExitCode {
         .map(|s| Box::new(s) as Box<dyn FrameSource>)
         .collect();
 
-    let opts = args.tuning.options(64);
+    let opts = args.tuning.options(64, policy);
     let backends = match backend::open_workers(&r.backend, &r.iface, &opts, sources.len()) {
         Ok(b) => b,
         Err(e) => {
@@ -758,9 +766,67 @@ pub(crate) fn run(args: crate::SendArgs, policy: &TxConfig) -> ExitCode {
     }
 }
 
+/// The pre-render thresholds: `--prerender-max-bytes` / `--prerender-max-packets`,
+/// else `tx.prerender_max_bytes` / `tx.prerender_max_packets`.
+fn plan_config(
+    policy: &TxConfig,
+    hint: PlanHint,
+    max_bytes: Option<u64>,
+    max_packets: Option<u64>,
+) -> PlanConfig {
+    let mut cfg = policy.plan_config(hint);
+    if let Some(b) = max_bytes {
+        cfg.threshold_bytes = b;
+    }
+    if let Some(p) = max_packets {
+        cfg.max_prerender_packets = p;
+    }
+    cfg
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn limits_from_config_and_flags() {
+        use wpg_core::stream::{Plan, Strategy};
+        let policy = TxConfig {
+            prerender_max_bytes: 1000,
+            ring_bytes: 32 << 20,
+            ..TxConfig::default()
+        };
+        let cfg = plan_config(&policy, PlanHint::Auto, None, None);
+        assert_eq!(cfg.threshold_bytes, 1000);
+        assert_eq!(cfg.max_prerender_packets, 100_000_000);
+        assert_eq!(
+            Plan::decide(Some(100), 60, &cfg).strategy,
+            Strategy::OnTheFly
+        );
+        let cfg = plan_config(&policy, PlanHint::Auto, Some(1 << 20), Some(50));
+        assert_eq!(
+            (cfg.threshold_bytes, cfg.max_prerender_packets),
+            (1 << 20, 50)
+        );
+        assert_eq!(
+            Plan::decide(Some(50), 60, &cfg).strategy,
+            Strategy::PreRender
+        );
+        assert_eq!(
+            Plan::decide(Some(51), 60, &cfg).strategy,
+            Strategy::OnTheFly
+        );
+
+        #[derive(clap::Parser)]
+        struct W {
+            #[command(flatten)]
+            t: TxTuningArgs,
+        }
+        let w = <W as clap::Parser>::parse_from(["w"]);
+        assert_eq!(w.t.options(64, &policy).ring_bytes, 32 << 20);
+        let w = <W as clap::Parser>::parse_from(["w", "--ring-bytes", "4194304"]);
+        assert_eq!(w.t.options(64, &policy).ring_bytes, 4 << 20);
+    }
 
     #[test]
     fn si_prefixes() {
