@@ -7,23 +7,23 @@ Supported: Windows 10 21H2 or later. Release binaries are not published yet, so 
 ## 1. Install the prerequisites
 
 1. Install [rustup](https://rustup.rs) (choose the default MSVC toolchain; it asks for the Visual Studio Build Tools "Desktop development with C++" workload if it is missing).
-2. Add the WASM target and the frontend bundler:
+2. Install [Npcap](https://npcap.com/#download) (the default options are fine; the WinPcap API-compatible mode is not needed). Sending needs it.
+3. Get the repository and run the setup script:
 
    ```powershell
-   rustup target add wasm32-unknown-unknown
-   cargo install trunk --locked
-   cargo install just --locked      # optional
+   git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
+   cd web-packet-generator
+   .\scripts\setup.ps1              # add -Just to also install the just task runner
    ```
 
-3. Install [Npcap](https://npcap.com/#download) (the default options are fine; the WinPcap API-compatible mode is not needed). Sending needs it.
-4. Download the [Npcap SDK](https://npcap.com/#download) and unpack it to `C:\Npcap-SDK`. `scripts\build.ps1` also finds it in `C:\npcap-sdk-<version>` (the name of the zip; the newest version wins), in the directory named by the environment variable `NPCAP_SDK`, or through `LIBPCAP_LIBDIR` set to its `Lib\x64` directory. It then builds the Npcap backend (`pcap` feature), the only way wpg can send on Windows. Without the SDK the build still succeeds, but the resulting `wpg.exe` cannot send and `build.ps1` warns about it.
-5. Optional: Wireshark (for `tshark`).
+   It installs the Rust toolchain pinned in `rust-toolchain.toml` with the WASM target, a prebuilt `trunk` and the [Npcap SDK](https://npcap.com/#download) (unpacked to `C:\Npcap-SDK`) at the versions pinned in `scripts\versions.env`, and lists anything still missing (the C++ build tools, Npcap). If PowerShell refuses to run scripts, start it with `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`.
+
+   The SDK is needed to link the Npcap backend (`pcap` feature), the only way wpg can send on Windows. `scripts\build.ps1` also finds an SDK you unpacked yourself in `C:\npcap-sdk-<version>` (the name of the zip; the newest version wins), in the directory named by the environment variable `NPCAP_SDK`, or through `LIBPCAP_LIBDIR` set to its `Lib\x64` directory. Without the SDK the build still succeeds, but the resulting `wpg.exe` cannot send and `build.ps1` warns about it.
+4. Optional: Wireshark (for `tshark`).
 
 ## 2. Build
 
 ```powershell
-git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
-cd web-packet-generator
 .\scripts\build.ps1 -Release       # or: just release
 ```
 
@@ -48,7 +48,7 @@ Without trunk the frontend is skipped with a warning (the web UI then serves a s
 
 ## 4. Allow sending
 
-Check that `wpg doctor` reports Npcap as installed (`npcap`) and the Npcap backend as built in (`backend.pcap`). If `backend.pcap` fails, `build.ps1` did not find the Npcap SDK: install it as in step 1 and build again. With Npcap's default install an ordinary PowerShell can send (`caps.raw_socket` is ok); if Npcap was installed with "Restrict Npcap driver's access to Administrators only", `caps.raw_socket` fails and you must open **PowerShell as Administrator** for sending. See [Permissions](permissions.md).
+Check that `wpg doctor` reports Npcap as installed (`npcap`) and the Npcap backend as built in (`backend.pcap`). If `backend.pcap` fails, `build.ps1` did not find the Npcap SDK: run `.\scripts\setup.ps1` (step 1) and build again. With Npcap's default install an ordinary PowerShell can send (`caps.raw_socket` is ok); if Npcap was installed with "Restrict Npcap driver's access to Administrators only", `caps.raw_socket` fails and you must open **PowerShell as Administrator** for sending. See [Permissions](permissions.md).
 
 ## 5. Start the server
 

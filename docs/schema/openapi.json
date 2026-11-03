@@ -589,6 +589,33 @@
         ],
         "type": "object"
       },
+      "ExtensionFile": {
+        "description": "One loaded extension file.",
+        "properties": {
+          "bindings": {
+            "description": "Number of its `bind` entries.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "protocols": {
+            "description": "Ids of the protocols it defines.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "source": {
+            "description": "The file.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "protocols",
+          "bindings"
+        ],
+        "type": "object"
+      },
       "Favorite": {
         "description": "Body of `POST /api/templates/{id}/favorite` (empty body = toggle).",
         "properties": {
@@ -2038,6 +2065,30 @@
         ],
         "type": "object"
       },
+      "ReloadResult": {
+        "description": "Result of `POST /api/protocols/reload`.",
+        "properties": {
+          "dirs": {
+            "description": "Directories that were read.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "files": {
+            "description": "The files now in use, in load order.",
+            "items": {
+              "$ref": "#/components/schemas/ExtensionFile"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "dirs",
+          "files"
+        ],
+        "type": "object"
+      },
       "RenderRequest": {
         "description": "`POST /api/render` request.",
         "properties": {
@@ -2398,6 +2449,21 @@
               "type": {
                 "enum": [
                   "dhcp_state"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The user-defined protocols were reloaded (`POST /api/protocols/reload`):\nfetch `GET /api/protocols` and `GET /api/protocols/extensions` again.",
+            "properties": {
+              "type": {
+                "enum": [
+                  "protocols_changed"
                 ],
                 "type": "string"
               }
@@ -5546,7 +5612,48 @@
             "description": "Extension files (`protocols`, `bind`, `source`)"
           }
         },
-        "summary": "The user-defined protocol files loaded at startup (`[protocols] dirs`,\n`--protocols-dir`): their definitions and bindings, so that the web UI can\nadd them to its in-browser catalog. Empty without extensions.",
+        "summary": "The user-defined protocol files in use (`[protocols] dirs`,\n`--protocols-dir`; loaded at startup or by `POST /api/protocols/reload`):\ntheir definitions and bindings, so that the web UI can add them to its\nin-browser catalog. Empty without extensions.",
+        "tags": [
+          "protocols"
+        ]
+      }
+    },
+    "/api/protocols/reload": {
+      "post": {
+        "operationId": "reload",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReloadResult"
+                }
+              }
+            },
+            "description": "Loaded files"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`forbidden`: not an admin"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`invalid_protocols`: a file does not load (`details.file`, `details.reason`)"
+          }
+        },
+        "summary": "Reads the user-defined protocol directories of the server again\n(`[protocols] dirs`, `--protocols-dir`) and switches the catalog to what\nthey hold now; WebSocket clients get a `protocols_changed` event. Jobs that\nare already running keep the catalog they started with. On an error nothing\nchanges. Admin only.",
         "tags": [
           "protocols"
         ]

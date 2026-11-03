@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## Serveur / API
 health-ok = Le service fonctionne correctement
-server-placeholder-ui = L'interface web n'a pas encore été compilée. Exécutez `trunk build` dans crates/wpg-web.
+server-placeholder-ui = L'interface web n'a pas encore été compilée. Exécutez `trunk build` dans crates/wpg-web, puis recompilez wpg.
 
 ## Erreurs
 error-not-implemented = `{ $command }` n'est pas encore implémenté.
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Recompilez avec le SDK Npcap ou utilisez une version p
 doctor-pcaplib-ok = libpcap est disponible
 doctor-pcaplib-missing = libpcap est introuvable ; le backend pcap ne peut pas être utilisé
 doctor-fix-pcaplib = Installez libpcap : { $hint }
+# Interface web intégrée et backend pcap hors Windows (wpg serve / wpg doctor)
+serve-banner-webui-missing = Interface web   absente : exécutez `trunk build` dans crates/wpg-web, puis recompilez wpg
+doctor-webui-ok = L'interface web est incluse
+doctor-webui-missing = L'interface web n'est pas incluse ; wpg serve affiche une page provisoire
+doctor-fix-webui = Recompilez wpg avec l'interface web : { $hint }
+doctor-pcap-backend-ok-macos = Ce wpg inclut le backend pcap
+doctor-pcap-backend-missing-macos = Ce wpg a été compilé sans le backend pcap et ne peut donc pas émettre sous macOS
+doctor-fix-pcap-backend-macos = Recompilez avec le backend pcap : { $hint }
+doctor-pcaplib-unused = Inutile : ce wpg a été compilé sans le backend pcap
 
 ## wpg template lint (clés `LintIssue` de wpg-template)
 lint-level-error = erreur
@@ -224,6 +233,8 @@ template-show-hex = Vidage hexadécimal ({ $len } octets)
 template-show-layout = Structure
 render-done = { $len } paquets écrits dans { $value }.
 render-unbounded = Le flux est illimité ; indiquez --count N.
+render-json-stdout = --json ne peut pas être combiné avec -o - (les deux écrivent sur la sortie standard).
+send-rate-over-limit = Le débit { $rate } dépasse la limite configurée tx.max_rate = { $max }.
 cli-bad-var = --var `{ $value }` invalide ; format attendu : NOM=VALEUR.
 
 ## wpg send / wpg bench (progression, résumé, erreurs)
@@ -373,6 +384,21 @@ config-issue-dir-missing = répertoire introuvable
 config-issue-protocols = impossible de charger les protocoles définis par l'utilisateur
 protocols-ext-loaded = { $count } protocole(s) défini(s) par l'utilisateur chargé(s)
 protocols-ext-error = impossible de charger les protocoles définis par l'utilisateur : { $file } : { $error }
+protocols-col-id = ID
+protocols-col-name = NOM
+protocols-col-layer = COUCHE
+protocols-col-source = SOURCE
+protocols-source-builtin = intégré
+protocols-unknown = protocole inconnu : { $id }
+protocols-check-ok = { $file } : OK ({ $protocols } protocole(s), { $bindings } liaison(s))
+protocols-check-error = { $file } : { $error }
+protocols-check-none = aucun fichier de protocole (*.yaml, *.yml) dans { $path }
+api-error-protocols-forbidden = Votre rôle ne permet pas de recharger les protocoles.
+api-error-protocols-reload = Impossible de charger les protocoles définis par l'utilisateur : { $file } : { $error }
+ui-set-protocols = Protocoles définis par l'utilisateur
+ui-set-protocols-count = { $count } chargé(s)
+ui-set-protocols-reload = Recharger
+ui-set-protocols-reloaded = { $count } protocole(s) défini(s) par l'utilisateur rechargé(s)
 config-issue-max-rate-percent = un pourcentage du lien ne peut pas servir de maximum global du serveur ; utilisez pps ou bps
 config-issue-bad-rate = débit invalide
 config-issue-unknown-backend = backend inconnu

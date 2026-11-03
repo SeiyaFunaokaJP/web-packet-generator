@@ -5,29 +5,26 @@
 ## 1. 前提ソフトウェアを入れる
 
 ```sh
-# Rust ツールチェーン (rustup.rs) と Web UI 用の WASM ターゲット
+# Rust ツールチェーンのインストーラ (rustup.rs) と、リンク用の C ツールチェーン
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup target add wasm32-unknown-unknown
+sudo apt install build-essential pkg-config git
 
-# フロントエンドのバンドラと、任意でタスクランナー
-cargo install trunk --locked
-cargo install just --locked
-
-# 任意の libpcap バックエンド (--features pcap) を使う場合のみ
-sudo apt install build-essential pkg-config libpcap-dev
+git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
+cd web-packet-generator
+./scripts/setup.sh          # --just を付けるとタスクランナー just も入れる
 ```
 
-`tshark` (パッケージ名 `tshark`) は任意です。チュートリアルで生成したキャプチャの確認に使います。
+`scripts/setup.sh` は `rust-toolchain.toml` で固定した Rust ツールチェーンと Web UI 用の WASM ターゲット、`scripts/versions.env` で固定したバージョンのビルド済み `trunk` (Web UI のバンドラ) を入れ、最後に次に実行するコマンドを表示します。
+
+Linux は AF_PACKET で送信するので、追加のライブラリは不要です。任意の libpcap バックエンド (`--features pcap`) を使う場合だけ `sudo apt install libpcap-dev` が必要です。`tshark` (パッケージ名 `tshark`) は任意です。チュートリアルで生成したキャプチャの確認に使います。
 
 ## 2. ビルドする
 
 ```sh
-git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
-cd web-packet-generator
-just release                # または: ./scripts/build.sh --release
+./scripts/build.sh --release        # または: just release
 ```
 
-スクリプトは前提条件を確認し、`trunk` でフロントエンドを、続いて `cargo` でワークスペースをビルドして、`==> done: target/release/wpg` と表示します。オプションのバックエンドには `scripts/build.sh` に `--features pcap` (または `--dpdk`) を付けます。`trunk` が無い場合、バックエンドはビルドされますが Web UI はスキップされます。
+スクリプトは `trunk` で Web UI を、続いて `cargo` で `wpg` バイナリをビルドして、`==> done: target/release/wpg` と表示します。オプションのバックエンドには `--features pcap`、`--features afxdp`、`--dpdk` を付けます。`trunk` が無い場合、バイナリはビルドされますが Web UI はスキップされます。
 
 ## 3. 権限なしで試す
 

@@ -1,7 +1,7 @@
 //! `wpg` — Web Packet Generator command line (spec §2.7).
 //!
 //! Every subcommand lives in [`cmd`] (`serve`: the HTTP server, `config`:
-//! `wpg.toml` tools, ...). Ones that are not implemented yet exit with status 2.
+//! `wpg.toml` tools, ...).
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -20,7 +20,7 @@ mod cmd;
 )]
 struct Cli {
     /// Directory of user-defined protocol files (`*.yaml`, repeatable; added to
-    /// `[protocols] dirs` of `wpg serve`).
+    /// `[protocols] dirs` of the configuration).
     #[arg(
         long = "protocols-dir",
         value_name = "DIR",
@@ -28,6 +28,10 @@ struct Cli {
         env = "WPG_PROTOCOLS_DIR"
     )]
     protocols_dirs: Vec<PathBuf>,
+    /// Configuration file (default: `wpg.toml` in the working directory, if any).
+    /// `wpg send` also takes its default backend and rate limit from `[tx]`.
+    #[arg(long, global = true, env = "WPG_CONFIG", value_name = "FILE")]
+    config: Option<PathBuf>,
     #[command(subcommand)]
     command: Command,
 }
@@ -54,6 +58,8 @@ enum Command {
     Capture(cmd::capture::CaptureArgs),
     /// Configuration file tools (init, show, validate).
     Config(ConfigArgs),
+    /// Protocol tools (list, show, check user-defined protocol files).
+    Protocols(cmd::protocols::ProtocolsArgs),
     /// Documentation tools for contributors (generate the reference pages).
     #[command(hide = true)]
     Docs(DocsArgs),
@@ -103,9 +109,6 @@ pub(crate) struct ServeArgs {
     /// (anyone reaching the server can then set it on the setup screen).
     #[arg(long)]
     pub(crate) allow_insecure: bool,
-    /// Configuration file (default: `wpg.toml` in the working directory, if any).
-    #[arg(long, env = "WPG_CONFIG", value_name = "FILE")]
-    pub(crate) config: Option<PathBuf>,
     /// Development mode: allow CORS from the Trunk dev server (:8081).
     #[arg(long)]
     pub(crate) dev: bool,
@@ -228,7 +231,7 @@ pub(crate) struct SendArgs {
 pub(crate) struct RenderArgs {
     /// Template file.
     pub(crate) template: PathBuf,
-    /// Output pcapng file.
+    /// Output pcapng file (`-` writes it to standard output).
     #[arg(short, long)]
     pub(crate) output: PathBuf,
     /// Number of packets.
@@ -237,6 +240,9 @@ pub(crate) struct RenderArgs {
     /// Template variable override (`name=value`), repeatable.
     #[arg(long = "var", value_name = "NAME=VALUE")]
     pub(crate) vars: Vec<String>,
+    /// Print the result (packets, bytes, path) as JSON on stdout.
+    #[arg(long)]
+    pub(crate) json: bool,
 }
 
 /// Arguments of `wpg import`.
@@ -275,16 +281,22 @@ pub(crate) struct TemplateArgs {
 /// Actions of `wpg template`.
 #[derive(Debug, Subcommand)]
 pub(crate) enum TemplateAction {
-    /// Check templates for errors and warnings (exit status 1 on errors).
+    /// Check templates for errors and warnings (exit status 3 on errors).
     Lint {
         /// Template files.
         #[arg(required = true)]
         files: Vec<PathBuf>,
+        /// Print the issues as JSON on stdout.
+        #[arg(long)]
+        json: bool,
     },
     /// List the templates of a directory (default: `templates/`).
     List {
         /// Directory to scan recursively.
         dir: Option<PathBuf>,
+        /// Print the list as JSON on stdout.
+        #[arg(long)]
+        json: bool,
     },
     /// Print the built packet (hex dump and layout tree) of a template.
     Show {
@@ -293,6 +305,9 @@ pub(crate) enum TemplateAction {
         /// Template variable override (`name=value`), repeatable.
         #[arg(long = "var", value_name = "NAME=VALUE")]
         vars: Vec<String>,
+        /// Print the packet (hex, layers, fields) as JSON on stdout.
+        #[arg(long)]
+        json: bool,
     },
     /// Print the JSON Schema of the template format.
     Schema,
@@ -398,23 +413,68 @@ impl Command {
             Command::Bench(_) => "bench",
             Command::Capture(_) => "capture",
             Command::Config(_) => "config",
+            Command::Protocols(_) => "protocols",
             Command::Docs(_) => "docs",
         }
     }
 }
 
+/// Loads the configuration for commands other than `serve` / `config`: a
+/// missing default `wpg.toml` gives the defaults, an explicit file must exist.
+fn load_config(path: Option<&std::path::Path>) -> Result<wpg_server::Config, ExitCode> {
+    wpg_server::Config::load(path, &wpg_server::Overrides::default()).map_err(|e| {
+        let locale = cmd::cli_locale();
+        eprintln!(
+            "{}",
+            cmd::send::tr(locale, "config-load-error", &[("error", e.to_string())])
+        );
+        ExitCode::from(2)
+    })
+}
+
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
+    // `serve` and `config` read the configuration themselves; `doctor` / `ifaces`
+    // do not need it and `docs` describes the built-ins only.
+    let config = if matches!(
+        cli.command,
+        Command::Send(_)
+            | Command::Render(_)
+            | Command::Import(_)
+            | Command::Template(_)
+            | Command::Bench(_)
+            | Command::Capture(_)
+    ) {
+        match load_config(cli.config.as_deref()) {
+            Ok(c) => Some(c),
+            Err(code) => return code,
+        }
+    } else {
+        None
+    };
+    if let Command::Config(ConfigArgs {
+        action: ConfigAction::Show { config } | ConfigAction::Validate { config },
+    }) = &mut cli.command
+    {
+        if config.is_none() {
+            config.clone_from(&cli.config);
+        }
+    }
     // `serve` merges the directories with its configuration; the reference
     // documentation always describes the built-in protocols only.
     if !matches!(cli.command, Command::Serve(_) | Command::Docs(_)) {
-        if let Err(code) = cmd::protocols::install(&cli.protocols_dirs, cmd::cli_locale()) {
+        let mut dirs = config
+            .as_ref()
+            .map(|c| c.protocols.dirs.clone())
+            .unwrap_or_default();
+        dirs.extend(cli.protocols_dirs.iter().cloned());
+        if let Err(code) = cmd::protocols::install(&dirs, cmd::cli_locale()) {
             return code;
         }
     }
     match cli.command {
-        Command::Serve(args) => cmd::serve::run(&args, &cli.protocols_dirs),
-        Command::Send(args) => cmd::send::run(args),
+        Command::Serve(args) => cmd::serve::run(&args, cli.config.as_deref(), &cli.protocols_dirs),
+        Command::Send(args) => cmd::send::run(args, &config.unwrap_or_default().tx),
         Command::Render(args) => cmd::render::run(&args),
         Command::Import(args) => cmd::import::run(&args),
         Command::Template(args) => cmd::template::run(args),
@@ -423,6 +483,7 @@ fn main() -> ExitCode {
         Command::Bench(args) => cmd::bench::run(args),
         Command::Capture(args) => cmd::capture::run(args),
         Command::Config(args) => cmd::config::run(args),
+        Command::Protocols(args) => cmd::protocols::run(&args),
         Command::Docs(args) => cmd::docs::run(&args),
     }
 }
@@ -450,12 +511,39 @@ mod tests {
     }
 
     #[test]
+    fn config_is_global() {
+        let cli = Cli::try_parse_from(["wpg", "--config", "a.toml", "serve"]).unwrap();
+        assert_eq!(cli.config, Some(PathBuf::from("a.toml")));
+        let cli = Cli::try_parse_from(["wpg", "serve", "--config", "b.toml"]).unwrap();
+        assert_eq!(cli.config, Some(PathBuf::from("b.toml")));
+        let cli = Cli::try_parse_from(["wpg", "config", "show", "--config", "c.toml"]).unwrap();
+        match cli.command {
+            Command::Config(ConfigArgs {
+                action: ConfigAction::Show { config },
+            }) => assert_eq!(config, Some(PathBuf::from("c.toml"))),
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
     fn all_subcommands_parse() {
         for argv in [
             &["wpg", "send", "t.wpg.yaml", "-i", "eth0", "--rate", "1Mpps"][..],
             &["wpg", "render", "t.wpg.yaml", "-o", "out.pcapng"],
             &["wpg", "import", "in.pcap", "-o", "t.wpg.yaml"],
-            &["wpg", "template", "lint", "t.wpg.yaml"],
+            &["wpg", "template", "lint", "t.wpg.yaml", "--json"],
+            &["wpg", "template", "show", "t.wpg.yaml", "--json"],
+            &["wpg", "template", "list", "--json"],
+            &[
+                "wpg",
+                "render",
+                "t.wpg.yaml",
+                "-o",
+                "-",
+                "--config",
+                "w.toml",
+            ],
+            &["wpg", "send", "t.wpg.yaml", "--config", "w.toml"],
             &["wpg", "ifaces", "--json"],
             &["wpg", "doctor"],
             &[
@@ -518,6 +606,9 @@ mod tests {
             &["wpg", "config", "init", "--path", "w.toml", "--force"],
             &["wpg", "config", "show", "--config", "w.toml"],
             &["wpg", "config", "validate"],
+            &["wpg", "protocols", "list", "--json"],
+            &["wpg", "protocols", "show", "udp", "--json"],
+            &["wpg", "protocols", "check", "p.d", "x.yaml"],
             &["wpg", "docs", "gen", "--root", "..", "--check"],
             &["wpg", "bench", "--backend", "null"],
             &[

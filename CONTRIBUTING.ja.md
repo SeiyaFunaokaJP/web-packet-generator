@@ -7,18 +7,25 @@
 
 ## 開発環境
 
-1. [rustup](https://rustup.rs) をインストール（`rust-toolchain.toml` のツールチェーンが自動で使われます）
-2. WASM ターゲット追加: `rustup target add wasm32-unknown-unknown`
-3. ツール: `cargo install just trunk cargo-watch cargo-deny cargo-audit mdbook --locked`
-   （最低限のビルドには `just` と `trunk` のみ必要）
-4. Linux は `sudo apt install libpcap-dev`、Windows は Npcap SDK（pcap バックエンド実装までは任意）
-5. `just build && ./target/debug/wpg serve` の後、<http://127.0.0.1:8080> を開く
+1. [rustup](https://rustup.rs) をインストール
+2. `./scripts/setup.sh --just` (Windows: `.\scripts\setup.ps1 -Just`) を実行。`rust-toolchain.toml` で固定したツールチェーンと
+   WASM ターゲット、`scripts/versions.env` で固定したバージョンの trunk、`just`、Windows では Npcap SDK を入れ、
+   自分で入れる必要のあるシステムパッケージを表示します。
+3. `just release && ./target/release/wpg serve` の後、<http://127.0.0.1:8080> を開く
+
+任意のツール: `cargo install cargo-watch cargo-deny cargo-audit mdbook --locked` (`just run`、`just deny`、`just audit`、
+`just docs` 用)。
 
 ## よく使うレシピ
 
-`just --list` で一覧を確認できます。`just build` / `release`（ビルド）、`run`（ホットリロード開発起動）、
-`test`、`e2e`（Web UI の Playwright テスト、[e2e/README.md](e2e/README.md)）、`fmt`、`lint`（clippy `-D warnings`）、`check-wasm`、`audit`、`deny`、`docs`、`clean`。
-PR 前に `just fmt lint test check-wasm` を実行してください。CI でも同じチェックが走ります。
+`just --list` で一覧を確認できます。レシピは Linux / macOS / Windows で動きます (Windows では PowerShell で
+`scripts\*.ps1` を呼びます)。`setup`（ビルドツールの導入）、`build` / `release`（`wpg` バイナリのデバッグ / 最適化ビルド）、
+`run`（ホットリロード開発起動）、`check`（作業中の高速チェック: フォーマット、WASM ビルド、default-members の clippy、
+コア crate のテスト）、`ci`（PR に必要なチェック一式: `fmt-check`、`lint`、`check-wasm`、`test`）、`test`、
+`e2e`（Web UI の Playwright テスト、[e2e/README.md](e2e/README.md)）、`fmt`、`lint`（clippy `-D warnings`）、
+`check-wasm`（`wpg-core`、`wpg-protocols`、`wpg-i18n` の wasm32 ビルド確認）、`audit`、`deny`、`docs`、`clean`。
+作業中は `just check`、PR 前は `just ci` を実行してください。CI でも同じチェック (と `cargo deny`、`cargo audit`、
+セットアップ / ビルドスクリプト) が Linux / macOS / Windows で走ります。
 
 ## コミット / PR 規約
 

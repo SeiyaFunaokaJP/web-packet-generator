@@ -115,6 +115,7 @@ fn parts() -> (Router<AppState>, utoipa::openapi::OpenApi) {
         .routes(routes!(system::backends))
         .routes(routes!(protocols::list))
         .routes(routes!(protocols::extensions))
+        .routes(routes!(protocols::reload))
         .routes(routes!(protocols::get))
         .routes(routes!(packets::render))
         .routes(routes!(packets::parse))

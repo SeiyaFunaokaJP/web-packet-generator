@@ -623,6 +623,8 @@ pub(crate) enum ServerEvent {
     },
     /// The DHCP server started / stopped or its settings / leases changed.
     DhcpState,
+    /// The server reloaded its user-defined protocols.
+    ProtocolsChanged,
     #[serde(other)]
     Unknown,
 }

@@ -17,7 +17,8 @@ ARG RUNTIME_IMAGE=debian:bookworm-slim
 
 # ---- build ------------------------------------------------------------------
 FROM ${RUST_IMAGE} AS build
-ARG TRUNK_VERSION=0.21.14
+# Trunk version; empty means the one pinned in scripts/versions.env.
+ARG TRUNK_VERSION=""
 # Extra cargo features of wpg-cli, e.g. "pcap".
 ARG FEATURES=""
 
@@ -32,8 +33,10 @@ RUN --mount=type=secret,id=ca_certs \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpcap-dev \
     && rm -rf /var/lib/apt/lists/*
-RUN arch="$(uname -m)" \
-    && curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}/trunk-${arch}-unknown-linux-gnu.tar.gz" \
+COPY scripts/versions.env /tmp/versions.env
+RUN version="${TRUNK_VERSION:-$(sed -n 's/^TRUNK_VERSION=//p' /tmp/versions.env | tr -d '\r')}" \
+    && arch="$(uname -m)" \
+    && curl -fsSL "https://github.com/trunk-rs/trunk/releases/download/v${version}/trunk-${arch}-unknown-linux-gnu.tar.gz" \
        | tar -xz -C /usr/local/bin trunk \
     && trunk --version
 

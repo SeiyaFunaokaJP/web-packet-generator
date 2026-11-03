@@ -20,12 +20,14 @@
 //! [`load_dirs`] reads every `*.yaml` / `*.yml` file of the given directories (in
 //! file name order), [`with_extensions`] merges them into the built-in catalog and
 //! [`install`] makes the result the process-wide [`catalog`](crate::catalog).
+//! [`install_dirs`] does both and remembers the directories, so that [`reload`]
+//! can read them again later (`POST /api/protocols/reload`).
 //! Built-in protocols can not be replaced, and a binding value that a lower layer
 //! already maps to another protocol is rejected rather than silently shadowed.
 
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::{OnceLock, RwLock};
+use std::sync::{Mutex, PoisonError, RwLock};
 
 use serde::{Deserialize, Serialize};
 use wpg_core::{Binding, BindingEntry, ProtocolDef};
@@ -101,11 +103,58 @@ impl Extension {
         let mut ext: Self = serde_yaml::with::singleton_map_recursive::deserialize(de)
             .map_err(|e| err(source, e.to_string()))?;
         ext.source = source.to_owned();
-        for def in &ext.protocols {
-            def.validate().map_err(|e| err(source, e.to_string()))?;
+        for (i, def) in ext.protocols.iter().enumerate() {
+            def.validate()
+                .map_err(|e| err(source, format!("protocols[{i}]: {e}")))?;
         }
         Ok(ext)
     }
+
+    /// The file as YAML in the shape [`Extension::from_yaml`] reads (without
+    /// `source`), e.g. to start a new definition from an existing one.
+    ///
+    /// # Errors
+    /// If a value cannot be represented in YAML.
+    pub fn to_yaml(&self) -> Result<String, ExtensionError> {
+        let shown = Self {
+            source: String::new(),
+            ..self.clone()
+        };
+        let mut out = Vec::new();
+        let mut ser = serde_yaml::Serializer::new(&mut out);
+        serde_yaml::with::singleton_map_recursive::serialize(&shown, &mut ser)
+            .map_err(|e| err(&self.source, e.to_string()))?;
+        String::from_utf8(out).map_err(|e| err(&self.source, e.to_string()))
+    }
+}
+
+/// Reads one extension file.
+///
+/// # Errors
+/// If the file cannot be read or does not parse.
+pub fn load_file(path: &Path) -> Result<Extension, ExtensionError> {
+    let shown = path.display().to_string();
+    let text = std::fs::read_to_string(path).map_err(|e| err(&shown, e.to_string()))?;
+    Extension::from_yaml(&shown, &text)
+}
+
+/// The `*.yaml` / `*.yml` files directly in `dir`, sorted by file name.
+///
+/// # Errors
+/// If the directory cannot be read.
+pub fn files_in(dir: &Path) -> Result<Vec<PathBuf>, ExtensionError> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .map_err(|e| err(&dir.display().to_string(), e.to_string()))?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| {
+            p.is_file()
+                && p.extension().is_some_and(|x| {
+                    x.eq_ignore_ascii_case("yaml") || x.eq_ignore_ascii_case("yml")
+                })
+        })
+        .collect();
+    files.sort();
+    Ok(files)
 }
 
 /// Loads every `*.yaml` / `*.yml` file directly in `dirs`, sorted by file name
@@ -116,23 +165,8 @@ impl Extension {
 pub fn load_dirs<P: AsRef<Path>>(dirs: &[P]) -> Result<Vec<Extension>, ExtensionError> {
     let mut out = Vec::new();
     for dir in dirs {
-        let dir = dir.as_ref();
-        let shown = dir.display().to_string();
-        let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
-            .map_err(|e| err(&shown, e.to_string()))?
-            .filter_map(|e| e.ok().map(|e| e.path()))
-            .filter(|p| {
-                p.is_file()
-                    && p.extension().is_some_and(|x| {
-                        x.eq_ignore_ascii_case("yaml") || x.eq_ignore_ascii_case("yml")
-                    })
-            })
-            .collect();
-        files.sort();
-        for path in files {
-            let shown = path.display().to_string();
-            let text = std::fs::read_to_string(&path).map_err(|e| err(&shown, e.to_string()))?;
-            out.push(Extension::from_yaml(&shown, &text)?);
+        for path in files_in(dir.as_ref())? {
+            out.push(load_file(&path)?);
         }
     }
     Ok(out)
@@ -147,21 +181,22 @@ pub fn load_dirs<P: AsRef<Path>>(dirs: &[P]) -> Result<Vec<Extension>, Extension
 pub fn with_extensions(extensions: &[Extension]) -> Result<Catalog, ExtensionError> {
     let mut defs = builtin();
     for ext in extensions {
-        for def in &ext.protocols {
+        for (i, def) in ext.protocols.iter().enumerate() {
             if defs.iter().any(|d| d.id == def.id) {
                 return Err(err(
                     &ext.source,
-                    format!("protocol `{}` is already defined", def.id),
+                    format!("protocols[{i}]: protocol `{}` is already defined", def.id),
                 ));
             }
             def.validate()
-                .map_err(|e| err(&ext.source, e.to_string()))?;
+                .map_err(|e| err(&ext.source, format!("protocols[{i}]: {e}")))?;
             defs.push(def.clone());
         }
     }
     for ext in extensions {
-        for b in &ext.bind {
-            apply_binding(&mut defs, b).map_err(|reason| err(&ext.source, reason))?;
+        for (i, b) in ext.bind.iter().enumerate() {
+            apply_binding(&mut defs, b)
+                .map_err(|reason| err(&ext.source, format!("bind[{i}]: {reason}")))?;
         }
     }
     for ext in extensions {
@@ -265,6 +300,16 @@ struct Installed {
 
 static INSTALLED: RwLock<Option<Installed>> = RwLock::new(None);
 
+/// Every catalog [`install`] has built. Catalogs are handed out as `&'static`
+/// (running jobs keep them), so they are never freed; installing a set of
+/// extensions that was installed before reuses its catalog instead of building
+/// another one, which bounds the memory to one catalog per distinct set.
+type Built = (&'static [Extension], &'static Catalog);
+static BUILT: Mutex<Vec<Built>> = Mutex::new(Vec::new());
+
+/// Directories given to the last [`install_dirs`].
+static DIRS: RwLock<Vec<PathBuf>> = RwLock::new(Vec::new());
+
 /// The catalog made current by [`install`], if any.
 pub(crate) fn installed() -> Option<&'static Catalog> {
     INSTALLED
@@ -275,32 +320,72 @@ pub(crate) fn installed() -> Option<&'static Catalog> {
 
 /// Merges `extensions` into the built-in catalog and makes the result the one
 /// [`catalog`](crate::catalog) returns from now on. Call it at startup, before
-/// anything keeps a reference to the catalog (the web UI calls it again after
-/// fetching the server's extensions; earlier references stay valid).
+/// anything keeps a reference to the catalog; calling it again (the web UI after
+/// fetching the server's extensions, [`reload`]) switches the catalog for later
+/// callers while earlier references stay valid. An empty list goes back to the
+/// built-in catalog.
 ///
 /// # Errors
 /// As [`with_extensions`]; the current catalog is then left unchanged.
 pub fn install(extensions: Vec<Extension>) -> Result<&'static Catalog, ExtensionError> {
-    let catalog: &'static Catalog = Box::leak(Box::new(with_extensions(&extensions)?));
-    let extensions: &'static [Extension] = Box::leak(extensions.into_boxed_slice());
-    if let Ok(mut g) = INSTALLED.write() {
-        *g = Some(Installed {
-            catalog,
-            extensions,
-        });
+    if extensions.is_empty() {
+        *INSTALLED.write().unwrap_or_else(PoisonError::into_inner) = None;
+        return Ok(crate::builtin_catalog());
     }
+    let mut built = BUILT.lock().unwrap_or_else(PoisonError::into_inner);
+    let (extensions, catalog) =
+        if let Some(&hit) = built.iter().find(|(e, _)| **e == extensions[..]) {
+            hit
+        } else {
+            let catalog: &'static Catalog = Box::leak(Box::new(with_extensions(&extensions)?));
+            let extensions: &'static [Extension] = Box::leak(extensions.into_boxed_slice());
+            built.push((extensions, catalog));
+            (extensions, catalog)
+        };
+    *INSTALLED.write().unwrap_or_else(PoisonError::into_inner) = Some(Installed {
+        catalog,
+        extensions,
+    });
     Ok(catalog)
+}
+
+/// [`load_dirs`] + [`install`], remembering `dirs` for [`reload`]. Returns the
+/// installed extensions.
+///
+/// # Errors
+/// As [`load_dirs`] and [`install`]; the current catalog is then left unchanged.
+pub fn install_dirs<P: AsRef<Path>>(dirs: &[P]) -> Result<&'static [Extension], ExtensionError> {
+    let dirs: Vec<PathBuf> = dirs.iter().map(|d| d.as_ref().to_path_buf()).collect();
+    let exts = load_dirs(&dirs)?;
+    *DIRS.write().unwrap_or_else(PoisonError::into_inner) = dirs;
+    install(exts)?;
+    Ok(extensions())
+}
+
+/// The directories of the last [`install_dirs`] (empty when it was not called).
+#[must_use]
+pub fn dirs() -> Vec<PathBuf> {
+    DIRS.read().map(|g| g.clone()).unwrap_or_default()
+}
+
+/// Reads the directories of the last [`install_dirs`] again and installs what
+/// they hold now (files added, changed or removed since). Returns the installed
+/// extensions.
+///
+/// # Errors
+/// As [`install_dirs`]; the current catalog is then left unchanged.
+pub fn reload() -> Result<&'static [Extension], ExtensionError> {
+    install_dirs(&dirs())
 }
 
 /// The extensions of the current catalog (empty when only built-ins are in use).
 #[must_use]
 pub fn extensions() -> &'static [Extension] {
-    static NONE: OnceLock<Vec<Extension>> = OnceLock::new();
     INSTALLED
         .read()
         .ok()
         .and_then(|g| g.as_ref().map(|i| i.extensions))
-        .unwrap_or_else(|| NONE.get_or_init(Vec::new))
+        .unwrap_or(&[])
 }
 
 #[cfg(test)]
@@ -452,5 +537,52 @@ bind:
         let bad = Extension::from_yaml("b", &ACME.replace("47000", "4789")).unwrap();
         assert!(install(vec![bad]).is_err());
         assert!(crate::catalog().get("acme_tlm").is_some());
+        // The same set again reuses its catalog instead of building another.
+        assert!(std::ptr::eq(install(vec![acme()]).unwrap(), cat));
+
+        // `reload` reads the directories of `install_dirs` again.
+        let dir = std::env::temp_dir().join(format!("wpg-ext-reload-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.yaml"), ACME).unwrap();
+        assert_eq!(install_dirs(&[&dir]).unwrap().len(), 1);
+        assert_eq!(dirs(), std::slice::from_ref(&dir));
+        std::fs::write(dir.join("a.yaml"), ACME.replace("acme_tlm", "acme_v2")).unwrap();
+        reload().unwrap();
+        assert!(crate::catalog().get("acme_v2").is_some());
+        assert!(crate::catalog().get("acme_tlm").is_none());
+        // A broken file leaves the catalog alone.
+        std::fs::write(dir.join("b.yaml"), "protcols: []").unwrap();
+        assert!(reload().is_err());
+        assert!(crate::catalog().get("acme_v2").is_some());
+        // No files: back to the built-in catalog.
+        std::fs::remove_file(dir.join("a.yaml")).unwrap();
+        std::fs::remove_file(dir.join("b.yaml")).unwrap();
+        assert!(reload().unwrap().is_empty());
+        assert!(std::ptr::eq(crate::catalog(), crate::builtin_catalog()));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn yaml_round_trip_and_error_paths() {
+        let ext = acme();
+        let yaml = ext.to_yaml().unwrap();
+        assert!(!yaml.contains("source"), "{yaml}");
+        let back = Extension::from_yaml("acme.yaml", &yaml).unwrap();
+        assert_eq!(back, ext);
+        // A built-in definition, renamed, is a valid starting point.
+        let mut udp = builtin().into_iter().find(|d| d.id == "udp").unwrap();
+        udp.id = "my_udp".into();
+        let yaml = Extension {
+            protocols: vec![udp],
+            ..Extension::default()
+        }
+        .to_yaml()
+        .unwrap();
+        let ext = Extension::from_yaml("u.yaml", &yaml).unwrap();
+        with_extensions(&[ext]).unwrap();
+
+        let taken = ACME.replace("47000", "4789");
+        let e = with_extensions(&[Extension::from_yaml("t.yaml", &taken).unwrap()]).unwrap_err();
+        assert!(e.reason.starts_with("bind[0]: "), "{e}");
     }
 }

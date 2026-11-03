@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## 伺服器 / API
 health-ok = 服務運作正常
-server-placeholder-ui = 尚未建置 Web UI。請在 crates/wpg-web 中執行 `trunk build`。
+server-placeholder-ui = 尚未建置 Web UI。請在 crates/wpg-web 中執行 `trunk build`，然後重新建置 wpg。
 
 ## 錯誤
 error-not-implemented = 尚未實作 `{ $command }`。
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = 請使用 Npcap SDK 重新建置，或使用發行版�
 doctor-pcaplib-ok = 可使用 libpcap
 doctor-pcaplib-missing = 找不到 libpcap；無法使用 pcap 後端
 doctor-fix-pcaplib = 安裝 libpcap：{ $hint }
+# Web UI 的內嵌以及 Windows 以外的 pcap 後端 (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web UI         未包含：請在 crates/wpg-web 中執行 `trunk build`，然後重新建置 wpg
+doctor-webui-ok = 已包含 Web UI
+doctor-webui-missing = 未包含 Web UI；wpg serve 只會顯示預留頁面
+doctor-fix-webui = 重新建置包含 Web UI 的 wpg：{ $hint }
+doctor-pcap-backend-ok-macos = 此 wpg 包含 pcap 後端
+doctor-pcap-backend-missing-macos = 此 wpg 建置時未包含 pcap 後端，因此無法在 macOS 上傳送
+doctor-fix-pcap-backend-macos = 重新建置並包含 pcap 後端：{ $hint }
+doctor-pcaplib-unused = 不需要：此 wpg 建置時未包含 pcap 後端
 
 ## wpg template lint (wpg-template `LintIssue` 鍵)
 lint-level-error = 錯誤
@@ -224,6 +233,8 @@ template-show-hex = 十六進位傾印 ({ $len } 位元組)
 template-show-layout = 版面配置
 render-done = 已將 { $len } 個封包寫入 { $value }。
 render-unbounded = 串流沒有上限；請指定 --count N。
+render-json-stdout = --json 不能與 -o - 同時使用（兩者都寫入標準輸出）。
+send-rate-over-limit = 速率 { $rate } 超過了設定的上限 tx.max_rate = { $max }。
 cli-bad-var = 無效的 --var `{ $value }`；格式應為 NAME=VALUE。
 
 ## wpg send / wpg bench (進度、摘要、錯誤)
@@ -373,6 +384,21 @@ config-issue-dir-missing = 找不到目錄
 config-issue-protocols = 無法載入使用者自訂協定
 protocols-ext-loaded = 已載入 { $count } 個使用者自訂協定
 protocols-ext-error = 無法載入使用者自訂協定: { $file }: { $error }
+protocols-col-id = ID
+protocols-col-name = 名稱
+protocols-col-layer = 層
+protocols-col-source = 來源
+protocols-source-builtin = 內建
+protocols-unknown = 未知的協定: { $id }
+protocols-check-ok = { $file }: OK ({ $protocols } 個協定, { $bindings } 個繫結)
+protocols-check-error = { $file }: { $error }
+protocols-check-none = { $path } 中沒有協定檔案 (*.yaml, *.yml)
+api-error-protocols-forbidden = 目前的角色無法重新載入協定。
+api-error-protocols-reload = 無法載入使用者自訂協定: { $file }: { $error }
+ui-set-protocols = 使用者自訂協定
+ui-set-protocols-count = 已載入 { $count } 個
+ui-set-protocols-reload = 重新載入
+ui-set-protocols-reloaded = 已重新載入 { $count } 個使用者自訂協定
 config-issue-max-rate-percent = 連結百分比不能作為伺服器全域上限；請使用 pps 或 bps
 config-issue-bad-rate = 無效的速率
 config-issue-unknown-backend = 未知的後端

@@ -38,6 +38,8 @@ Needs Npcap (either install mode; wpg finds `wpcap.dll` in `System32\Npcap` itse
 | `kernel.tpacket_v3` | warn | Kernel 3.2 or newer; otherwise afpacket falls back to `sendmmsg` |
 | `hugepages` | warn | Hugepages configured; only needed for the DPDK backend |
 | `npcap` | fail / warn (Windows only) | Npcap installed and `wpcap.dll` present (`System32\Npcap` or `System32`); skipped elsewhere |
-| `pcap_lib` | warn | libpcap found (needed by the `pcap` backend); skipped on Windows |
+| `backend.pcap` | fail (Windows, macOS) | Built with the `pcap` backend, the only way to send on Windows and macOS; skipped on Linux |
+| `pcap_lib` | warn | libpcap found (needed by the `pcap` backend); skipped on Windows and when the backend is not built in |
+| `webui.embedded` | warn | The web UI is included in this binary |
 
 Each check reports `ok`, `warn`, `fail` or `skip` (not applicable on this OS).

@@ -14,23 +14,29 @@ Web Packet Generator
 Usage: wpg [OPTIONS] <COMMAND>
 
 Commands:
-  serve     Start the web UI / API server
-  send      Send a template headlessly
-  render    Render a template to a pcapng file without transmitting
-  import    Convert a pcap/pcapng capture into a template
-  template  Template tools (lint, list, migrate, export, import)
-  ifaces    List network interfaces usable for transmission
-  doctor    Diagnose privileges, drivers, hugepages and Npcap
-  bench     Measure transmit performance
-  capture   Receive: counters, the first frames, pcapng output, signature verification
-  config    Configuration file tools (init, show, validate)
-  help      Print this message or the help of the given subcommand(s)
+  serve      Start the web UI / API server
+  send       Send a template headlessly
+  render     Render a template to a pcapng file without transmitting
+  import     Convert a pcap/pcapng capture into a template
+  template   Template tools (lint, list, migrate, export, import)
+  ifaces     List network interfaces usable for transmission
+  doctor     Diagnose privileges, drivers, hugepages and Npcap
+  bench      Measure transmit performance
+  capture    Receive: counters, the first frames, pcapng output, signature verification
+  config     Configuration file tools (init, show, validate)
+  protocols  Protocol tools (list, show, check user-defined protocol files)
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -53,9 +59,14 @@ Options:
           [env: WPG_BIND]
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --password <PASSWORD>
           Admin password (plain text or argon2 hash). Visible in the process list: prefer --password-file, `WPG_PASSWORD` or `wpg config set-password`
@@ -68,11 +79,6 @@ Options:
 
       --allow-insecure
           Listen on a non-loopback address even though no password is configured (anyone reaching the server can then set it on the setup screen)
-
-      --config <FILE>
-          Configuration file (default: `wpg.toml` in the working directory, if any)
-
-          [env: WPG_CONFIG]
 
       --dev
           Development mode: allow CORS from the Trunk dev server (:8081)
@@ -108,12 +114,17 @@ Options:
           Interface to transmit on
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
 
       --backend <BACKEND>
           Transmit backend (null, pcapfile, pcap, afpacket, afxdp, dpdk)
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --count <COUNT>
           Number of packets
@@ -222,18 +233,26 @@ Arguments:
 
 Options:
   -o, --output <OUTPUT>
-          Output pcapng file
+          Output pcapng file (`-` writes it to standard output)
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --count <COUNT>
           Number of packets
 
       --var <NAME=VALUE>
           Template variable override (`name=value`), repeatable
+
+      --json
+          Print the result (packets, bytes, path) as JSON on stdout
 
   -h, --help
           Print help
@@ -260,9 +279,14 @@ Options:
           Output template (`-` prints YAML on standard output)
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --per-packet <DIR>
           Write one template per packet into this directory instead of one merged template
@@ -298,7 +322,7 @@ Template tools (lint, list, migrate, export, import)
 Usage: wpg template [OPTIONS] <COMMAND>
 
 Commands:
-  lint     Check templates for errors and warnings (exit status 1 on errors)
+  lint     Check templates for errors and warnings (exit status 3 on errors)
   list     List the templates of a directory (default: `templates/`)
   show     Print the built packet (hex dump and layout tree) of a template
   schema   Print the JSON Schema of the template format
@@ -309,9 +333,14 @@ Commands:
 
 Options:
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -323,7 +352,7 @@ Options:
 ### `wpg template lint`
 
 ```text
-Check templates for errors and warnings (exit status 1 on errors)
+Check templates for errors and warnings (exit status 3 on errors)
 
 Usage: wpg template lint [OPTIONS] <FILES>...
 
@@ -332,10 +361,18 @@ Arguments:
           Template files
 
 Options:
+      --json
+          Print the issues as JSON on stdout
+
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -356,10 +393,18 @@ Arguments:
           Directory to scan recursively
 
 Options:
+      --json
+          Print the list as JSON on stdout
+
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -381,12 +426,20 @@ Arguments:
 
 Options:
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
 
       --var <NAME=VALUE>
           Template variable override (`name=value`), repeatable
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --json
+          Print the packet (hex, layers, fields) as JSON on stdout
 
   -h, --help
           Print help
@@ -404,9 +457,14 @@ Usage: wpg template schema [OPTIONS]
 
 Options:
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -431,12 +489,17 @@ Options:
           Output bundle
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
 
       --attach <FILE>
           Attach a capture (pcap / pcapng) or other file, repeatable
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --dir <DIR>
           Template library used to resolve ids (default: `templates/`)
@@ -466,9 +529,14 @@ Options:
           Only report outdated templates (exit status 1 if any needs migrating)
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --no-backup
           Do not keep a `.bak` copy of migrated files
@@ -496,9 +564,14 @@ Options:
           Output directory
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --force
           Overwrite existing files
@@ -524,9 +597,14 @@ Options:
           Output JSON
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -549,9 +627,14 @@ Options:
           Output JSON
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -574,9 +657,14 @@ Options:
           Backend to benchmark
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -i, --iface <IFACE>
           Interface (for real backends)
@@ -659,12 +747,17 @@ Options:
           Interface to receive on (`any` = every interface with `afpacket`); for the `pcapfile` backend the capture file to replay
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
 
       --backend <BACKEND>
           Receive backend: afpacket (Linux), pcap (feature `pcap`), pcapfile, null
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -f, --filter <EXPR>
           tcpdump-style filter, e.g. `udp port 5001 and wpg` (default: every frame)
@@ -723,9 +816,14 @@ Commands:
 
 Options:
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -748,9 +846,14 @@ Options:
           [default: wpg.toml]
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
       --force
           Overwrite an existing file
@@ -776,7 +879,7 @@ Options:
           [env: WPG_CONFIG]
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
 
@@ -801,7 +904,7 @@ Options:
           [env: WPG_CONFIG]
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
 
@@ -827,7 +930,7 @@ Options:
           [default: wpg.toml]
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
 
@@ -836,6 +939,108 @@ Options:
 
   -h, --help
           Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols`
+
+```text
+Protocol tools (list, show, check user-defined protocol files)
+
+Usage: wpg protocols [OPTIONS] <COMMAND>
+
+Commands:
+  list   List the protocols: built-in ones and those of `--protocols-dir`
+  show   Print a protocol definition, as an extension file to start a new protocol from (change its `id` first)
+  check  Check user-defined protocol files (exit status 1 on errors)
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols list`
+
+```text
+List the protocols: built-in ones and those of `--protocols-dir`
+
+Usage: wpg protocols list [OPTIONS]
+
+Options:
+      --json
+          Output JSON
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols show`
+
+```text
+Print a protocol definition, as an extension file to start a new protocol from (change its `id` first)
+
+Usage: wpg protocols show [OPTIONS] <ID>
+
+Arguments:
+  <ID>
+          Protocol id (`udp`, `ipv4`, ...)
+
+Options:
+      --json
+          Output the definition as JSON instead of YAML
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg protocols check`
+
+```text
+Check user-defined protocol files (exit status 1 on errors).
+
+The files are checked together, with the built-in protocols and the other files of `--protocols-dir`.
+
+Usage: wpg protocols check [OPTIONS] <PATHS>...
+
+Arguments:
+  <PATHS>...
+          Extension files (`*.yaml`) or directories holding them
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+  -h, --help
+          Print help (see a summary with '-h')
 
   -V, --version
           Print version

@@ -836,6 +836,7 @@ async fn openapi_lists_every_route() {
         ("/api/system/backends", &["get"]),
         ("/api/protocols", &["get"]),
         ("/api/protocols/extensions", &["get"]),
+        ("/api/protocols/reload", &["post"]),
         ("/api/protocols/{id}", &["get"]),
         ("/api/render", &["post"]),
         ("/api/parse", &["post"]),

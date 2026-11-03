@@ -72,18 +72,22 @@ pub(crate) fn App() -> impl IntoView {
     api::set_locale(i18n.current());
     api::set_unauthorized_hook(move || auth.refresh_later());
     auth.refresh_later();
+    // User-defined protocols of the server join the in-browser catalog
+    // (preview, field editor, capture tree) once per page load and again
+    // whenever the server reloads them (`protocols_changed`).
+    let extensions_loaded = StoredValue::new(None::<u64>);
+    Effect::new(move |_| {
+        let rev = live.protocols_rev.get();
+        if auth.phase.with(AuthPhase::allows_app) && extensions_loaded.get_value() != Some(rev) {
+            extensions_loaded.set_value(Some(rev));
+            leptos::task::spawn_local(load_protocol_extensions(toasts, live, i18n));
+        }
+    });
     // The event stream needs a session: connect once the app may be shown, and
     // skip the back-off whenever that becomes true again (after a login).
     let ws_started = StoredValue::new(false);
-    let extensions_loaded = StoredValue::new(false);
     Effect::new(move |_| {
         if auth.phase.with(AuthPhase::allows_app) {
-            // User-defined protocols of the server join the in-browser catalog
-            // (preview, field editor, capture tree) once per page load.
-            if !extensions_loaded.get_value() {
-                extensions_loaded.set_value(true);
-                leptos::task::spawn_local(load_protocol_extensions(toasts, live, i18n));
-            }
             if ws_started.get_value() {
                 ws::reconnect_now();
             } else {
@@ -118,12 +122,12 @@ pub(crate) fn App() -> impl IntoView {
 }
 
 /// Fetches the server's user-defined protocols and installs them into
-/// [`wpg_protocols::catalog`]. A failure is shown as an error toast (the
+/// [`wpg_protocols::catalog`]. An empty list is installed too, so removed
+/// protocols go away after a reload. A failure is shown as an error toast (the
 /// builder then offers the built-in protocols only), with the cause in the
 /// logs panel.
 async fn load_protocol_extensions(toasts: Toasts, live: Live, i18n: I18n) {
     let cause = match api::protocol_extensions().await {
-        Ok(exts) if exts.is_empty() => return,
         Ok(exts) => match wpg_protocols::extension::install(exts) {
             Ok(_) => return,
             Err(e) => e.to_string(),

@@ -73,6 +73,9 @@ pub enum ServerEvent {
     /// The DHCP server started / stopped, its settings changed or leases
     /// expired / were deleted: reload `GET /api/dhcp`.
     DhcpState,
+    /// The user-defined protocols were reloaded (`POST /api/protocols/reload`):
+    /// fetch `GET /api/protocols` and `GET /api/protocols/extensions` again.
+    ProtocolsChanged,
 }
 
 impl ServerEvent {

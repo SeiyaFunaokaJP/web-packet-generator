@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## 서버 / API
 health-ok = 서비스가 정상입니다
-server-placeholder-ui = 웹 UI가 아직 빌드되지 않았습니다. crates/wpg-web에서 `trunk build`를 실행하십시오.
+server-placeholder-ui = 웹 UI가 아직 빌드되지 않았습니다. crates/wpg-web에서 `trunk build`를 실행한 다음 wpg를 다시 빌드하십시오.
 
 ## 오류
 error-not-implemented = `{ $command }`는 아직 구현되지 않았습니다.
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Npcap SDK로 다시 빌드하거나 릴리스 빌드�
 doctor-pcaplib-ok = libpcap을 사용할 수 있습니다
 doctor-pcaplib-missing = libpcap을 찾을 수 없습니다. pcap 백엔드를 사용할 수 없습니다
 doctor-fix-pcaplib = libpcap을 설치하십시오: { $hint }
+# 웹 UI 포함 여부와 Windows 이외의 pcap 백엔드 (wpg serve / wpg doctor)
+serve-banner-webui-missing = 웹 UI           포함되지 않음: crates/wpg-web에서 `trunk build`를 실행한 다음 wpg를 다시 빌드하십시오
+doctor-webui-ok = 웹 UI가 포함되어 있습니다
+doctor-webui-missing = 웹 UI가 포함되어 있지 않습니다. wpg serve는 임시 페이지를 표시합니다
+doctor-fix-webui = 웹 UI를 포함하여 wpg를 다시 빌드하십시오: { $hint }
+doctor-pcap-backend-ok-macos = 이 wpg에는 pcap 백엔드가 포함되어 있습니다
+doctor-pcap-backend-missing-macos = 이 wpg는 pcap 백엔드 없이 빌드되어 macOS에서 전송할 수 없습니다
+doctor-fix-pcap-backend-macos = pcap 백엔드를 포함하여 다시 빌드하십시오: { $hint }
+doctor-pcaplib-unused = 필요 없음: 이 wpg는 pcap 백엔드 없이 빌드되었습니다
 
 ## wpg template lint (wpg-template `LintIssue` 키)
 lint-level-error = 오류
@@ -224,6 +233,8 @@ template-show-hex = 16진 덤프({ $len }바이트)
 template-show-layout = 레이아웃
 render-done = 패킷 { $len }개를 { $value }에 기록했습니다.
 render-unbounded = 스트림이 무한합니다. --count N을 지정하십시오.
+render-json-stdout = --json과 -o -는 함께 지정할 수 없습니다(둘 다 표준 출력에 씁니다).
+send-rate-over-limit = 속도 { $rate }이(가) 설정된 상한 tx.max_rate = { $max }을(를) 초과합니다.
 cli-bad-var = 잘못된 --var `{ $value }`입니다. NAME=VALUE 형식이어야 합니다.
 
 ## wpg send / wpg bench (진행 상황, 요약, 오류)
@@ -373,6 +384,21 @@ config-issue-dir-missing = 디렉터리를 찾을 수 없음
 config-issue-protocols = 사용자 정의 프로토콜을 불러올 수 없음
 protocols-ext-loaded = 사용자 정의 프로토콜 { $count }개를 불러왔습니다
 protocols-ext-error = 사용자 정의 프로토콜을 불러올 수 없습니다: { $file }: { $error }
+protocols-col-id = ID
+protocols-col-name = 이름
+protocols-col-layer = 계층
+protocols-col-source = 출처
+protocols-source-builtin = 내장
+protocols-unknown = 알 수 없는 프로토콜: { $id }
+protocols-check-ok = { $file }: OK (프로토콜 { $protocols }개, 바인딩 { $bindings }개)
+protocols-check-error = { $file }: { $error }
+protocols-check-none = { $path }에 프로토콜 파일(*.yaml, *.yml)이 없습니다
+api-error-protocols-forbidden = 현재 역할로는 프로토콜을 다시 불러올 수 없습니다.
+api-error-protocols-reload = 사용자 정의 프로토콜을 불러올 수 없습니다: { $file }: { $error }
+ui-set-protocols = 사용자 정의 프로토콜
+ui-set-protocols-count = { $count }개 불러옴
+ui-set-protocols-reload = 다시 불러오기
+ui-set-protocols-reloaded = 사용자 정의 프로토콜 { $count }개를 다시 불러왔습니다
 config-issue-max-rate-percent = 링크 백분율은 서버 전체 최대값으로 사용할 수 없음. pps 또는 bps를 사용할 것
 config-issue-bad-rate = 잘못된 속도
 config-issue-unknown-backend = 알 수 없는 백엔드

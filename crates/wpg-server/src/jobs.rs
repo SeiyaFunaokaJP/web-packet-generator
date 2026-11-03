@@ -291,7 +291,6 @@ struct Inner {
     events: EventBus,
     config: Arc<Config>,
     store: TemplateStore,
-    catalog: &'static Catalog,
     interval: Duration,
 }
 
@@ -424,6 +423,9 @@ impl Inner {
     #[allow(clippy::too_many_lines)]
     fn prepare(&self, spec: &JobSpec) -> Result<(JobInfo, Prepared), ApiError> {
         let cfg = &self.config;
+        // The catalog current now (user-defined protocols may be reloaded later;
+        // the job keeps this one).
+        let catalog = wpg_protocols::catalog();
         if spec.streams.is_empty() {
             return Err(spec_error("a job needs at least one stream"));
         }
@@ -490,7 +492,7 @@ impl Inner {
                 }
             };
             names.push(t.meta.name.clone());
-            compiled.push(compile(&t, &s.vars, self.catalog).map_err(ApiError::template)?);
+            compiled.push(compile(&t, &s.vars, catalog).map_err(ApiError::template)?);
         }
         let single = compiled.len() == 1;
         let tx0 = compiled[0].tx.clone();
@@ -511,7 +513,7 @@ impl Inner {
         }
         let min_len = compiled
             .iter()
-            .map(|c| first_frame_len(c, self.catalog))
+            .map(|c| first_frame_len(c, catalog))
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .min()
@@ -577,7 +579,7 @@ impl Inner {
                 c.stream.count = Some(n);
             }
             let exp = Expansion::new(&c.stream, None).map_err(|e| ApiError::template(e.into()))?;
-            let (r, plan) = Rendered::auto(c.packet, exp, self.catalog, &pcfg)
+            let (r, plan) = Rendered::auto(c.packet, exp, catalog, &pcfg)
                 .map_err(|e| ApiError::bad_request("api-error-render-failed", e))?;
             let r = match (r, loop_each) {
                 (Rendered::Pre(p), true) => Rendered::Pre(PreRendered::new(p.into_frames(), None)),
@@ -767,14 +769,8 @@ impl JobManager {
     /// Creates the manager and loads the persisted history from `db` (importing
     /// the JSON records of older versions from `<data_dir>/history` once).
     #[must_use]
-    pub fn new(
-        config: Arc<Config>,
-        store: TemplateStore,
-        catalog: &'static Catalog,
-        events: EventBus,
-        db: Db,
-    ) -> Self {
-        Self::with_interval(config, store, catalog, events, db, SNAPSHOT_INTERVAL)
+    pub fn new(config: Arc<Config>, store: TemplateStore, events: EventBus, db: Db) -> Self {
+        Self::with_interval(config, store, events, db, SNAPSHOT_INTERVAL)
     }
 
     /// [`Self::new`] with a custom statistics cadence.
@@ -782,7 +778,6 @@ impl JobManager {
     pub fn with_interval(
         config: Arc<Config>,
         store: TemplateStore,
-        catalog: &'static Catalog,
         events: EventBus,
         db: Db,
         interval: Duration,
@@ -807,7 +802,6 @@ impl JobManager {
                 events,
                 config,
                 store,
-                catalog,
                 interval,
             }),
         }

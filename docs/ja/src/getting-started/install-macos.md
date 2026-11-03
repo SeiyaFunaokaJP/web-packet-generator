@@ -7,18 +7,19 @@
 ```sh
 xcode-select --install                     # コンパイラとリンカ
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup target add wasm32-unknown-unknown
-cargo install trunk --locked
-cargo install just --locked                # 任意のタスクランナー
 brew install wireshark                     # 任意: tshark と ChmodBPF (下記)
+
+git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
+cd web-packet-generator
+./scripts/setup.sh                         # --just を付けるとタスクランナー just も入れる
 ```
+
+`scripts/setup.sh` は `rust-toolchain.toml` で固定した Rust ツールチェーンと WASM ターゲット、`scripts/versions.env` で固定したバージョンのビルド済み `trunk` を入れます。
 
 ## 2. ビルドする
 
 ```sh
-git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
-cd web-packet-generator
-just release                # または: ./scripts/build.sh --release
+./scripts/build.sh --release        # または: just release
 ```
 
 最後に `==> done: target/release/wpg` と表示されます。

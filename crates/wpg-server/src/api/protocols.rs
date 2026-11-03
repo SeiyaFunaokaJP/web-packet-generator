@@ -4,13 +4,16 @@
 #![allow(unused_qualifications)]
 
 use axum::extract::State;
-use axum::http::HeaderMap;
-use axum::Json;
+use axum::http::{HeaderMap, StatusCode};
+use axum::{Extension, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 
-use crate::error::{ApiError, ApiPath, ApiResult};
+use crate::auth::Principal;
+use crate::db::Role;
+use crate::error::{codes, ApiError, ApiPath, ApiResult};
+use crate::events::ServerEvent;
 use crate::localize::{add_descriptions, request_locale};
 use crate::state::AppState;
 
@@ -37,7 +40,7 @@ pub struct ProtocolSummary {
     responses((status = 200, description = "Catalog summary", body = Vec<ProtocolSummary>)))]
 pub async fn list(State(st): State<AppState>) -> Json<Vec<ProtocolSummary>> {
     Json(
-        st.catalog
+        st.catalog()
             .iter()
             .map(|p| {
                 let mut next: Vec<String> = p
@@ -64,15 +67,97 @@ pub async fn list(State(st): State<AppState>) -> Json<Vec<ProtocolSummary>> {
     )
 }
 
-/// The user-defined protocol files loaded at startup (`[protocols] dirs`,
-/// `--protocols-dir`): their definitions and bindings, so that the web UI can
-/// add them to its in-browser catalog. Empty without extensions.
+/// The user-defined protocol files in use (`[protocols] dirs`,
+/// `--protocols-dir`; loaded at startup or by `POST /api/protocols/reload`):
+/// their definitions and bindings, so that the web UI can add them to its
+/// in-browser catalog. Empty without extensions.
 #[utoipa::path(get, path = "/api/protocols/extensions", tag = "protocols",
     responses((status = 200, description = "Extension files (`protocols`, `bind`, `source`)", body = Vec<Object>)))]
 pub async fn extensions() -> ApiResult<Json<Value>> {
     let v =
         serde_json::to_value(wpg_protocols::extension::extensions()).map_err(ApiError::internal)?;
     Ok(Json(v))
+}
+
+/// One loaded extension file.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct ExtensionFile {
+    /// The file.
+    pub source: String,
+    /// Ids of the protocols it defines.
+    pub protocols: Vec<String>,
+    /// Number of its `bind` entries.
+    pub bindings: usize,
+}
+
+/// Result of `POST /api/protocols/reload`.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct ReloadResult {
+    /// Directories that were read.
+    pub dirs: Vec<String>,
+    /// The files now in use, in load order.
+    pub files: Vec<ExtensionFile>,
+}
+
+/// Reads the user-defined protocol directories of the server again
+/// (`[protocols] dirs`, `--protocols-dir`) and switches the catalog to what
+/// they hold now; WebSocket clients get a `protocols_changed` event. Jobs that
+/// are already running keep the catalog they started with. On an error nothing
+/// changes. Admin only.
+#[utoipa::path(post, path = "/api/protocols/reload", tag = "protocols",
+    responses(
+        (status = 200, description = "Loaded files", body = ReloadResult),
+        (status = 403, description = "`forbidden`: not an admin", body = crate::error::ErrorBody),
+        (status = 422, description = "`invalid_protocols`: a file does not load (`details.file`, `details.reason`)", body = crate::error::ErrorBody)))]
+pub async fn reload(
+    State(st): State<AppState>,
+    principal: Option<Extension<Principal>>,
+) -> ApiResult<Json<ReloadResult>> {
+    if principal.is_some_and(|Extension(p)| p.role != Role::Admin) {
+        return Err(ApiError::new(
+            StatusCode::FORBIDDEN,
+            codes::FORBIDDEN,
+            "api-error-protocols-forbidden",
+        ));
+    }
+    let result = tokio::task::spawn_blocking(wpg_protocols::extension::reload)
+        .await
+        .map_err(ApiError::internal)?;
+    let exts = match result {
+        Ok(exts) => exts,
+        Err(e) => {
+            tracing::warn!("user-defined protocols not reloaded: {e}");
+            return Err(ApiError::new(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                codes::INVALID_PROTOCOLS,
+                "api-error-protocols-reload",
+            )
+            .arg("file", &e.source)
+            .arg("error", &e.reason)
+            .details(serde_json::json!({ "file": e.source, "reason": e.reason })));
+        }
+    };
+    let files: Vec<ExtensionFile> = exts
+        .iter()
+        .map(|e| ExtensionFile {
+            source: e.source.clone(),
+            protocols: e.protocols.iter().map(|d| d.id.clone()).collect(),
+            bindings: e.bind.len(),
+        })
+        .collect();
+    tracing::info!(
+        files = files.len(),
+        protocols = files.iter().map(|f| f.protocols.len()).sum::<usize>(),
+        "user-defined protocols reloaded"
+    );
+    let _ = st.events.send(ServerEvent::ProtocolsChanged);
+    Ok(Json(ReloadResult {
+        dirs: wpg_protocols::extension::dirs()
+            .iter()
+            .map(|d| d.display().to_string())
+            .collect(),
+        files,
+    }))
 }
 
 /// The full definition (`wpg_core::ProtocolDef`): fields with types, defaults,
@@ -89,7 +174,7 @@ pub async fn get(
     ApiPath(id): ApiPath<String>,
 ) -> ApiResult<Json<Value>> {
     let def = st
-        .catalog
+        .catalog()
         .get(&id)
         .ok_or_else(|| ApiError::not_found(format!("protocol {id}")))?;
     let mut v = serde_json::to_value(def).map_err(ApiError::internal)?;

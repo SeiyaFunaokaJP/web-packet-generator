@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## Server / API
 health-ok = Dienst ist betriebsbereit
-server-placeholder-ui = Die Web-UI wurde noch nicht gebaut. Führen Sie `trunk build` in crates/wpg-web aus.
+server-placeholder-ui = Die Web-UI wurde noch nicht gebaut. Führen Sie `trunk build` in crates/wpg-web aus und bauen Sie wpg danach neu.
 
 ## Fehler
 error-not-implemented = `{ $command }` ist noch nicht implementiert.
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Mit dem Npcap SDK neu bauen oder ein Release-Build ver
 doctor-pcaplib-ok = libpcap ist verfügbar
 doctor-pcaplib-missing = libpcap wurde nicht gefunden; das pcap-Backend kann nicht verwendet werden
 doctor-fix-pcaplib = Installieren Sie libpcap: { $hint }
+# Eingebettete Web-UI und das pcap-Backend außerhalb von Windows (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web-UI          nicht enthalten: `trunk build` in crates/wpg-web ausführen, dann wpg neu bauen
+doctor-webui-ok = Die Web-UI ist enthalten
+doctor-webui-missing = Die Web-UI ist nicht enthalten; wpg serve zeigt eine Platzhalterseite
+doctor-fix-webui = Bauen Sie wpg mit der Web-UI neu: { $hint }
+doctor-pcap-backend-ok-macos = Dieses wpg enthält das pcap-Backend
+doctor-pcap-backend-missing-macos = Dieses wpg wurde ohne das pcap-Backend gebaut und kann unter macOS nicht senden
+doctor-fix-pcap-backend-macos = Bauen Sie wpg mit dem pcap-Backend neu: { $hint }
+doctor-pcaplib-unused = Nicht nötig: Dieses wpg wurde ohne das pcap-Backend gebaut
 
 ## wpg template lint (wpg-template `LintIssue`-Schlüssel)
 lint-level-error = Fehler
@@ -224,6 +233,8 @@ template-show-hex = Hexdump ({ $len } Bytes)
 template-show-layout = Aufbau
 render-done = { $len } Pakete nach { $value } geschrieben.
 render-unbounded = Der Stream ist unbegrenzt; geben Sie --count N an.
+render-json-stdout = --json kann nicht mit -o - kombiniert werden (beide schreiben auf die Standardausgabe).
+send-rate-over-limit = Die Rate { $rate } überschreitet das konfigurierte Limit tx.max_rate = { $max }.
 cli-bad-var = Ungültiges --var `{ $value }`; erwartet wird NAME=VALUE.
 
 ## wpg send / wpg bench (Fortschritt, Zusammenfassung, Fehler)
@@ -373,6 +384,21 @@ config-issue-dir-missing = Verzeichnis nicht gefunden
 config-issue-protocols = benutzerdefinierte Protokolle können nicht geladen werden
 protocols-ext-loaded = { $count } benutzerdefinierte(s) Protokoll(e) geladen
 protocols-ext-error = benutzerdefinierte Protokolle können nicht geladen werden: { $file }: { $error }
+protocols-col-id = ID
+protocols-col-name = NAME
+protocols-col-layer = SCHICHT
+protocols-col-source = QUELLE
+protocols-source-builtin = integriert
+protocols-unknown = unbekanntes Protokoll: { $id }
+protocols-check-ok = { $file }: OK ({ $protocols } Protokoll(e), { $bindings } Bindung(en))
+protocols-check-error = { $file }: { $error }
+protocols-check-none = keine Protokolldateien (*.yaml, *.yml) in { $path }
+api-error-protocols-forbidden = Ihre Rolle darf Protokolle nicht neu laden.
+api-error-protocols-reload = Benutzerdefinierte Protokolle können nicht geladen werden: { $file }: { $error }
+ui-set-protocols = Benutzerdefinierte Protokolle
+ui-set-protocols-count = { $count } geladen
+ui-set-protocols-reload = Neu laden
+ui-set-protocols-reloaded = { $count } benutzerdefinierte(s) Protokoll(e) neu geladen
 config-issue-max-rate-percent = ein Link-Prozentsatz kann kein serverweites Maximum sein; verwenden Sie pps oder bps
 config-issue-bad-rate = ungültige Rate
 config-issue-unknown-backend = unbekanntes Backend

@@ -50,6 +50,12 @@ pub(crate) fn banner(
             ],
         ),
         tr(locale, "serve-banner-listen", &[("url", url.clone())]),
+    ];
+    // In --dev mode the UI comes from the Trunk dev server, so nothing is missing.
+    if !dev && !wpg_server::web_ui_embedded() {
+        out.push(t(locale, "serve-banner-webui-missing"));
+    }
+    out.extend([
         tr(locale, "serve-banner-docs", &[("url", url)]),
         tr(
             locale,
@@ -61,7 +67,7 @@ pub(crate) fn banner(
             "serve-banner-data",
             &[("path", config.data_dir.display().to_string())],
         ),
-    ];
+    ]);
     for lib in &config.templates.library_paths {
         let state_text = if lib.is_dir() {
             String::new()
@@ -145,7 +151,11 @@ pub(crate) fn banner(
 }
 
 /// Runs `wpg serve`.
-pub(crate) fn run(args: &crate::ServeArgs, protocols_dirs: &[PathBuf]) -> ExitCode {
+pub(crate) fn run(
+    args: &crate::ServeArgs,
+    config_file: Option<&Path>,
+    protocols_dirs: &[PathBuf],
+) -> ExitCode {
     let locale = cli_locale();
     if args.password.is_some() {
         eprintln!("{}", t(locale, "serve-password-arg-warning"));
@@ -158,7 +168,7 @@ pub(crate) fn run(args: &crate::ServeArgs, protocols_dirs: &[PathBuf]) -> ExitCo
         password_file: args.password_file.clone(),
         tls: args.tls,
     };
-    let config = match Config::load(args.config.as_deref(), &overrides) {
+    let config = match Config::load(config_file, &overrides) {
         Ok(c) => c,
         Err(e) => {
             eprintln!(
@@ -196,7 +206,7 @@ pub(crate) fn run(args: &crate::ServeArgs, protocols_dirs: &[PathBuf]) -> ExitCo
             return ExitCode::FAILURE;
         }
     };
-    let source = config_source(args.config.as_deref(), locale);
+    let source = config_source(config_file, locale);
     let opts = ServeOptions {
         dev: args.dev,
         watch: true,

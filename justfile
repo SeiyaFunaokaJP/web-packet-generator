@@ -1,21 +1,54 @@
 # web-packet-generator task runner. Run `just --list` to see all recipes.
-# Install just: https://github.com/casey/just  (cargo install just)
+# Install just: https://github.com/casey/just  (cargo install just --locked, or scripts/setup.sh --just)
+#
+# Recipes that differ by OS have a [unix] and a [windows] variant; the Windows ones run in
+# Windows PowerShell and call the scripts/*.ps1 counterparts.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
-set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+# -ExecutionPolicy Bypass only applies to this process, so the repository's .ps1 scripts
+# run even where the machine policy is Restricted (the Windows PowerShell default).
+set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
 
 default:
     @just --list
 
-# Build frontend (trunk) then backend (debug). See `release` for the optimised build.
+# Install the build tools: pinned toolchain + wasm target, trunk; lists system packages (--just: also just).
+[unix]
+setup *args:
+    ./scripts/setup.sh {{args}}
+
+# Install the build tools: pinned toolchain + wasm target, trunk, Npcap SDK; lists what else to install.
+[windows]
+setup *args:
+    & ./scripts/setup.ps1 {{args}}
+
+# Build frontend (trunk) then the wpg binary (debug). See `release` for the optimised build.
+[unix]
 build:
     ./scripts/build.sh
 
-# Optimised build: frontend then backend with --release.
+# Build frontend (trunk) then the wpg binary (debug). See `release` for the optimised build.
+[windows]
+build:
+    & ./scripts/build.ps1
+
+# Optimised build: frontend then the wpg binary with --release (target/release/wpg).
+[unix]
 release:
     ./scripts/build.sh --release
 
+# Optimised build: frontend then the wpg binary with -Release (target/release/wpg.exe).
+[windows]
+release:
+    & ./scripts/build.ps1 -Release
+
 # Development server: trunk serve (frontend) + cargo watch (backend).
+[windows]
+run:
+    & ./scripts/run.ps1 -Dev
+
+# Development server: trunk serve (frontend) + cargo watch (backend).
+[unix]
 run:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -36,7 +69,15 @@ run:
 
 # Run the whole test suite.
 test:
-    cargo test --workspace
+    cargo test --workspace --no-fail-fast
+
+# Fast check while working: formatting, WASM build, clippy on the default members, core crate tests.
+check: fmt-check check-wasm
+    cargo clippy --all-targets -- -D warnings
+    cargo test -p wpg-core -p wpg-protocols -p wpg-template -p wpg-i18n
+
+# Everything a PR must pass (the checks in CLAUDE.md / CONTRIBUTING.md): run before opening a PR.
+ci: fmt-check lint check-wasm test
 
 # Browser end-to-end tests of the web UI (requires: trunk, Node.js 20+; see e2e/README.md).
 e2e:
@@ -54,12 +95,24 @@ screenshots:
     cd e2e && npm ci && npx playwright install chromium && npx playwright test -c screenshots.config.ts
 
 # Regenerate tests/golden/*.hex and *.pcap (review the diff before committing).
+[unix]
 golden-update:
     WPG_UPDATE_GOLDEN=1 cargo test -p wpg-golden-tests --test golden
 
+# Regenerate tests/golden/*.hex and *.pcap (review the diff before committing).
+[windows]
+golden-update:
+    $env:WPG_UPDATE_GOLDEN = '1'; cargo test -p wpg-golden-tests --test golden
+
 # Cross-check golden pcaps with Wireshark (requires tshark).
+[unix]
 tshark:
     WPG_TSHARK=1 cargo test -p wpg-golden-tests --test tshark -- --ignored
+
+# Cross-check golden pcaps with Wireshark (requires tshark).
+[windows]
+tshark:
+    $env:WPG_TSHARK = '1'; cargo test -p wpg-golden-tests --test tshark -- --ignored
 
 # Format all code.
 fmt:
@@ -124,6 +177,13 @@ shellcheck:
     shellcheck scripts/*.sh scripts/lib/*.sh docs/build.sh
 
 # Remove build artefacts.
+[unix]
 clean:
     cargo clean
     rm -rf crates/wpg-web/dist
+
+# Remove build artefacts.
+[windows]
+clean:
+    cargo clean
+    if (Test-Path crates/wpg-web/dist) { Remove-Item -Recurse -Force crates/wpg-web/dist }

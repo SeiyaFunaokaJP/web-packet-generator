@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## Server / API
 health-ok = サービスは正常です
-server-placeholder-ui = Web UI はまだビルドされていません。crates/wpg-web で `trunk build` を実行してください。
+server-placeholder-ui = Web UI はまだビルドされていません。crates/wpg-web で `trunk build` を実行してから、wpg をビルドし直してください。
 
 ## Errors
 error-not-implemented = `{ $command }` はまだ実装されていません。
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Npcap SDK を用意して再ビルドするか、リ�
 doctor-pcaplib-ok = libpcap を利用できます
 doctor-pcaplib-missing = libpcap が見つかりません。pcap バックエンドは利用できません
 doctor-fix-pcaplib = libpcap をインストールしてください: { $hint }
+# Web UI の組み込みと Windows 以外の pcap バックエンド (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web UI           未組み込み: crates/wpg-web で `trunk build` を実行してから、wpg をビルドし直してください
+doctor-webui-ok = Web UI が組み込まれています
+doctor-webui-missing = Web UI が組み込まれていません。wpg serve は仮のページを表示します
+doctor-fix-webui = Web UI を含めて wpg をビルドし直してください: { $hint }
+doctor-pcap-backend-ok-macos = この wpg には pcap バックエンドが組み込まれています
+doctor-pcap-backend-missing-macos = この wpg は pcap バックエンドなしでビルドされているため、macOS では送信できません
+doctor-fix-pcap-backend-macos = pcap バックエンドを含めてビルドし直してください: { $hint }
+doctor-pcaplib-unused = 不要です (この wpg は pcap バックエンドなしでビルドされています)
 
 ## wpg template lint (wpg-template `LintIssue` keys)
 lint-level-error = エラー
@@ -224,6 +233,8 @@ template-show-hex = Hex ダンプ ({ $len } バイト)
 template-show-layout = レイアウト
 render-done = { $len } パケットを { $value } に書き出しました。
 render-unbounded = ストリームが無限です。--count N を指定してください。
+render-json-stdout = --json と -o - は同時に指定できません (どちらも標準出力に書き出します)。
+send-rate-over-limit = レート { $rate } が設定の上限 tx.max_rate = { $max } を超えています。
 cli-bad-var = --var `{ $value }` が不正です。NAME=VALUE 形式で指定してください。
 
 ## wpg send / wpg bench (進捗・サマリ・エラー)
@@ -373,6 +384,21 @@ config-issue-dir-missing = ディレクトリが見つかりません
 config-issue-protocols = ユーザ定義プロトコルを読み込めません
 protocols-ext-loaded = ユーザ定義プロトコルを { $count } 件読み込みました
 protocols-ext-error = ユーザ定義プロトコルを読み込めません: { $file }: { $error }
+protocols-col-id = ID
+protocols-col-name = 名前
+protocols-col-layer = レイヤ
+protocols-col-source = 定義元
+protocols-source-builtin = 組み込み
+protocols-unknown = 不明なプロトコルです: { $id }
+protocols-check-ok = { $file }: OK (プロトコル { $protocols } 件、バインド { $bindings } 件)
+protocols-check-error = { $file }: { $error }
+protocols-check-none = { $path } にプロトコルファイル (*.yaml, *.yml) がありません
+api-error-protocols-forbidden = このロールではプロトコルを再読み込みできません。
+api-error-protocols-reload = ユーザ定義プロトコルを読み込めません: { $file }: { $error }
+ui-set-protocols = ユーザ定義プロトコル
+ui-set-protocols-count = { $count } 件読み込み済み
+ui-set-protocols-reload = 再読み込み
+ui-set-protocols-reloaded = ユーザ定義プロトコルを { $count } 件読み込みました
 config-issue-max-rate-percent = 回線率 (%) はサーバ全体の上限に使えません。pps か bps で指定してください
 config-issue-bad-rate = レートが不正です
 config-issue-unknown-backend = 不明なバックエンドです

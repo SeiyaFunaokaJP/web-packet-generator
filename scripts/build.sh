@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Build wpg: frontend (trunk, WASM) first, then the backend workspace.
+# Build wpg: frontend (trunk, WASM) first, then the wpg binary (crate wpg-cli).
 #
 # Usage: scripts/build.sh [--release] [--features <list>] [--dpdk] [--no-pcap]
 #   --release          optimised build
-#   --features <list>  extra cargo features for wpg-cli (e.g. "dpdk")
+#   --features <list>  extra cargo features for wpg-cli (e.g. "pcap", "afxdp", "dpdk")
 #   --dpdk             shorthand for --features dpdk
 #   --no-pcap          macOS: leave out the pcap backend, which is otherwise added
 #                      because it is the only way to send there (libpcap ships with macOS)
@@ -56,20 +56,21 @@ have_trunk=1
 command -v rustup >/dev/null 2>&1 || die "rustup not found. Install from https://rustup.rs"
 command -v cargo >/dev/null 2>&1 || die "cargo not found. Install from https://rustup.rs"
 
-if ! rustup target list --installed 2>/dev/null | grep -qx 'wasm32-unknown-unknown'; then
-    die "wasm32-unknown-unknown target missing. Run: rustup target add wasm32-unknown-unknown"
-fi
-
 if ! command -v trunk >/dev/null 2>&1; then
     have_trunk=0
-    warn "trunk not found; the frontend build will be skipped. Install: cargo install trunk --locked"
+    warn "trunk not found; the frontend build will be skipped. Run: ./scripts/setup.sh"
+elif ! rustup target list --installed 2>/dev/null | grep -qx 'wasm32-unknown-unknown'; then
+    have_trunk=0
+    warn "wasm32-unknown-unknown target missing; the frontend build will be skipped. Run: ./scripts/setup.sh"
 fi
 
 case "$(uname -s)" in
     Linux)
         if ! { command -v pkg-config >/dev/null 2>&1 && pkg-config --exists libpcap; } \
             && [ ! -e /usr/include/pcap/pcap.h ]; then
-            warn "libpcap headers not found (Debian/Ubuntu: sudo apt install libpcap-dev). Not required yet: the pcap feature is unused."
+            case ",$features," in
+                *,pcap,*) warn "libpcap headers not found; --features pcap needs them (Debian/Ubuntu: sudo apt install libpcap-dev)" ;;
+            esac
         fi
         ;;
     Darwin)
@@ -101,7 +102,9 @@ else
 fi
 
 # ---- backend ----------------------------------------------------------------
-cargo_args=(build --workspace)
+# Only the binary: `--workspace` would also compile the web UI natively, dpdk-sys and the
+# test crates.
+cargo_args=(build -p wpg-cli)
 [ "$release" -eq 1 ] && cargo_args+=(--release)
 [ -n "$features" ] && cargo_args+=(--features "$features")
 echo "==> building backend (cargo ${cargo_args[*]})"

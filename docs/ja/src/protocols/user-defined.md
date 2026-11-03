@@ -8,13 +8,47 @@
 |---|---|
 | `wpg serve` | `wpg.toml` の `[protocols] dirs = ["/etc/wpg/protocols.d"]` と `--protocols-dir <DIR>` (両方の和) |
 | ほかのサブコマンド (`send` / `render` / `import` / `template lint` / `capture` …) | `--protocols-dir <DIR>` (繰り返し可) または環境変数 `WPG_PROTOCOLS_DIR` |
-| Web UI | ログイン後に `GET /api/protocols/extensions` からサーバの定義を取得し、ブラウザ内のカタログに追加 |
+| Web UI | ログイン後に `GET /api/protocols/extensions` からサーバの定義を取得し、ブラウザ内のカタログに追加 (再読み込み後も取得し直す) |
 
-ディレクトリ直下の `*.yaml` / `*.yml` をファイル名順に読み込みます (サブディレクトリは読みません)。読み込みは起動時の 1 回だけで、ファイルを変えたら `wpg serve` を再起動してください。定義に誤りがあるとコマンドは終了コード 2 で止まり、ファイル名と理由を表示します。`wpg config validate` も `protocols.dirs` を検査します。
+ディレクトリ直下の `*.yaml` / `*.yml` をファイル名順に読み込みます (サブディレクトリは読みません)。定義に誤りがあるとコマンドは終了コード 2 で止まり、ファイル名と理由を表示します。`wpg config validate` も `protocols.dirs` を検査します。
 
 ```sh
 wpg render examples/acme-telemetry.wpg.yaml -o acme.pcapng --protocols-dir examples/protocols.d
 wpg import acme.pcapng -o acme.wpg.yaml --protocols-dir examples/protocols.d
+```
+
+### 動作中のサーバへの再読み込み
+
+`wpg serve` は起動時にディレクトリを読み込みます。ファイルを追加・変更・削除したら、再起動せずに再読み込みできます。
+
+- Web UI: **設定 → ユーザ定義プロトコル → 再読み込み**。
+- API: `POST /api/protocols/reload` (ほかの変更操作と同じく管理者のセッションと `X-CSRF-Token` が必要)。応答は読み込んだディレクトリと、使用中になったファイルの一覧です。接続中のブラウザには `protocols_changed` イベントが届き、定義を取得し直します。
+
+読み直すのは起動時と同じディレクトリです (`wpg.toml` の `[protocols] dirs` を変えたときは再起動が必要)。読み込めないファイルがあると応答は `422 invalid_protocols` (`details.file` / `details.reason`) になり、使用中のプロトコルは変わりません。実行中のジョブは開始時の定義を使い続けます。
+
+読み込んだ定義の組み合わせは、異なるものごとにサーバの終了までメモリに残ります (実行中のジョブが使っている可能性があるため)。以前と同じ組み合わせを読み込んだときは再利用します。量は小さいものの、開発中に非常に頻繁に再読み込みするなら、ときどき再起動してください。
+
+## ツール: `wpg protocols`
+
+| コマンド | 内容 |
+|---|---|
+| `wpg protocols list [--json]` | プロトコルの一覧: ID、名前、レイヤ、定義元 (`組み込み`、または `--protocols-dir` のユーザ定義ファイル) |
+| `wpg protocols show <id> [--json]` | 定義を拡張ファイルの形 (YAML) で表示。新しいプロトコルのひな形に使えます。`--json` は定義 IR を表示 |
+| `wpg protocols check <file\|dir>...` | 拡張ファイルを検査 (どこにも読み込みません)。誤りがあれば終了コード 1 |
+
+`check` は各ファイルを読み、組み込みプロトコルと `--protocols-dir` のほかのファイルとあわせて検査します (ファイル間の参照も解決します)。エラーにはファイル名とファイル内の位置が付きます。
+
+```text
+my.yaml: protocols[0].fields[2]: missing field `bits` at line 12 column 9
+acme.yaml: bind[0]: `udp.dst_port` value 4789 is already bound to `vxlan`
+```
+
+既存のプロトコルをもとに作る例:
+
+```sh
+wpg protocols show udp > protocols.d/my-proto.yaml
+# `id` (と `name`) を変え、`description_key` の行を消してからフィールドを編集
+wpg protocols check protocols.d/my-proto.yaml
 ```
 
 ## ファイル形式
@@ -52,7 +86,7 @@ bind:
 
 ### プロトコル定義
 
-各定義の形は `GET /api/protocols/{id}` が返す JSON と同じです。既存のプロトコルの定義を参考にするときは、その API の出力をそのまま YAML にできます。
+各定義の形は `GET /api/protocols/{id}` が返す JSON と同じです。`wpg protocols show <id>` で既存のプロトコルをこの形式で表示でき、ひな形に使えます。
 
 - フィールド型 (`type.kind`): `uint` / `int` (`bits`)、`enum` (`bits`, `variants`)、`flags` (`bits`, `flags`)、`bytes` (`len`)、`mac`、`ipv4`、`ipv6`、`nsap`、`cstring`、`tlv`、`list`、`padding`、`raw`。
 - 既定値 (`default`) は `{ uint: 1 }`、`{ bytes: [0, 1] }` のように型名 1 つのマップで書きます。

@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## 服务器 / API
 health-ok = 服务运行正常
-server-placeholder-ui = Web UI 尚未构建。请在 crates/wpg-web 中运行 `trunk build`。
+server-placeholder-ui = Web UI 尚未构建。请在 crates/wpg-web 中运行 `trunk build`，然后重新构建 wpg。
 
 ## 错误
 error-not-implemented = `{ $command }` 尚未实现。
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = 请使用 Npcap SDK 重新构建，或使用发布版�
 doctor-pcaplib-ok = 可以使用 libpcap
 doctor-pcaplib-missing = 未找到 libpcap；无法使用 pcap 后端
 doctor-fix-pcaplib = 安装 libpcap：{ $hint }
+# Web UI 的嵌入以及 Windows 以外的 pcap 后端 (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web UI         未包含：请在 crates/wpg-web 中运行 `trunk build`，然后重新构建 wpg
+doctor-webui-ok = 已包含 Web UI
+doctor-webui-missing = 未包含 Web UI；wpg serve 只显示占位页面
+doctor-fix-webui = 重新构建包含 Web UI 的 wpg：{ $hint }
+doctor-pcap-backend-ok-macos = 此 wpg 包含 pcap 后端
+doctor-pcap-backend-missing-macos = 此 wpg 构建时未包含 pcap 后端，因此无法在 macOS 上发送
+doctor-fix-pcap-backend-macos = 重新构建并包含 pcap 后端：{ $hint }
+doctor-pcaplib-unused = 不需要：此 wpg 构建时未包含 pcap 后端
 
 ## wpg template lint (wpg-template `LintIssue` 键)
 lint-level-error = 错误
@@ -224,6 +233,8 @@ template-show-hex = 十六进制转储 ({ $len } 字节)
 template-show-layout = 布局
 render-done = 已将 { $len } 个数据包写入 { $value }。
 render-unbounded = 流没有上限；请指定 --count N。
+render-json-stdout = --json 不能与 -o - 同时使用（两者都写入标准输出）。
+send-rate-over-limit = 速率 { $rate } 超过了配置的上限 tx.max_rate = { $max }。
 cli-bad-var = 无效的 --var `{ $value }`；应为 NAME=VALUE。
 
 ## wpg send / wpg bench (进度、摘要、错误)
@@ -373,6 +384,21 @@ config-issue-dir-missing = 未找到目录
 config-issue-protocols = 无法加载用户自定义协议
 protocols-ext-loaded = 已加载 { $count } 个用户自定义协议
 protocols-ext-error = 无法加载用户自定义协议: { $file }: { $error }
+protocols-col-id = ID
+protocols-col-name = 名称
+protocols-col-layer = 层
+protocols-col-source = 来源
+protocols-source-builtin = 内置
+protocols-unknown = 未知协议: { $id }
+protocols-check-ok = { $file }: OK ({ $protocols } 个协议, { $bindings } 个绑定)
+protocols-check-error = { $file }: { $error }
+protocols-check-none = { $path } 中没有协议文件 (*.yaml, *.yml)
+api-error-protocols-forbidden = 当前角色无法重新加载协议。
+api-error-protocols-reload = 无法加载用户自定义协议: { $file }: { $error }
+ui-set-protocols = 用户自定义协议
+ui-set-protocols-count = 已加载 { $count } 个
+ui-set-protocols-reload = 重新加载
+ui-set-protocols-reloaded = 已重新加载 { $count } 个用户自定义协议
 config-issue-max-rate-percent = 链路百分比不能作为服务器全局最大值；请使用 pps 或 bps
 config-issue-bad-rate = 无效的速率
 config-issue-unknown-backend = 未知后端

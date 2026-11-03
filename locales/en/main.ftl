@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## Server / API
 health-ok = Service is healthy
-server-placeholder-ui = The web UI has not been built yet. Run `trunk build` in crates/wpg-web.
+server-placeholder-ui = The web UI has not been built yet. Run `trunk build` in crates/wpg-web, then rebuild wpg.
 
 ## Errors
 error-not-implemented = `{ $command }` is not implemented yet.
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Rebuild with the Npcap SDK, or use a release build: { 
 doctor-pcaplib-ok = libpcap is available
 doctor-pcaplib-missing = libpcap was not found; the pcap backend cannot be used
 doctor-fix-pcaplib = Install libpcap: { $hint }
+# Web UI embedding and the pcap backend outside Windows (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web UI         not included: run `trunk build` in crates/wpg-web, then rebuild wpg
+doctor-webui-ok = The web UI is included
+doctor-webui-missing = The web UI is not included; wpg serve shows a placeholder page
+doctor-fix-webui = Rebuild wpg with the web UI: { $hint }
+doctor-pcap-backend-ok-macos = This wpg includes the pcap backend
+doctor-pcap-backend-missing-macos = This wpg was built without the pcap backend, so it cannot send on macOS
+doctor-fix-pcap-backend-macos = Rebuild with the pcap backend: { $hint }
+doctor-pcaplib-unused = Not needed: this wpg was built without the pcap backend
 
 ## wpg template lint (wpg-template `LintIssue` keys)
 lint-level-error = error
@@ -224,6 +233,8 @@ template-show-hex = Hex dump ({ $len } bytes)
 template-show-layout = Layout
 render-done = Wrote { $len } packets to { $value }.
 render-unbounded = The stream is unbounded; pass --count N.
+render-json-stdout = --json cannot be combined with -o - (both write to standard output).
+send-rate-over-limit = Rate { $rate } exceeds the configured limit tx.max_rate = { $max }.
 cli-bad-var = Invalid --var `{ $value }`; expected NAME=VALUE.
 
 ## wpg send / wpg bench (progress, summary, errors)
@@ -373,6 +384,21 @@ config-issue-dir-missing = directory not found
 config-issue-protocols = cannot load the user-defined protocols
 protocols-ext-loaded = loaded { $count } user-defined protocol(s)
 protocols-ext-error = cannot load user-defined protocols: { $file }: { $error }
+protocols-col-id = ID
+protocols-col-name = NAME
+protocols-col-layer = LAYER
+protocols-col-source = SOURCE
+protocols-source-builtin = built-in
+protocols-unknown = unknown protocol: { $id }
+protocols-check-ok = { $file }: OK ({ $protocols } protocol(s), { $bindings } binding(s))
+protocols-check-error = { $file }: { $error }
+protocols-check-none = no protocol files (*.yaml, *.yml) in { $path }
+api-error-protocols-forbidden = Your role may not reload protocols.
+api-error-protocols-reload = Cannot load user-defined protocols: { $file }: { $error }
+ui-set-protocols = User-defined protocols
+ui-set-protocols-count = { $count } loaded
+ui-set-protocols-reload = Reload
+ui-set-protocols-reloaded = Reloaded { $count } user-defined protocol(s)
 config-issue-max-rate-percent = a link percentage cannot be a server-wide maximum; use pps or bps
 config-issue-bad-rate = invalid rate
 config-issue-unknown-backend = unknown backend

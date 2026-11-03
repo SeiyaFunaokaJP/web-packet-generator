@@ -5,29 +5,26 @@ Supported: Ubuntu 20.04 or later (glibc 2.31) and comparable distributions. Rele
 ## 1. Install the prerequisites
 
 ```sh
-# Rust toolchain (rustup.rs) and the WASM target used by the web UI
+# Rust toolchain installer (rustup.rs) and a C toolchain for linking
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup target add wasm32-unknown-unknown
+sudo apt install build-essential pkg-config git
 
-# Frontend bundler and, optionally, the task runner
-cargo install trunk --locked
-cargo install just --locked
-
-# Only needed for the optional libpcap backend (--features pcap)
-sudo apt install build-essential pkg-config libpcap-dev
+git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
+cd web-packet-generator
+./scripts/setup.sh          # add --just to also install the just task runner
 ```
 
-`tshark` (package `tshark`) is optional; the tutorials use it to inspect generated captures.
+`scripts/setup.sh` installs the Rust toolchain pinned in `rust-toolchain.toml` with the WASM target used by the web UI, and a prebuilt `trunk` (the web UI bundler) at the version pinned in `scripts/versions.env`. It ends by printing the next command.
+
+Linux sends through AF_PACKET, which needs no extra library. Only the optional libpcap backend (`--features pcap`) needs `sudo apt install libpcap-dev`. `tshark` (package `tshark`) is optional; the tutorials use it to inspect generated captures.
 
 ## 2. Build
 
 ```sh
-git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
-cd web-packet-generator
-just release                # or: ./scripts/build.sh --release
+./scripts/build.sh --release        # or: just release
 ```
 
-The script checks the prerequisites, builds the frontend with `trunk`, then the workspace with `cargo`, and prints `==> done: target/release/wpg`. Add `--features pcap` (or `--dpdk`) to `scripts/build.sh` for optional backends. Without `trunk` the script still builds the backend but skips the web UI.
+The script builds the web UI with `trunk`, then the `wpg` binary with `cargo`, and prints `==> done: target/release/wpg`. Add `--features pcap`, `--features afxdp` or `--dpdk` for optional backends. Without `trunk` the script still builds the binary but skips the web UI.
 
 ## 3. Try it without any privileges
 
