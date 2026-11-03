@@ -453,6 +453,15 @@ mod tests {
                     "host",
                     "hop",
                     "via",
+                    // API tokens, wpg remote
+                    "user",
+                    "name",
+                    "prefix",
+                    "created",
+                    "used",
+                    "expires",
+                    "server",
+                    "status",
                 ] {
                     args.set(name, "1");
                 }

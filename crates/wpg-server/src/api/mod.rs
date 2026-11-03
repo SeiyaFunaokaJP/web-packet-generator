@@ -21,6 +21,7 @@ pub mod snmp;
 pub mod system;
 pub mod templates;
 pub mod terminal;
+pub mod tokens;
 pub mod ws;
 
 /// Base OpenAPI document (paths are added by the router).
@@ -36,13 +37,15 @@ pub mod ws;
             authenticates every request and POST / PUT / DELETE must also send the \
             session's CSRF token (cookie `wpg_csrf`, `GET /api/auth/status`) in \
             `X-CSRF-Token`. Without a session protected endpoints answer 401 \
-            (`unauthorized`, or `setup_required` while no password exists).",
+            (`unauthorized`, or `setup_required` while no password exists).
+
+            Scripts can send an API token instead: `Authorization: Bearer wpg_...`             (create one on the Settings page, with `POST /api/tokens` or with             `wpg config token create`). Bearer requests act as the token's user and             need no CSRF token; they cannot manage tokens.",
         license(name = "MIT OR Apache-2.0")
     ),
     modifiers(&SecuritySchemes),
-    security(("cookieAuth" = [])),
+    security(("cookieAuth" = []), ("bearerAuth" = [])),
     tags(
-        (name = "auth", description = "Login, logout, first-run setup"),
+        (name = "auth", description = "Login, logout, first-run setup, API tokens"),
         (name = "system", description = "Health, version, interfaces, diagnostics, backends"),
         (name = "protocols", description = "Protocol catalog"),
         (name = "packets", description = "Render / parse / lint"),
@@ -58,6 +61,9 @@ pub mod ws;
         crate::auth::AuthStatus,
         crate::auth::UserInfo,
         crate::db::Role,
+        crate::db::TokenInfo,
+        tokens::CreateToken,
+        tokens::CreatedToken,
         crate::error::ErrorBody,
         crate::error::ErrorInfo,
         crate::events::ServerEvent,
@@ -76,13 +82,15 @@ pub mod ws;
 )]
 struct ApiDoc;
 
-/// `cookieAuth` (the session cookie) and `csrfToken` (the header required on
-/// mutating requests).
+/// `cookieAuth` (the session cookie), `csrfToken` (the header required on
+/// mutating requests with a session) and `bearerAuth` (API tokens).
 struct SecuritySchemes;
 
 impl utoipa::Modify for SecuritySchemes {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
+        use utoipa::openapi::security::{
+            ApiKey, ApiKeyValue, Http, HttpAuthScheme, SecurityScheme,
+        };
         let components = openapi.components.get_or_insert_with(Default::default);
         components.add_security_scheme(
             "cookieAuth",
@@ -99,6 +107,17 @@ impl utoipa::Modify for SecuritySchemes {
                  (also the `wpg_csrf` cookie)",
             ))),
         );
+        components.add_security_scheme(
+            "bearerAuth",
+            SecurityScheme::Http(
+                Http::builder()
+                    .scheme(HttpAuthScheme::Bearer)
+                    .description(Some(
+                        "API token (`wpg_...`); no CSRF token needed. Cannot manage tokens.",
+                    ))
+                    .build(),
+            ),
+        );
     }
 }
 
@@ -108,6 +127,8 @@ fn parts() -> (Router<AppState>, utoipa::openapi::OpenApi) {
         .routes(routes!(auth::setup))
         .routes(routes!(auth::login))
         .routes(routes!(auth::logout))
+        .routes(routes!(tokens::list, tokens::create))
+        .routes(routes!(tokens::revoke))
         .routes(routes!(system::health))
         .routes(routes!(system::version))
         .routes(routes!(system::ifaces))

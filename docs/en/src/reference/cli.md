@@ -23,7 +23,8 @@ Commands:
   doctor     Diagnose privileges, drivers, hugepages and Npcap
   bench      Measure transmit performance
   capture    Receive: counters, the first frames, pcapng output, signature verification
-  config     Configuration file tools (init, show, validate)
+  config     Configuration file tools (init, show, validate) and API tokens
+  remote     Drive a running server with an API token (jobs, templates)
   protocols  Protocol tools (list, show, check user-defined protocol files)
   help       Print this message or the help of the given subcommand(s)
 
@@ -803,7 +804,7 @@ Options:
 `wpg.toml` tools; see the [configuration reference](config.md).
 
 ```text
-Configuration file tools (init, show, validate)
+Configuration file tools (init, show, validate) and API tokens
 
 Usage: wpg config [OPTIONS] <COMMAND>
 
@@ -812,6 +813,7 @@ Commands:
   show          Print the effective configuration (file + environment) as TOML, secrets redacted
   validate      Check the configuration; exit status 1 on errors
   set-password  Prompt for the admin password and store its argon2id hash as `auth.password_hash` (the file is created from the example if missing)
+  token         API tokens for scripts and `wpg remote` (create, list, revoke), stored in the server's database
   help          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -936,6 +938,588 @@ Options:
 
       --stdin
           Read the password from the first line of standard input (no prompt)
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg config token`
+
+Manages API tokens directly in the server's database (`<data_dir>/wpg.sqlite`), also while the server runs. `create` prints only the secret on standard output.
+
+```text
+API tokens for scripts and `wpg remote` (create, list, revoke), stored in the server's database
+
+Usage: wpg config token [OPTIONS] <COMMAND>
+
+Commands:
+  create  Create a token and print its secret (shown only once)
+  list    List the tokens (never their secrets)
+  revoke  Revoke (delete) a token by id
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+      --data-dir <DIR>
+          Data directory holding `wpg.sqlite` (default: `data_dir` of the configuration)
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg config token create`
+
+```text
+Create a token and print its secret (shown only once)
+
+Usage: wpg config token create [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          Name, to recognise the token later
+
+Options:
+      --data-dir <DIR>
+          Data directory holding `wpg.sqlite` (default: `data_dir` of the configuration)
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --user <USER>
+          User the token acts as (with that user's role)
+
+          [default: admin]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --expires-days <DAYS>
+          Expire after this many days (default: never)
+
+      --json
+          Print the token and its secret as JSON
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg config token list`
+
+```text
+List the tokens (never their secrets)
+
+Usage: wpg config token list [OPTIONS]
+
+Options:
+      --data-dir <DIR>
+          Data directory holding `wpg.sqlite` (default: `data_dir` of the configuration)
+
+      --json
+          Print JSON
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg config token revoke`
+
+```text
+Revoke (delete) a token by id
+
+Usage: wpg config token revoke [OPTIONS] <ID>
+
+Arguments:
+  <ID>
+          Token id (see `wpg config token list`)
+
+Options:
+      --data-dir <DIR>
+          Data directory holding `wpg.sqlite` (default: `data_dir` of the configuration)
+
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote`
+
+Drives a running server through its API with an API token; see [Authentication and TLS](../operations/security.md#api-tokens). Exit status: 0 success, 1 the job failed (`jobs wait`, `jobs start --wait`), 2 any other error.
+
+```text
+Drive a running server with an API token (jobs, templates)
+
+Usage: wpg remote [OPTIONS] <COMMAND>
+
+Commands:
+  jobs       Transmit jobs: list, start, stop, wait
+  templates  The server's template library: list, push
+  help       Print this message or the help of the given subcommand(s)
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote jobs`
+
+```text
+Transmit jobs: list, start, stop, wait
+
+Usage: wpg remote jobs [OPTIONS] <COMMAND>
+
+Commands:
+  list   List the server's jobs (running and recently finished)
+  start  Start a job from a library template id or a local template file; prints the job id
+  stop   Stop a job
+  wait   Wait until a job ends; exit status 1 if it failed
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote jobs list`
+
+```text
+List the server's jobs (running and recently finished)
+
+Usage: wpg remote jobs list [OPTIONS]
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote jobs start`
+
+```text
+Start a job from a library template id or a local template file; prints the job id
+
+Usage: wpg remote jobs start [OPTIONS] <TEMPLATE>
+
+Arguments:
+  <TEMPLATE>
+          Template id on the server, or a local `.wpg.yaml` file sent with the job
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --var <NAME=VALUE>
+          Template variable value (repeatable)
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --rate <RATE>
+          Rate, e.g. `1000pps`, `1Mpps`, `10Gbps`, `unlimited`
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --count <COUNT>
+          Number of packets
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --duration <DURATION>
+          Duration limit, e.g. `10s`, `2m`
+
+      --json
+          Print the server's JSON responses
+
+  -i, --iface <IFACE>
+          Interface on the server
+
+      --backend <BACKEND>
+          Transmit backend (default: the server's)
+
+      --name <NAME>
+          Job name
+
+      --wait
+          Wait until the job ends (like `wpg remote jobs wait`)
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote jobs stop`
+
+```text
+Stop a job
+
+Usage: wpg remote jobs stop [OPTIONS] <ID>
+
+Arguments:
+  <ID>
+          Job id
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote jobs wait`
+
+```text
+Wait until a job ends; exit status 1 if it failed
+
+Usage: wpg remote jobs wait [OPTIONS] <ID>
+
+Arguments:
+  <ID>
+          Job id
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --timeout <SECS>
+          Give up after this many seconds (exit status 2)
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote templates`
+
+```text
+The server's template library: list, push
+
+Usage: wpg remote templates [OPTIONS] <COMMAND>
+
+Commands:
+  list  List the templates on the server
+  push  Upload a template file to the server's user templates; prints its id
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote templates list`
+
+```text
+List the templates on the server
+
+Usage: wpg remote templates list [OPTIONS]
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
+
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+```
+
+### `wpg remote templates push`
+
+```text
+Upload a template file to the server's user templates; prints its id
+
+Usage: wpg remote templates push [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          Template file (`.wpg.yaml`)
+
+Options:
+      --protocols-dir <DIR>
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
+
+          [env: WPG_PROTOCOLS_DIR]
+
+      --server <URL>
+          Server URL
+
+          [env: WPG_SERVER]
+          [default: http://127.0.0.1:8080]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
+
+      --token <TOKEN>
+          API token (`wpg_...`). Visible in the process list: prefer `WPG_TOKEN`
+
+          [env: WPG_TOKEN]
+
+      --insecure
+          Accept any TLS certificate (for servers with a self-signed certificate)
+
+      --json
+          Print the server's JSON responses
 
   -h, --help
           Print help

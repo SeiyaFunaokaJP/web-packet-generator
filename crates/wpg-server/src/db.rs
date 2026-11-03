@@ -1,6 +1,6 @@
 //! The `SQLite` database `<data_dir>/wpg.sqlite` (ADR-0003 "DB ハイブリッド":
 //! templates stay YAML files; users, sessions, login attempts and the job history
-//! live here).
+//! live here, as do the API tokens).
 //!
 //! One connection behind a mutex: every statement is a short indexed lookup /
 //! insert, so the handlers call it directly instead of going through a pool or
@@ -17,6 +17,9 @@ use thiserror::Error;
 use utoipa::ToSchema;
 
 use crate::jobs::JobInfo;
+
+mod tokens;
+pub use tokens::{NewToken, TokenAuth, TokenInfo};
 
 /// Finished jobs kept in the database (the in-memory ring keeps fewer).
 pub const HISTORY_KEEP: usize = 1000;
@@ -61,6 +64,17 @@ const MIGRATIONS: &[&str] = &[
          record TEXT NOT NULL            -- JobInfo as JSON
      );
      CREATE INDEX job_history_finished ON job_history(finished);",
+    // 2: API tokens (only the SHA-256 of the secret is stored)
+    "CREATE TABLE api_tokens (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         name TEXT NOT NULL,
+         hash TEXT NOT NULL UNIQUE,      -- SHA-256 of the secret (hex)
+         prefix TEXT NOT NULL,
+         created INTEGER NOT NULL,
+         last_used INTEGER,
+         expires INTEGER
+     );",
 ];
 
 /// Database errors.

@@ -829,6 +829,8 @@ async fn openapi_lists_every_route() {
         ("/api/auth/setup", &["post"]),
         ("/api/auth/login", &["post"]),
         ("/api/auth/logout", &["post"]),
+        ("/api/tokens", &["get", "post"]),
+        ("/api/tokens/{id}", &["delete"]),
         ("/api/health", &["get"]),
         ("/api/version", &["get"]),
         ("/api/system/ifaces", &["get"]),
@@ -911,6 +913,8 @@ async fn openapi_lists_every_route() {
     assert_eq!(schemes["cookieAuth"]["name"], "wpg_session");
     assert_eq!(schemes["csrfToken"]["name"], "X-CSRF-Token");
     assert_eq!(doc["security"][0]["cookieAuth"], json!([]));
+    assert_eq!(doc["security"][1]["bearerAuth"], json!([]));
+    assert_eq!(schemes["bearerAuth"]["scheme"], "bearer");
     assert_eq!(paths["/api/health"]["get"]["security"], json!([{}]));
     assert_eq!(paths["/api/auth/login"]["post"]["security"], json!([{}]));
     for s in [

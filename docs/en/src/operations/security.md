@@ -36,6 +36,31 @@ wpg serve --bind 0.0.0.0:8080 --tls        # now any address is fine
 
 API: `GET /api/auth/status`, `POST /api/auth/setup {password, confirm}`, `POST /api/auth/login {password, username?}`, `POST /api/auth/logout`. See the [API reference](../reference/api.md).
 
+## API tokens
+
+Scripts, CI jobs and [`wpg remote`](../reference/cli.md#wpg-remote) authenticate with an API token instead of a session:
+
+```sh
+# on the server (also while it runs); prints only the token
+wpg config token create ci --expires-days 90
+# or on the web UI: Settings → API tokens
+
+export WPG_SERVER=https://wpg.example.net:8080 WPG_TOKEN=wpg_...
+wpg remote jobs start examples-arp-sweep --backend null --count 100 --wait
+curl -H "Authorization: Bearer $WPG_TOKEN" "$WPG_SERVER/api/jobs"
+```
+
+- A token is `wpg_` followed by 64 hex digits (256 random bits). wpg shows it once, when you create it. The database stores only its SHA-256, and the first 12 characters (`wpg_` + 8 hex digits) to tell tokens apart. A fast hash is enough because the token is random and long; argon2 would cost every API request about 19 MiB and tens of milliseconds.
+- A request with `Authorization: Bearer <token>` acts as the user who created the token, with that user's role. There are no finer scopes. It needs no CSRF token and gets no cookies.
+- When a request carries an `Authorization` header, wpg ignores the session cookie. A wrong, expired or revoked token answers `401 unauthorized`. Failures count against the [login rate limit](#login-rate-limit) of the client address.
+- A token can expire after 1 to 3650 days, or never. It survives password changes. Revoking it (web UI, `wpg config token revoke <id>`, `DELETE /api/tokens/{id}`) deletes it; the next request with it fails.
+- Tokens cannot manage tokens: `/api/tokens` answers `403 forbidden` to bearer requests. Create and revoke tokens with a session (the web UI) or with `wpg config token` on the server. Admins see and revoke every user's tokens; other users see only their own.
+- The audit log records token creation, revocation and rejected tokens. wpg records each token's last use, at most once a minute.
+
+API: `GET /api/tokens`, `POST /api/tokens {name, expires_in_days?}` (returns `{token, secret}`), `DELETE /api/tokens/{id}`.
+
+`wpg remote` checks the server certificate. For a server with a self-signed certificate, pass `--insecure`.
+
 ## Login rate limit
 
 wpg allows 5 failed logins per minute per client address. After that, the client is locked out for 1 minute. The lock-out doubles each time it happens again, up to 15 minutes. While a client is locked out, logins answer `429 rate_limited` with `details.retry_after_secs` and a `Retry-After` header.
@@ -44,7 +69,7 @@ wpg records every attempt in the `login_attempts` table and keeps it for 30 days
 
 ## Audit log
 
-Logins, failed logins, logouts, the setup and every job action (create, start, pause, resume, stop, delete) are logged with the `wpg::audit` target, the user and the client address. To log only these events, set `RUST_LOG=wpg::audit=info`.
+Logins, failed logins, logouts, the setup, API token creation, revocation and rejection, and every job action (create, start, pause, resume, stop, delete) are logged with the `wpg::audit` target, the user and the client address. To log only these events, set `RUST_LOG=wpg::audit=info`.
 
 ## TLS
 

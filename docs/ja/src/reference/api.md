@@ -12,6 +12,9 @@ wpg-server は `/api` 以下で REST (JSON) API を提供し、リアルタイ�
 | auth | [`POST /api/auth/logout`](#op-post-api-auth-logout) | Logs out (needs `X-CSRF-Token` when the session is live) and clears the cookies. |
 | auth | [`POST /api/auth/setup`](#op-post-api-auth-setup) | First-run setup: sets the admin password and logs in. Only while no password is configured, and only from a loopback client unless the server runs with `--allow-insecure`. Requires `Content-Type: application/json`. |
 | auth | [`GET /api/auth/status`](#op-get-api-auth-status) | Authentication state of the caller (never requires a session). |
+| auth | [`GET /api/tokens`](#op-get-api-tokens) | API tokens (admins: all; others: their own), oldest first. |
+| auth | [`POST /api/tokens`](#op-post-api-tokens) | Creates a token for the logged-in user, with that user's role. The response is the only place the secret appears. |
+| auth | [`DELETE /api/tokens/{id}`](#op-delete-api-tokens-id) | Revokes (deletes) a token; requests with it fail from now on. |
 | system | [`GET /api/health`](#op-get-api-health) | Liveness probe. |
 | system | [`GET /api/system/backends`](#op-get-api-system-backends) | Transmit backends of this build. |
 | system | [`GET /api/system/doctor`](#op-get-api-system-doctor) | Self-diagnosis (`wpg doctor --json`), with localised `summary` / `fix`. |
@@ -155,6 +158,55 @@ Authentication state of the caller (never requires a session).
 | ステータス | 説明 | 本文 |
 |---|---|---|
 | `200` | State | `application/json` [`AuthStatus`](#schema-authstatus) |
+
+<a id="op-get-api-tokens"></a>
+
+#### `GET /api/tokens`
+
+API tokens (admins: all; others: their own), oldest first.
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `200` | Tokens (without secrets) | `application/json` [`TokenInfo`](#schema-tokeninfo)`[]` |
+| `403` | `forbidden`: bearer requests cannot manage tokens | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-post-api-tokens"></a>
+
+#### `POST /api/tokens`
+
+Creates a token for the logged-in user, with that user's role. The response is the only place the secret appears.
+
+**リクエスト本文**: `application/json` [`CreateToken`](#schema-createtoken)
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `201` | Created | `application/json` [`CreatedToken`](#schema-createdtoken) |
+| `400` | Invalid name or expiry | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `403` | `forbidden`: bearer requests cannot manage tokens | `application/json` [`ErrorBody`](#schema-errorbody) |
+
+<a id="op-delete-api-tokens-id"></a>
+
+#### `DELETE /api/tokens/{id}`
+
+Revokes (deletes) a token; requests with it fail from now on.
+
+**パラメータ**
+
+| 名前 | 位置 | 型 | 必須 | 説明 |
+|---|---|---|---|---|
+| `id` | path | `integer` | はい | Token id |
+
+**レスポンス**
+
+| ステータス | 説明 | 本文 |
+|---|---|---|
+| `204` | Revoked |   |
+| `403` | `forbidden`: bearer requests cannot manage tokens | `application/json` [`ErrorBody`](#schema-errorbody) |
+| `404` | Unknown id | `application/json` [`ErrorBody`](#schema-errorbody) |
 
 ### `system`
 
@@ -1635,6 +1687,28 @@ Selects the jobs whose `stats` / `job_state` events are sent.
 |---|---|---|---|
 | `start` | `boolean` |   | Start immediately (default `true`); `false` leaves it in state `created`. |
 
+<a id="schema-createtoken"></a>
+
+### `CreateToken`
+
+`POST /api/tokens` body.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `expires_in_days` | `integer` \| `null` |   | Expiry in days (1 to 3650); omitted or `null`: never expires. |
+| `name` | `string` | はい | Name, to recognise the token later (1 to 100 characters). |
+
+<a id="schema-createdtoken"></a>
+
+### `CreatedToken`
+
+`POST /api/tokens` response.
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `secret` | `string` | はい | The secret to send as `Authorization: Bearer <secret>`. Only this response contains it. |
+| `token` | [`TokenInfo`](#schema-tokeninfo) | はい | The stored token. |
+
 <a id="schema-dhcpstatus"></a>
 
 ### `DhcpStatus`
@@ -2849,6 +2923,22 @@ The session ended.
 | `max_sessions` | `integer` | はい | `terminal.max_sessions`. |
 | `record_sessions` | `boolean` | はい | `terminal.record_sessions`. |
 | `sessions` | [`ActiveSession`](#schema-activesession)`[]` | はい | Running sessions (all users). |
+
+<a id="schema-tokeninfo"></a>
+
+### `TokenInfo`
+
+An API token as listed (never the secret).
+
+| キー | 型 | 必須 | 説明 |
+|---|---|---|---|
+| `created` | `integer` | はい | Creation time (Unix seconds). |
+| `expires` | `integer` \| `null` |   | Expiry (Unix seconds); `null`: never expires. |
+| `id` | `integer` | はい | Token id (for revoking). |
+| `last_used` | `integer` \| `null` |   | Last use (Unix seconds, updated at most once a minute). |
+| `name` | `string` | はい | Name given at creation. |
+| `prefix` | `string` | はい | The first characters of the secret (`wpg_` + 8 hex digits), to recognise it. |
+| `user` | `string` | はい | Owner: requests with the token act as this user, with its role. |
 
 <a id="schema-trapout"></a>
 
