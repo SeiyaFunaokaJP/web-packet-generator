@@ -67,6 +67,31 @@ impl Check {
     }
 }
 
+/// Operating system family, for the checks that differ between platforms.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Os {
+    /// Windows (Npcap).
+    Windows,
+    /// macOS (BPF through libpcap).
+    MacOs,
+    /// Linux and other Unix systems.
+    Unix,
+}
+
+impl Os {
+    /// The OS this binary was built for.
+    #[must_use]
+    pub const fn current() -> Self {
+        if cfg!(windows) {
+            Self::Windows
+        } else if cfg!(target_os = "macos") {
+            Self::MacOs
+        } else {
+            Self::Unix
+        }
+    }
+}
+
 /// All checks.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Report {
@@ -91,8 +116,8 @@ impl Report {
 /// Runs every check against the current host.
 ///
 /// `pcap_backend`: the calling binary was built with the `pcap` feature (pass
-/// `cfg!(feature = "pcap")`). On Windows that backend is the only way to send, so a build
-/// without it fails the `backend.pcap` check.
+/// `cfg!(feature = "pcap")`). On Windows and macOS that backend is the only way to send,
+/// so a build without it fails the `backend.pcap` check.
 #[must_use]
 pub fn run(pcap_backend: bool) -> Report {
     let exe = std::env::current_exe()
@@ -112,10 +137,11 @@ pub fn run(pcap_backend: bool) -> Report {
             check_tpacket_v3(kernel::release().as_deref(), cfg!(target_os = "linux")),
             check_hugepages(hugepages::read().as_ref(), first_iface.as_deref()),
             check_npcap(&npcap, cfg!(windows)),
-            check_pcap_backend(pcap_backend, cfg!(windows)),
+            check_pcap_backend(pcap_backend, Os::current()),
             check_pcap_lib(
                 pcaplib::find().as_deref().map(|p| p.display().to_string()),
-                cfg!(windows),
+                pcap_backend,
+                Os::current(),
             ),
         ],
     }
@@ -293,49 +319,96 @@ fn check_npcap(info: &NpcapInfo, windows: bool) -> Check {
     }
 }
 
-/// Windows: was this `wpg.exe` built with the Npcap backend (`pcap` feature)?
-fn check_pcap_backend(built_in: bool, windows: bool) -> Check {
-    if !windows {
-        return Check::skip("backend.pcap");
-    }
-    if built_in {
-        Check::new(
-            "backend.pcap",
-            Status::Ok,
+/// Windows / macOS: was this binary built with the pcap backend (`pcap` feature), the
+/// only way to send there? Linux sends through AF_PACKET without it.
+fn check_pcap_backend(built_in: bool, os: Os) -> Check {
+    let (ok_key, missing_key, fix_key, hint) = match os {
+        Os::Unix => return Check::skip("backend.pcap"),
+        Os::Windows => (
             "doctor-pcap-backend-ok",
-            String::new(),
-        )
+            "doctor-pcap-backend-missing",
+            "doctor-fix-pcap-backend",
+            r"unpack the Npcap SDK (https://npcap.com/#download) to C:\Npcap-SDK, then run .\scripts\build.ps1 -Release",
+        ),
+        Os::MacOs => (
+            "doctor-pcap-backend-ok-macos",
+            "doctor-pcap-backend-missing-macos",
+            "doctor-fix-pcap-backend-macos",
+            "./scripts/build.sh --release",
+        ),
+    };
+    if built_in {
+        Check::new("backend.pcap", Status::Ok, ok_key, String::new())
     } else {
         Check::new(
             "backend.pcap",
             Status::Fail,
-            "doctor-pcap-backend-missing",
+            missing_key,
             "built without the pcap feature".to_owned(),
         )
-        .with_fix(
-            "doctor-fix-pcap-backend",
-            r"unpack the Npcap SDK (https://npcap.com/#download) to C:\Npcap-SDK, then run .\scripts\build.ps1 -Release".to_owned(),
-        )
+        .with_fix(fix_key, hint.to_owned())
     }
 }
 
-fn check_pcap_lib(found: Option<String>, windows: bool) -> Check {
-    if windows {
+/// Linux / macOS: the libpcap runtime used by the pcap backend. Nothing to check when the
+/// backend is not compiled in; macOS ships the library with the OS.
+fn check_pcap_lib(found: Option<String>, built_in: bool, os: Os) -> Check {
+    if os == Os::Windows {
         return Check::skip("pcap_lib");
+    }
+    if !built_in {
+        return Check::new(
+            "pcap_lib",
+            Status::Skip,
+            "doctor-pcaplib-unused",
+            String::new(),
+        );
     }
     match found {
         Some(p) => Check::new("pcap_lib", Status::Ok, "doctor-pcaplib-ok", p),
-        None => Check::new(
-            "pcap_lib",
-            Status::Warn,
-            "doctor-pcaplib-missing",
-            String::new(),
-        )
-        .with_fix(
-            "doctor-fix-pcaplib",
-            "sudo apt install libpcap0.8   # or: brew install libpcap".to_owned(),
-        ),
+        None => {
+            let check = Check::new(
+                "pcap_lib",
+                Status::Warn,
+                "doctor-pcaplib-missing",
+                String::new(),
+            );
+            if os == Os::MacOs {
+                check
+            } else {
+                check.with_fix(
+                    "doctor-fix-pcaplib",
+                    "sudo apt install libpcap0.8   # or: sudo dnf install libpcap".to_owned(),
+                )
+            }
+        }
     }
+}
+
+/// Whether the web UI was embedded when this binary was built (pass
+/// `wpg_server::web_ui_embedded()`). Without it `wpg serve` shows a placeholder page.
+#[must_use]
+pub fn check_web_ui(embedded: bool, os: Os) -> Check {
+    if embedded {
+        return Check::new(
+            "webui.embedded",
+            Status::Ok,
+            "doctor-webui-ok",
+            String::new(),
+        );
+    }
+    let hint = if os == Os::Windows {
+        r".\scripts\build.ps1 -Release"
+    } else {
+        "./scripts/build.sh --release"
+    };
+    Check::new(
+        "webui.embedded",
+        Status::Warn,
+        "doctor-webui-missing",
+        "crates/wpg-web/dist/index.html missing at build time".to_owned(),
+    )
+    .with_fix("doctor-fix-webui", hint.to_owned())
 }
 
 #[cfg(test)]
@@ -445,21 +518,58 @@ mod tests {
 
     #[test]
     fn pcap_backend_check() {
-        assert_eq!(check_pcap_backend(true, true).status, Status::Ok);
-        let missing = check_pcap_backend(false, true);
+        assert_eq!(check_pcap_backend(true, Os::Windows).status, Status::Ok);
+        let missing = check_pcap_backend(false, Os::Windows);
         assert_eq!(missing.status, Status::Fail);
         assert_eq!(missing.fix_key, Some("doctor-fix-pcap-backend"));
         assert!(missing.fix_hint.unwrap().contains("build.ps1"));
-        assert_eq!(check_pcap_backend(false, false).status, Status::Skip);
+        assert_eq!(check_pcap_backend(false, Os::Unix).status, Status::Skip);
+        assert_eq!(check_pcap_backend(true, Os::Unix).status, Status::Skip);
+    }
+
+    #[test]
+    fn pcap_backend_check_macos() {
+        let ok = check_pcap_backend(true, Os::MacOs);
+        assert_eq!(ok.status, Status::Ok);
+        assert_eq!(ok.summary_key, "doctor-pcap-backend-ok-macos");
+        let missing = check_pcap_backend(false, Os::MacOs);
+        assert_eq!(missing.status, Status::Fail);
+        assert_eq!(missing.summary_key, "doctor-pcap-backend-missing-macos");
+        assert_eq!(missing.fix_key, Some("doctor-fix-pcap-backend-macos"));
+        assert!(missing.fix_hint.unwrap().contains("build.sh"));
+    }
+
+    #[test]
+    fn web_ui_check() {
+        assert_eq!(check_web_ui(true, Os::Unix).status, Status::Ok);
+        let missing = check_web_ui(false, Os::Unix);
+        assert_eq!(missing.id, "webui.embedded");
+        assert_eq!(missing.status, Status::Warn);
+        assert_eq!(missing.fix_key, Some("doctor-fix-webui"));
+        assert!(missing.fix_hint.unwrap().contains("build.sh"));
+        let windows = check_web_ui(false, Os::Windows);
+        assert!(windows.fix_hint.unwrap().contains("build.ps1"));
     }
 
     #[test]
     fn iface_and_pcap_lib_checks() {
         assert_eq!(check_ifaces(Ok(&[])).status, Status::Warn);
         assert_eq!(check_ifaces(Err("boom".into())).status, Status::Fail);
-        assert_eq!(check_pcap_lib(None, false).status, Status::Warn);
-        assert_eq!(check_pcap_lib(Some("/x".into()), false).status, Status::Ok);
-        assert_eq!(check_pcap_lib(None, true).status, Status::Skip);
+        let linux = check_pcap_lib(None, true, Os::Unix);
+        assert_eq!(linux.status, Status::Warn);
+        assert!(!linux.fix_hint.unwrap().contains("brew"));
+        assert_eq!(
+            check_pcap_lib(Some("/x".into()), true, Os::Unix).status,
+            Status::Ok
+        );
+        assert_eq!(check_pcap_lib(None, true, Os::Windows).status, Status::Skip);
+        // Backend not compiled in: nothing to check.
+        let unused = check_pcap_lib(None, false, Os::Unix);
+        assert_eq!(unused.status, Status::Skip);
+        assert_eq!(unused.summary_key, "doctor-pcaplib-unused");
+        assert_eq!(check_pcap_lib(None, false, Os::MacOs).status, Status::Skip);
+        // macOS ships libpcap: no install hint.
+        assert!(check_pcap_lib(None, true, Os::MacOs).fix_hint.is_none());
     }
 
     #[test]

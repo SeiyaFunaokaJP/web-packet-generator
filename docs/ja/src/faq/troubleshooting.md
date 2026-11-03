@@ -12,8 +12,9 @@
 | `kernel.tpacket_v3` | warn | カーネル 3.2 以降。なければ afpacket は `sendmmsg` にフォールバック |
 | `hugepages` | warn | Hugepages の設定。DPDK バックエンドでのみ必要 |
 | `npcap` | fail / warn (Windows のみ) | Npcap が導入され、`wpcap.dll` が `System32\Npcap` か `System32` にあるか。他 OS では skip |
-| `backend.pcap` | fail (Windows のみ) | この `wpg.exe` に Npcap バックエンド (`pcap` feature) が組み込まれているか。Windows で送信できるのはこのバックエンドだけです。Npcap SDK なしでビルドするとここが fail になるので、SDK を `C:\Npcap-SDK` に展開して `scripts\build.ps1` をもう一度実行します ([Windows へのインストール](../getting-started/install-windows.md))。他 OS では skip |
-| `pcap_lib` | warn | libpcap が見つかること (`pcap` バックエンドで必要)。Windows では skip |
+| `backend.pcap` | fail (Windows、macOS) | この `wpg` に pcap バックエンド (`pcap` feature) が組み込まれているか。Windows と macOS で送信できるのはこのバックエンドだけです。Windows で Npcap SDK なしでビルドするとここが fail になるので、SDK を `C:\Npcap-SDK` に展開して `scripts\build.ps1` をもう一度実行します ([Windows へのインストール](../getting-started/install-windows.md))。macOS では `scripts/build.sh` をもう一度実行します。Linux では skip |
+| `pcap_lib` | warn | libpcap が見つかること (`pcap` バックエンドで必要)。Windows と、バックエンドを組み込んでいないときは skip |
+| `webui.embedded` | warn | `wpg` より先に Web UI がビルドされていたか。そうでなければ `wpg serve` は仮のページを表示します。`scripts/build.sh` (Windows は `scripts\build.ps1`) をもう一度実行します |
 
 各結果は `ok` / `warn` / `fail` / `skip` (この OS では対象外) のいずれかです。
 

@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## Serveur / API
 health-ok = Le service fonctionne correctement
-server-placeholder-ui = L'interface web n'a pas encore été compilée. Exécutez `trunk build` dans crates/wpg-web.
+server-placeholder-ui = L'interface web n'a pas encore été compilée. Exécutez `trunk build` dans crates/wpg-web, puis recompilez wpg.
 
 ## Erreurs
 error-not-implemented = `{ $command }` n'est pas encore implémenté.
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Recompilez avec le SDK Npcap ou utilisez une version p
 doctor-pcaplib-ok = libpcap est disponible
 doctor-pcaplib-missing = libpcap est introuvable ; le backend pcap ne peut pas être utilisé
 doctor-fix-pcaplib = Installez libpcap : { $hint }
+# Interface web intégrée et backend pcap hors Windows (wpg serve / wpg doctor)
+serve-banner-webui-missing = Interface web   absente : exécutez `trunk build` dans crates/wpg-web, puis recompilez wpg
+doctor-webui-ok = L'interface web est incluse
+doctor-webui-missing = L'interface web n'est pas incluse ; wpg serve affiche une page provisoire
+doctor-fix-webui = Recompilez wpg avec l'interface web : { $hint }
+doctor-pcap-backend-ok-macos = Ce wpg inclut le backend pcap
+doctor-pcap-backend-missing-macos = Ce wpg a été compilé sans le backend pcap et ne peut donc pas émettre sous macOS
+doctor-fix-pcap-backend-macos = Recompilez avec le backend pcap : { $hint }
+doctor-pcaplib-unused = Inutile : ce wpg a été compilé sans le backend pcap
 
 ## wpg template lint (clés `LintIssue` de wpg-template)
 lint-level-error = erreur

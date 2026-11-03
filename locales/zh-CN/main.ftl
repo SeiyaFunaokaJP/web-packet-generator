@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## 服务器 / API
 health-ok = 服务运行正常
-server-placeholder-ui = Web UI 尚未构建。请在 crates/wpg-web 中运行 `trunk build`。
+server-placeholder-ui = Web UI 尚未构建。请在 crates/wpg-web 中运行 `trunk build`，然后重新构建 wpg。
 
 ## 错误
 error-not-implemented = `{ $command }` 尚未实现。
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = 请使用 Npcap SDK 重新构建，或使用发布版�
 doctor-pcaplib-ok = 可以使用 libpcap
 doctor-pcaplib-missing = 未找到 libpcap；无法使用 pcap 后端
 doctor-fix-pcaplib = 安装 libpcap：{ $hint }
+# Web UI 的嵌入以及 Windows 以外的 pcap 后端 (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web UI         未包含：请在 crates/wpg-web 中运行 `trunk build`，然后重新构建 wpg
+doctor-webui-ok = 已包含 Web UI
+doctor-webui-missing = 未包含 Web UI；wpg serve 只显示占位页面
+doctor-fix-webui = 重新构建包含 Web UI 的 wpg：{ $hint }
+doctor-pcap-backend-ok-macos = 此 wpg 包含 pcap 后端
+doctor-pcap-backend-missing-macos = 此 wpg 构建时未包含 pcap 后端，因此无法在 macOS 上发送
+doctor-fix-pcap-backend-macos = 重新构建并包含 pcap 后端：{ $hint }
+doctor-pcaplib-unused = 不需要：此 wpg 构建时未包含 pcap 后端
 
 ## wpg template lint (wpg-template `LintIssue` 键)
 lint-level-error = 错误
