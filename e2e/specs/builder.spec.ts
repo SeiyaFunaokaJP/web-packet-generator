@@ -119,6 +119,8 @@ test('open a library template in the builder', async ({ page }) => {
 
 test('new job saves the template first, asking for a name', async ({ page }) => {
   await addLayers(page, ['ethernet2', 'ipv4', 'udp', 'payload']);
+  // Let the preview of the finished stack settle before saving.
+  await expect(page.locator('[data-parity="match"]')).toHaveCount(1);
   await page.getByRole('button', { name: 'New job', exact: true }).click();
   const prompt = page.getByRole('dialog', { name: 'Name this template' });
   await prompt.getByRole('textbox').fill(unique('e2e-job'));
