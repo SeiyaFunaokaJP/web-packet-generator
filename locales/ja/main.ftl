@@ -224,6 +224,8 @@ template-show-hex = Hex ダンプ ({ $len } バイト)
 template-show-layout = レイアウト
 render-done = { $len } パケットを { $value } に書き出しました。
 render-unbounded = ストリームが無限です。--count N を指定してください。
+render-json-stdout = --json と -o - は同時に指定できません (どちらも標準出力に書き出します)。
+send-rate-over-limit = レート { $rate } が設定の上限 tx.max_rate = { $max } を超えています。
 cli-bad-var = --var `{ $value }` が不正です。NAME=VALUE 形式で指定してください。
 
 ## wpg send / wpg bench (進捗・サマリ・エラー)

@@ -15,21 +15,39 @@ use wpg_template::{
     LintIssue, LintLevel, Template, TemplateError, VarOverrides, SCHEMA_VERSION,
 };
 
+use serde_json::{json, Value};
+
 use crate::cmd::cli_locale;
+use crate::cmd::send::print_json;
 use crate::{TemplateAction, TemplateArgs};
 
 /// Default template library directory of `wpg template list`.
 const DEFAULT_DIR: &str = "templates";
 
+/// Exit status for template validation errors (docs/spec/08-cli.md).
+pub(crate) const EXIT_INVALID_TEMPLATE: u8 = 3;
+
+/// Exit status for a template that failed to load: 1 when the file cannot be
+/// read, else [`EXIT_INVALID_TEMPLATE`].
+fn load_error_code(err: &TemplateError) -> ExitCode {
+    if matches!(err, TemplateError::File { .. }) {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::from(EXIT_INVALID_TEMPLATE)
+    }
+}
+
 /// Runs `wpg template`.
 pub(crate) fn run(args: TemplateArgs) -> ExitCode {
     let locale = cli_locale();
     match args.action {
-        TemplateAction::Lint { files } => lint_files(&files, locale),
-        TemplateAction::List { dir } => {
-            list(dir.as_deref().unwrap_or(Path::new(DEFAULT_DIR)), locale)
-        }
-        TemplateAction::Show { file, vars } => show(&file, &vars, locale),
+        TemplateAction::Lint { files, json } => lint_files(&files, json, locale),
+        TemplateAction::List { dir, json } => list(
+            dir.as_deref().unwrap_or(Path::new(DEFAULT_DIR)),
+            json,
+            locale,
+        ),
+        TemplateAction::Show { file, vars, json } => show(&file, &vars, json, locale),
         TemplateAction::Schema => {
             match serde_json::to_string_pretty(&Template::json_schema()) {
                 Ok(s) => println!("{s}"),
@@ -126,7 +144,8 @@ pub(crate) fn report_error(path: &Path, err: &TemplateError, locale: Locale) {
     }
 }
 
-/// Loads and compiles a template with the built-in catalog.
+/// Loads and compiles a template with the built-in catalog. Errors: exit status
+/// 2 for a bad `--var`, 1 for an unreadable file, 3 for an invalid template.
 pub(crate) fn load_compiled(
     path: &Path,
     vars: &[String],
@@ -138,39 +157,73 @@ pub(crate) fn load_compiled(
     })?;
     let template = Template::from_path(path).map_err(|e| {
         report_error(path, &e, locale);
-        ExitCode::FAILURE
+        load_error_code(&e)
     })?;
     match compile(&template, &overrides, catalog()) {
         Ok(c) => Ok((template, c)),
         Err(e) => {
             report_error(path, &e, locale);
-            Err(ExitCode::FAILURE)
+            Err(load_error_code(&e))
         }
     }
 }
 
-fn lint_files(files: &[PathBuf], locale: Locale) -> ExitCode {
-    let (mut errors, mut warnings) = (0usize, 0usize);
+/// JSON of a lint issue (`level`, `code`, `path`, English `message`, `args`).
+fn issue_json(i: &LintIssue) -> Value {
+    json!({
+        "level": i.level.to_string(),
+        "code": i.key,
+        "path": i.path,
+        "message": i.message,
+        "args": i.args,
+    })
+}
+
+fn lint_files(files: &[PathBuf], json: bool, locale: Locale) -> ExitCode {
+    let (mut errors, mut warnings, mut unreadable) = (0usize, 0usize, false);
+    let mut results = Vec::new();
     for path in files {
-        let template = match Template::from_path(path) {
-            Ok(t) => t,
+        let issues = match Template::from_path(path) {
+            Ok(t) => lint(&t, catalog()),
+            Err(TemplateError::Lint(issues)) => issues,
             Err(e) => {
-                report_error(path, &e, locale);
                 errors += 1;
+                unreadable |= matches!(e, TemplateError::File { .. });
+                if json {
+                    results.push(json!({
+                        "file": path.display().to_string(),
+                        "issues": [{
+                            "level": LintLevel::Error.to_string(),
+                            "code": "template-load-error",
+                            "path": "",
+                            "message": e.to_string(),
+                        }],
+                    }));
+                } else {
+                    report_error(path, &e, locale);
+                }
                 continue;
             }
         };
-        let issues = lint(&template, catalog());
+        for i in &issues {
+            match i.level {
+                LintLevel::Error => errors += 1,
+                LintLevel::Warning => warnings += 1,
+            }
+        }
+        if json {
+            results.push(json!({
+                "file": path.display().to_string(),
+                "issues": issues.iter().map(issue_json).collect::<Vec<_>>(),
+            }));
+            continue;
+        }
         if issues.is_empty() {
             let mut a = FluentArgs::new();
             a.set("value", path.display().to_string());
             println!("{}", t_args(locale, "template-lint-ok", &a));
         }
         for i in &issues {
-            match i.level {
-                LintLevel::Error => errors += 1,
-                LintLevel::Warning => warnings += 1,
-            }
             println!(
                 "{}: {}: {}: {}",
                 path.display(),
@@ -180,13 +233,22 @@ fn lint_files(files: &[PathBuf], locale: Locale) -> ExitCode {
             );
         }
     }
-    let mut a = FluentArgs::new();
-    a.set("fail", errors as i64);
-    a.set("warn", warnings as i64);
-    a.set("ok", files.len() as i64);
-    println!("{}", t_args(locale, "template-lint-summary", &a));
-    if errors > 0 {
+    if json {
+        let doc = json!({ "files": results, "errors": errors, "warnings": warnings });
+        if !print_json(serde_json::to_string_pretty(&doc), locale) {
+            return ExitCode::FAILURE;
+        }
+    } else {
+        let mut a = FluentArgs::new();
+        a.set("fail", errors as i64);
+        a.set("warn", warnings as i64);
+        a.set("ok", files.len() as i64);
+        println!("{}", t_args(locale, "template-lint-summary", &a));
+    }
+    if unreadable {
         ExitCode::FAILURE
+    } else if errors > 0 {
+        ExitCode::from(EXIT_INVALID_TEMPLATE)
     } else {
         ExitCode::SUCCESS
     }
@@ -476,20 +538,31 @@ fn migrate(paths: &[PathBuf], check: bool, backup: bool, locale: Locale) -> Exit
     }
 }
 
-fn list(dir: &Path, locale: Locale) -> ExitCode {
+fn list(dir: &Path, json: bool, locale: Locale) -> ExitCode {
     let mut files = Vec::new();
     collect(dir, &mut files);
-    if files.is_empty() {
+    if files.is_empty() && !json {
         let mut a = FluentArgs::new();
         a.set("value", dir.display().to_string());
         println!("{}", t_args(locale, "template-list-empty", &a));
         return ExitCode::SUCCESS;
     }
     let mut failed = false;
+    let mut entries = Vec::new();
     for f in &files {
         match Template::from_path(f) {
             Ok(t) => {
                 let stack: Vec<&str> = t.layers.iter().map(|l| l.protocol.as_str()).collect();
+                if json {
+                    entries.push(json!({
+                        "name": t.meta.name,
+                        "description": t.meta.description,
+                        "tags": t.meta.tags,
+                        "layers": stack,
+                        "path": f.display().to_string(),
+                    }));
+                    continue;
+                }
                 let tags = if t.meta.tags.is_empty() {
                     String::new()
                 } else {
@@ -509,6 +582,9 @@ fn list(dir: &Path, locale: Locale) -> ExitCode {
             }
         }
     }
+    if json && !print_json(serde_json::to_string_pretty(&entries), locale) {
+        return ExitCode::FAILURE;
+    }
     if failed {
         ExitCode::FAILURE
     } else {
@@ -516,7 +592,7 @@ fn list(dir: &Path, locale: Locale) -> ExitCode {
     }
 }
 
-fn show(file: &Path, vars: &[String], locale: Locale) -> ExitCode {
+fn show(file: &Path, vars: &[String], json: bool, locale: Locale) -> ExitCode {
     let (_, compiled) = match load_compiled(file, vars, locale) {
         Ok(v) => v,
         Err(code) => return code,
@@ -548,6 +624,13 @@ fn show(file: &Path, vars: &[String], locale: Locale) -> ExitCode {
         }
     };
 
+    if json {
+        return if print_json(serde_json::to_string_pretty(&built_json(&built)), locale) {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        };
+    }
     let mut a = FluentArgs::new();
     a.set("len", built.bytes.len() as i64);
     println!("{}", t_args(locale, "template-show-hex", &a));
@@ -575,6 +658,65 @@ fn show(file: &Path, vars: &[String], locale: Locale) -> ExitCode {
         println!("{}: {}", d.level, t_diag(locale, d));
     }
     ExitCode::SUCCESS
+}
+
+/// JSON of a built packet: `len`, `hex`, `layers` (with their fields),
+/// `trailers` and `diagnostics`. Field values are formatted as in the text output.
+fn built_json(built: &wpg_core::Built) -> Value {
+    fn fields_json(fields: &[FieldLayout], def: Option<&ProtocolDef>) -> Vec<Value> {
+        fields
+            .iter()
+            .map(|f| {
+                let ty = def.and_then(|d| d.field(&f.name)).map(|d| &d.ty);
+                let mut v = json!({
+                    "name": f.name,
+                    "value": describe(&f.value, ty),
+                    "bit_offset": f.bit_offset,
+                    "bit_len": f.bit_len,
+                    "auto": f.auto,
+                });
+                if !f.children.is_empty() {
+                    v["children"] = Value::from(fields_json(&f.children, None));
+                }
+                v
+            })
+            .collect()
+    }
+    let hex: String = built.bytes.iter().map(|b| format!("{b:02x}")).collect();
+    let layers: Vec<Value> = built
+        .layout
+        .iter()
+        .map(|l| {
+            json!({
+                "protocol": l.protocol,
+                "offset": l.offset,
+                "header_len": l.header_len,
+                "len": l.len,
+                "truncated": l.truncated,
+                "fields": fields_json(&l.fields, wpg_core_lookup(&l.protocol)),
+            })
+        })
+        .collect();
+    let diagnostics: Vec<Value> = built
+        .diagnostics
+        .iter()
+        .map(|d| {
+            json!({
+                "level": d.level.to_string(),
+                "code": d.key,
+                "layer": d.layer,
+                "field": d.field,
+                "message": d.message,
+            })
+        })
+        .collect();
+    json!({
+        "len": built.bytes.len(),
+        "hex": hex,
+        "layers": layers,
+        "trailers": built.trailers,
+        "diagnostics": diagnostics,
+    })
 }
 
 fn wpg_core_lookup(id: &str) -> Option<&'static ProtocolDef> {

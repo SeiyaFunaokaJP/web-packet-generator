@@ -224,6 +224,8 @@ template-show-hex = 16진 덤프({ $len }바이트)
 template-show-layout = 레이아웃
 render-done = 패킷 { $len }개를 { $value }에 기록했습니다.
 render-unbounded = 스트림이 무한합니다. --count N을 지정하십시오.
+render-json-stdout = --json과 -o -는 함께 지정할 수 없습니다(둘 다 표준 출력에 씁니다).
+send-rate-over-limit = 속도 { $rate }이(가) 설정된 상한 tx.max_rate = { $max }을(를) 초과합니다.
 cli-bad-var = 잘못된 --var `{ $value }`입니다. NAME=VALUE 형식이어야 합니다.
 
 ## wpg send / wpg bench (진행 상황, 요약, 오류)

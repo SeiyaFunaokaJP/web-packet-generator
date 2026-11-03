@@ -224,6 +224,8 @@ template-show-hex = Volcado hexadecimal ({ $len } bytes)
 template-show-layout = Estructura
 render-done = Se escribieron { $len } paquetes en { $value }.
 render-unbounded = El flujo no tiene límite; indique --count N.
+render-json-stdout = --json no se puede combinar con -o - (ambos escriben en la salida estándar).
+send-rate-over-limit = La tasa { $rate } supera el límite configurado tx.max_rate = { $max }.
 cli-bad-var = --var `{ $value }` no válido; se esperaba NOMBRE=VALOR.
 
 ## wpg send / wpg bench (progreso, resumen, errores)
