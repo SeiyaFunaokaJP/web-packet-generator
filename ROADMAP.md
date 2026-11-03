@@ -5,7 +5,7 @@
 Milestones towards wpg 1.0. A ticked item is complete and released on `main`; an unticked item is in
 progress or not started. The detailed specification lives in [`docs/spec/`](docs/spec/README.md) (Japanese
 primary), the design decisions in [`docs/adr/`](docs/adr/README.md), and the list of changes in
-[CHANGELOG.md](CHANGELOG.md). Milestone numbers (M0 to M12) are referenced from the changelog, the
+[CHANGELOG.md](CHANGELOG.md). Milestone numbers (M0 to M13) are referenced from the changelog, the
 developer guide and code comments.
 
 ## Status
@@ -163,6 +163,25 @@ backend is not yet confirmed on macOS, and the first release has not been publis
 - [x] Web terminal (SSH / Telnet, jump hosts (ProxyJump); ADR-0011)
 - [x] DHCP server (DHCPv4, DHCPv6 IA_NA / IA_PD, router advertisements, answering on the interface chosen at deploy time, static interface addresses; ADR-0012)
 - [x] Interactive deploy wizard and unattended deploys (Windows `deploy.bat` / `deploy.ps1`, `deploy.sh`; answer files, several hosts, scheduled runs)
+
+## M13: Easier to use, build and extend
+
+Wave 1 (in progress):
+
+- [ ] Builder: "New job" saves unsaved edits first; restored drafts are marked and can be discarded; palette errors and empty searches are shown; a calmer toolbar
+- [ ] Jobs: forms warn before discarding changes; "Run again" and "Edit as new job" for finished jobs; shorter job form with sensible defaults
+- [ ] First run: a "Get started" card and actionable empty states; clearer template cards; dismissable error toasts; visible user-protocol load errors
+- [ ] One setup command per OS (`scripts/setup.sh` / `setup.ps1`), a justfile that works on Windows, an accurate README quick start, and build scripts checked in CI
+- [ ] The release binary always embeds the freshly built web UI; `wpg serve` and `wpg doctor` say when it is missing; doctor checks the macOS pcap backend
+- [ ] Every CLI command reads `wpg.toml` (`--config`); `--json` for render and template commands; `-o -` for render; exit code 3 for template errors
+- [ ] `wpg protocols list / show / check` and reloading user-defined protocols without restarting the server
+
+Wave 2 (planned):
+
+- [ ] API tokens for scripts (`Authorization: Bearer`) and `wpg remote` to drive a running server
+- [ ] Field overrides from the CLI (`--set LAYER.FIELD=VALUE`) and a variables file (`--vars-file`)
+- [ ] Typed template variables (type, choices, range, required) checked by lint and the GUI form
+- [ ] Configurable limits (pre-render thresholds, preview size, job history, ring size)
 
 ## After 1.0
 
