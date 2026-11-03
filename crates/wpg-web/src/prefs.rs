@@ -1,9 +1,11 @@
-//! Client preferences persisted in `localStorage` (language, theme, logs level).
+//! Client preferences persisted in `localStorage` (language, theme, logs level,
+//! last job interface).
 
 use wpg_i18n::Locale;
 
 const KEY_LOCALE: &str = "wpg.locale";
 const KEY_THEME: &str = "wpg.theme";
+const KEY_LAST_IFACE: &str = "wpg.jobs.iface";
 
 /// Reads a `localStorage` entry (`None` natively / when storage is disabled).
 pub(crate) fn load(key: &str) -> Option<String> {
@@ -135,6 +137,15 @@ pub(crate) fn save_locale(l: Locale) {
     store(KEY_LOCALE, l.as_str());
 }
 
+/// The interface of the last job created from the form.
+pub(crate) fn load_last_iface() -> Option<String> {
+    load(KEY_LAST_IFACE).filter(|s| !s.is_empty())
+}
+
+pub(crate) fn save_last_iface(iface: &str) {
+    store(KEY_LAST_IFACE, iface);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,5 +159,6 @@ mod tests {
         assert!(is_dark(Theme::Dark) && !is_dark(Theme::Light));
         assert_eq!(load_theme(), Theme::System, "no storage natively");
         assert_eq!(load_locale(), Locale::En);
+        assert_eq!(load_last_iface(), None);
     }
 }

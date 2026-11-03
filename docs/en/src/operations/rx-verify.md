@@ -56,7 +56,7 @@ Syntax errors are reported with their position (`wpg capture` exits with status 
 
 ## Signatures
 
-With `wpg send --signature` (job option `"signature": true`, the checkbox on the web UI's job page) every frame gets a signature written over its **last 24 octets**:
+With `wpg send --signature` (job option `"signature": true`, the checkbox under **Advanced** in the web UI's new-job form) every frame gets a signature written over its **last 24 octets**:
 
 | Offset | Size | Content |
 |---:|---:|---|

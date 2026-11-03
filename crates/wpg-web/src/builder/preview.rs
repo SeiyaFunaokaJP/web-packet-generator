@@ -65,20 +65,33 @@ impl Preview {
     }
 }
 
+/// Outcome of comparing the in-browser build with `POST /api/render`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Parity {
+    /// Not compared yet (request in flight, or the local build failed).
+    Idle,
+    /// Both builds produced the same bytes.
+    Match,
+    /// The server produced different bytes.
+    Differs,
+    /// The server render could not be fetched.
+    Unknown,
+}
+
 /// The latest in-browser build plus the server-parity result (context).
 #[derive(Clone, Copy)]
 pub(crate) struct PreviewCtx {
     /// The most recent in-browser build.
     pub(crate) preview: RwSignal<Preview>,
-    /// `Some(true/false)` once the server render was compared, `None` while pending.
-    pub(crate) parity: RwSignal<Option<bool>>,
+    /// Comparison of [`Self::preview`] with the server render.
+    pub(crate) parity: RwSignal<Parity>,
 }
 
 impl PreviewCtx {
     pub(crate) fn new() -> Self {
         Self {
             preview: RwSignal::new(Preview::empty()),
-            parity: RwSignal::new(None),
+            parity: RwSignal::new(Parity::Idle),
         }
     }
 

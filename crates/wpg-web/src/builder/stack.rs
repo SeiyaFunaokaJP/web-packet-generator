@@ -10,7 +10,7 @@ use wpg_template::{FieldInput, Template};
 use super::dnd::{drop_target, Drag, DragCtx};
 use super::proto;
 use super::state::{edit, Builder};
-use crate::components::{Icon, IconName, BTN_GHOST};
+use crate::components::{Icon, IconName, BTN, BTN_GHOST};
 use crate::i18n::{tr, use_i18n};
 
 /// Common stacks offered on an empty builder, outermost first.
@@ -48,8 +48,10 @@ fn layer_summary(t: &Template, layer: usize) -> String {
     parts.join(" · ")
 }
 
+/// The layer stack. `on_add` opens the protocol palette where the side palette is
+/// hidden (narrow screens).
 #[component]
-pub(crate) fn Stack() -> impl IntoView {
+pub(crate) fn Stack(#[prop(into)] on_add: Callback<()>) -> impl IntoView {
     let i18n = use_i18n();
     let builder = Builder::use_ctx();
     let dnd = DragCtx::use_ctx();
@@ -236,7 +238,12 @@ pub(crate) fn Stack() -> impl IntoView {
 
     view! {
         <section aria-label=tr("ui-bld-stack") class="flex h-full min-h-0 flex-col">
-            <h2 class="mb-2 text-sm font-semibold">{tr("ui-bld-stack")}</h2>
+            <div class="mb-2 flex items-center justify-between gap-2">
+                <h2 class="text-sm font-semibold">{tr("ui-bld-stack")}</h2>
+                <button type="button" class=format!("{BTN} lg:hidden") on:click=move |_| on_add.run(())>
+                    <Icon name=IconName::Plus class="h-4 w-4" />{tr("ui-bld-add-layer")}
+                </button>
+            </div>
             <div class="min-h-0 flex-1 overflow-y-auto">
                 <Show
                     when=move || builder.template.with(|t| !t.layers.is_empty())

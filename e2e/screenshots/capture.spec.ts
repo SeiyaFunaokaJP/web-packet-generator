@@ -78,7 +78,7 @@ test('screens', async ({ page }) => {
   await src.getByRole('button', { name: 'Gen' }).click();
   await src.getByRole('textbox').first().fill('10.0.0.1-10.0.0.250');
   await page.getByRole('textbox', { name: 'Rate' }).fill('1000pps');
-  await expect(page.getByText('matches', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-parity="match"]')).toHaveCount(1);
   // The palette scrolled down to `payload`: show its top.
   await scrollToTop(page.getByRole('region', { name: 'Protocols' }));
   // Taller, so the hex dump and the tree are in the shot too.
@@ -92,9 +92,11 @@ test('screens', async ({ page }) => {
   await page.goto('/jobs?new=protocols-l4-udp');
   const form = page.getByRole('dialog', { name: 'New job' });
   await expect(form.getByRole('combobox', { name: 'Template' })).toHaveValue('protocols-l4-udp');
-  await form.getByRole('textbox', { name: 'Dry run: pcapng file name' }).fill(file);
+  await form.getByRole('checkbox', { name: 'Write to a file instead of sending' }).check();
+  await form.getByRole('textbox', { name: 'File name' }).fill(file);
   await form.getByRole('textbox', { name: 'Rate' }).fill('500pps');
   await form.getByRole('textbox', { name: 'Packet count' }).fill('1000');
+  await form.getByText('Advanced', { exact: true }).click();
   await form.getByRole('checkbox', { name: 'Stamp a verification signature' }).check();
   await form.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
   await shoot(page, 'job-new');
@@ -162,7 +164,7 @@ test('builder walkthrough GIF', async ({ page }) => {
   await src.getByRole('button', { name: 'Gen' }).click();
   await frame(1);
   await src.getByRole('textbox').first().fill('10.0.0.1-10.0.0.250');
-  await expect(page.getByRole('group', { name: 'Stream index' })).toContainText('0 / 250');
+  await expect(page.getByRole('group', { name: 'Stream index' })).toContainText('Packet 1 of 250');
   await frame(2.5);
   for (let i = 0; i < 3; i++) {
     await page.getByRole('button', { name: 'Next packet' }).click();

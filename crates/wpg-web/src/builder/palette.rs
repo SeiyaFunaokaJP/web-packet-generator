@@ -7,7 +7,7 @@ use leptos::prelude::*;
 use super::dnd::{Drag, DragCtx};
 use super::state::{edit, Builder};
 use crate::api::{self, ProtocolSummary};
-use crate::components::{Icon, IconName, INPUT};
+use crate::components::{Icon, IconName, BTN, INPUT};
 use crate::i18n::{tr, use_i18n};
 
 /// Layer groups in palette order.
@@ -97,11 +97,33 @@ pub(crate) fn Palette() -> impl IntoView {
     };
 
     let groups_view = move || {
-        let Some(Ok(list)) = protocols.get() else {
-            return view! { <p class="px-1 text-xs text-slate-400">{tr("ui-loading")}</p> }
-                .into_any();
+        let list = match protocols.get() {
+            None => {
+                return view! { <p class="px-1 text-xs text-slate-400">{tr("ui-loading")}</p> }
+                    .into_any()
+            }
+            Some(Err(e)) => return view! {
+                <div class="space-y-2 px-1 text-xs" role="alert">
+                    <p class="text-rose-600 dark:text-rose-400">{i18n.t("ui-bld-palette-error")}</p>
+                    <p class="text-slate-500">{e.message(i18n)}</p>
+                    <button type="button" class=BTN on:click=move |_| protocols.refetch()>
+                        <Icon name=IconName::Refresh class="h-4 w-4" />{tr("ui-retry")}
+                    </button>
+                </div>
+            }
+            .into_any(),
+            Some(Ok(list)) => list,
         };
         let q = query.get();
+        if !list.iter().any(|p| matches(p, &q)) {
+            return view! {
+                <div class="space-y-2 px-1 text-xs text-slate-500">
+                    <p>{tr("ui-bld-palette-none")}</p>
+                    <button type="button" class=BTN on:click=move |_| query.set(String::new())>{tr("ui-bld-palette-clear")}</button>
+                </div>
+            }
+            .into_any();
+        }
         let favs = builder.favorites.get();
         let fav_items: Vec<ProtocolSummary> = favs
             .iter()

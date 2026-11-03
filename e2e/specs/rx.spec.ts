@@ -12,8 +12,10 @@ test('verify a signed dry run on the receive page', async ({ page }) => {
   await page.goto('/jobs?new=protocols-l4-udp');
   const form = page.getByRole('dialog', { name: 'New job' });
   await expect(form.getByRole('combobox', { name: 'Template' })).toHaveValue('protocols-l4-udp');
-  await form.getByRole('textbox', { name: 'Dry run: pcapng file name' }).fill(file);
+  await form.getByRole('checkbox', { name: 'Write to a file instead of sending' }).check();
+  await form.getByRole('textbox', { name: 'File name' }).fill(file);
   await form.getByRole('textbox', { name: 'Packet count' }).fill('50');
+  await form.getByText('Advanced', { exact: true }).click();
   const streamId = form.getByRole('textbox', { name: 'Signature stream id (first stream)' });
   await expect(streamId).toBeDisabled();
   await form.getByRole('checkbox', { name: 'Stamp a verification signature' }).check();

@@ -448,7 +448,7 @@ fn YamlEditor(
     };
 
     view! {
-        <Modal title=summary.name.clone() on_close=on_close wide=true>
+        <Modal title=summary.name.clone() on_close=on_close wide=true dirty=dirty>
             {move || load_error.get().map(|e| view! { <ErrorBox error=e /> })}
             {move || match text.get() {
                 None if load_error.with(Option::is_none) => view! { <Loading /> }.into_any(),

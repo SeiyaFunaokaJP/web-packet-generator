@@ -24,6 +24,16 @@ pub(crate) fn draft_key(id: Option<&str>) -> String {
     format!("wpg.builder.draft.{}", id.unwrap_or("new"))
 }
 
+/// Removes the `localStorage` entry `key` (ignored when storage is unavailable).
+fn remove_draft(key: &str) {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(s) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) {
+        let _ = s.remove_item(key);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = key;
+}
+
 /// The template as the JSON object the API accepts (`POST` / `PUT /api/templates`).
 #[must_use]
 pub(crate) fn template_to_value(t: &Template) -> Value {
@@ -203,17 +213,24 @@ pub(crate) struct Builder {
     /// "Allow irregular packets": unlocks computed fields and turns out-of-spec
     /// findings from errors into warnings (see [`super::irregular`]).
     pub(crate) allow_irregular: RwSignal<bool>,
+    /// While a restored local draft is shown: the copy "Discard" goes back to (the
+    /// server copy, or a blank template for a never-saved one).
+    pub(crate) discard_to: RwSignal<Option<Template>>,
 }
 
 impl Builder {
     /// Creates the document, restoring a draft for `id` when one exists.
+    ///
+    /// A restored draft counts as unsaved. For a never-saved template the restore is
+    /// flagged right away; for a server template [`Self::compare_with_server`] decides
+    /// once the server copy has loaded.
     pub(crate) fn new(id: Option<String>) -> Self {
-        let restored = id
-            .as_deref()
-            .or(Some("new"))
-            .and_then(|k| crate::prefs::load(&draft_key(id.as_deref())).map(|s| (k, s)))
-            .and_then(|(_, s)| serde_json::from_str::<Value>(&s).ok())
-            .and_then(|v| template_from_value(&v).ok());
+        let restored = crate::prefs::load(&draft_key(id.as_deref()))
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .and_then(|v| template_from_value(&v).ok())
+            .filter(|t| *t != blank_template());
+        let dirty = restored.is_some();
+        let discard_to = (dirty && id.is_none()).then(blank_template);
         let template = restored.unwrap_or_else(blank_template);
         let favorites = crate::prefs::load("wpg.builder.favorites")
             .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
@@ -224,7 +241,7 @@ impl Builder {
         Self {
             template: RwSignal::new(template),
             history: RwSignal::new(History::default()),
-            dirty: RwSignal::new(false),
+            dirty: RwSignal::new(dirty),
             server_id: RwSignal::new(id),
             sel_layer: RwSignal::new(sel),
             sel_field: RwSignal::new(None),
@@ -234,7 +251,32 @@ impl Builder {
             auto_recompute: RwSignal::new(true),
             favorites: RwSignal::new(favorites),
             allow_irregular: RwSignal::new(allow_irregular),
+            discard_to: RwSignal::new(discard_to),
         }
+    }
+
+    /// Reconciles a restored draft with the freshly loaded server copy: identical
+    /// means nothing is unsaved; otherwise the draft stays and "Discard" is offered.
+    pub(crate) fn compare_with_server(self, server: Template) {
+        if self.template.with_untracked(|t| *t == server) {
+            self.dirty.set(false);
+            self.discard_to.set(None);
+        } else {
+            self.dirty.set(true);
+            self.discard_to.set(Some(server));
+        }
+    }
+
+    /// Records a successful save as `id`. The first save of a new template drops the
+    /// `"new"` draft, so the next fresh builder starts blank.
+    pub(crate) fn mark_saved(self, id: String) {
+        if self.server_id.get_untracked().is_none() {
+            remove_draft(&draft_key(None));
+        }
+        self.server_id.set(Some(id));
+        self.dirty.set(false);
+        self.discard_to.set(None);
+        self.save_draft();
     }
 
     /// Switches "allow irregular packets" and remembers it for this browser.
@@ -269,6 +311,7 @@ impl Builder {
         self.sel_field.set(None);
         self.range.set(None);
         self.dirty.set(false);
+        self.discard_to.set(None);
         self.index.set(0);
         self.save_draft();
     }

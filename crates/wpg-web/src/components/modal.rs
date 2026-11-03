@@ -1,5 +1,6 @@
 //! Dialogs: [`Modal`], [`Confirm`] and the side [`Drawer`]. All are `role="dialog"`
-//! with `aria-modal`, close on Escape / backdrop click and take focus on open.
+//! with `aria-modal`, close on Escape / backdrop click and take focus on open; a
+//! [`Modal`] with unsaved input asks before it closes.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -29,17 +30,46 @@ pub(crate) fn Modal(
     /// Element id to focus on open (default: the dialog itself).
     #[prop(optional)]
     focus: Option<String>,
+    /// Unsaved input: Escape, the backdrop and the close button ask before closing.
+    #[prop(optional, into)]
+    dirty: Signal<bool>,
     children: Children,
 ) -> impl IntoView {
     let panel = next_id("dlg");
     let heading = format!("{panel}-title");
     let labelledby = heading.clone();
+    let keep_id = next_id("keep");
+    let ask_heading = format!("{keep_id}-title");
     focus_soon(focus.unwrap_or_else(|| panel.clone()));
     let width = if wide { "max-w-4xl" } else { "max-w-lg" };
+    let asking = RwSignal::new(false);
+    // The backdrop closes only when both the press and the release hit it, so a
+    // text selection that ends outside the panel does not close the dialog.
+    let pressed = StoredValue::new(false);
+    let panel_id = StoredValue::new(panel.clone());
+    let keep_focus = StoredValue::new(keep_id.clone());
+    let request_close = move || {
+        if dirty.get_untracked() {
+            asking.set(true);
+            focus_soon(keep_focus.get_value());
+        } else {
+            on_close.run(());
+        }
+    };
+    let keep_editing = move || {
+        asking.set(false);
+        focus_soon(panel_id.get_value());
+    };
     view! {
         <div
             class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 pt-[8vh]"
-            on:click=move |_| on_close.run(())
+            on:mousedown=move |ev| pressed.set_value(ev.target() == ev.current_target())
+            on:click=move |ev| {
+                if pressed.get_value() && ev.target() == ev.current_target() {
+                    request_close();
+                }
+                pressed.set_value(false);
+            }
         >
             <div
                 id=panel
@@ -50,11 +80,10 @@ pub(crate) fn Modal(
                 class=format!(
                     "w-full {width} rounded-lg border border-slate-200 bg-white shadow-xl focus:outline-none dark:border-slate-700 dark:bg-slate-900",
                 )
-                on:click=|ev| ev.stop_propagation()
                 on:keydown=move |ev| {
                     if ev.key() == "Escape" {
                         ev.stop_propagation();
-                        on_close.run(());
+                        request_close();
                     }
                 }
             >
@@ -67,7 +96,7 @@ pub(crate) fn Modal(
                         class=BTN_GHOST
                         aria-label=tr("ui-close")
                         title=tr("ui-close")
-                        on:click=move |_| on_close.run(())
+                        on:click=move |_| request_close()
                     >
                         <Icon name=IconName::Close />
                     </button>
@@ -75,6 +104,43 @@ pub(crate) fn Modal(
                 <div class="px-5 py-4">{children()}</div>
             </div>
         </div>
+        <Show when=move || asking.get()>
+            <div
+                class="fixed inset-0 z-[60] flex items-start justify-center bg-slate-900/40 p-4 pt-[20vh]"
+                on:keydown=move |ev| {
+                    if ev.key() == "Escape" {
+                        ev.stop_propagation();
+                        keep_editing();
+                    }
+                }
+            >
+                <div
+                    role="alertdialog"
+                    aria-modal="true"
+                    aria-labelledby=ask_heading.clone()
+                    class="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+                >
+                    <h2 id=ask_heading.clone() class="text-base font-semibold">
+                        {tr("ui-discard-title")}
+                    </h2>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button id=keep_id.clone() type="button" class=BTN on:click=move |_| keep_editing()>
+                            {tr("ui-keep-editing")}
+                        </button>
+                        <button
+                            type="button"
+                            class=BTN_DANGER
+                            on:click=move |_| {
+                                asking.set(false);
+                                on_close.run(());
+                            }
+                        >
+                            {tr("ui-discard")}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Show>
     }
 }
 
