@@ -78,7 +78,8 @@ fn civil_from_days(days: i64) -> (i64, i64, i64) {
     (y, m, d)
 }
 
-/// Default file name of a write-to-file job: `<template>-<YYYYMMDD-HHMMSS>.pcapng` (UTC).
+/// Default file name of a write-to-file job: `<template>-<YYYYMMDD-HHMMSS>.pcapng`,
+/// with the date and time of `unix_ms` read as UTC (callers shift it to local time).
 pub(crate) fn default_capture_name(template: &str, unix_ms: f64) -> String {
     let base: String = template
         .trim()
@@ -292,7 +293,11 @@ pub(crate) fn JobForm(
                     .map(|r| r.template.get_untracked())
                     .unwrap_or_default()
             });
-            file_name.set(default_capture_name(&tpl, crate::dom::now_ms()));
+            let now = crate::dom::now_ms();
+            // The browser's local time, as shown elsewhere in the UI.
+            #[cfg(target_arch = "wasm32")]
+            let now = now - js_sys::Date::new_0().get_timezone_offset() * 60_000.0;
+            file_name.set(default_capture_name(&tpl, now));
         }
     };
 
