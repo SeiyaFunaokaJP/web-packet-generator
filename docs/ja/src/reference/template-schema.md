@@ -118,6 +118,35 @@ generators:
 
 `wpg send` のコマンドラインオプションが優先されます。
 
+## コマンドラインからの上書き
+
+`wpg send`、`wpg render`、`wpg template show`、`wpg bench --template` では、ファイルを編集せずにその実行だけテンプレートを変えられます。
+
+| オプション | 効果 |
+|---|---|
+| `--vars-file FILE` | YAML または JSON のマップ (`dst_ip: 10.1.2.3`) から変数の値を読みます。 |
+| `--var NAME=VALUE` | 変数を 1 つ指定します (複数回指定可)。`--vars-file` より優先され、`--vars-file` はテンプレートの `default` より優先されます。 |
+| `--set LAYER.FIELD=VALUE` | フィールドを `fields:` と同じ表記の値に固定します。フィールドは Manual になり、ジェネレータは外れます。 |
+| `--gen LAYER.FIELD=GEN` | フィールドにジェネレータを付け、固定値を外します。 |
+
+`LAYER` はプロトコル ID (最初のレイヤ: `ipv4`)、0 から数えた n 番目のレイヤ (`ipv4[1]` は IP-in-IP の内側のヘッダ)、または 0 始まりのレイヤ添字 (`2`) です。`FIELD` は [プロトコルリファレンス](protocols.md) にあるフィールド名です。存在しないレイヤやフィールドを指定すると終了コード 3 で止まり、テンプレートのレイヤ一覧か近いフィールド名を表示します。`--vars-file` の変数も `--var` と同じく、テンプレートで宣言されている必要があります。
+
+`GEN` は次のいずれかです。
+
+| 短縮表記 | ジェネレータ |
+|---|---|
+| `range:A..B`、`range:A..B/STEP` | `A` から `B` まで (両端を含む) の `range` |
+| `list:a,b,c` | `list` |
+| `random`、`random:MIN..MAX` | `random` |
+| `counter`、`counter:START`、`counter:START/STEP` | `counter` |
+| `expr:EXPR` | `expr` |
+| 上記以外 | `generators:` の短縮表記: `10.0.0.1-10.0.0.9`、`10.0.0.0/24`、`1,5,9`、`00:11:22:*` |
+
+```console
+$ wpg render templates/examples/eth-ipv4-udp-range.wpg.yaml -o out.pcapng --count 100 \
+    --vars-file lab.yaml --set ipv4.ttl=1 --gen udp.src_port=range:1024..1123
+```
+
 ## payload レイヤ
 
 `payload` は実際のプロトコルではなく、フィールドが生成を制御します。`mode` (`fixed`、`pattern`、`random`、`counter`)、`data`、`length`、`seed`、`counter` モードでは `counter_offset`、`counter_width` (`u32` または `u64`)、`counter_value` (通常は `counter` ジェネレータで与える) です。`raw` は指定したバイト列をそのまま置きます。

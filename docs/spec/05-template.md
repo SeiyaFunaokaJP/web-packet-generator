@@ -30,11 +30,15 @@ Status: M5 (実装済み: wpg-template) / 仕様 §2.4
 - enum: 数値のほか **バリアント名** (`ethertype: arp`, `oper: request`)。
 - flags: **ビット名を `|` で連結** (`flags: syn|ack`, `flags: df`)。
 - TLV (TCP オプション等): 項目のリスト。`nop` / `{ mss: 1460 }` / `{ timestamps: { tsval: 1, tsecr: 0 } }` / 明示形 `{ type: 99, data: "01 02" }`, `{ name: mss, length: 4, fields: { value: 1 } }`。
-- 変数参照: `${name}` (文字列内の任意の位置)。値は `variables[].default`、実行時は `--var name=value` で上書き。宣言のない変数・値のない変数はエラー。
+- 変数参照: `${name}` (文字列内の任意の位置)。値は `variables[].default`、実行時は `--vars-file` (YAML / JSON のマップ) と `--var name=value` で上書きする (優先順位は default < 変数ファイル < `--var`)。宣言のない変数 (変数ファイル中のものを含む)・値のない変数はエラー。
 
 ### ジェネレータ (`layers[].generators`)
 
 フィールド名 → ジェネレータ。完全形 `{ kind: range|list|random|random_mac|counter|file|expr, ... }` か、GUI と同じ短縮表記の文字列 (`192.168.1.1-192.168.5.254`, `10.0.0.0/24`, `1,5,9`, `00:11:22:*`)。数値の `min` / `max` / `start` / `end` はそのまま書ける。enum / flags は名前でも指定できる。
+
+### 実行時のフィールド上書き (`--set` / `--gen`)
+
+CLI の `--set LAYER.FIELD=VALUE` は `layers[i].fields` に値を書き込んで同じフィールドの `generators` を外し、`--gen LAYER.FIELD=GEN` は `generators` に追加して `fields` を外す (`wpg_template::overrides::apply_field_overrides`、コンパイル前に適用)。`LAYER` は添字 / プロトコル ID (最初に一致した層) / `proto[n]`。存在しない層・フィールドは `lint-override-layer` / `lint-override-field` のエラーになる。`GEN` の短縮表記は [08-cli.md](08-cli.md#テンプレートの実行時上書き) を参照。
 
 ### ストリーム (`stream`)
 

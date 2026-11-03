@@ -211,9 +211,8 @@ pub(crate) struct SendArgs {
     /// Print the final report as JSON on stdout.
     #[arg(long)]
     pub(crate) json: bool,
-    /// Template variable override (`name=value`), repeatable.
-    #[arg(long = "var", value_name = "NAME=VALUE")]
-    pub(crate) vars: Vec<String>,
+    #[command(flatten)]
+    pub(crate) inputs: cmd::overrides::TemplateInputArgs,
     /// Stamp every frame with a receive-verification signature (magic, stream id,
     /// sequence number, TX time over the last 24 payload octets; see `wpg capture
     /// --verify`).
@@ -237,9 +236,8 @@ pub(crate) struct RenderArgs {
     /// Number of packets.
     #[arg(long)]
     pub(crate) count: Option<u64>,
-    /// Template variable override (`name=value`), repeatable.
-    #[arg(long = "var", value_name = "NAME=VALUE")]
-    pub(crate) vars: Vec<String>,
+    #[command(flatten)]
+    pub(crate) inputs: cmd::overrides::TemplateInputArgs,
     /// Print the result (packets, bytes, path) as JSON on stdout.
     #[arg(long)]
     pub(crate) json: bool,
@@ -302,9 +300,8 @@ pub(crate) enum TemplateAction {
     Show {
         /// Template file.
         file: PathBuf,
-        /// Template variable override (`name=value`), repeatable.
-        #[arg(long = "var", value_name = "NAME=VALUE")]
-        vars: Vec<String>,
+        #[command(flatten)]
+        inputs: cmd::overrides::TemplateInputArgs,
         /// Print the packet (hex, layers, fields) as JSON on stdout.
         #[arg(long)]
         json: bool,
@@ -389,9 +386,8 @@ pub(crate) struct BenchArgs {
     /// Benchmark on-the-fly generation of this template instead of a fixed frame.
     #[arg(long, value_name = "FILE")]
     pub(crate) template: Option<PathBuf>,
-    /// Template variable override (`name=value`), repeatable (with --template).
-    #[arg(long = "var", value_name = "NAME=VALUE")]
-    pub(crate) vars: Vec<String>,
+    #[command(flatten)]
+    pub(crate) inputs: cmd::overrides::TemplateInputArgs,
     /// Output JSON.
     #[arg(long)]
     pub(crate) json: bool,

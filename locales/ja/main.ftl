@@ -236,6 +236,11 @@ render-unbounded = ストリームが無限です。--count N を指定してく
 render-json-stdout = --json と -o - は同時に指定できません (どちらも標準出力に書き出します)。
 send-rate-over-limit = レート { $rate } が設定の上限 tx.max_rate = { $max } を超えています。
 cli-bad-var = --var `{ $value }` が不正です。NAME=VALUE 形式で指定してください。
+cli-bad-override = { $flag } `{ $value }` が不正です。LAYER.FIELD=VALUE 形式で指定してください。
+cli-bad-gen = --gen `{ $value }` が不正です: { $error }
+cli-vars-file-error = 変数ファイル { $value } を読み込めません: { $error }
+lint-override-layer = テンプレートにレイヤー `{ $value }` はありません。レイヤー: { $protocols }
+lint-override-field = プロトコル `{ $protocol }` にフィールド `{ $field }` はありません。候補: { $fields }
 
 ## wpg send / wpg bench (進捗・サマリ・エラー)
 tx-progress = [{ $t } 秒] { $packets } パケット  { $pps }pps  { $bps }bps  ドロップ { $dropped }

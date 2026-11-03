@@ -161,7 +161,16 @@ Options:
           Print the final report as JSON on stdout
 
       --var <NAME=VALUE>
-          Template variable override (`name=value`), repeatable
+          Template variable override (`name=value`), repeatable; wins over --vars-file
+
+      --vars-file <FILE>
+          YAML or JSON map of template variable values
+
+      --set <LAYER.FIELD=VALUE>
+          Set a field to a fixed value, repeatable. LAYER is a protocol id, `proto[n]` or a layer index, e.g. `ipv4.ttl=1`
+
+      --gen <LAYER.FIELD=GEN>
+          Vary a field with a generator, repeatable, e.g. `udp.src_port=range:1000..1999`, `ipv4.dst=list:10.0.0.1,10.0.0.2`, `ipv4.id=random`
 
       --signature
           Stamp every frame with a receive-verification signature (magic, stream id, sequence number, TX time over the last 24 payload octets; see `wpg capture --verify`)
@@ -249,7 +258,16 @@ Options:
           Number of packets
 
       --var <NAME=VALUE>
-          Template variable override (`name=value`), repeatable
+          Template variable override (`name=value`), repeatable; wins over --vars-file
+
+      --vars-file <FILE>
+          YAML or JSON map of template variable values
+
+      --set <LAYER.FIELD=VALUE>
+          Set a field to a fixed value, repeatable. LAYER is a protocol id, `proto[n]` or a layer index, e.g. `ipv4.ttl=1`
+
+      --gen <LAYER.FIELD=GEN>
+          Vary a field with a generator, repeatable, e.g. `udp.src_port=range:1000..1999`, `ipv4.dst=list:10.0.0.1,10.0.0.2`, `ipv4.id=random`
 
       --json
           Print the result (packets, bytes, path) as JSON on stdout
@@ -431,12 +449,21 @@ Options:
           [env: WPG_PROTOCOLS_DIR]
 
       --var <NAME=VALUE>
-          Template variable override (`name=value`), repeatable
+          Template variable override (`name=value`), repeatable; wins over --vars-file
 
       --config <FILE>
           Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
 
           [env: WPG_CONFIG]
+
+      --vars-file <FILE>
+          YAML or JSON map of template variable values
+
+      --set <LAYER.FIELD=VALUE>
+          Set a field to a fixed value, repeatable. LAYER is a protocol id, `proto[n]` or a layer index, e.g. `ipv4.ttl=1`
+
+      --gen <LAYER.FIELD=GEN>
+          Vary a field with a generator, repeatable, e.g. `udp.src_port=range:1000..1999`, `ipv4.dst=list:10.0.0.1,10.0.0.2`, `ipv4.id=random`
 
       --json
           Print the packet (hex, layers, fields) as JSON on stdout
@@ -683,7 +710,16 @@ Options:
           Benchmark on-the-fly generation of this template instead of a fixed frame
 
       --var <NAME=VALUE>
-          Template variable override (`name=value`), repeatable (with --template)
+          Template variable override (`name=value`), repeatable; wins over --vars-file
+
+      --vars-file <FILE>
+          YAML or JSON map of template variable values
+
+      --set <LAYER.FIELD=VALUE>
+          Set a field to a fixed value, repeatable. LAYER is a protocol id, `proto[n]` or a layer index, e.g. `ipv4.ttl=1`
+
+      --gen <LAYER.FIELD=GEN>
+          Vary a field with a generator, repeatable, e.g. `udp.src_port=range:1000..1999`, `ipv4.dst=list:10.0.0.1,10.0.0.2`, `ipv4.id=random`
 
       --json
           Output JSON

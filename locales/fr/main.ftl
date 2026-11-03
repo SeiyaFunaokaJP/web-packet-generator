@@ -236,6 +236,11 @@ render-unbounded = Le flux est illimité ; indiquez --count N.
 render-json-stdout = --json ne peut pas être combiné avec -o - (les deux écrivent sur la sortie standard).
 send-rate-over-limit = Le débit { $rate } dépasse la limite configurée tx.max_rate = { $max }.
 cli-bad-var = --var `{ $value }` invalide ; format attendu : NOM=VALEUR.
+cli-bad-override = { $flag } `{ $value }` invalide ; format attendu : COUCHE.CHAMP=VALEUR.
+cli-bad-gen = --gen `{ $value }` invalide : { $error }
+cli-vars-file-error = Impossible de lire le fichier de variables { $value } : { $error }
+lint-override-layer = Le modèle n'a pas de couche `{ $value }`. Couches : { $protocols }
+lint-override-field = Le protocole `{ $protocol }` n'a pas de champ `{ $field }`. Candidats : { $fields }
 
 ## wpg send / wpg bench (progression, résumé, erreurs)
 tx-progress = [{ $t } s] { $packets } paq.  { $pps }pps  { $bps }bps  perdus { $dropped }

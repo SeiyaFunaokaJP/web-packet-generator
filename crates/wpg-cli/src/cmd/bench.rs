@@ -93,7 +93,7 @@ fn template_sources(
     workers: usize,
     locale: Locale,
 ) -> Result<TemplateSources, ExitCode> {
-    let (_, compiled) = load_compiled(path, &args.vars, locale)?;
+    let (_, compiled) = load_compiled(path, &args.inputs, locale)?;
     let exp = Expansion::new(&compiled.stream, None).map_err(|e| {
         eprintln!(
             "{}",

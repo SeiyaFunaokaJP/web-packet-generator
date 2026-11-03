@@ -11,13 +11,15 @@ use wpg_i18n::{t, t_args, t_diag, FluentArgs, Locale};
 use wpg_protocols::catalog;
 use wpg_template::bundle::slug;
 use wpg_template::{
-    apply_overrides, compile, export_bundle, import_bundle, lint, schema_version, Compiled,
-    LintIssue, LintLevel, Template, TemplateError, VarOverrides, SCHEMA_VERSION,
+    apply_field_overrides, apply_overrides, compile, export_bundle, import_bundle, lint,
+    schema_version, Compiled, LintIssue, LintLevel, Template, TemplateError, VarOverrides,
+    SCHEMA_VERSION,
 };
 
 use serde_json::{json, Value};
 
 use crate::cmd::cli_locale;
+use crate::cmd::overrides::TemplateInputArgs;
 use crate::cmd::send::print_json;
 use crate::{TemplateAction, TemplateArgs};
 
@@ -47,7 +49,7 @@ pub(crate) fn run(args: TemplateArgs) -> ExitCode {
             json,
             locale,
         ),
-        TemplateAction::Show { file, vars, json } => show(&file, &vars, json, locale),
+        TemplateAction::Show { file, inputs, json } => show(&file, &inputs, json, locale),
         TemplateAction::Schema => {
             match serde_json::to_string_pretty(&Template::json_schema()) {
                 Ok(s) => println!("{s}"),
@@ -144,22 +146,25 @@ pub(crate) fn report_error(path: &Path, err: &TemplateError, locale: Locale) {
     }
 }
 
-/// Loads and compiles a template with the built-in catalog. Errors: exit status
-/// 2 for a bad `--var`, 1 for an unreadable file, 3 for an invalid template.
+/// Loads a template, applies `--set` / `--gen` and compiles it with the
+/// variables (`--vars-file`, then `--var`) against the built-in catalog. Errors:
+/// exit status 2 for a bad argument or variables file, 1 for an unreadable
+/// template, 3 for an invalid template or override target.
 pub(crate) fn load_compiled(
     path: &Path,
-    vars: &[String],
+    inputs: &TemplateInputArgs,
     locale: Locale,
 ) -> Result<(Template, Compiled), ExitCode> {
-    let overrides = parse_vars(vars, locale).map_err(|m| {
-        eprintln!("{m}");
-        ExitCode::from(2)
-    })?;
-    let template = Template::from_path(path).map_err(|e| {
+    let inputs = inputs.parse(locale)?;
+    let mut template = Template::from_path(path).map_err(|e| {
         report_error(path, &e, locale);
         load_error_code(&e)
     })?;
-    match compile(&template, &overrides, catalog()) {
+    if let Err(e) = apply_field_overrides(&mut template, &inputs.fields, catalog()) {
+        report_error(path, &e, locale);
+        return Err(load_error_code(&e));
+    }
+    match compile(&template, &inputs.vars, catalog()) {
         Ok(c) => Ok((template, c)),
         Err(e) => {
             report_error(path, &e, locale);
@@ -592,8 +597,8 @@ fn list(dir: &Path, json: bool, locale: Locale) -> ExitCode {
     }
 }
 
-fn show(file: &Path, vars: &[String], json: bool, locale: Locale) -> ExitCode {
-    let (_, compiled) = match load_compiled(file, vars, locale) {
+fn show(file: &Path, inputs: &TemplateInputArgs, json: bool, locale: Locale) -> ExitCode {
+    let (_, compiled) = match load_compiled(file, inputs, locale) {
         Ok(v) => v,
         Err(code) => return code,
     };

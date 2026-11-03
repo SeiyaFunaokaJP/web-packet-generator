@@ -585,7 +585,7 @@ fn limit_text(r: &Resolved, remaining: Option<u64>, locale: Locale) -> String {
 #[allow(clippy::too_many_lines)]
 pub(crate) fn run(args: crate::SendArgs, policy: &TxConfig) -> ExitCode {
     let locale = cli_locale();
-    let (_, mut compiled) = match load_compiled(&args.template, &args.vars, locale) {
+    let (_, mut compiled) = match load_compiled(&args.template, &args.inputs, locale) {
         Ok(v) => v,
         Err(code) => return code,
     };

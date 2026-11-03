@@ -236,6 +236,11 @@ render-unbounded = 스트림이 무한합니다. --count N을 지정하십시오
 render-json-stdout = --json과 -o -는 함께 지정할 수 없습니다(둘 다 표준 출력에 씁니다).
 send-rate-over-limit = 속도 { $rate }이(가) 설정된 상한 tx.max_rate = { $max }을(를) 초과합니다.
 cli-bad-var = 잘못된 --var `{ $value }`입니다. NAME=VALUE 형식이어야 합니다.
+cli-bad-override = 잘못된 { $flag } `{ $value }`입니다. LAYER.FIELD=VALUE 형식이어야 합니다.
+cli-bad-gen = 잘못된 --gen `{ $value }`입니다: { $error }
+cli-vars-file-error = 변수 파일 { $value }을(를) 읽을 수 없습니다: { $error }
+lint-override-layer = 템플릿에 레이어 `{ $value }`가 없습니다. 레이어: { $protocols }
+lint-override-field = 프로토콜 `{ $protocol }`에 필드 `{ $field }`가 없습니다. 후보: { $fields }
 
 ## wpg send / wpg bench (진행 상황, 요약, 오류)
 tx-progress = [{ $t } s] { $packets } pkts  { $pps }pps  { $bps }bps  드롭 { $dropped }
