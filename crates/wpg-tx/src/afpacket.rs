@@ -47,8 +47,6 @@ const TP_STATUS_WRONG_FORMAT: u32 = 4;
 const TPACKET3_HDR: usize = 48;
 const TP_LEN_OFF: usize = 16;
 const TP_STATUS_OFF: usize = 20;
-/// Upper bound for the ring's memory.
-const RING_MAX_BYTES: usize = 16 << 20;
 
 /// `struct tpacket_req3`.
 #[repr(C)]
@@ -132,7 +130,7 @@ struct Ring {
 unsafe impl Send for Ring {}
 
 impl Ring {
-    fn setup(fd: RawFd, iface: &str, depth: usize) -> io::Result<Ring> {
+    fn setup(fd: RawFd, iface: &str, depth: usize, max_bytes: usize) -> io::Result<Ring> {
         setsockopt_int(fd, libc::SOL_PACKET, PACKET_VERSION, TPACKET_V3)?;
         let mtu = iface_mtu(iface).unwrap_or(1500).min(9216);
         let need = TPACKET3_HDR + mtu + 14 + 4;
@@ -141,7 +139,7 @@ impl Ring {
         let frames_per_block = (32 * 1024 / frame_size).max(1) * 2;
         let block_size = (frame_size * frames_per_block).div_ceil(page) * page;
         let frames_per_block = block_size / frame_size;
-        let max_frames = (RING_MAX_BYTES / frame_size).max(frames_per_block);
+        let max_frames = (max_bytes / frame_size).max(frames_per_block);
         let want = depth.clamp(frames_per_block, max_frames);
         let block_nr = want.div_ceil(frames_per_block);
         let frame_nr = block_nr * frames_per_block;
@@ -479,7 +477,12 @@ impl TxBackend for AfPacketBackend {
         let mut fd = Self::new_socket(iface, opts.qdisc_bypass)?;
         let mut ring = None;
         if opts.tx_ring {
-            match Ring::setup(fd.as_raw_fd(), iface, opts.ring_depth.max(1)) {
+            match Ring::setup(
+                fd.as_raw_fd(),
+                iface,
+                opts.ring_depth.max(1),
+                opts.ring_bytes,
+            ) {
                 Ok(r) => ring = Some(r),
                 Err(_) => {
                     // Start over with a clean socket for the sendmmsg path.

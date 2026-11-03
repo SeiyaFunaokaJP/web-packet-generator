@@ -213,12 +213,19 @@ pub(crate) struct SendArgs {
     /// Expansion strategy: auto, prerender or onthefly.
     #[arg(long, default_value = "auto")]
     pub(crate) plan: String,
+    /// `auto` pre-renders only streams up to this many bytes (default:
+    /// `tx.prerender_max_bytes`, 256 MiB).
+    #[arg(long, value_name = "BYTES")]
+    pub(crate) prerender_max_bytes: Option<u64>,
+    /// `auto` pre-renders only streams up to this many packets (default:
+    /// `tx.prerender_max_packets`, 100M).
+    #[arg(long, value_name = "N")]
+    pub(crate) prerender_max_packets: Option<u64>,
     /// Print the final report as JSON on stdout.
     #[arg(long)]
     pub(crate) json: bool,
-    /// Template variable override (`name=value`), repeatable.
-    #[arg(long = "var", value_name = "NAME=VALUE")]
-    pub(crate) vars: Vec<String>,
+    #[command(flatten)]
+    pub(crate) inputs: cmd::overrides::TemplateInputArgs,
     /// Stamp every frame with a receive-verification signature (magic, stream id,
     /// sequence number, TX time over the last 24 payload octets; see `wpg capture
     /// --verify`).
@@ -242,9 +249,8 @@ pub(crate) struct RenderArgs {
     /// Number of packets.
     #[arg(long)]
     pub(crate) count: Option<u64>,
-    /// Template variable override (`name=value`), repeatable.
-    #[arg(long = "var", value_name = "NAME=VALUE")]
-    pub(crate) vars: Vec<String>,
+    #[command(flatten)]
+    pub(crate) inputs: cmd::overrides::TemplateInputArgs,
     /// Print the result (packets, bytes, path) as JSON on stdout.
     #[arg(long)]
     pub(crate) json: bool,
@@ -307,9 +313,8 @@ pub(crate) enum TemplateAction {
     Show {
         /// Template file.
         file: PathBuf,
-        /// Template variable override (`name=value`), repeatable.
-        #[arg(long = "var", value_name = "NAME=VALUE")]
-        vars: Vec<String>,
+        #[command(flatten)]
+        inputs: cmd::overrides::TemplateInputArgs,
         /// Print the packet (hex, layers, fields) as JSON on stdout.
         #[arg(long)]
         json: bool,
@@ -394,9 +399,8 @@ pub(crate) struct BenchArgs {
     /// Benchmark on-the-fly generation of this template instead of a fixed frame.
     #[arg(long, value_name = "FILE")]
     pub(crate) template: Option<PathBuf>,
-    /// Template variable override (`name=value`), repeatable (with --template).
-    #[arg(long = "var", value_name = "NAME=VALUE")]
-    pub(crate) vars: Vec<String>,
+    #[command(flatten)]
+    pub(crate) inputs: cmd::overrides::TemplateInputArgs,
     /// Output JSON.
     #[arg(long)]
     pub(crate) json: bool,
@@ -486,7 +490,7 @@ fn main() -> ExitCode {
         Command::Template(args) => cmd::template::run(args),
         Command::Ifaces(args) => cmd::ifaces::run(&args),
         Command::Doctor(args) => cmd::doctor::run(&args),
-        Command::Bench(args) => cmd::bench::run(args),
+        Command::Bench(args) => cmd::bench::run(args, &config.unwrap_or_default().tx),
         Command::Capture(args) => cmd::capture::run(args),
         Command::Config(args) => cmd::config::run(args, cli.config.as_deref()),
         Command::Remote(args) => cmd::remote::run(&args),

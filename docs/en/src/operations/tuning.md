@@ -23,8 +23,17 @@ Change one thing at a time and measure each step with `wpg bench` (64-byte frame
 ## Batch size and ring depth
 
 - `--batch <N>`: frames handed to the backend per `send_batch` call. Larger batches mean fewer system calls (default 64 for `wpg send`, 256 for `wpg bench`). Too large a batch delays the rate limiter's pacing granularity. Try 64, 128, 256, 512.
-- `--ring-depth <N>`: number of frame slots in the afpacket TX ring (default 4096). The ring is capped at 16 MiB in total, so on `lo` (16 KiB slots) the effective depth is 1024. Larger rings absorb bursts; they do not raise the sustained rate.
+- `--ring-depth <N>`: number of frame slots in the afpacket TX ring (default 4096). The ring (and the afxdp UMEM) is capped at `--ring-bytes` / `tx.ring_bytes` in total (default 16 MiB), so on `lo` (16 KiB slots) the effective depth is 1024. Larger rings absorb bursts; they do not raise the sustained rate.
 - `--burst <N>` (`wpg send`): frames sent back to back per rate-control grant.
+
+## Memory limits
+
+These defaults suit most hosts; raise them only for the cases below. Each has a `wpg.toml` key (see the [configuration reference](../reference/config.md)) and, for `wpg send`, a command-line override.
+
+- `tx.prerender_max_bytes` (256 MiB) and `tx.prerender_max_packets` (100M), `--prerender-max-bytes` / `--prerender-max-packets`: streams within both limits are built in full before sending (`--plan auto`); larger ones are built on the fly. Pre-rendered streams reach higher rates for templates whose fields cannot be patched in place, so raise the limits when such a stream just misses them and the host has the memory to spare. Lower them on small hosts that run several jobs at once.
+- `tx.ring_bytes` (16 MiB), `--ring-bytes`: memory per worker for the afpacket TX ring or the afxdp UMEM. Raise it together with `--ring-depth` when jumbo frames or long bursts need a deeper ring than 16 MiB holds. The memory is locked, so raise `ulimit -l` (systemd: `LimitMEMLOCK`) to match.
+- `server.preview_max` (256): most packets one preview request may render. Raise it to look further into a stream in one request; each request renders that many packets on the server.
+- `server.job_history` (100) and `server.job_history_db` (1000): finished jobs listed on the Jobs screen and kept in the database.
 
 ## Ring versus `sendmmsg`: `--no-tx-ring`
 

@@ -26,6 +26,24 @@ tx: { ... }                # 任意
 
 テンプレート引数です。各項目は `name`、任意の `default` (文字列・数値・真偽値)、`description` を持ちます。フィールド値やジェネレータの中で `${name}` と書き、実行時に `--var name=value` (`wpg send`、`wpg render`) や GUI で上書きします。既定値も上書きも無い変数はエラーで、宣言の無い `${…}` もエラーです。宣言だけで使われていない変数は警告になります。
 
+次の任意のキーで値を制約できます。書かなければどんな文字列も受け付けます。
+
+| キー | 意味 |
+|---|---|
+| `type` | `uint`、`int`、`bool`、`string`、`ipv4`、`ipv6`、`mac`、`bytes`。値の書式はフィールドと同じです (`0x0800`、`0200.0000.0001`) |
+| `choices` | 許す値の一覧 |
+| `min`、`max` | 範囲 (両端を含む)。`uint` と `int` のみ |
+| `required` | 実行時に値の指定が必須。`default` は持てません |
+
+```yaml
+variables:
+  - { name: vlan_id, type: uint, min: 1, max: 4094, default: 100 }
+  - { name: target, type: ipv4, required: true }
+  - { name: proto, type: uint, choices: [6, 17], default: 17 }
+```
+
+`wpg template lint` は既定値と選択肢を検査します。実行時の値 (`--var`、ジョブ API と render API の `vars`) が合わなければテンプレートエラーになり、変数名と期待する値を示します。CLI は終了コード 3、サーバは 422 `invalid_template` を返します。`bool` は `true`、`false`、`1`、`0` を受け付け、`1` か `0` として代入されます。GUI のジョブ作成フォームは変数ごとに合った入力欄を表示します。
+
 ## `layers`
 
 各項目は `protocol` (カタログの ID。[プロトコルリファレンス](protocols.md) を参照)、`fields`、`generators` から成ります。
@@ -117,6 +135,35 @@ generators:
 | `burst` | 連続送信するフレーム数 |
 
 `wpg send` のコマンドラインオプションが優先されます。
+
+## コマンドラインからの上書き
+
+`wpg send`、`wpg render`、`wpg template show`、`wpg bench --template` では、ファイルを編集せずにその実行だけテンプレートを変えられます。
+
+| オプション | 効果 |
+|---|---|
+| `--vars-file FILE` | YAML または JSON のマップ (`dst_ip: 10.1.2.3`) から変数の値を読みます。 |
+| `--var NAME=VALUE` | 変数を 1 つ指定します (複数回指定可)。`--vars-file` より優先され、`--vars-file` はテンプレートの `default` より優先されます。 |
+| `--set LAYER.FIELD=VALUE` | フィールドを `fields:` と同じ表記の値に固定します。フィールドは Manual になり、ジェネレータは外れます。 |
+| `--gen LAYER.FIELD=GEN` | フィールドにジェネレータを付け、固定値を外します。 |
+
+`LAYER` はプロトコル ID (最初のレイヤ: `ipv4`)、0 から数えた n 番目のレイヤ (`ipv4[1]` は IP-in-IP の内側のヘッダ)、または 0 始まりのレイヤ添字 (`2`) です。`FIELD` は [プロトコルリファレンス](protocols.md) にあるフィールド名です。存在しないレイヤやフィールドを指定すると終了コード 3 で止まり、テンプレートのレイヤ一覧か近いフィールド名を表示します。`--vars-file` の変数も `--var` と同じく、テンプレートで宣言されている必要があります。
+
+`GEN` は次のいずれかです。
+
+| 短縮表記 | ジェネレータ |
+|---|---|
+| `range:A..B`、`range:A..B/STEP` | `A` から `B` まで (両端を含む) の `range` |
+| `list:a,b,c` | `list` |
+| `random`、`random:MIN..MAX` | `random` |
+| `counter`、`counter:START`、`counter:START/STEP` | `counter` |
+| `expr:EXPR` | `expr` |
+| 上記以外 | `generators:` の短縮表記: `10.0.0.1-10.0.0.9`、`10.0.0.0/24`、`1,5,9`、`00:11:22:*` |
+
+```console
+$ wpg render templates/examples/eth-ipv4-udp-range.wpg.yaml -o out.pcapng --count 100 \
+    --vars-file lab.yaml --set ipv4.ttl=1 --gen udp.src_port=range:1024..1123
+```
 
 ## payload レイヤ
 
@@ -371,6 +418,23 @@ How the stream is transmitted.
 | `duration_secs` | `number` \| `null` |   | Duration limit in seconds. |
 | `rate` | `string` \| `null` |   | Rate in human notation: `1000pps`, `1Mpps`, `10Gbps`, `50%`. |
 
+<a id="schema-vartype"></a>
+
+### `VarType`
+
+Value type of a template variable (the field-type names of the protocol catalog).
+
+| 値 | 説明 |
+|---|---|
+| `"uint"` | Unsigned integer: `64`, `0x0800`, `0b101`. |
+| `"int"` | Signed integer: `-1`, `+5`, `0x10`. |
+| `"bool"` | `true` / `false` (or `1` / `0`); substituted as `1` / `0`. |
+| `"string"` | Any text. |
+| `"ipv4"` | IPv4 address. |
+| `"ipv6"` | IPv6 address. |
+| `"mac"` | MAC address. |
+| `"bytes"` | Octets in hex: `"00 01 02"`. |
+
 <a id="schema-variable"></a>
 
 ### `Variable`
@@ -379,7 +443,12 @@ A template argument (`${name}` placeholder) overridable at run time.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
+| `choices` | [`Scalar`](#schema-scalar)`[]` |   | Allowed values; any other value is rejected. |
 | `default` | [`Scalar`](#schema-scalar) \| `null` |   | Default value (human notation; numbers and booleans are accepted too). |
 | `description` | `string` \| `null` |   | Description shown in the GUI / CLI. |
+| `max` | `integer` \| `null` |   | Largest allowed value (`type: uint` / `int` only). |
+| `min` | `integer` \| `null` |   | Smallest allowed value (`type: uint` / `int` only). |
 | `name` | `string` | はい | Placeholder name. |
+| `required` | `boolean` |   | A value must be given at run time; the variable has no `default`. |
+| `type` | [`VarType`](#schema-vartype) \| `null` |   | Value type; values (default, `--var`, job `vars`) are checked against it. Without a type any text is accepted. |
 <!-- wpg-docs-gen:end template-schema-keys -->

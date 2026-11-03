@@ -453,6 +453,8 @@ mod tests {
                     "host",
                     "hop",
                     "via",
+                    // typed template variables
+                    "max",
                     // API tokens, wpg remote
                     "user",
                     "name",

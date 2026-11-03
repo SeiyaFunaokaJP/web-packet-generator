@@ -81,8 +81,6 @@ const BPF_XDP: u32 = 37;
 // <linux/if_link.h>
 const XDP_FLAGS_DRV_MODE: u32 = 1 << 2;
 
-/// Upper bound for one socket's UMEM.
-const UMEM_MAX_BYTES: usize = 16 << 20;
 /// Fill ring entries (unused, but the kernel wants a ring).
 const FILL_ENTRIES: u32 = 64;
 
@@ -451,16 +449,19 @@ struct Geometry {
 }
 
 impl Geometry {
-    fn new(depth: usize, mtu: Option<usize>) -> Geometry {
+    /// `max_bytes` bounds the UMEM; at least 64 TX entries are kept whatever it is.
+    fn new(depth: usize, mtu: Option<usize>, max_bytes: usize) -> Geometry {
         let chunk = if mtu.unwrap_or(1500) + 14 + 4 <= 2048 {
             2048
         } else {
             4096
         };
-        // Powers of two: 4096 (2 KiB chunks) or 2048 (4 KiB chunks).
-        let max_tx = UMEM_MAX_BYTES / chunk / 2;
+        // The largest power of two that fits (rings must be powers of two), e.g.
+        // 4096 (2 KiB chunks) or 2048 (4 KiB chunks) for 16 MiB.
+        let fit = (max_bytes / chunk / 2).max(64);
+        let max_tx = 1usize << (usize::BITS - 1 - fit.leading_zeros());
         let tx = depth.clamp(64, max_tx).next_power_of_two().min(max_tx);
-        #[allow(clippy::cast_possible_truncation)] // <= UMEM_MAX_BYTES / 2048
+        #[allow(clippy::cast_possible_truncation)] // tx.ring_bytes is validated (<= 1 GiB)
         Geometry {
             tx_entries: tx as u32,
             chunks: tx * 2,
@@ -849,7 +850,7 @@ impl TxBackend for AfXdpBackend {
             u32::try_from(ifindex(iface)?).map_err(|_| TxError::Interface(iface.to_owned()))?;
         let queue = opts.queue.unwrap_or(0);
         check_queue(iface, queue)?;
-        let geo = Geometry::new(opts.ring_depth.max(1), iface_mtu(iface));
+        let geo = Geometry::new(opts.ring_depth.max(1), iface_mtu(iface), opts.ring_bytes);
         self.fallback = None;
         let xsk = match opts.xdp_mode {
             XdpMode::Copy => Xsk::create(iface, idx, queue, geo, false, opts)?,
@@ -982,16 +983,26 @@ mod tests {
 
     #[test]
     fn geometry() {
-        let g = Geometry::new(4096, Some(1500));
+        const MAX: usize = crate::DEFAULT_RING_BYTES;
+        let g = Geometry::new(4096, Some(1500), MAX);
         assert_eq!((g.chunk, g.tx_entries, g.chunks), (2048, 4096, 8192));
-        assert!(g.chunks * g.chunk <= UMEM_MAX_BYTES);
-        let g = Geometry::new(4096, Some(65536));
+        assert!(g.chunks * g.chunk <= MAX);
+        let g = Geometry::new(4096, Some(65536), MAX);
         assert_eq!((g.chunk, g.tx_entries, g.chunks), (4096, 2048, 4096));
-        let g = Geometry::new(1, None);
+        let g = Geometry::new(1, None, MAX);
         assert_eq!((g.tx_entries, g.chunks), (64, 128));
-        let g = Geometry::new(1000, Some(1500));
+        let g = Geometry::new(1000, Some(1500), MAX);
         assert_eq!(g.tx_entries, 1024);
         assert!(g.tx_entries.is_power_of_two());
+        // A larger budget allows deeper rings; odd sizes round down to a power of two.
+        let g = Geometry::new(65536, Some(1500), 64 << 20);
+        assert_eq!(g.tx_entries, 16384);
+        let g = Geometry::new(65536, Some(1500), 10 << 20);
+        assert_eq!(g.tx_entries, 2048);
+        assert!(g.chunks * g.chunk <= 10 << 20);
+        // A tiny budget still keeps the minimum of 64 entries.
+        let g = Geometry::new(4096, Some(1500), 1);
+        assert_eq!(g.tx_entries, 64);
     }
 
     #[test]

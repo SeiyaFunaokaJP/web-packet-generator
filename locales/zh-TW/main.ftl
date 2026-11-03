@@ -218,6 +218,18 @@ lint-unused-variable = 變數 `{ $value }` 從未被使用。
 lint-duplicate-variable = 變數 `{ $value }` 被宣告了不只一次。
 lint-var-syntax = `{ $value }` 中的變數預留位置未結束。
 lint-override-unknown = 未知的變數覆寫 `{ $value }`。
+lint-var-bad-type = 變數 `{ $name }`：`{ $value }` 不是有效的 { $expected }。
+lint-var-out-of-range = 變數 `{ $name }`：{ $value } 超出範圍 { $expected }。
+lint-var-not-a-choice = 變數 `{ $name }`：`{ $value }` 不是 { $expected } 之一。
+lint-var-required = 變數 `{ $name }` 為必填，請指定值。
+lint-var-required-default = 變數 `{ $name }` 為必填，不能有預設值。
+lint-var-range-type = 變數 `{ $name }`：min 和 max 需要型別 uint 或 int。
+lint-var-empty-range = 變數 `{ $name }`：min { $min } 大於 max { $max }。
+ui-jobs-vars = 變數
+ui-jobs-bad-vars = 請檢查範本變數。
+ui-var-required = 必填
+ui-var-choose = 選擇…
+ui-var-default = { $value }（預設）
 lint-field-and-generator = `{ $field }` 同時有固定值與產生器；以產生器為準。
 lint-next-protocol-manual = `{ $next }` 不在 `{ $protocol }` 的繫結表中；`{ $field }` 將為 Manual。
 lint-unknown-order = 串流順序中的 `{ $value }` 沒有對應的產生器。
@@ -236,6 +248,11 @@ render-unbounded = 串流沒有上限；請指定 --count N。
 render-json-stdout = --json 不能與 -o - 同時使用（兩者都寫入標準輸出）。
 send-rate-over-limit = 速率 { $rate } 超過了設定的上限 tx.max_rate = { $max }。
 cli-bad-var = 無效的 --var `{ $value }`；格式應為 NAME=VALUE。
+cli-bad-override = 無效的 { $flag } `{ $value }`；格式應為 LAYER.FIELD=VALUE。
+cli-bad-gen = 無效的 --gen `{ $value }`：{ $error }
+cli-vars-file-error = 無法讀取變數檔 { $value }：{ $error }
+lint-override-layer = 範本中沒有層 `{ $value }`。現有的層：{ $protocols }
+lint-override-field = 協定 `{ $protocol }` 沒有欄位 `{ $field }`。候選：{ $fields }
 
 ## wpg send / wpg bench (進度、摘要、錯誤)
 tx-progress = [{ $t } 秒] { $packets } 個封包  { $pps }pps  { $bps }bps  丟棄 { $dropped }
@@ -404,6 +421,8 @@ config-issue-bad-rate = 無效的速率
 config-issue-unknown-backend = 未知的後端
 config-issue-backend-unavailable = 此建置版本 / 此作業系統不提供該後端
 config-issue-bad-log-level = 無效的記錄篩選條件
+config-issue-out-of-range = 超出允許範圍（值；最小–最大）
+config-issue-job-history-db-smaller = 小於 server.job_history：重新啟動後最多只列出這麼多工作
 config-level-error = 錯誤
 config-level-warning = 警告
 config-issue-line = { $level }：{ $key }：{ $message }{ $detail }
@@ -1504,6 +1523,9 @@ docgen-config-server-tls-cert = PEM 憑證鏈。
 docgen-config-server-tls-key = PEM 私密金鑰。
 docgen-config-server-self-signed-tls = 以產生至 `<data_dir>/tls/` 的自我簽署憑證提供 HTTPS (之後啟動時重複使用)；`wpg serve --tls` 會設定此項。
 docgen-config-server-base-url = 位於反向代理伺服器後方時伺服器的公開 URL (`https://wpg.example.net`)，用於絕對連結。
+docgen-config-server-preview-max = 一次預覽請求 (`POST /api/render`) 最多可產生的封包數 (1–100000)。
+docgen-config-server-job-history = 保留在記憶體中、在工作畫面和 API 中列出的已結束工作數 (1–100000)。
+docgen-config-server-job-history-db = 資料庫中保留的已結束工作數；較舊的會被刪除 (1–10000000)。
 docgen-config-auth = 驗證。
 docgen-config-auth-password-hash = 管理員密碼的 argon2id PHC 字串；由 `wpg config set-password` 寫入。
 docgen-config-auth-password-file = 存放管理員密碼的檔案：argon2 PHC 字串，或在啟動時進行雜湊的純文字。
@@ -1518,6 +1540,9 @@ docgen-config-tx-allowed-ifaces = 工作可用來傳送的介面；空白 = 全�
 docgen-config-tx-max-rate = 工作可要求的最高速率 (`100kpps`、`1Gbps`)；未指定速率的工作會以此速率傳送。
 docgen-config-tx-default-backend = 工作未指定後端時使用的後端 (`null`、`pcapfile`、`afpacket`、`pcap`、`afxdp`、`dpdk`)；未設定時 Linux 上為 `afpacket`，否則為 `pcap`，再否則為 `null`。
 docgen-config-tx-dpdk-eal-args = `dpdk` 後端的 DPDK EAL 參數，例如 `["-a", "0000:00:04.0"]`。若未指定，wpg 會加上 `-l <first CPU>` 與 `--in-memory`。EAL 在每個處理程序中於第一個 `dpdk` 工作時啟動一次；變更參數需要重新啟動。
+docgen-config-tx-prerender-max-bytes = 僅當封包數 × 訊框長度不超過此位元組數時才預先產生串流 (傳送前產生全部訊框)；更大的串流邊傳送邊產生。`0` 表示除非指定 `--plan prerender` 否則不預先產生。上限 1 TiB；可用 `wpg send --prerender-max-bytes` 覆寫。
+docgen-config-tx-prerender-max-packets = 僅當串流的封包數不超過此值時才預先產生。可用 `wpg send --prerender-max-packets` 覆寫。
+docgen-config-tx-ring-bytes = 每個工作執行緒的 `afpacket` TX 環 / `afxdp` UMEM 記憶體 (位元組，1 MiB–1 GiB)；環深度會相應減小。此記憶體會被鎖定：取值較大時請提高 `ulimit -l`。可用 `--ring-bytes` 覆寫。
 docgen-config-log = 記錄。
 docgen-config-log-level = 篩選指示詞 (`RUST_LOG` 會覆寫)，例如 `info` 或 `wpg_tx=debug,info`。
 docgen-config-log-format = 每行格式：`pretty` (人類可讀) 或 `json` (每行一個物件)。

@@ -2340,7 +2340,7 @@ Result of `POST /api/protocols/reload`.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
-| `count` | `integer` \| `null` |   | Packets to render (1..=256, default 1). |
+| `count` | `integer` \| `null` |   | Packets to render (1..=`server.preview_max`, default 1; 256 unless configured). |
 | `index` | `integer` \| `null` |   | Stream index of the first packet (default 0). |
 | `template` | `object` | はい | Template: object (JSON form of `.wpg.yaml`) or YAML text. |
 | `vars` | `map<string, ``string``>` |   | Variable values. |

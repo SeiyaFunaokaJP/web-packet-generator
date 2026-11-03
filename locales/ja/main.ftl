@@ -218,6 +218,18 @@ lint-unused-variable = 変数 `{ $value }` は使われていません。
 lint-duplicate-variable = 変数 `{ $value }` が複数回宣言されています。
 lint-var-syntax = `{ $value }` 内の変数プレースホルダが閉じられていません。
 lint-override-unknown = 不明な変数 `{ $value }` を上書きしようとしています。
+lint-var-bad-type = 変数 `{ $name }`: `{ $value }` は有効な { $expected } ではありません。
+lint-var-out-of-range = 変数 `{ $name }`: { $value } は範囲 { $expected } の外です。
+lint-var-not-a-choice = 変数 `{ $name }`: `{ $value }` は { $expected } のいずれでもありません。
+lint-var-required = 変数 `{ $name }` は必須です。値を指定してください。
+lint-var-required-default = 変数 `{ $name }` は必須のため、デフォルト値を持てません。
+lint-var-range-type = 変数 `{ $name }`: min と max には型 uint または int が必要です。
+lint-var-empty-range = 変数 `{ $name }`: min { $min } が max { $max } より大きくなっています。
+ui-jobs-vars = 変数
+ui-jobs-bad-vars = テンプレート変数を確認してください。
+ui-var-required = 必須
+ui-var-choose = 選択…
+ui-var-default = { $value } (デフォルト)
 lint-field-and-generator = `{ $field }` に固定値とジェネレータの両方があります。ジェネレータが優先されます。
 lint-next-protocol-manual = `{ $next }` は `{ $protocol }` のバインディング表にないため、`{ $field }` は Manual になります。
 lint-unknown-order = ストリームの順序に指定された `{ $value }` にはジェネレータがありません。
@@ -236,6 +248,11 @@ render-unbounded = ストリームが無限です。--count N を指定してく
 render-json-stdout = --json と -o - は同時に指定できません (どちらも標準出力に書き出します)。
 send-rate-over-limit = レート { $rate } が設定の上限 tx.max_rate = { $max } を超えています。
 cli-bad-var = --var `{ $value }` が不正です。NAME=VALUE 形式で指定してください。
+cli-bad-override = { $flag } `{ $value }` が不正です。LAYER.FIELD=VALUE 形式で指定してください。
+cli-bad-gen = --gen `{ $value }` が不正です: { $error }
+cli-vars-file-error = 変数ファイル { $value } を読み込めません: { $error }
+lint-override-layer = テンプレートにレイヤー `{ $value }` はありません。レイヤー: { $protocols }
+lint-override-field = プロトコル `{ $protocol }` にフィールド `{ $field }` はありません。候補: { $fields }
 
 ## wpg send / wpg bench (進捗・サマリ・エラー)
 tx-progress = [{ $t } 秒] { $packets } パケット  { $pps }pps  { $bps }bps  ドロップ { $dropped }
@@ -404,6 +421,8 @@ config-issue-bad-rate = レートが不正です
 config-issue-unknown-backend = 不明なバックエンドです
 config-issue-backend-unavailable = このビルド / OS では使えないバックエンドです
 config-issue-bad-log-level = ログフィルタが不正です
+config-issue-out-of-range = 許可された範囲外です (値; 最小–最大)
+config-issue-job-history-db-smaller = server.job_history より小さいため、再起動後に一覧に出る件数はこの値までになります
 config-level-error = エラー
 config-level-warning = 警告
 config-issue-line = { $level }: { $key }: { $message }{ $detail }
@@ -1504,6 +1523,9 @@ docgen-config-server-tls-cert = PEM 形式の証明書チェーン。
 docgen-config-server-tls-key = PEM 形式の秘密鍵。
 docgen-config-server-self-signed-tls = `<data_dir>/tls/` に生成する自己署名証明書で HTTPS を提供します (次回以降も再利用)。`wpg serve --tls` と同じです。
 docgen-config-server-base-url = リバースプロキシ配下で公開する URL (`https://wpg.example.net`)。絶対リンクに使います。
+docgen-config-server-preview-max = 1 回のプレビュー (`POST /api/render`) で生成できる最大パケット数 (1–100000)。
+docgen-config-server-job-history = メモリに保持し、ジョブ画面と API に一覧表示する終了済みジョブ数 (1–100000)。
+docgen-config-server-job-history-db = データベースに残す終了済みジョブ数。古いものから削除します (1–10000000)。
 docgen-config-auth = 認証。
 docgen-config-auth-password-hash = 管理者パスワードの argon2id PHC 文字列。`wpg config set-password` が書き込みます。
 docgen-config-auth-password-file = 管理者パスワードを書いたファイル: argon2 PHC 文字列、または起動時にハッシュする平文。
@@ -1518,6 +1540,9 @@ docgen-config-tx-allowed-ifaces = ジョブが送出してよいインタフェ�
 docgen-config-tx-max-rate = ジョブが指定できる最大レート (`100kpps`、`1Gbps`)。レート指定のないジョブはこのレートで送出します。
 docgen-config-tx-default-backend = ジョブがバックエンドを指定しないときのバックエンド (`null`、`pcapfile`、`afpacket`、`pcap`、`afxdp`、`dpdk`)。未設定なら Linux は `afpacket`、それ以外は `pcap`、使えなければ `null`。
 docgen-config-tx-dpdk-eal-args = `dpdk` バックエンドの DPDK EAL 引数 (例: `["-a", "0000:00:04.0"]`)。指定がなければ wpg が `-l <先頭の CPU>` と `--in-memory` を加えます。EAL はプロセスごとに最初の `dpdk` ジョブで 1 度だけ起動するため、変更には再起動が必要です。
+docgen-config-tx-prerender-max-bytes = パケット数 × フレーム長がこのバイト数以下のストリームだけを事前生成 (送出前に全フレームを生成) し、超えるものは送出しながら生成します。`0` は `--plan prerender` を指定しない限り事前生成しません。上限 1 TiB。`wpg send --prerender-max-bytes` で上書きできます。
+docgen-config-tx-prerender-max-packets = パケット数がこの値以下のストリームだけを事前生成します。`wpg send --prerender-max-packets` で上書きできます。
+docgen-config-tx-ring-bytes = ワーカーごとの `afpacket` TX リング / `afxdp` UMEM のメモリ (バイト、1 MiB–1 GiB)。収まるようにリング深さを減らします。このメモリはロックされるため、大きな値では `ulimit -l` を引き上げてください。`--ring-bytes` で上書きできます。
 docgen-config-log = ログ。
 docgen-config-log-level = フィルタ指定 (`RUST_LOG` が優先)。例: `info`、`wpg_tx=debug,info`。
 docgen-config-log-format = 行の形式: `pretty` (人が読む形式) または `json` (1 行に 1 オブジェクト)。

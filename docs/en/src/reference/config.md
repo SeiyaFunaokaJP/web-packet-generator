@@ -60,6 +60,9 @@ HTTP listener.
 |---|---|---|---|---|
 | `base_url` | `string` |   | `WPG_SERVER__BASE_URL` | Public URL of the server behind a reverse proxy (`https://wpg.example.net`), used for absolute links. |
 | `bind` | `string` | `"127.0.0.1:8080"` | `WPG_SERVER__BIND` | Listen address. Without a password (and no user created on the setup screen) only loopback addresses are accepted (`--allow-insecure` overrides). |
+| `job_history` | `integer` | `100` | `WPG_SERVER__JOB_HISTORY` | Finished jobs kept in memory and listed on the Jobs screen and by the API (1–100000). |
+| `job_history_db` | `integer` | `1000` | `WPG_SERVER__JOB_HISTORY_DB` | Finished jobs kept in the database; older ones are deleted (1–10000000). |
+| `preview_max` | `integer` | `256` | `WPG_SERVER__PREVIEW_MAX` | Most packets one preview request (`POST /api/render`) may render (1–100000). |
 | `self_signed_tls` | `boolean` | `false` | `WPG_SERVER__SELF_SIGNED_TLS` | Serve HTTPS with a self-signed certificate generated into `<data_dir>/tls/` (reused on later starts); `wpg serve --tls` sets it. |
 
 ### `[server.tls]`
@@ -112,6 +115,9 @@ Transmit policy and defaults.
 | `default_backend` | `string` |   | `WPG_TX__DEFAULT_BACKEND` | Backend used when a job names none (`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`); unset = `afpacket` on Linux, else `pcap`, else `null`. |
 | `dpdk_eal_args` | `string[]` | `[]` | `WPG_TX__DPDK_EAL_ARGS` | DPDK EAL arguments for the `dpdk` backend, e.g. `["-a", "0000:00:04.0"]`. wpg adds `-l <first CPU>` and `--in-memory` unless given. EAL starts once per process with the first `dpdk` job; changing them needs a restart. |
 | `max_rate` | `string` |   | `WPG_TX__MAX_RATE` | Highest rate a job may request (`100kpps`, `1Gbps`); jobs without a rate are sent at this rate. |
+| `prerender_max_bytes` | `integer` | `268435456` | `WPG_TX__PRERENDER_MAX_BYTES` | Pre-render a stream (build every frame before sending) only when packets × frame length is at most this many bytes; larger streams are built on the fly. `0` never pre-renders unless `--plan prerender` asks for it. Up to 1 TiB; `wpg send --prerender-max-bytes` overrides. |
+| `prerender_max_packets` | `integer` | `100000000` | `WPG_TX__PRERENDER_MAX_PACKETS` | Pre-render a stream only when it has at most this many packets. `wpg send --prerender-max-packets` overrides. |
+| `ring_bytes` | `integer` | `16777216` | `WPG_TX__RING_BYTES` | Memory of one `afpacket` TX ring or `afxdp` UMEM per worker, in bytes (1 MiB–1 GiB); the ring depth is reduced to fit. The memory is locked: raise `ulimit -l` for large values. `--ring-bytes` overrides. |
 
 ## Example (`wpg config init`)
 
@@ -138,6 +144,12 @@ bind = "127.0.0.1:8080"
 # Serve HTTPS with a self-signed certificate generated into <data_dir>/tls/
 # (same as `wpg serve --tls`). Ignored when [server.tls] is set.
 self_signed_tls = false
+# Most packets one preview request may render (1-100000).
+preview_max = 256
+# Finished jobs listed on the Jobs screen (kept in memory, 1-100000) and kept in
+# the database (1-10000000; older ones are deleted).
+job_history = 100
+job_history_db = 1000
 
 # TLS certificate chain and private key (PEM) to serve HTTPS with.
 # [server.tls]
@@ -183,6 +195,16 @@ allowed_ifaces = []
 # "--in-memory" unless given). EAL starts with the first dpdk job; changing them
 # needs a restart.
 # dpdk_eal_args = ["-a", "0000:00:04.0"]
+# Streams are pre-rendered (every frame built before sending) when they have at
+# most prerender_max_packets packets and packets * frame length is at most
+# prerender_max_bytes (default 256 MiB, up to 1 TiB); larger ones are built on
+# the fly. `wpg send --prerender-max-bytes / --prerender-max-packets` override.
+prerender_max_bytes = 268435456
+prerender_max_packets = 100000000
+# Memory of one afpacket TX ring / afxdp UMEM per worker in bytes (1 MiB-1 GiB,
+# default 16 MiB); --ring-depth is reduced to fit. Locked memory: raise
+# `ulimit -l` / LimitMEMLOCK for large values.
+ring_bytes = 16777216
 
 [snmp]
 # SNMP tool screen and API (Get / Walk / Set / traps, MIB upload).

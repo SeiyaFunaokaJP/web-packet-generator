@@ -38,9 +38,11 @@ mod compile;
 pub mod import;
 mod input;
 mod lint;
+pub mod overrides;
 mod pcapng;
 pub mod pcapread;
 pub mod render;
+pub mod vars;
 
 pub use bundle::{
     export_bundle, import_bundle, BundleError, BundleTemplate, ImportedBundle, Manifest,
@@ -52,7 +54,9 @@ pub use import::{
 };
 pub use input::{parse_text, FieldInput};
 pub use lint::{lint, LintIssue, LintLevel};
+pub use overrides::{apply_field_overrides, FieldOverride};
 pub use pcapng::PcapngWriter;
+pub use vars::{check_type, check_value, VarError, VarType};
 
 /// Current template schema version written by this crate.
 pub const SCHEMA_VERSION: u32 = 1;
@@ -402,6 +406,27 @@ pub struct Variable {
     /// Description shown in the GUI / CLI.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Value type; values (default, `--var`, job `vars`) are checked against it.
+    /// Without a type any text is accepted.
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<VarType>,
+    /// Allowed values; any other value is rejected.
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "scalar_vec"
+    )]
+    #[schemars(with = "Vec<Scalar>")]
+    pub choices: Vec<String>,
+    /// Smallest allowed value (`type: uint` / `int` only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min: Option<i64>,
+    /// Largest allowed value (`type: uint` / `int` only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<i64>,
+    /// A value must be given at run time; the variable has no `default`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub required: bool,
 }
 
 /// A YAML scalar; variable defaults may be written as numbers.
@@ -414,13 +439,26 @@ enum Scalar {
     Bool(bool),
 }
 
+impl Scalar {
+    fn into_text(self) -> String {
+        match self {
+            Scalar::Str(s) => s,
+            Scalar::Uint(v) => v.to_string(),
+            Scalar::Int(v) => v.to_string(),
+            Scalar::Bool(v) => u8::from(v).to_string(),
+        }
+    }
+}
+
 fn scalar_opt<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
-    Ok(Option::<Scalar>::deserialize(d)?.map(|s| match s {
-        Scalar::Str(s) => s,
-        Scalar::Uint(v) => v.to_string(),
-        Scalar::Int(v) => v.to_string(),
-        Scalar::Bool(v) => u8::from(v).to_string(),
-    }))
+    Ok(Option::<Scalar>::deserialize(d)?.map(Scalar::into_text))
+}
+
+fn scalar_vec<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<String>, D::Error> {
+    Ok(Vec::<Scalar>::deserialize(d)?
+        .into_iter()
+        .map(Scalar::into_text)
+        .collect())
 }
 
 fn is_default<T: Default + PartialEq>(v: &T) -> bool {

@@ -242,6 +242,40 @@ async fn render_preview() {
 }
 
 #[tokio::test]
+async fn render_honours_configured_limits() {
+    let app = TestApp::with(|c| {
+        c.server.preview_max = 4;
+        // 254 x 60 octets no longer fits: the plan switches to on-the-fly.
+        c.tx.prerender_max_bytes = 1000;
+    });
+    let r = app
+        .post("/api/render", json!({ "template": ARP_SWEEP, "count": 4 }))
+        .await;
+    r.expect(StatusCode::OK);
+    let j = r.json();
+    assert_eq!(j["packets"].as_array().unwrap().len(), 4);
+    assert_eq!(j["plan"]["strategy"], "on_the_fly");
+    assert_eq!(j["plan"]["reason"]["threshold_bytes"], 1000);
+    let e = app
+        .post("/api/render", json!({ "template": ARP_SWEEP, "count": 5 }))
+        .await
+        .expect_error(StatusCode::BAD_REQUEST, "bad_request");
+    assert!(e.to_string().contains('4'), "{e}");
+
+    // A larger maximum accepts what the default refuses.
+    let app = TestApp::with(|c| c.server.preview_max = 300);
+    let j = app
+        .post(
+            "/api/render",
+            json!({ "template": ARP_SWEEP, "count": 257 }),
+        )
+        .await
+        .json();
+    // The stream has 254 packets.
+    assert_eq!(j["packets"].as_array().unwrap().len(), 254);
+}
+
+#[tokio::test]
 async fn render_errors() {
     let app = TestApp::new();
     app.post(
@@ -281,6 +315,54 @@ async fn render_errors() {
     app.post("/api/render", json!({ "count": 1 }))
         .await
         .expect_error(StatusCode::BAD_REQUEST, "bad_request");
+}
+
+/// Variable values that do not fit the declared type are rejected with a lint
+/// detail naming the variable and what was expected.
+#[tokio::test]
+async fn typed_vars_are_checked() {
+    let app = TestApp::new();
+    let job = |vars: Value| {
+        json!({
+            "streams": [{ "template_id": "examples-vlan-tcp-syn", "vars": vars }],
+            "backend": "null",
+            "count": 1,
+            "start": false,
+        })
+    };
+    for (vars, key, expected) in [
+        (
+            json!({ "vlan_id": "5000" }),
+            "lint-var-out-of-range",
+            "1..4094",
+        ),
+        (
+            json!({ "dst_ip": "198.51.100.300" }),
+            "lint-var-bad-type",
+            "ipv4",
+        ),
+    ] {
+        let j = app
+            .post("/api/jobs", job(vars.clone()))
+            .await
+            .expect_error(StatusCode::UNPROCESSABLE_ENTITY, "invalid_template");
+        let d = &j["error"]["details"][0];
+        assert_eq!(d["key"], key, "{j}");
+        assert_eq!(d["args"]["expected"], expected, "{j}");
+        let name = vars.as_object().unwrap().keys().next().unwrap().clone();
+        assert_eq!(d["args"]["name"], name.as_str(), "{j}");
+
+        let vlan = include_str!("../../../templates/examples/vlan-tcp-syn.wpg.yaml");
+        app.post(
+            "/api/render",
+            json!({ "template": vlan, "vars": vars, "count": 1 }),
+        )
+        .await
+        .expect_error(StatusCode::UNPROCESSABLE_ENTITY, "invalid_template");
+    }
+    app.post("/api/jobs", job(json!({ "vlan_id": "4094" })))
+        .await
+        .expect(StatusCode::CREATED);
 }
 
 #[tokio::test]
@@ -526,6 +608,41 @@ async fn template_crud() {
 }
 
 // ---------------------------------------------------------------- jobs
+
+#[tokio::test]
+async fn job_history_limits_are_configurable() {
+    let app = TestApp::with(|c| {
+        c.server.job_history = 2;
+        c.server.job_history_db = 3;
+    });
+    let mut ids = Vec::new();
+    for _ in 0..4 {
+        let r = app
+            .post(
+                "/api/jobs",
+                json!({
+                    "streams": [{ "template_id": "examples-arp-sweep" }],
+                    "backend": "null",
+                    "count": 10,
+                    "rate": "unlimited",
+                }),
+            )
+            .await;
+        r.expect(StatusCode::CREATED);
+        let id = r.json()["id"].as_str().unwrap().to_owned();
+        wait_terminal(&app, &id).await;
+        ids.push(id);
+    }
+    let h = app.get("/api/jobs/history").await.json();
+    let listed: Vec<&str> = h
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|j| j["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(listed, [ids[3].as_str(), ids[2].as_str()]);
+    assert_eq!(app.state.db.jobs(100).unwrap().len(), 3);
+}
 
 #[tokio::test]
 async fn job_lifecycle_null_backend() {

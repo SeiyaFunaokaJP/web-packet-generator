@@ -218,6 +218,18 @@ lint-unused-variable = La variable `{ $value }` nunca se usa.
 lint-duplicate-variable = La variable `{ $value }` se declara más de una vez.
 lint-var-syntax = Marcador de variable sin cerrar en `{ $value }`.
 lint-override-unknown = Sustitución de variable desconocida `{ $value }`.
+lint-var-bad-type = Variable `{ $name }`: `{ $value }` no es un valor { $expected } válido.
+lint-var-out-of-range = Variable `{ $name }`: { $value } está fuera del rango { $expected }.
+lint-var-not-a-choice = Variable `{ $name }`: `{ $value }` no es ninguno de { $expected }.
+lint-var-required = La variable `{ $name }` es obligatoria; indique un valor.
+lint-var-required-default = La variable `{ $name }` es obligatoria, por lo que no puede tener valor predeterminado.
+lint-var-range-type = Variable `{ $name }`: min y max requieren el tipo uint o int.
+lint-var-empty-range = Variable `{ $name }`: min { $min } es mayor que max { $max }.
+ui-jobs-vars = Variables
+ui-jobs-bad-vars = Revise las variables de la plantilla.
+ui-var-required = Obligatorio
+ui-var-choose = Elegir…
+ui-var-default = { $value } (predeterminado)
 lint-field-and-generator = `{ $field }` tiene a la vez un valor fijo y un generador; prevalece el generador.
 lint-next-protocol-manual = `{ $next }` no está en la tabla de vinculación de `{ $protocol }`; `{ $field }` será Manual.
 lint-unknown-order = `{ $value }` en el orden del flujo no tiene generador.
@@ -236,6 +248,11 @@ render-unbounded = El flujo no tiene límite; indique --count N.
 render-json-stdout = --json no se puede combinar con -o - (ambos escriben en la salida estándar).
 send-rate-over-limit = La tasa { $rate } supera el límite configurado tx.max_rate = { $max }.
 cli-bad-var = --var `{ $value }` no válido; se esperaba NOMBRE=VALOR.
+cli-bad-override = { $flag } `{ $value }` no válido; se esperaba CAPA.CAMPO=VALOR.
+cli-bad-gen = --gen `{ $value }` no válido: { $error }
+cli-vars-file-error = No se puede leer el archivo de variables { $value }: { $error }
+lint-override-layer = La plantilla no tiene la capa `{ $value }`. Capas: { $protocols }
+lint-override-field = El protocolo `{ $protocol }` no tiene el campo `{ $field }`. Candidatos: { $fields }
 
 ## wpg send / wpg bench (progreso, resumen, errores)
 tx-progress = [{ $t } s] { $packets } paq.  { $pps }pps  { $bps }bps  descartados { $dropped }
@@ -404,6 +421,8 @@ config-issue-bad-rate = tasa no válida
 config-issue-unknown-backend = backend desconocido
 config-issue-backend-unavailable = backend no disponible en esta compilación / en este sistema operativo
 config-issue-bad-log-level = filtro de registro no válido
+config-issue-out-of-range = fuera del rango permitido (valor; mínimo–máximo)
+config-issue-job-history-db-smaller = menor que server.job_history: tras un reinicio solo se muestra ese número de trabajos
 config-level-error = error
 config-level-warning = advertencia
 config-issue-line = { $level }: { $key }: { $message }{ $detail }
@@ -1504,6 +1523,9 @@ docgen-config-server-tls-cert = Cadena de certificados PEM.
 docgen-config-server-tls-key = Clave privada PEM.
 docgen-config-server-self-signed-tls = Servir HTTPS con un certificado autofirmado generado en `<data_dir>/tls/` (reutilizado en los siguientes arranques); `wpg serve --tls` lo activa.
 docgen-config-server-base-url = URL pública del servidor detrás de un proxy inverso (`https://wpg.example.net`), usada para los enlaces absolutos.
+docgen-config-server-preview-max = Máximo de paquetes que puede generar una solicitud de vista previa (`POST /api/render`) (1–100000).
+docgen-config-server-job-history = Trabajos terminados que se guardan en memoria y se listan en la pantalla de trabajos y en la API (1–100000).
+docgen-config-server-job-history-db = Trabajos terminados que se conservan en la base de datos; los más antiguos se eliminan (1–10000000).
 docgen-config-auth = Autenticación.
 docgen-config-auth-password-hash = Cadena PHC argon2id de la contraseña de administrador; `wpg config set-password` la escribe.
 docgen-config-auth-password-file = Archivo que contiene la contraseña de administrador: una cadena PHC argon2 o texto sin formato que se convierte en hash al arrancar.
@@ -1518,6 +1540,9 @@ docgen-config-tx-allowed-ifaces = Interfaces por las que pueden enviar los traba
 docgen-config-tx-max-rate = Tasa máxima que puede solicitar un trabajo (`100kpps`, `1Gbps`); los trabajos sin tasa se envían a esta tasa.
 docgen-config-tx-default-backend = Backend que se usa cuando un trabajo no indica ninguno (`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`); sin definir = `afpacket` en Linux; si no, `pcap`; si no, `null`.
 docgen-config-tx-dpdk-eal-args = Argumentos EAL de DPDK para el backend `dpdk`, p. ej., `["-a", "0000:00:04.0"]`. wpg añade `-l <primera CPU>` y `--in-memory` si no se indican. EAL se inicia una vez por proceso con el primer trabajo `dpdk`; para cambiarlos hay que reiniciar.
+docgen-config-tx-prerender-max-bytes = Prerrenderizar un flujo (generar todas las tramas antes de enviar) solo si paquetes × longitud de trama no supera estos bytes; los flujos mayores se generan sobre la marcha. `0` nunca prerrenderiza salvo con `--plan prerender`. Hasta 1 TiB; `wpg send --prerender-max-bytes` lo sobrescribe.
+docgen-config-tx-prerender-max-packets = Prerrenderizar un flujo solo si tiene como máximo estos paquetes. `wpg send --prerender-max-packets` lo sobrescribe.
+docgen-config-tx-ring-bytes = Memoria de un anillo TX de `afpacket` o una UMEM de `afxdp` por worker, en bytes (1 MiB–1 GiB); la profundidad del anillo se reduce para que quepa. Esta memoria se bloquea: aumente `ulimit -l` para valores grandes. `--ring-bytes` lo sobrescribe.
 docgen-config-log = Registro.
 docgen-config-log-level = Directivas de filtro (`RUST_LOG` las anula), por ejemplo `info` o `wpg_tx=debug,info`.
 docgen-config-log-format = Formato de línea: `pretty` (legible) o `json` (un objeto por línea).

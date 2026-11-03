@@ -218,6 +218,18 @@ lint-unused-variable = 변수 `{ $value }`는 사용되지 않습니다.
 lint-duplicate-variable = 변수 `{ $value }`가 두 번 이상 선언되었습니다.
 lint-var-syntax = `{ $value }`에 닫히지 않은 변수 플레이스홀더가 있습니다.
 lint-override-unknown = 알 수 없는 변수 재정의 `{ $value }`입니다.
+lint-var-bad-type = 변수 `{ $name }`: `{ $value }`은(는) 올바른 { $expected }이(가) 아닙니다.
+lint-var-out-of-range = 변수 `{ $name }`: { $value }이(가) 범위 { $expected }을(를) 벗어났습니다.
+lint-var-not-a-choice = 변수 `{ $name }`: `{ $value }`은(는) { $expected } 중 하나가 아닙니다.
+lint-var-required = 변수 `{ $name }`은(는) 필수입니다. 값을 지정하세요.
+lint-var-required-default = 변수 `{ $name }`은(는) 필수이므로 기본값을 가질 수 없습니다.
+lint-var-range-type = 변수 `{ $name }`: min과 max에는 uint 또는 int 유형이 필요합니다.
+lint-var-empty-range = 변수 `{ $name }`: min { $min }이(가) max { $max }보다 큽니다.
+ui-jobs-vars = 변수
+ui-jobs-bad-vars = 템플릿 변수를 확인하세요.
+ui-var-required = 필수
+ui-var-choose = 선택…
+ui-var-default = { $value } (기본값)
 lint-field-and-generator = `{ $field }`에 고정 값과 생성기가 모두 있습니다. 생성기가 우선합니다.
 lint-next-protocol-manual = `{ $next }`는 `{ $protocol }`의 바인딩 테이블에 없습니다. `{ $field }`는 Manual이 됩니다.
 lint-unknown-order = 스트림 순서의 `{ $value }`에 해당하는 생성기가 없습니다.
@@ -236,6 +248,11 @@ render-unbounded = 스트림이 무한합니다. --count N을 지정하십시오
 render-json-stdout = --json과 -o -는 함께 지정할 수 없습니다(둘 다 표준 출력에 씁니다).
 send-rate-over-limit = 속도 { $rate }이(가) 설정된 상한 tx.max_rate = { $max }을(를) 초과합니다.
 cli-bad-var = 잘못된 --var `{ $value }`입니다. NAME=VALUE 형식이어야 합니다.
+cli-bad-override = 잘못된 { $flag } `{ $value }`입니다. LAYER.FIELD=VALUE 형식이어야 합니다.
+cli-bad-gen = 잘못된 --gen `{ $value }`입니다: { $error }
+cli-vars-file-error = 변수 파일 { $value }을(를) 읽을 수 없습니다: { $error }
+lint-override-layer = 템플릿에 레이어 `{ $value }`가 없습니다. 레이어: { $protocols }
+lint-override-field = 프로토콜 `{ $protocol }`에 필드 `{ $field }`가 없습니다. 후보: { $fields }
 
 ## wpg send / wpg bench (진행 상황, 요약, 오류)
 tx-progress = [{ $t } s] { $packets } pkts  { $pps }pps  { $bps }bps  드롭 { $dropped }
@@ -404,6 +421,8 @@ config-issue-bad-rate = 잘못된 속도
 config-issue-unknown-backend = 알 수 없는 백엔드
 config-issue-backend-unavailable = 이 빌드 또는 이 OS에서 사용할 수 없는 백엔드
 config-issue-bad-log-level = 잘못된 로그 필터
+config-issue-out-of-range = 허용 범위를 벗어남 (값; 최소–최대)
+config-issue-job-history-db-smaller = server.job_history보다 작음: 재시작 후에는 이 개수까지만 작업이 표시됨
 config-level-error = 오류
 config-level-warning = 경고
 config-issue-line = { $level }: { $key }: { $message }{ $detail }
@@ -1504,6 +1523,9 @@ docgen-config-server-tls-cert = PEM 인증서 체인.
 docgen-config-server-tls-key = PEM 개인 키.
 docgen-config-server-self-signed-tls = `<data_dir>/tls/`에 생성한 자체 서명 인증서로 HTTPS를 제공합니다(이후 시작 시 재사용). `wpg serve --tls`로 설정됩니다.
 docgen-config-server-base-url = 리버스 프록시 뒤에 있는 서버의 공개 URL(`https://wpg.example.net`). 절대 링크에 사용됩니다.
+docgen-config-server-preview-max = 한 번의 미리보기 요청(`POST /api/render`)으로 생성할 수 있는 최대 패킷 수 (1–100000).
+docgen-config-server-job-history = 메모리에 보관하고 작업 화면과 API에 표시하는 완료된 작업 수 (1–100000).
+docgen-config-server-job-history-db = 데이터베이스에 보관하는 완료된 작업 수. 오래된 것부터 삭제됩니다 (1–10000000).
 docgen-config-auth = 인증.
 docgen-config-auth-password-hash = 관리자 비밀번호의 argon2id PHC 문자열. `wpg config set-password`가 기록합니다.
 docgen-config-auth-password-file = 관리자 비밀번호를 담은 파일: argon2 PHC 문자열 또는 시작 시 해시되는 평문.
@@ -1518,6 +1540,9 @@ docgen-config-tx-allowed-ifaces = 작업이 송신할 수 있는 인터페이스
 docgen-config-tx-max-rate = 작업이 요청할 수 있는 최대 속도(`100kpps`, `1Gbps`). 속도를 지정하지 않은 작업은 이 속도로 송신됩니다.
 docgen-config-tx-default-backend = 작업에서 백엔드를 지정하지 않았을 때 사용할 백엔드(`null`, `pcapfile`, `afpacket`, `pcap`, `afxdp`, `dpdk`). 미설정 시 Linux에서는 `afpacket`, 그 외에는 `pcap`, 그것도 없으면 `null`.
 docgen-config-tx-dpdk-eal-args = `dpdk` 백엔드용 DPDK EAL 인수(예: `["-a", "0000:00:04.0"]`). 지정하지 않으면 wpg가 `-l <first CPU>`와 `--in-memory`를 추가합니다. EAL은 첫 `dpdk` 작업과 함께 프로세스당 한 번 시작되므로 변경하려면 재시작이 필요합니다.
+docgen-config-tx-prerender-max-bytes = 패킷 수 × 프레임 길이가 이 바이트 수 이하인 스트림만 미리 렌더링(전송 전에 모든 프레임 생성)하고, 더 큰 스트림은 전송하면서 생성합니다. `0`이면 `--plan prerender`를 지정하지 않는 한 미리 렌더링하지 않습니다. 최대 1 TiB. `wpg send --prerender-max-bytes`로 덮어쓸 수 있습니다.
+docgen-config-tx-prerender-max-packets = 패킷 수가 이 값 이하인 스트림만 미리 렌더링합니다. `wpg send --prerender-max-packets`로 덮어쓸 수 있습니다.
+docgen-config-tx-ring-bytes = 워커당 `afpacket` TX 링 / `afxdp` UMEM 메모리(바이트, 1 MiB–1 GiB). 맞도록 링 깊이를 줄입니다. 이 메모리는 잠기므로 큰 값에서는 `ulimit -l`을 올리세요. `--ring-bytes`로 덮어쓸 수 있습니다.
 docgen-config-log = 로깅.
 docgen-config-log-level = 필터 지시문(`RUST_LOG`가 우선함). 예: `info` 또는 `wpg_tx=debug,info`.
 docgen-config-log-format = 줄 형식: `pretty`(사람이 읽기 쉬운 형식) 또는 `json`(줄마다 객체 하나).
