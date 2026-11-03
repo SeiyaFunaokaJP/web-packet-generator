@@ -68,6 +68,38 @@ jobs:
       - name: Test the AF_XDP backend
         run: cargo test -p wpg-tx --features afxdp
 
+  # The documented from-source path on each OS: rustup (preinstalled on the runners), then
+  # scripts/setup.* (pinned trunk, wasm target, Npcap SDK on Windows) and scripts/build.*
+  # in debug mode, so a broken setup or build script fails the PR.
+  build-scripts:
+    name: build scripts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: build-scripts
+      - name: setup.sh + build.sh
+        if: runner.os != 'Windows'
+        run: |
+          ./scripts/setup.sh
+          trunk --version
+          ./scripts/build.sh
+          ./target/debug/wpg --version
+      - name: setup.ps1 + build.ps1
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/setup.ps1
+          trunk --version
+          ./scripts/build.ps1
+          ./target/debug/wpg.exe --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
   # dpdk-sys (bindgen + C shim) against both supported DPDK LTS releases (ADR-0004):
   # 23.11 from Ubuntu 24.04, 24.11 from Debian 13. The smoke test runs EAL without
   # hugepages or PCI on virtual ports (net_ring / net_pcap / net_null), so no NIC or
@@ -124,9 +156,8 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: trunk
+      # The trunk version pinned in scripts/versions.env.
+      - run: ./scripts/setup.sh
       - uses: actions/setup-node@v7
         with:
           node-version: 22

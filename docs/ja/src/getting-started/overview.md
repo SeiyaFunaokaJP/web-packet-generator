@@ -14,7 +14,7 @@ wpg は Web UI を組み込んだ単一の `wpg` 実行ファイルです。リ�
 |---|---|---|
 | Linux の検証ホスト (CML2、EVE-NG、VM) で、高レートで、サービスとして動かす | [scripts/deploy.sh によるデプロイ](../operations/deploy.md): SSH でホスト上に wpg をビルドし、systemd ユニットを入れるウィザード。Windows (`scripts\deploy.bat`)、Linux、macOS のどれからでも始められます。 | ホストへの SSH と sudo |
 | Rust ツールチェーンを入れずに Linux ホストで動かす | [Docker で動かす](docker.md) | Linux ホストの Docker |
-| 自分の PC で使う、または開発する | ソースからビルド: [Linux](install-linux.md)、[macOS](install-macos.md)、[Windows](install-windows.md) | rustup、trunk。Windows では Npcap とその SDK |
+| 自分の PC で使う、または開発する | ソースからビルド: [Linux](install-linux.md)、[macOS](install-macos.md)、[Windows](install-windows.md) | rustup (残りは `scripts/setup.sh` か `setup.ps1` が入れる)。Windows では Npcap |
 
 選ぶときの注意:
 

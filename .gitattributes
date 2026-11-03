@@ -3,3 +3,4 @@
 *.sh text eol=lf
 packaging/systemd/* text eol=lf
 *.bat text eol=crlf
+scripts/versions.env text eol=lf

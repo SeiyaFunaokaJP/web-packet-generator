@@ -56,33 +56,41 @@ Three ways to get wpg running; [Choose how to install](docs/en/src/getting-start
   ([Run with Docker](docs/en/src/getting-started/docker.md)).
 - **Build from source** on Linux, macOS or Windows, as below.
 
-Prerequisites: [rustup](https://rustup.rs), the WASM target
-(`rustup target add wasm32-unknown-unknown`), [trunk](https://trunkrs.dev) (`cargo install trunk --locked`),
-and optionally [just](https://github.com/casey/just). The libpcap / Npcap transmit backend is optional
-(`cargo build --release --features pcap`, forwarded to `wpg-tx/pcap`): on Linux it needs `libpcap-dev`, macOS ships
-libpcap, and on Windows it needs the Npcap runtime plus the [Npcap SDK](https://npcap.com/#download) (`wpcap.lib` on
-`LIB`). Without the feature no pcap library is required. `wpg doctor` reports what is missing.
+You need [rustup](https://rustup.rs) and a clone of this repository. The setup script installs the rest (the
+pinned Rust toolchain with the WASM target, [trunk](https://trunkrs.dev), and on Windows the Npcap SDK) and lists the
+system packages it cannot install for you.
+
+Linux / macOS:
 
 ```sh
-# Build (frontend, then backend)
-just build            # or: ./scripts/build.sh      (Windows: .\scripts\build.ps1)
-just release          # optimised build
-
-# Run
-./target/release/wpg serve    # or: ./scripts/run.sh   (Windows: .\scripts\run.ps1)
+./scripts/setup.sh                 # add --just to also install the just task runner
+./scripts/build.sh --release       # or: just release
+./target/release/wpg serve
 ```
 
-Then open <http://127.0.0.1:8080> in your browser.
+Windows (PowerShell; also install [Npcap](https://npcap.com/#download), which wpg needs to send):
 
-For development with hot reload (needs `cargo install cargo-watch --locked`):
-
-```sh
-just run              # or: ./scripts/run.sh --dev
+```powershell
+.\scripts\setup.ps1                # add -Just to also install the just task runner
+.\scripts\build.ps1 -Release       # or: just release
+.\target\release\wpg.exe serve
 ```
 
-Raw-socket transmission needs privileges: on Linux run as root or use
-`sudo setcap cap_net_raw,cap_net_admin+ep ./target/release/wpg`; on Windows install Npcap and run as
-Administrator; on macOS grant access to `/dev/bpf*`. Run `wpg doctor` to diagnose.
+Then open <http://127.0.0.1:8080> in your browser. `./scripts/run.sh` (Windows: `.\scripts\run.ps1`) does the last
+two steps in one go.
+
+How each OS sends: Linux uses AF_PACKET and needs no extra library (`--features pcap` adds the optional libpcap
+backend, which needs `libpcap-dev`). On macOS and Windows libpcap / Npcap is the only way to send, so the build
+scripts add the `pcap` backend by themselves: macOS ships libpcap, and on Windows `build.ps1` finds the Npcap SDK that
+`setup.ps1` unpacked to `C:\Npcap-SDK`.
+
+Sending needs privileges: on Linux run as root or use
+`sudo setcap cap_net_raw,cap_net_admin+ep ./target/release/wpg`; on Windows install Npcap (run as Administrator
+only if Npcap was installed in administrator-only mode); on macOS grant access to `/dev/bpf*`. Run `wpg doctor` to
+see what is missing.
+
+For development with hot reload (needs `cargo install cargo-watch --locked`): `just run` or `./scripts/run.sh --dev`.
+The step-by-step guides per OS are in [the manual](docs/en/src/getting-started/overview.md).
 
 ## Architecture
 

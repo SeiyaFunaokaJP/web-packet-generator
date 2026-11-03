@@ -7,31 +7,39 @@ Thank you for your interest! Please read the [Code of Conduct](CODE_OF_CONDUCT.m
 
 ## Development setup
 
-1. Install [rustup](https://rustup.rs). The pinned toolchain in `rust-toolchain.toml` is picked up automatically.
-2. Add the WASM target: `rustup target add wasm32-unknown-unknown`
-3. Install tools: `cargo install just trunk cargo-watch cargo-deny cargo-audit mdbook --locked`
-   (only `just` and `trunk` are needed for a basic build).
-4. Linux: `sudo apt install libpcap-dev`. Windows: Npcap SDK. (Optional until the pcap backend lands.)
-5. `just build && ./target/debug/wpg serve`, then open <http://127.0.0.1:8080>.
+1. Install [rustup](https://rustup.rs).
+2. Run `./scripts/setup.sh --just` (Windows: `.\scripts\setup.ps1 -Just`). It installs the toolchain pinned in
+   `rust-toolchain.toml` with the WASM target, trunk at the version pinned in `scripts/versions.env`, `just`, and on
+   Windows the Npcap SDK, then lists the system packages to install yourself.
+3. `just release && ./target/release/wpg serve`, then open <http://127.0.0.1:8080>.
+
+Optional tools: `cargo install cargo-watch cargo-deny cargo-audit mdbook --locked` (for `just run`, `just deny`,
+`just audit` and `just docs`).
 
 ## Common tasks (`just --list`)
 
+The recipes work on Linux, macOS and Windows; on Windows they run in PowerShell and call the `scripts\*.ps1`
+counterparts.
+
 | Recipe | What it does |
 |---|---|
-| `just build` / `just release` | Build the frontend (trunk), then the backend |
+| `just setup` | Install the build tools (see above) |
+| `just build` / `just release` | Build the frontend (trunk), then the `wpg` binary (debug / optimised) |
 | `just run` | Dev server with hot reload (`trunk serve` + `cargo watch`) |
-| `just test` | `cargo test --workspace` |
+| `just check` | Fast check while working: formatting, WASM build, clippy on the default members, core crate tests |
+| `just ci` | Everything a PR must pass: `fmt-check`, `lint`, `check-wasm` and `test` |
+| `just test` | `cargo test --workspace --no-fail-fast` |
 | `just e2e` | Playwright tests of the web UI against a real `wpg serve` ([e2e/README.md](e2e/README.md)) |
 | `just fmt` / `just fmt-check` | Format / check formatting |
-| `just lint` | `cargo clippy ... -D warnings` |
-| `just check-wasm` | Ensure `wpg-core` and `wpg-i18n` build for `wasm32-unknown-unknown` |
+| `just lint` | `cargo clippy --workspace --all-targets -- -D warnings` |
+| `just check-wasm` | Ensure `wpg-core`, `wpg-protocols` and `wpg-i18n` build for `wasm32-unknown-unknown` |
 | `just audit` / `just deny` | `cargo audit` / `cargo deny check` |
 | `just docs-gen` | Regenerate the reference chapters of the docs from the code |
 | `just docs` | Build the mdBook docs |
 | `just clean` | Remove build artefacts |
 
-Before opening a PR, run `just fmt lint test check-wasm`. CI runs the same checks (plus `cargo deny` and
-`cargo audit`) on Linux, macOS and Windows.
+Use `just check` while you work and run `just ci` before opening a PR. CI runs the same checks (plus `cargo deny`,
+`cargo audit` and the setup / build scripts) on Linux, macOS and Windows.
 
 ## Commits and pull requests
 

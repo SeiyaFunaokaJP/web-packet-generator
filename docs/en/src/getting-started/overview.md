@@ -14,7 +14,7 @@ wpg is a single `wpg` executable with the web UI embedded. Release binaries are 
 |---|---|---|
 | Run wpg on a Linux lab host (CML2, EVE-NG, a VM), at high rates, as a service | [Deploying with scripts/deploy.sh](../operations/deploy.md): a wizard that builds wpg on the host over SSH and installs a systemd unit. Start it from Windows (`scripts\deploy.bat`), Linux or macOS. | SSH access with sudo to the host |
 | Run wpg on a Linux host without installing a Rust toolchain | [Run with Docker](docker.md) | Docker on a Linux host |
-| Use wpg on your own PC, or develop it | Build from source: [Linux](install-linux.md), [macOS](install-macos.md), [Windows](install-windows.md) | rustup, trunk; Npcap and its SDK on Windows |
+| Use wpg on your own PC, or develop it | Build from source: [Linux](install-linux.md), [macOS](install-macos.md), [Windows](install-windows.md) | rustup (`scripts/setup.sh` or `setup.ps1` installs the rest); Npcap on Windows |
 
 Notes for the choice:
 

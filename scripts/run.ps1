@@ -3,13 +3,17 @@
   Run wpg.
 .PARAMETER Dev
   Hot reload: `trunk serve` (frontend) + `cargo watch` (backend).
-  Without it, runs the release binary `wpg serve` (built first if missing).
+  Without it, brings the release build up to date (scripts\build.ps1 -Release), then
+  runs `wpg serve`.
+.PARAMETER NoBuild
+  Run target\release\wpg.exe as it is, without rebuilding it first.
 .PARAMETER ServeArgs
   Extra arguments passed to `wpg serve`.
 #>
 [CmdletBinding()]
 param(
     [switch]$Dev,
+    [switch]$NoBuild,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$ServeArgs = @()
 )
@@ -36,9 +40,10 @@ if ($Dev) {
     }
 } else {
     $bin = Join-Path $Root "target\release\wpg.exe"
-    if (-not (Test-Path $bin)) {
-        Write-Host "==> release binary missing, building"
+    if (-not $NoBuild) {
         & (Join-Path $PSScriptRoot "build.ps1") -Release
+    } elseif (-not (Test-Path $bin)) {
+        throw "$bin missing; run without -NoBuild"
     }
     & $bin serve @ServeArgs
     exit $LASTEXITCODE

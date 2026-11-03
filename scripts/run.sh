@@ -1,22 +1,28 @@
 #!/usr/bin/env bash
 # Run wpg.
 #
-# Usage: scripts/run.sh [--dev] [-- <extra args for `wpg serve`>]
-#   --dev   hot reload: `trunk serve` (frontend) + `cargo watch` (backend)
-#   default: run the release binary `wpg serve` (builds it first if missing)
+# Usage: scripts/run.sh [--dev | --no-build] [-- <extra args for `wpg serve`>]
+#   --dev        hot reload: `trunk serve` (frontend) + `cargo watch` (backend)
+#   --no-build   run target/release/wpg as it is, without rebuilding it first
+#   default: bring the release build up to date (scripts/build.sh --release), then
+#            run `wpg serve`
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 dev=0
+build=1
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --dev)
             dev=1
             ;;
+        --no-build)
+            build=0
+            ;;
         -h | --help)
-            sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         --)
@@ -48,9 +54,11 @@ if [ "$dev" -eq 1 ]; then
     cargo watch -x "run -p wpg-cli -- serve $*"
 else
     bin="target/release/wpg"
-    if [ ! -x "$bin" ]; then
-        echo "==> release binary missing, building"
+    if [ "$build" -eq 1 ]; then
         "$ROOT/scripts/build.sh" --release
+    elif [ ! -x "$bin" ]; then
+        echo "error: $bin missing; run without --no-build" >&2
+        exit 1
     fi
     exec "$bin" serve "$@"
 fi

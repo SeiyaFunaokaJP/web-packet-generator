@@ -14,7 +14,8 @@
 #   --out <file>         where to copy the built binary
 #
 # Installs rustup (stable, minimal profile, into ~/.cargo of the user), the
-# wasm32-unknown-unknown target and trunk when they are missing.
+# wasm32-unknown-unknown target and trunk (at the version pinned in the source's
+# scripts/versions.env) when they are missing.
 set -euo pipefail
 
 mode=""
@@ -83,25 +84,6 @@ rustup toolchain install stable --profile minimal >/dev/null 2>&1 \
     || rustup toolchain install stable --profile minimal
 rustup target add --toolchain stable wasm32-unknown-unknown
 
-if ! command -v trunk >/dev/null 2>&1; then
-    arch="$(uname -m)"
-    url=""
-    case "$arch" in
-        x86_64 | aarch64) url="https://github.com/trunk-rs/trunk/releases/latest/download/trunk-$arch-unknown-linux-gnu.tar.gz" ;;
-    esac
-    tmp="$(mktemp -d)"
-    if [ -n "$url" ] && curl -fsSL --max-time 300 "$url" -o "$tmp/trunk.tar.gz" \
-        && tar -xzf "$tmp/trunk.tar.gz" -C "$tmp" && [ -f "$tmp/trunk" ] \
-        && "$tmp/trunk" --version >/dev/null 2>&1; then
-        install -m 0755 "$tmp/trunk" "$HOME/.cargo/bin/trunk"
-        info "installed $(trunk --version) (prebuilt)"
-    else
-        info "building trunk with cargo install trunk --locked (takes a few minutes)"
-        cargo install trunk --locked
-    fi
-    rm -rf "$tmp"
-fi
-
 # ---- source -----------------------------------------------------------------
 mkdir -p "$workdir"
 src="$workdir/src"
@@ -132,6 +114,37 @@ fi
 [ -f "$src/scripts/build.sh" ] || die "$src does not look like the wpg repository (scripts/build.sh missing)"
 # A checkout made on Windows may carry CRLF line endings, which bash does not accept.
 find "$src/scripts" -name '*.sh' -exec sed -i 's/\r$//' {} +
+
+# ---- trunk ------------------------------------------------------------------
+# The version pinned by the source being built (scripts/versions.env); older sources
+# without that file get the latest release.
+trunk_version="$(sed -n 's/^TRUNK_VERSION=//p' "$src/scripts/versions.env" 2>/dev/null | tr -d '\r' | head -n 1 || true)"
+current_trunk="$(trunk --version 2>/dev/null | awk '{print $2}' || true)"
+if [ -z "$current_trunk" ] || { [ -n "$trunk_version" ] && [ "$current_trunk" != "$trunk_version" ]; }; then
+    arch="$(uname -m)"
+    if [ -n "$trunk_version" ]; then
+        base="https://github.com/trunk-rs/trunk/releases/download/v$trunk_version"
+    else
+        base="https://github.com/trunk-rs/trunk/releases/latest/download"
+    fi
+    asset=""
+    case "$arch" in
+        x86_64 | aarch64) asset="trunk-$arch-unknown-linux-gnu.tar.gz" ;;
+    esac
+    tmp="$(mktemp -d)"
+    if [ -n "$asset" ] && curl -fsSL --max-time 300 "$base/$asset" -o "$tmp/$asset" \
+        && curl -fsSL --max-time 60 "$base/$asset.sha256" -o "$tmp/$asset.sha256" \
+        && [ "$(cut -d' ' -f1 <"$tmp/$asset.sha256" | tr -d '\r\n')" = "$(sha256sum "$tmp/$asset" | cut -d' ' -f1)" ] \
+        && tar -xzf "$tmp/$asset" -C "$tmp" && [ -f "$tmp/trunk" ] \
+        && "$tmp/trunk" --version >/dev/null 2>&1; then
+        install -m 0755 "$tmp/trunk" "$HOME/.cargo/bin/trunk"
+        info "installed $(trunk --version) (prebuilt)"
+    else
+        info "building trunk with cargo install trunk ${trunk_version:+--version $trunk_version }--locked (takes a few minutes)"
+        cargo install trunk ${trunk_version:+--version "$trunk_version"} --locked
+    fi
+    rm -rf "$tmp"
+fi
 
 # ---- build ------------------------------------------------------------------
 mem_mb="$(awk '/^MemTotal:/ {print int($2 / 1024)}' /proc/meminfo 2>/dev/null || echo 4096)"

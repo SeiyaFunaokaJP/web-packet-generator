@@ -7,23 +7,23 @@
 ## 1. 前提ソフトウェアを入れる
 
 1. [rustup](https://rustup.rs) をインストールします (既定の MSVC ツールチェーンを選びます。Visual Studio Build Tools の「C++ によるデスクトップ開発」が無い場合は案内されます)。
-2. WASM ターゲットとフロントエンドのバンドラを追加します。
+2. [Npcap](https://npcap.com/#download) をインストールします (既定のオプションのままでかまいません。WinPcap API 互換モードは不要です)。送信に必要です。
+3. リポジトリを取得し、セットアップスクリプトを実行します。
 
    ```powershell
-   rustup target add wasm32-unknown-unknown
-   cargo install trunk --locked
-   cargo install just --locked      # 任意
+   git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
+   cd web-packet-generator
+   .\scripts\setup.ps1              # -Just を付けるとタスクランナー just も入れる
    ```
 
-3. [Npcap](https://npcap.com/#download) をインストールします (既定のオプションのままでかまいません。WinPcap API 互換モードは不要です)。送信に必要です。
-4. [Npcap SDK](https://npcap.com/#download) をダウンロードして `C:\Npcap-SDK` に展開します。`scripts\build.ps1` は `C:\npcap-sdk-<バージョン>` (zip の名前のまま。複数あれば新しいもの)、環境変数 `NPCAP_SDK` で指定したディレクトリ、SDK の `Lib\x64` を指す `LIBPCAP_LIBDIR` も探します。見つかると `scripts\build.ps1` が Npcap バックエンド (`pcap` feature) を組み込みます。Windows で送信できるのはこのバックエンドだけです。SDK が無くてもビルドは成功しますが、できた `wpg.exe` は送信できず、`build.ps1` が警告します。
-5. 任意: Wireshark (`tshark` 用)。
+   `rust-toolchain.toml` で固定した Rust ツールチェーンと WASM ターゲット、`scripts\versions.env` で固定したバージョンのビルド済み `trunk` と [Npcap SDK](https://npcap.com/#download) (`C:\Npcap-SDK` に展開) を入れ、まだ足りないもの (C++ ビルドツール、Npcap) を表示します。PowerShell がスクリプトの実行を拒否する場合は `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1` で実行してください。
+
+   SDK は Npcap バックエンド (`pcap` feature) のリンクに必要です。Windows で送信できるのはこのバックエンドだけです。自分で展開した SDK も、`scripts\build.ps1` が `C:\npcap-sdk-<バージョン>` (zip の名前のまま。複数あれば新しいもの)、環境変数 `NPCAP_SDK` で指定したディレクトリ、SDK の `Lib\x64` を指す `LIBPCAP_LIBDIR` から見つけます。SDK が無くてもビルドは成功しますが、できた `wpg.exe` は送信できず、`build.ps1` が警告します。
+4. 任意: Wireshark (`tshark` 用)。
 
 ## 2. ビルドする
 
 ```powershell
-git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
-cd web-packet-generator
 .\scripts\build.ps1 -Release       # または: just release
 ```
 
@@ -48,7 +48,7 @@ trunk が無いとフロントエンドのビルドは警告付きで省略さ�
 
 ## 4. 送信を許可する
 
-`wpg doctor` が Npcap をインストール済み (`npcap`)、Npcap バックエンドを組み込み済み (`backend.pcap`) と報告することを確認します。`backend.pcap` が fail なら `build.ps1` が Npcap SDK を見つけられていないので、手順 1 のとおり SDK を入れてビルドし直してください。Npcap を既定のオプションで入れていれば、通常の PowerShell から送信できます (`caps.raw_socket` は ok)。「Restrict Npcap driver's access to Administrators only」を選んで入れた場合は `caps.raw_socket` が fail になるので、送信するときは **管理者として PowerShell を開いて** ください。[権限設定](permissions.md) を参照してください。
+`wpg doctor` が Npcap をインストール済み (`npcap`)、Npcap バックエンドを組み込み済み (`backend.pcap`) と報告することを確認します。`backend.pcap` が fail なら `build.ps1` が Npcap SDK を見つけられていないので、`.\scripts\setup.ps1` を実行して (手順 1) ビルドし直してください。Npcap を既定のオプションで入れていれば、通常の PowerShell から送信できます (`caps.raw_socket` は ok)。「Restrict Npcap driver's access to Administrators only」を選んで入れた場合は `caps.raw_socket` が fail になるので、送信するときは **管理者として PowerShell を開いて** ください。[権限設定](permissions.md) を参照してください。
 
 ## 5. サーバを起動する
 

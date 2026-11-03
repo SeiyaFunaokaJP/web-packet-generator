@@ -55,30 +55,40 @@ v1 の非ゴール: 本格的なキャプチャ/解析（Wireshark の代替で�
   ([Docker で動かす](docs/ja/src/getting-started/docker.md))。
 - **ソースからビルド** (Linux / macOS / Windows): 以下の手順です。
 
-前提: [rustup](https://rustup.rs)、WASM ターゲット（`rustup target add wasm32-unknown-unknown`）、
-[trunk](https://trunkrs.dev)（`cargo install trunk --locked`）、任意で [just](https://github.com/casey/just)。
-libpcap / Npcap 送出バックエンドは任意です（`cargo build --release --features pcap`、`wpg-tx/pcap` に転送されます）。Linux では `libpcap-dev`、macOS は標準搭載、Windows では Npcap ランタイムと [Npcap SDK](https://npcap.com/#download)（`LIB` に `wpcap.lib`）が必要です。機能を有効にしなければ pcap ライブラリは不要です。不足しているものは `wpg doctor` で確認できます。
+必要なのは [rustup](https://rustup.rs) とこのリポジトリのクローンだけです。残り (固定バージョンの Rust ツールチェーンと WASM
+ターゲット、[trunk](https://trunkrs.dev)、Windows では Npcap SDK) はセットアップスクリプトが入れ、自分で入れる必要のある
+システムパッケージを表示します。
+
+Linux / macOS:
 
 ```sh
-# ビルド（フロントエンド → バックエンドの順）
-just build            # または ./scripts/build.sh      （Windows: .\scripts\build.ps1）
-just release          # 最適化ビルド
-
-# 起動
-./target/release/wpg serve    # または ./scripts/run.sh   （Windows: .\scripts\run.ps1）
+./scripts/setup.sh                 # --just を付けるとタスクランナー just も入れる
+./scripts/build.sh --release       # または: just release
+./target/release/wpg serve
 ```
 
-ブラウザで <http://127.0.0.1:8080> を開きます。
+Windows (PowerShell。送信に必要な [Npcap](https://npcap.com/#download) もインストールしてください):
 
-ホットリロード付きの開発起動（`cargo install cargo-watch --locked` が必要）:
-
-```sh
-just run              # または ./scripts/run.sh --dev
+```powershell
+.\scripts\setup.ps1                # -Just を付けるとタスクランナー just も入れる
+.\scripts\build.ps1 -Release       # または: just release
+.\target\release\wpg.exe serve
 ```
 
-raw ソケット送出には権限が必要です。Linux は root 実行、または
-`sudo setcap cap_net_raw,cap_net_admin+ep ./target/release/wpg`。Windows は Npcap をインストールして管理者で実行。
-macOS は `/dev/bpf*` への権限が必要です。`wpg doctor` で自己診断できます。
+ブラウザで <http://127.0.0.1:8080> を開きます。`./scripts/run.sh` (Windows: `.\scripts\run.ps1`) を使うと、最後の 2 手順を
+まとめて実行できます。
+
+OS ごとの送信方法: Linux は AF_PACKET で送るので追加のライブラリは不要です (`--features pcap` で任意の libpcap
+バックエンドを加えられます。これには `libpcap-dev` が必要)。macOS と Windows で送信できるのは libpcap / Npcap だけなので、
+ビルドスクリプトが `pcap` バックエンドを自動で組み込みます。macOS は libpcap を標準で持ち、Windows では `setup.ps1` が
+`C:\Npcap-SDK` に展開した Npcap SDK を `build.ps1` が見つけます。
+
+送信には権限が必要です。Linux は root 実行、または `sudo setcap cap_net_raw,cap_net_admin+ep ./target/release/wpg`。
+Windows は Npcap をインストールします (Npcap を管理者専用モードで入れた場合だけ管理者で実行)。macOS は `/dev/bpf*`
+への権限が必要です。不足しているものは `wpg doctor` で確認できます。
+
+ホットリロード付きの開発起動 (`cargo install cargo-watch --locked` が必要): `just run` または `./scripts/run.sh --dev`。
+OS ごとの詳しい手順は [マニュアル](docs/ja/src/getting-started/overview.md) にあります。
 
 ## アーキテクチャ
 
