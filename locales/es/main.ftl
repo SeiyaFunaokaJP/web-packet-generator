@@ -670,7 +670,6 @@ ui-tpl-recent = Usadas recientemente
 ui-tpl-empty = Ninguna plantilla coincide.
 ui-tpl-favorite = Favorita
 ui-tpl-view = Ver / editar YAML
-ui-tpl-new-job = Nuevo trabajo con esta plantilla
 ui-tpl-export = Descargar YAML
 ui-tpl-duplicate = Duplicar
 ui-tpl-imported = Plantilla “{ $id }” importada.

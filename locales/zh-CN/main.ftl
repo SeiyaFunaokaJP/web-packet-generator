@@ -670,7 +670,6 @@ ui-tpl-recent = 最近使用
 ui-tpl-empty = 没有匹配的模板。
 ui-tpl-favorite = 收藏
 ui-tpl-view = 查看 / 编辑 YAML
-ui-tpl-new-job = 使用此模板新建任务
 ui-tpl-export = 下载 YAML
 ui-tpl-duplicate = 复制
 ui-tpl-imported = 已导入模板 “{ $id }”。

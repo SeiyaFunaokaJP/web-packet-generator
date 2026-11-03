@@ -670,7 +670,6 @@ ui-tpl-recent = Zuletzt verwendet
 ui-tpl-empty = Keine passende Vorlage.
 ui-tpl-favorite = Favorit
 ui-tpl-view = YAML anzeigen / bearbeiten
-ui-tpl-new-job = Neuer Job mit dieser Vorlage
 ui-tpl-export = YAML herunterladen
 ui-tpl-duplicate = Duplizieren
 ui-tpl-imported = Vorlage „{ $id }“ importiert.

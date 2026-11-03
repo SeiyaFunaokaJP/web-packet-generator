@@ -670,7 +670,6 @@ ui-tpl-recent = Recently used
 ui-tpl-empty = No template matches.
 ui-tpl-favorite = Favourite
 ui-tpl-view = View / edit YAML
-ui-tpl-new-job = New job with this template
 ui-tpl-export = Download YAML
 ui-tpl-duplicate = Duplicate
 ui-tpl-imported = Template “{ $id }” imported.

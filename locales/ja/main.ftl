@@ -670,7 +670,6 @@ ui-tpl-recent = 最近使ったもの
 ui-tpl-empty = 該当するテンプレートはありません。
 ui-tpl-favorite = お気に入り
 ui-tpl-view = YAML を表示 / 編集
-ui-tpl-new-job = このテンプレートでジョブを作成
 ui-tpl-export = YAML をダウンロード
 ui-tpl-duplicate = 複製
 ui-tpl-imported = テンプレート「{ $id }」をインポートしました。

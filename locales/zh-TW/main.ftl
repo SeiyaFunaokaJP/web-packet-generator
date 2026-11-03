@@ -670,7 +670,6 @@ ui-tpl-recent = 最近使用
 ui-tpl-empty = 沒有符合的範本。
 ui-tpl-favorite = 我的最愛
 ui-tpl-view = 檢視 / 編輯 YAML
-ui-tpl-new-job = 使用此範本新增工作
 ui-tpl-export = 下載 YAML
 ui-tpl-duplicate = 複製
 ui-tpl-imported = 已匯入範本「{ $id }」。

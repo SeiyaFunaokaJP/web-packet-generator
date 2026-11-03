@@ -670,7 +670,6 @@ ui-tpl-recent = 최근 사용
 ui-tpl-empty = 일치하는 템플릿이 없습니다.
 ui-tpl-favorite = 즐겨찾기
 ui-tpl-view = YAML 보기 / 편집
-ui-tpl-new-job = 이 템플릿으로 새 작업
 ui-tpl-export = YAML 다운로드
 ui-tpl-duplicate = 복제
 ui-tpl-imported = 템플릿 “{ $id }”을(를) 가져왔습니다.

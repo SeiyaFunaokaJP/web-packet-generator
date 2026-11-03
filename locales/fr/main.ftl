@@ -670,7 +670,6 @@ ui-tpl-recent = Utilisés récemment
 ui-tpl-empty = Aucun modèle ne correspond.
 ui-tpl-favorite = Favori
 ui-tpl-view = Afficher / modifier le YAML
-ui-tpl-new-job = Nouvelle tâche avec ce modèle
 ui-tpl-export = Télécharger le YAML
 ui-tpl-duplicate = Dupliquer
 ui-tpl-imported = Modèle « { $id } » importé.
