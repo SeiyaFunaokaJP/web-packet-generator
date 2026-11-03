@@ -11,10 +11,12 @@ pub(crate) mod ifaces;
 pub(crate) mod import;
 pub(crate) mod overrides;
 pub(crate) mod protocols;
+pub(crate) mod remote;
 pub(crate) mod render;
 pub(crate) mod send;
 pub(crate) mod serve;
 pub(crate) mod template;
+pub(crate) mod token;
 
 /// CLI locale from `LC_ALL` / `LC_MESSAGES` / `LANG` (POSIX precedence).
 pub(crate) fn cli_locale() -> Locale {

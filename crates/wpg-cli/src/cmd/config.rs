@@ -1,5 +1,5 @@
-//! `wpg config init|show|validate|set-password` (spec §2.8 "`wpg config init`",
-//! §2.6 password).
+//! `wpg config init|show|validate|set-password|token` (spec §2.8 "`wpg config
+//! init`", §2.6 password; tokens: [`crate::cmd::token`]).
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -13,11 +13,12 @@ use crate::cmd::send::tr;
 use crate::cmd::serve::config_source;
 use crate::{ConfigAction, ConfigArgs};
 
-/// Runs `wpg config`.
+/// Runs `wpg config`; `config` is the global `--config`.
 #[allow(clippy::needless_pass_by_value)] // uniform `cmd::*::run(args)` dispatch
-pub(crate) fn run(args: ConfigArgs) -> ExitCode {
+pub(crate) fn run(args: ConfigArgs, config: Option<&Path>) -> ExitCode {
     let locale = cli_locale();
     match args.action {
+        ConfigAction::Token(t) => crate::cmd::token::run(&t, config),
         ConfigAction::Init { path, force } => init(&path, force, locale),
         ConfigAction::SetPassword { config, stdin } => set_password(&config, stdin, locale),
         ConfigAction::Show { config } => match load(config.as_deref(), locale) {

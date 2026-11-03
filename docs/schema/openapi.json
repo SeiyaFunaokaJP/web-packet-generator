@@ -437,6 +437,46 @@
         ],
         "description": "`POST /api/jobs` body: a [`JobSpec`] plus `start`."
       },
+      "CreateToken": {
+        "description": "`POST /api/tokens` body.",
+        "properties": {
+          "expires_in_days": {
+            "description": "Expiry in days (1 to 3650); omitted or `null`: never expires.",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "Name, to recognise the token later (1 to 100 characters).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "CreatedToken": {
+        "description": "`POST /api/tokens` response.",
+        "properties": {
+          "secret": {
+            "description": "The secret to send as `Authorization: Bearer <secret>`. Only this response\ncontains it.",
+            "type": "string"
+          },
+          "token": {
+            "$ref": "#/components/schemas/TokenInfo",
+            "description": "The stored token."
+          }
+        },
+        "required": [
+          "token",
+          "secret"
+        ],
+        "type": "object"
+      },
       "DhcpStatus": {
         "description": "`GET /api/dhcp`.",
         "properties": {
@@ -3704,6 +3744,57 @@
         ],
         "type": "object"
       },
+      "TokenInfo": {
+        "description": "An API token as listed (never the secret).",
+        "properties": {
+          "created": {
+            "description": "Creation time (Unix seconds).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "expires": {
+            "description": "Expiry (Unix seconds); `null`: never expires.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Token id (for revoking).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "last_used": {
+            "description": "Last use (Unix seconds, updated at most once a minute).",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "Name given at creation.",
+            "type": "string"
+          },
+          "prefix": {
+            "description": "The first characters of the secret (`wpg_` + 8 hex digits), to recognise it.",
+            "type": "string"
+          },
+          "user": {
+            "description": "Owner: requests with the token act as this user, with its role.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "user",
+          "created"
+        ],
+        "type": "object"
+      },
       "TrapOut": {
         "description": "A received notification.",
         "properties": {
@@ -4162,6 +4253,11 @@
       }
     },
     "securitySchemes": {
+      "bearerAuth": {
+        "description": "API token (`wpg_...`); no CSRF token needed. Cannot manage tokens.",
+        "scheme": "bearer",
+        "type": "http"
+      },
       "cookieAuth": {
         "description": "Session cookie set by `POST /api/auth/login` / `POST /api/auth/setup`",
         "in": "cookie",
@@ -4180,7 +4276,7 @@
     "contact": {
       "name": "web-packet-generator contributors"
     },
-    "description": "REST + WebSocket API of the wpg server. Errors are `{ \"error\": { \"code\", \"message\", \"details\" } }` with `message` in the language of `Accept-Language` (en, ja).\n\nAuthentication: log in with `POST /api/auth/login` (or complete `POST /api/auth/setup` on first run); the `wpg_session` cookie then authenticates every request and POST / PUT / DELETE must also send the session's CSRF token (cookie `wpg_csrf`, `GET /api/auth/status`) in `X-CSRF-Token`. Without a session protected endpoints answer 401 (`unauthorized`, or `setup_required` while no password exists).",
+    "description": "REST + WebSocket API of the wpg server. Errors are `{ \"error\": { \"code\", \"message\", \"details\" } }` with `message` in the language of `Accept-Language` (en, ja).\n\nAuthentication: log in with `POST /api/auth/login` (or complete `POST /api/auth/setup` on first run); the `wpg_session` cookie then authenticates every request and POST / PUT / DELETE must also send the session's CSRF token (cookie `wpg_csrf`, `GET /api/auth/status`) in `X-CSRF-Token`. Without a session protected endpoints answer 401 (`unauthorized`, or `setup_required` while no password exists).\n\n            Scripts can send an API token instead: `Authorization: Bearer wpg_...`             (create one on the Settings page, with `POST /api/tokens` or with             `wpg config token create`). Bearer requests act as the token's user and             need no CSRF token; they cannot manage tokens.",
     "license": {
       "name": "MIT OR Apache-2.0"
     },
@@ -7475,6 +7571,135 @@
         ]
       }
     },
+    "/api/tokens": {
+      "get": {
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TokenInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Tokens (without secrets)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`forbidden`: bearer requests cannot manage tokens"
+          }
+        },
+        "summary": "API tokens (admins: all; others: their own), oldest first.",
+        "tags": [
+          "auth"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedToken"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid name or expiry"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`forbidden`: bearer requests cannot manage tokens"
+          }
+        },
+        "summary": "Creates a token for the logged-in user, with that user's role. The response\nis the only place the secret appears.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/tokens/{id}": {
+      "delete": {
+        "operationId": "revoke",
+        "parameters": [
+          {
+            "description": "Token id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`forbidden`: bearer requests cannot manage tokens"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown id"
+          }
+        },
+        "summary": "Revokes (deletes) a token; requests with it fail from now on.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/version": {
       "get": {
         "operationId": "version",
@@ -7524,11 +7749,14 @@
   "security": [
     {
       "cookieAuth": []
+    },
+    {
+      "bearerAuth": []
     }
   ],
   "tags": [
     {
-      "description": "Login, logout, first-run setup",
+      "description": "Login, logout, first-run setup, API tokens",
       "name": "auth"
     },
     {

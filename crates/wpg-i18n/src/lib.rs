@@ -454,8 +454,16 @@ mod tests {
                     "hop",
                     "via",
                     // typed template variables
-                    "name",
                     "max",
+                    // API tokens, wpg remote
+                    "user",
+                    "name",
+                    "prefix",
+                    "created",
+                    "used",
+                    "expires",
+                    "server",
+                    "status",
                 ] {
                     args.set(name, "1");
                 }

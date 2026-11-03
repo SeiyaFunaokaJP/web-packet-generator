@@ -11,6 +11,7 @@
 pub(crate) mod dhcp;
 pub(crate) mod snmp;
 pub(crate) mod terminal;
+pub(crate) mod tokens;
 pub(crate) mod types;
 
 use std::cell::{Cell, RefCell};

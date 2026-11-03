@@ -36,6 +36,31 @@ wpg serve --bind 0.0.0.0:8080 --tls        # 以後は任意のアドレスで�
 
 API: `GET /api/auth/status`、`POST /api/auth/setup {password, confirm}`、`POST /api/auth/login {password, username?}`、`POST /api/auth/logout`。詳しくは [API リファレンス](../reference/api.md) を参照してください。
 
+## API トークン
+
+スクリプト、CI ジョブ、[`wpg remote`](../reference/cli.md#wpg-remote) は、セッションの代わりに API トークンで認証します。
+
+```sh
+# サーバ上で実行 (稼働中でも可)。標準出力にはトークンだけを出力
+wpg config token create ci --expires-days 90
+# または Web UI の「設定」→「API トークン」
+
+export WPG_SERVER=https://wpg.example.net:8080 WPG_TOKEN=wpg_...
+wpg remote jobs start examples-arp-sweep --backend null --count 100 --wait
+curl -H "Authorization: Bearer $WPG_TOKEN" "$WPG_SERVER/api/jobs"
+```
+
+- トークンは `wpg_` に 16 進 64 桁 (ランダムな 256 ビット) を続けたものです。表示するのは作成時の 1 回だけです。データベースには SHA-256 と、見分けるための先頭 12 文字 (`wpg_` と 16 進 8 桁) だけを保存します。トークンは十分に長いランダム値なので高速なハッシュで足ります。argon2 にすると API リクエストのたびに約 19 MiB と数十ミリ秒かかります。
+- `Authorization: Bearer <トークン>` を付けたリクエストは、トークンを作成したユーザとして、そのユーザの役割で動作します。細かいスコープはありません。CSRF トークンは不要で、Cookie も発行しません。
+- `Authorization` ヘッダがあるリクエストでは、セッション Cookie を見ません。誤った、期限切れの、または失効したトークンには `401 unauthorized` を返します。失敗はクライアントのアドレスごとの [ログインのレート制限](#ログインのレート制限) に数えます。
+- 有効期限は 1〜3650 日、または無期限です。パスワードを変えてもトークンは有効なままです。失効 (Web UI、`wpg config token revoke <id>`、`DELETE /api/tokens/{id}`) はトークンを削除し、次のリクエストから拒否します。
+- トークンではトークンを管理できません。Bearer のリクエストには `/api/tokens` が `403 forbidden` を返します。作成と失効はセッション (Web UI) か、サーバ上の `wpg config token` で行います。admin はすべてのユーザのトークンを、その他のユーザは自分のトークンだけを表示・失効できます。
+- トークンの作成、失効、拒否は監査ログに記録します。最終使用日時は最大 1 分に 1 回記録します。
+
+API: `GET /api/tokens`、`POST /api/tokens {name, expires_in_days?}` (`{token, secret}` を返す)、`DELETE /api/tokens/{id}`。
+
+`wpg remote` はサーバ証明書を検証します。自己署名証明書のサーバには `--insecure` を付けてください。
+
 ## ログインのレート制限
 
 ログインの失敗はクライアントのアドレスごとに 1 分あたり 5 回まで許可します。それを超えるとそのクライアントは 1 分間ロックアウトされます。ロックアウトが繰り返されるたびに時間は 2 倍になり、最大 15 分です。ロックアウト中のログインには `429 rate_limited` を返し、`details.retry_after_secs` と `Retry-After` ヘッダで待ち時間を示します。
@@ -44,7 +69,7 @@ API: `GET /api/auth/status`、`POST /api/auth/setup {password, confirm}`、`POST
 
 ## 監査ログ
 
-ログイン、ログイン失敗、ログアウト、セットアップ、ジョブ操作 (作成、開始、一時停止、再開、停止、削除) は、ユーザ名とクライアントのアドレスを付けて `wpg::audit` ターゲットでログに記録します。これらのイベントだけを出力するには `RUST_LOG=wpg::audit=info` を指定します。
+ログイン、ログイン失敗、ログアウト、セットアップ、API トークンの作成・失効・拒否、ジョブ操作 (作成、開始、一時停止、再開、停止、削除) は、ユーザ名とクライアントのアドレスを付けて `wpg::audit` ターゲットでログに記録します。これらのイベントだけを出力するには `RUST_LOG=wpg::audit=info` を指定します。
 
 ## TLS
 

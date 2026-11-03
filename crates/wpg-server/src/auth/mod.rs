@@ -12,6 +12,7 @@
 //!   started with `--allow-insecure` (see [`crate::Server::bind`]); the setup
 //!   request itself is only accepted from loopback clients in that case.
 //! * Sessions and CSRF: [`session`]. Login rate limit: [`ratelimit`].
+//! * API tokens (`Authorization: Bearer wpg_...`, no CSRF): [`token`].
 //! * [`require`] is the middleware in front of the API; public paths:
 //!   [`is_public`].
 //! * Audit trail: `tracing` events with target `wpg::audit` (login, logout,
@@ -38,6 +39,7 @@ use crate::state::AppState;
 pub mod password;
 pub mod ratelimit;
 pub mod session;
+pub mod token;
 
 /// `tracing` target of audit events.
 pub const AUDIT: &str = "wpg::audit";
@@ -437,6 +439,44 @@ impl Auth {
         Ok(user)
     }
 
+    /// Authenticates a bearer token (see [`token`]). Failures count against the
+    /// login rate limit of the client address.
+    ///
+    /// # Errors
+    /// 429 `rate_limited`, 401 `unauthorized`.
+    pub fn bearer(&self, credential: &str, addr: ClientAddr) -> Result<Principal, ApiError> {
+        let ip = addr.ip();
+        let instant = std::time::Instant::now();
+        if let Err(wait) = self.inner.limiter.check(&ip, instant) {
+            tracing::warn!(target: AUDIT, ip = %ip, "token refused: rate limited");
+            return Err(rate_limited(wait.as_secs().max(1)));
+        }
+        let now = now_secs();
+        let found = if token::well_formed(credential) {
+            self.inner
+                .db
+                .token_by_hash(&token::hash(credential), now)
+                .map_err(ApiError::internal)?
+        } else {
+            None
+        };
+        let Some(t) = found else {
+            let lock = self.inner.limiter.failure(&ip, instant);
+            tracing::warn!(target: AUDIT, ip = %ip, locked_secs = lock.map(|d| d.as_secs()), "API token rejected");
+            return Err(unauthorized("auth-error-token-invalid"));
+        };
+        if t.last_used
+            .is_none_or(|l| now - l >= session::TOUCH_INTERVAL_SECS)
+        {
+            let _ = self.inner.db.touch_token(t.id, now);
+        }
+        Ok(Principal {
+            user: t.user.name,
+            role: t.user.role,
+            ip,
+        })
+    }
+
     /// Ends the session of a request (CSRF checked when it is live); returns the
     /// headers clearing the cookies.
     ///
@@ -545,15 +585,39 @@ pub async fn require(State(st): State<AppState>, mut req: Request, next: Next) -
     if auth.setup_required() {
         return setup_required().into_response();
     }
-    let Some(s) = auth.session(req.headers()) else {
-        return unauthorized("auth-error-unauthorized").into_response();
-    };
+    let addr = ClientAddr::of(req.extensions());
     let method = req.method().clone();
-    if is_mutating(&method) {
-        if let Err(e) = check_csrf(req.headers(), &s) {
-            return e.into_response();
+    let (principal, session) = if let Some(credential) = token::bearer(req.headers()) {
+        // a token: no CSRF (browsers never send the header by themselves)
+        let principal = match auth.bearer(credential, addr) {
+            Ok(p) => p,
+            Err(e) => return e.into_response(),
+        };
+        if path == "/api/tokens" || path.starts_with("/api/tokens/") {
+            return ApiError::new(
+                StatusCode::FORBIDDEN,
+                codes::FORBIDDEN,
+                "auth-error-token-session",
+            )
+            .into_response();
         }
-    }
+        (principal, None)
+    } else {
+        let Some(s) = auth.session(req.headers()) else {
+            return unauthorized("auth-error-unauthorized").into_response();
+        };
+        if is_mutating(&method) {
+            if let Err(e) = check_csrf(req.headers(), &s) {
+                return e.into_response();
+            }
+        }
+        let principal = Principal {
+            user: s.user.name.clone(),
+            role: s.user.role,
+            ip: addr.ip(),
+        };
+        (principal, Some(s))
+    };
     if (path == "/api/ws" || path == "/api/terminal/ws")
         && !st.dev
         && !same_origin(req.headers(), st.config.server.base_url.as_deref())
@@ -561,35 +625,25 @@ pub async fn require(State(st): State<AppState>, mut req: Request, next: Next) -
         return ApiError::new(StatusCode::FORBIDDEN, codes::FORBIDDEN, "auth-error-origin")
             .into_response();
     }
-    let addr = ClientAddr::of(req.extensions());
-    let principal = Principal {
-        user: s.user.name.clone(),
-        role: s.user.role,
-        ip: addr.ip(),
-    };
     req.extensions_mut().insert(principal.clone());
 
     // sliding expiry
     let now = now_secs();
-    let refresh = now - s.last_seen >= session::TOUCH_INTERVAL_SECS;
-    if refresh {
-        let _ = auth
-            .db()
-            .touch_session(&s.id, now, now.saturating_add(auth.ttl()));
-    }
-    let token = session::cookie(req.headers(), session::SESSION_COOKIE)
-        .unwrap_or_default()
-        .to_owned();
+    let refresh = session
+        .filter(|s| now - s.last_seen >= session::TOUCH_INTERVAL_SECS)
+        .map(|s| {
+            let _ = auth
+                .db()
+                .touch_session(&s.id, now, now.saturating_add(auth.ttl()));
+            let token = session::cookie(req.headers(), session::SESSION_COOKIE)
+                .unwrap_or_default()
+                .to_owned();
+            (token, s.csrf)
+        });
 
     let mut resp = next.run(req).await;
-    if refresh {
-        session::append_cookies(
-            resp.headers_mut(),
-            &token,
-            &s.csrf,
-            auth.ttl(),
-            auth.secure(),
-        );
+    if let Some((token, csrf)) = refresh {
+        session::append_cookies(resp.headers_mut(), &token, &csrf, auth.ttl(), auth.secure());
     }
     if is_mutating(&method) && path.starts_with("/api/jobs") {
         let action = match (method.as_str(), path.rsplit('/').next().unwrap_or("")) {

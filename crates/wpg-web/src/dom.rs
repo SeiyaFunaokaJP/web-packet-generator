@@ -93,6 +93,51 @@ pub(crate) fn focus_id(id: &str) {
     let _ = id;
 }
 
+/// Copies `text` to the clipboard (the async Clipboard API, or a hidden text
+/// area on plain HTTP where that API does not exist).
+pub(crate) fn copy_text(text: &str) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use wasm_bindgen::{JsCast, JsValue};
+        let Some(window) = web_sys::window() else {
+            return;
+        };
+        let clipboard = js_sys::Reflect::get(&window.navigator(), &"clipboard".into())
+            .ok()
+            .filter(|c| !c.is_undefined() && !c.is_null());
+        if let Some(c) = clipboard {
+            if let Ok(f) = js_sys::Reflect::get(&c, &"writeText".into()) {
+                if let Ok(f) = f.dyn_into::<js_sys::Function>() {
+                    let _ = f.call1(&c, &JsValue::from_str(text));
+                    return;
+                }
+            }
+        }
+        let Some(doc) = window.document() else {
+            return;
+        };
+        let Some(ta) = doc
+            .create_element("textarea")
+            .ok()
+            .and_then(|e| e.dyn_into::<web_sys::HtmlTextAreaElement>().ok())
+        else {
+            return;
+        };
+        ta.set_value(text);
+        let _ = ta.set_attribute("style", "position:fixed;left:-9999px;top:0");
+        if let Some(body) = doc.body() {
+            let _ = body.append_child(&ta);
+            ta.select();
+            if let Ok(hd) = doc.clone().dyn_into::<web_sys::HtmlDocument>() {
+                let _ = hd.exec_command("copy");
+            }
+            ta.remove();
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = text;
+}
+
 /// `ws://` / `wss://` URL of `path` on the current origin.
 pub(crate) fn ws_url(path: &str) -> String {
     #[cfg(target_arch = "wasm32")]

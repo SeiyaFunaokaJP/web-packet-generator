@@ -179,43 +179,11 @@ mod imp {
             .filter(|c| !c.is_undefined() && !c.is_null())
     }
 
-    /// Copies `text` (the async Clipboard API, or a hidden text area on plain
-    /// HTTP where that API does not exist).
-    fn clipboard_write(text: &str) {
-        if let Some(c) = clipboard() {
-            if let Ok(f) = Reflect::get(&c, &"writeText".into()) {
-                if let Ok(f) = f.dyn_into::<js_sys::Function>() {
-                    let _ = f.call1(&c, &JsValue::from_str(text));
-                    return;
-                }
-            }
-        }
-        let Some(doc) = web_sys::window().and_then(|w| w.document()) else {
-            return;
-        };
-        let Ok(ta) = doc.create_element("textarea") else {
-            return;
-        };
-        let Ok(ta) = ta.dyn_into::<web_sys::HtmlTextAreaElement>() else {
-            return;
-        };
-        ta.set_value(text);
-        let _ = ta.set_attribute("style", "position:fixed;left:-9999px;top:0");
-        if let Some(body) = doc.body() {
-            let _ = body.append_child(&ta);
-            ta.select();
-            if let Ok(hd) = doc.clone().dyn_into::<web_sys::HtmlDocument>() {
-                let _ = hd.exec_command("copy");
-            }
-            ta.remove();
-        }
-    }
-
     /// Copies the selection of tab `id`.
     pub(crate) fn copy_selection(id: u32) {
         if let Some(tab) = get(id) {
             if tab.term.has_selection() {
-                clipboard_write(&tab.term.get_selection());
+                crate::dom::copy_text(&tab.term.get_selection());
             }
         }
     }

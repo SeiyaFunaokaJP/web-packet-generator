@@ -56,8 +56,10 @@ enum Command {
     Bench(BenchArgs),
     /// Receive: counters, the first frames, pcapng output, signature verification.
     Capture(cmd::capture::CaptureArgs),
-    /// Configuration file tools (init, show, validate).
+    /// Configuration file tools (init, show, validate) and API tokens.
     Config(ConfigArgs),
+    /// Drive a running server with an API token (jobs, templates).
+    Remote(cmd::remote::RemoteArgs),
     /// Protocol tools (list, show, check user-defined protocol files).
     Protocols(cmd::protocols::ProtocolsArgs),
     /// Documentation tools for contributors (generate the reference pages).
@@ -167,6 +169,9 @@ pub(crate) enum ConfigAction {
         #[arg(long)]
         stdin: bool,
     },
+    /// API tokens for scripts and `wpg remote` (create, list, revoke), stored in
+    /// the server's database.
+    Token(cmd::token::TokenArgs),
 }
 
 /// Arguments of `wpg send`.
@@ -417,6 +422,7 @@ impl Command {
             Command::Bench(_) => "bench",
             Command::Capture(_) => "capture",
             Command::Config(_) => "config",
+            Command::Remote(_) => "remote",
             Command::Protocols(_) => "protocols",
             Command::Docs(_) => "docs",
         }
@@ -486,7 +492,8 @@ fn main() -> ExitCode {
         Command::Doctor(args) => cmd::doctor::run(&args),
         Command::Bench(args) => cmd::bench::run(args, &config.unwrap_or_default().tx),
         Command::Capture(args) => cmd::capture::run(args),
-        Command::Config(args) => cmd::config::run(args),
+        Command::Config(args) => cmd::config::run(args, cli.config.as_deref()),
+        Command::Remote(args) => cmd::remote::run(&args),
         Command::Protocols(args) => cmd::protocols::run(&args),
         Command::Docs(args) => cmd::docs::run(&args),
     }
@@ -610,6 +617,40 @@ mod tests {
             &["wpg", "config", "init", "--path", "w.toml", "--force"],
             &["wpg", "config", "show", "--config", "w.toml"],
             &["wpg", "config", "validate"],
+            &[
+                "wpg",
+                "config",
+                "token",
+                "create",
+                "ci",
+                "--expires-days",
+                "30",
+                "--data-dir",
+                "d",
+            ],
+            &["wpg", "config", "token", "list", "--json"],
+            &["wpg", "config", "token", "revoke", "3"],
+            &[
+                "wpg",
+                "remote",
+                "--server",
+                "https://h:8443",
+                "--insecure",
+                "jobs",
+                "start",
+                "t.wpg.yaml",
+                "--var",
+                "a=1",
+                "--rate",
+                "1kpps",
+                "--count",
+                "5",
+                "-i",
+                "eth0",
+                "--json",
+            ],
+            &["wpg", "remote", "jobs", "wait", "abc", "--timeout", "5"],
+            &["wpg", "remote", "templates", "push", "t.wpg.yaml"],
             &["wpg", "protocols", "list", "--json"],
             &["wpg", "protocols", "show", "udp", "--json"],
             &["wpg", "protocols", "check", "p.d", "x.yaml"],

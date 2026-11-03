@@ -4,10 +4,12 @@
 use leptos::prelude::*;
 
 use crate::api;
+use crate::api::tokens::TokenInfo;
 use crate::app::use_ui;
 use crate::auth::{use_auth, AuthPhase};
 use crate::components::{
-    use_toasts, ErrorBox, Icon, IconName, Loading, PageHeader, BTN, CARD, TD, TH,
+    use_toasts, Confirm, ErrorBox, Icon, IconName, Loading, PageHeader, BTN, BTN_GHOST,
+    BTN_PRIMARY, CARD, INPUT, LABEL, TD, TH,
 };
 use crate::i18n::{locale_label_key, tr, use_i18n};
 use crate::prefs::Theme;
@@ -145,6 +147,10 @@ pub(crate) fn SettingsPage() -> impl IntoView {
             <UserProtocols />
         </div>
 
+        <Show when=move || matches!(auth.phase.get(), AuthPhase::Authenticated { .. })>
+            <ApiTokens />
+        </Show>
+
         <section id="doctor" aria-labelledby="set-doctor" class="mt-6">
             <div class="mb-3 flex items-center justify-between">
                 <h2 id="set-doctor" class="font-semibold">{tr("ui-dash-doctor")}</h2>
@@ -243,6 +249,210 @@ fn UserProtocols() -> impl IntoView {
                 <Icon name=IconName::Refresh class="h-4 w-4" />
                 {tr("ui-set-protocols-reload")}
             </button>
+        </section>
+    }
+}
+
+/// Expiry choices of a new token, in days (`None`: never).
+const TOKEN_EXPIRY: [Option<u32>; 4] = [Some(30), Some(90), Some(365), None];
+
+/// API tokens of the logged-in user: create (the secret is shown once), list,
+/// revoke.
+#[component]
+fn ApiTokens() -> impl IntoView {
+    let i18n = use_i18n();
+    let toasts = use_toasts();
+    let rev = RwSignal::new(0u32);
+    let list = LocalResource::new(move || {
+        rev.track();
+        api::tokens::tokens()
+    });
+    let name = RwSignal::new(String::new());
+    let expiry = RwSignal::new(Some(90u32));
+    let busy = RwSignal::new(false);
+    let secret = RwSignal::new(None::<String>);
+    let revoking = RwSignal::new(None::<TokenInfo>);
+
+    let create = move |ev: leptos::ev::SubmitEvent| {
+        ev.prevent_default();
+        let n = name.get_untracked();
+        if n.trim().is_empty() {
+            return;
+        }
+        busy.set(true);
+        leptos::task::spawn_local(async move {
+            match api::tokens::create_token(n.trim(), expiry.get_untracked()).await {
+                Ok(c) => {
+                    secret.set(Some(c.secret));
+                    name.set(String::new());
+                    rev.update(|r| *r += 1);
+                }
+                Err(e) => toasts.error(e.message(i18n)),
+            }
+            busy.set(false);
+        });
+    };
+    let revoke = move || {
+        let Some(t) = revoking.get_untracked() else {
+            return;
+        };
+        busy.set(true);
+        leptos::task::spawn_local(async move {
+            match api::tokens::revoke_token(t.id).await {
+                Ok(()) => {
+                    toasts.ok(i18n.t("ui-set-token-revoked"));
+                    rev.update(|r| *r += 1);
+                }
+                Err(e) => toasts.error(e.message(i18n)),
+            }
+            revoking.set(None);
+            busy.set(false);
+        });
+    };
+    let when = move |secs: Option<i64>| match secs.and_then(|s| u64::try_from(s).ok()) {
+        Some(s) => crate::fmt::datetime(i18n.locale.get(), s.saturating_mul(1000)),
+        None => i18n.t("ui-set-token-never"),
+    };
+
+    view! {
+        <section aria-labelledby="set-tokens" class=format!("{CARD} mt-6 space-y-4")>
+            <div>
+                <h2 id="set-tokens" class="font-semibold">{tr("ui-set-tokens")}</h2>
+                <p class="text-sm text-slate-600 dark:text-slate-400">{tr("ui-set-tokens-intro")}</p>
+            </div>
+            <form class="flex flex-wrap items-end gap-3" on:submit=create>
+                <div class="min-w-48 flex-1">
+                    <label for="token-name" class=LABEL>{tr("ui-set-token-name")}</label>
+                    <input
+                        id="token-name"
+                        type="text"
+                        class=INPUT
+                        maxlength="100"
+                        required
+                        prop:value=move || name.get()
+                        on:input=move |ev| name.set(event_target_value(&ev))
+                    />
+                </div>
+                <div>
+                    <label for="token-expiry" class=LABEL>{tr("ui-set-token-expires")}</label>
+                    <select
+                        id="token-expiry"
+                        class=INPUT
+                        on:change=move |ev| expiry.set(event_target_value(&ev).parse().ok())
+                    >
+                        {TOKEN_EXPIRY
+                            .into_iter()
+                            .map(|d| {
+                                let value = d.map(|d| d.to_string()).unwrap_or_default();
+                                view! {
+                                    <option value=value selected=move || expiry.get() == d>
+                                        {move || match d {
+                                            Some(n) => i18n.ta("ui-set-token-days", &[("count", n.to_string())]),
+                                            None => i18n.t("ui-set-token-never"),
+                                        }}
+                                    </option>
+                                }
+                            })
+                            .collect_view()}
+                    </select>
+                </div>
+                <button type="submit" class=BTN_PRIMARY disabled=move || busy.get() || name.get().trim().is_empty()>
+                    <Icon name=IconName::Plus class="h-4 w-4" />
+                    {tr("ui-set-token-create")}
+                </button>
+            </form>
+
+            {move || secret.get().map(|s| {
+                let copy = s.clone();
+                view! {
+                    <div role="status" class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950">
+                        <p class="text-sm font-medium">{tr("ui-set-token-secret")}</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <code class="flex-1 rounded bg-white px-2 py-1 font-mono text-xs break-all dark:bg-slate-900">{s}</code>
+                            <button
+                                type="button"
+                                class=BTN
+                                on:click=move |_| {
+                                    crate::dom::copy_text(&copy);
+                                    toasts.ok(i18n.t("ui-set-token-copied"));
+                                }
+                            >
+                                <Icon name=IconName::Copy class="h-4 w-4" />
+                                {tr("ui-set-token-copy")}
+                            </button>
+                            <button type="button" class=BTN on:click=move |_| secret.set(None)>
+                                {tr("ui-set-token-done")}
+                            </button>
+                        </div>
+                    </div>
+                }
+            })}
+
+            {move || match list.get() {
+                None => view! { <Loading /> }.into_any(),
+                Some(Err(e)) => view! { <ErrorBox error=e /> }.into_any(),
+                Some(Ok(tokens)) if tokens.is_empty() => view! {
+                    <p class="text-sm text-slate-500">{tr("ui-set-token-none")}</p>
+                }.into_any(),
+                Some(Ok(tokens)) => view! {
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                            <caption class="sr-only">{tr("ui-set-tokens")}</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col" class=TH>{tr("ui-set-token-name")}</th>
+                                    <th scope="col" class=TH>{tr("ui-set-token-col-token")}</th>
+                                    <th scope="col" class=TH>{tr("ui-set-token-col-user")}</th>
+                                    <th scope="col" class=TH>{tr("ui-set-token-col-created")}</th>
+                                    <th scope="col" class=TH>{tr("ui-set-token-col-used")}</th>
+                                    <th scope="col" class=TH>{tr("ui-set-token-expires")}</th>
+                                    <th scope="col" class=TH><span class="sr-only">{tr("ui-set-token-revoke")}</span></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                {tokens.into_iter().map(|t| {
+                                    let (created, used, expires) = (t.created, t.last_used, t.expires);
+                                    let label = t.name.clone();
+                                    let row = t.clone();
+                                    view! {
+                                        <tr>
+                                            <td class=TD>{t.name}</td>
+                                            <td class=format!("{TD} font-mono text-xs")>{format!("{}…", t.prefix)}</td>
+                                            <td class=TD>{t.user}</td>
+                                            <td class=format!("{TD} whitespace-nowrap")>{move || when(Some(created))}</td>
+                                            <td class=format!("{TD} whitespace-nowrap")>{move || when(used)}</td>
+                                            <td class=format!("{TD} whitespace-nowrap")>{move || when(expires)}</td>
+                                            <td class=format!("{TD} text-right")>
+                                                <button
+                                                    type="button"
+                                                    class=BTN_GHOST
+                                                    aria-label=move || i18n.ta("ui-set-token-revoke-named", &[("name", label.clone())])
+                                                    on:click=move |_| revoking.set(Some(row.clone()))
+                                                >
+                                                    <Icon name=IconName::Trash class="h-4 w-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect_view()}
+                            </tbody>
+                        </table>
+                    </div>
+                }.into_any(),
+            }}
+
+            <Show when=move || revoking.get().is_some()>
+                <Confirm
+                    title=Signal::derive(move || i18n.ta("ui-set-token-revoke-title",&[("name", revoking.get().map(|t| t.name).unwrap_or_default())]))
+                    confirm_label=tr("ui-set-token-revoke")
+                    danger=true
+                    busy=busy
+                    on_confirm=move || revoke()
+                    on_cancel=move || revoking.set(None)
+                >
+                    <p>{tr("ui-set-token-revoke-body")}</p>
+                </Confirm>
+            </Show>
         </section>
     }
 }
