@@ -38,6 +38,8 @@ Npcap が必要です (インストールモードは問いません。wpg が `
 | `kernel.tpacket_v3` | warn | カーネル 3.2 以降。なければ afpacket は `sendmmsg` にフォールバック |
 | `hugepages` | warn | Hugepages の設定。DPDK バックエンドでのみ必要 |
 | `npcap` | fail / warn (Windows のみ) | Npcap が導入され、`wpcap.dll` が `System32\Npcap` か `System32` にあること。他の OS では skip |
-| `pcap_lib` | warn | libpcap が見つかること (`pcap` バックエンドで必要)。Windows では skip |
+| `backend.pcap` | fail (Windows、macOS) | `pcap` バックエンドが組み込まれていること。Windows と macOS で送信できるのはこのバックエンドだけ。Linux では skip |
+| `pcap_lib` | warn | libpcap が見つかること (`pcap` バックエンドで必要)。Windows と、バックエンドを組み込んでいないときは skip |
+| `webui.embedded` | warn | このバイナリに Web UI が組み込まれていること |
 
 各チェックの結果は `ok`、`warn`、`fail`、`skip` (この OS では対象外) のいずれかです。

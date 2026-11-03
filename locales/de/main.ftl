@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## Server / API
 health-ok = Dienst ist betriebsbereit
-server-placeholder-ui = Die Web-UI wurde noch nicht gebaut. Führen Sie `trunk build` in crates/wpg-web aus.
+server-placeholder-ui = Die Web-UI wurde noch nicht gebaut. Führen Sie `trunk build` in crates/wpg-web aus und bauen Sie wpg danach neu.
 
 ## Fehler
 error-not-implemented = `{ $command }` ist noch nicht implementiert.
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Mit dem Npcap SDK neu bauen oder ein Release-Build ver
 doctor-pcaplib-ok = libpcap ist verfügbar
 doctor-pcaplib-missing = libpcap wurde nicht gefunden; das pcap-Backend kann nicht verwendet werden
 doctor-fix-pcaplib = Installieren Sie libpcap: { $hint }
+# Eingebettete Web-UI und das pcap-Backend außerhalb von Windows (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web-UI          nicht enthalten: `trunk build` in crates/wpg-web ausführen, dann wpg neu bauen
+doctor-webui-ok = Die Web-UI ist enthalten
+doctor-webui-missing = Die Web-UI ist nicht enthalten; wpg serve zeigt eine Platzhalterseite
+doctor-fix-webui = Bauen Sie wpg mit der Web-UI neu: { $hint }
+doctor-pcap-backend-ok-macos = Dieses wpg enthält das pcap-Backend
+doctor-pcap-backend-missing-macos = Dieses wpg wurde ohne das pcap-Backend gebaut und kann unter macOS nicht senden
+doctor-fix-pcap-backend-macos = Bauen Sie wpg mit dem pcap-Backend neu: { $hint }
+doctor-pcaplib-unused = Nicht nötig: Dieses wpg wurde ohne das pcap-Backend gebaut
 
 ## wpg template lint (wpg-template `LintIssue`-Schlüssel)
 lint-level-error = Fehler

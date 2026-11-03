@@ -5,7 +5,7 @@ app-name = Web Packet Generator
 
 ## Server / API
 health-ok = サービスは正常です
-server-placeholder-ui = Web UI はまだビルドされていません。crates/wpg-web で `trunk build` を実行してください。
+server-placeholder-ui = Web UI はまだビルドされていません。crates/wpg-web で `trunk build` を実行してから、wpg をビルドし直してください。
 
 ## Errors
 error-not-implemented = `{ $command }` はまだ実装されていません。
@@ -192,6 +192,15 @@ doctor-fix-pcap-backend = Npcap SDK を用意して再ビルドするか、リ�
 doctor-pcaplib-ok = libpcap を利用できます
 doctor-pcaplib-missing = libpcap が見つかりません。pcap バックエンドは利用できません
 doctor-fix-pcaplib = libpcap をインストールしてください: { $hint }
+# Web UI の組み込みと Windows 以外の pcap バックエンド (wpg serve / wpg doctor)
+serve-banner-webui-missing = Web UI           未組み込み: crates/wpg-web で `trunk build` を実行してから、wpg をビルドし直してください
+doctor-webui-ok = Web UI が組み込まれています
+doctor-webui-missing = Web UI が組み込まれていません。wpg serve は仮のページを表示します
+doctor-fix-webui = Web UI を含めて wpg をビルドし直してください: { $hint }
+doctor-pcap-backend-ok-macos = この wpg には pcap バックエンドが組み込まれています
+doctor-pcap-backend-missing-macos = この wpg は pcap バックエンドなしでビルドされているため、macOS では送信できません
+doctor-fix-pcap-backend-macos = pcap バックエンドを含めてビルドし直してください: { $hint }
+doctor-pcaplib-unused = 不要です (この wpg は pcap バックエンドなしでビルドされています)
 
 ## wpg template lint (wpg-template `LintIssue` keys)
 lint-level-error = エラー

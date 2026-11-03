@@ -11,7 +11,7 @@ use crate::cmd::cli_locale;
 /// Runs `wpg doctor`. Exit status 1 if any check failed.
 pub(crate) fn run(args: &crate::DoctorArgs) -> ExitCode {
     let locale = cli_locale();
-    let report = doctor::run(cfg!(feature = "pcap"));
+    let report = report();
     if args.json {
         match serde_json::to_string_pretty(&to_json(locale, &report)) {
             Ok(s) => println!("{s}"),
@@ -28,6 +28,16 @@ pub(crate) fn run(args: &crate::DoctorArgs) -> ExitCode {
     } else {
         ExitCode::SUCCESS
     }
+}
+
+/// The `wpg-sys` checks plus the ones only this binary can answer (the embedded web UI).
+fn report() -> Report {
+    let mut report = doctor::run(cfg!(feature = "pcap"));
+    report.checks.push(doctor::check_web_ui(
+        wpg_server::web_ui_embedded(),
+        doctor::Os::current(),
+    ));
+    report
 }
 
 fn marker(status: Status) -> &'static str {
@@ -105,7 +115,7 @@ mod tests {
     fn every_summary_and_fix_key_is_translated() {
         // Enumerate keys by running the real checks plus the fixed key lists that depend
         // on the host (the ftl parity test covers en/ja equality).
-        let report = doctor::run(cfg!(feature = "pcap"));
+        let report = report();
         for c in &report.checks {
             for locale in Locale::ALL {
                 assert_ne!(t(locale, c.summary_key), c.summary_key, "{}", c.summary_key);
@@ -139,6 +149,13 @@ mod tests {
             "doctor-pcap-backend-missing",
             "doctor-pcaplib-ok",
             "doctor-pcaplib-missing",
+            "doctor-pcaplib-unused",
+            "doctor-pcap-backend-ok-macos",
+            "doctor-pcap-backend-missing-macos",
+            "doctor-fix-pcap-backend-macos",
+            "doctor-webui-ok",
+            "doctor-webui-missing",
+            "doctor-fix-webui",
             "doctor-skip",
             "doctor-fix-caps",
             "doctor-fix-iface",
@@ -155,9 +172,10 @@ mod tests {
 
     #[test]
     fn render_and_json() {
-        let report = doctor::run(cfg!(feature = "pcap"));
+        let report = report();
         let text = render(Locale::En, &report);
         assert!(text.contains("[caps.raw_socket]"));
+        assert!(text.contains("[webui.embedded]"));
         let j = to_json(Locale::Ja, &report);
         assert_eq!(j["locale"], "ja");
         assert!(j["checks"][0]["summary"].is_string());

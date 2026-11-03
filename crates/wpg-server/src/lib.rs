@@ -64,10 +64,19 @@ pub const DEV_ORIGINS: &[&str] = &["http://localhost:8081", "http://127.0.0.1:80
 ///
 /// `allow_missing` keeps the server buildable before the front-end has ever been built
 /// (fresh clone, CI lint jobs); a built-in placeholder page is served instead.
+/// `build.rs` makes Cargo rebuild this crate whenever `dist/` changes. In debug builds
+/// rust-embed reads the folder from disk at run time instead.
 #[derive(RustEmbed)]
 #[folder = "../wpg-web/dist"]
 #[allow_missing = true]
 struct WebAssets;
+
+/// Whether this binary serves the web UI (`index.html` was embedded), rather than the
+/// placeholder page shown when the front-end was not built before compiling wpg.
+#[must_use]
+pub fn web_ui_embedded() -> bool {
+    WebAssets::get("index.html").is_some()
+}
 
 /// Installs the global `tracing` subscriber from `cfg` (console / file, pretty /
 /// JSON, `RUST_LOG` aware) with the WebSocket log sink attached. Keep the guard
@@ -351,4 +360,16 @@ fn placeholder_page(locale: Locale) -> Html<String> {
         title = t(locale, "app-name"),
         msg = t(locale, "server-placeholder-ui"),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn web_ui_embedded_matches_dist() {
+        // build.rs creates dist/ (possibly empty); the UI counts as embedded only with
+        // an index.html in it.
+        let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../wpg-web/dist");
+        assert!(dist.is_dir());
+        assert_eq!(super::web_ui_embedded(), dist.join("index.html").is_file());
+    }
 }
