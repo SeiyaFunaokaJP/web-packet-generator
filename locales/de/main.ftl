@@ -236,6 +236,11 @@ render-unbounded = Der Stream ist unbegrenzt; geben Sie --count N an.
 render-json-stdout = --json kann nicht mit -o - kombiniert werden (beide schreiben auf die Standardausgabe).
 send-rate-over-limit = Die Rate { $rate } überschreitet das konfigurierte Limit tx.max_rate = { $max }.
 cli-bad-var = Ungültiges --var `{ $value }`; erwartet wird NAME=VALUE.
+cli-bad-override = Ungültiges { $flag } `{ $value }`; erwartet wird LAYER.FIELD=VALUE.
+cli-bad-gen = Ungültiges --gen `{ $value }`: { $error }
+cli-vars-file-error = Die Variablendatei { $value } kann nicht gelesen werden: { $error }
+lint-override-layer = Die Vorlage hat keine Schicht `{ $value }`. Schichten: { $protocols }
+lint-override-field = Protokoll `{ $protocol }` hat kein Feld `{ $field }`. Kandidaten: { $fields }
 
 ## wpg send / wpg bench (Fortschritt, Zusammenfassung, Fehler)
 tx-progress = [{ $t } s] { $packets } Pkt.  { $pps }pps  { $bps }bps  verworfen { $dropped }

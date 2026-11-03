@@ -118,6 +118,35 @@ Unbounded generators (a `counter` without `wrap`) need a `count` and cannot be i
 
 Command-line options of `wpg send` override these.
 
+## Overriding values from the command line
+
+`wpg send`, `wpg render`, `wpg template show` and `wpg bench --template` change a template for one run without editing the file:
+
+| Option | Effect |
+|---|---|
+| `--vars-file FILE` | Variable values from a YAML or JSON map (`dst_ip: 10.1.2.3`). |
+| `--var NAME=VALUE` | One variable value (repeatable). Wins over `--vars-file`, which wins over the template's `default`. |
+| `--set LAYER.FIELD=VALUE` | Fixes a field to a value, written as in `fields:`. The field becomes Manual and loses any generator. |
+| `--gen LAYER.FIELD=GEN` | Gives a field a generator and drops its fixed value. |
+
+`LAYER` is a protocol id (its first layer: `ipv4`), the n-th layer of a protocol counting from 0 (`ipv4[1]` is the inner header of IP-in-IP) or a 0-based layer index (`2`). `FIELD` is a field name from the [protocol reference](protocols.md). An unknown layer or field stops with exit status 3 and lists the template's layers or the closest field names. Every variable in `--vars-file` must be declared in the template, as with `--var`.
+
+`GEN` is one of:
+
+| Shorthand | Generator |
+|---|---|
+| `range:A..B`, `range:A..B/STEP` | `range` from `A` to `B` inclusive |
+| `list:a,b,c` | `list` |
+| `random`, `random:MIN..MAX` | `random` |
+| `counter`, `counter:START`, `counter:START/STEP` | `counter` |
+| `expr:EXPR` | `expr` |
+| anything else | the shorthand of `generators:`: `10.0.0.1-10.0.0.9`, `10.0.0.0/24`, `1,5,9`, `00:11:22:*` |
+
+```console
+$ wpg render templates/examples/eth-ipv4-udp-range.wpg.yaml -o out.pcapng --count 100 \
+    --vars-file lab.yaml --set ipv4.ttl=1 --gen udp.src_port=range:1024..1123
+```
+
 ## Payload layers
 
 `payload` is not a wire protocol; its fields control generation: `mode` (`fixed`, `pattern`, `random`, `counter`), `data`, `length`, `seed`, and for `counter` the `counter_offset`, `counter_width` (`u32` or `u64`) and `counter_value` (usually fed by a `counter` generator). `raw` places bytes as given.

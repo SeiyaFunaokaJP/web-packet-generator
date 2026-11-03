@@ -44,7 +44,7 @@ pub(crate) fn run(args: &crate::RenderArgs) -> ExitCode {
         eprintln!("{}", t(locale, "render-json-stdout"));
         return ExitCode::from(2);
     }
-    let (_, compiled) = match load_compiled(&args.template, &args.vars, locale) {
+    let (_, compiled) = match load_compiled(&args.template, &args.inputs, locale) {
         Ok(v) => v,
         Err(code) => return code,
     };

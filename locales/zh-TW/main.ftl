@@ -236,6 +236,11 @@ render-unbounded = 串流沒有上限；請指定 --count N。
 render-json-stdout = --json 不能與 -o - 同時使用（兩者都寫入標準輸出）。
 send-rate-over-limit = 速率 { $rate } 超過了設定的上限 tx.max_rate = { $max }。
 cli-bad-var = 無效的 --var `{ $value }`；格式應為 NAME=VALUE。
+cli-bad-override = 無效的 { $flag } `{ $value }`；格式應為 LAYER.FIELD=VALUE。
+cli-bad-gen = 無效的 --gen `{ $value }`：{ $error }
+cli-vars-file-error = 無法讀取變數檔 { $value }：{ $error }
+lint-override-layer = 範本中沒有層 `{ $value }`。現有的層：{ $protocols }
+lint-override-field = 協定 `{ $protocol }` 沒有欄位 `{ $field }`。候選：{ $fields }
 
 ## wpg send / wpg bench (進度、摘要、錯誤)
 tx-progress = [{ $t } 秒] { $packets } 個封包  { $pps }pps  { $bps }bps  丟棄 { $dropped }

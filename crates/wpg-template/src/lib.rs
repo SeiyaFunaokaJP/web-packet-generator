@@ -38,6 +38,7 @@ mod compile;
 pub mod import;
 mod input;
 mod lint;
+pub mod overrides;
 mod pcapng;
 pub mod pcapread;
 pub mod render;
@@ -52,6 +53,7 @@ pub use import::{
 };
 pub use input::{parse_text, FieldInput};
 pub use lint::{lint, LintIssue, LintLevel};
+pub use overrides::{apply_field_overrides, FieldOverride};
 pub use pcapng::PcapngWriter;
 
 /// Current template schema version written by this crate.

@@ -236,6 +236,11 @@ render-unbounded = El flujo no tiene límite; indique --count N.
 render-json-stdout = --json no se puede combinar con -o - (ambos escriben en la salida estándar).
 send-rate-over-limit = La tasa { $rate } supera el límite configurado tx.max_rate = { $max }.
 cli-bad-var = --var `{ $value }` no válido; se esperaba NOMBRE=VALOR.
+cli-bad-override = { $flag } `{ $value }` no válido; se esperaba CAPA.CAMPO=VALOR.
+cli-bad-gen = --gen `{ $value }` no válido: { $error }
+cli-vars-file-error = No se puede leer el archivo de variables { $value }: { $error }
+lint-override-layer = La plantilla no tiene la capa `{ $value }`. Capas: { $protocols }
+lint-override-field = El protocolo `{ $protocol }` no tiene el campo `{ $field }`. Candidatos: { $fields }
 
 ## wpg send / wpg bench (progreso, resumen, errores)
 tx-progress = [{ $t } s] { $packets } paq.  { $pps }pps  { $bps }bps  descartados { $dropped }
