@@ -1,5 +1,5 @@
-//! `/jobs`: live and finished jobs; `?new=1|<template id>` opens the form,
-//! `?job=<id>` the detail drawer.
+//! `/jobs`: live and finished jobs; `?new=1|<template id>` opens the form
+//! (`&from=<job id>` seeds it with that job's settings), `?job=<id>` the detail drawer.
 
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_query_map};
@@ -7,7 +7,7 @@ use leptos_router::NavigateOptions;
 
 use crate::api::{self, JobInfo};
 use crate::components::{
-    Empty, ErrorBox, Icon, IconName, Loading, PageHeader, StateBadge, ViewOnlyNote, BTN_PRIMARY,
+    ErrorBox, Icon, IconName, Loading, Modal, PageHeader, StateBadge, ViewOnlyNote, BTN_PRIMARY,
     TD, TD_NUM, TH,
 };
 use crate::fmt;
@@ -42,6 +42,7 @@ pub(crate) fn JobsPage() -> impl IntoView {
 
     let selected = move || query.with(|q| q.get("job"));
     let new_form = move || query.with(|q| q.get("new"));
+    let from_job = move || query.with(|q| q.get("from")).filter(|s| !s.is_empty());
     let go = {
         let navigate = navigate.clone();
         move |to: String| navigate(&to, NavigateOptions::default())
@@ -90,26 +91,73 @@ pub(crate) fn JobsPage() -> impl IntoView {
         {move || match jobs.get() {
             None => view! { <Loading /> }.into_any(),
             Some(Err(e)) => view! { <ErrorBox error=e /> }.into_any(),
-            Some(Ok(list)) if list.is_empty() => view! { <Empty text=tr("ui-jobs-empty") /> }.into_any(),
+            Some(Ok(list)) if list.is_empty() => {
+                let key = if tab.get() == Tab::History { "ui-jobs-empty-history" } else { "ui-jobs-empty" };
+                view! {
+                    <div class="flex flex-col items-center gap-3 rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700">
+                        <p>{tr(key)}</p>
+                        <a href="/jobs?new=1" class=format!("{BTN_PRIMARY} max-md:hidden")>
+                            <Icon name=IconName::Plus class="h-4 w-4" />
+                            {tr("ui-jobs-new")}
+                        </a>
+                    </div>
+                }
+                    .into_any()
+            }
             Some(Ok(list)) => view! { <JobTable list=list on_open=open_job /> }.into_any(),
         }}
         {move || {
             new_form()
                 .map(|v| {
-                    let initial = (v != "1" && !v.is_empty()).then_some(v);
-                    view! {
-                        <JobForm
-                            initial_template=initial
-                            on_close=close
-                            on_created=move |id: String| {
-                                live.jobs_rev.update(|r| *r += 1);
-                                open_job.run(id);
+                    let on_created = Callback::new(move |id: String| {
+                        live.jobs_rev.update(|r| *r += 1);
+                        open_job.run(id);
+                    });
+                    match from_job() {
+                        Some(from) => view! {
+                            <JobFormFrom id=from on_close=close on_created=on_created />
+                        }
+                            .into_any(),
+                        None => {
+                            let initial = (v != "1" && !v.is_empty()).then_some(v);
+                            view! {
+                                <JobForm initial_template=initial on_close=close on_created=on_created />
                             }
-                        />
+                                .into_any()
+                        }
                     }
                 })
         }}
         {move || selected().map(|id| view! { <JobDetail id=id on_close=close /> })}
+    }
+}
+
+/// The form seeded with job `id`'s settings ("Edit as new job").
+#[component]
+fn JobFormFrom(
+    id: String,
+    #[prop(into)] on_close: Callback<()>,
+    #[prop(into)] on_created: Callback<String>,
+) -> impl IntoView {
+    let id = StoredValue::new(id);
+    let job = LocalResource::new(move || {
+        let id = id.get_value();
+        async move { api::job(&id).await }
+    });
+    move || {
+        match job.get() {
+        None => view! { <Loading /> }.into_any(),
+        Some(Err(e)) => view! {
+            <Modal title=tr("ui-jobs-new") on_close=on_close>
+                <ErrorBox error=e />
+            </Modal>
+        }
+        .into_any(),
+        Some(Ok(j)) => view! {
+            <JobForm initial_template=None initial_spec=j.spec on_close=on_close on_created=on_created />
+        }
+        .into_any(),
+    }
     }
 }
 
