@@ -11,6 +11,7 @@ use crate::components::{
 };
 use crate::fmt;
 use crate::i18n::{tr, use_i18n, I18n};
+use crate::pages::job_vars::{vars_ok, vars_to_send, VarFields, VarValues};
 use crate::prefs;
 use crate::validate::{self, RateKind};
 
@@ -114,6 +115,10 @@ struct StreamRow {
     key: u32,
     template: RwSignal<String>,
     weight: RwSignal<String>,
+    /// Variables declared by the chosen template.
+    var_defs: RwSignal<Vec<wpg_template::Variable>>,
+    /// Values entered for them (seeded from the base stream).
+    vars: RwSignal<VarValues>,
     /// The stream this row was seeded from (inline template, variables).
     base: StoredValue<JobStream>,
 }
@@ -125,6 +130,8 @@ impl StreamRow {
             key,
             template: RwSignal::new(base.template_id.clone().unwrap_or_default()),
             weight: RwSignal::new(weight.to_string()),
+            var_defs: RwSignal::new(Vec::new()),
+            vars: RwSignal::new(base.vars.clone()),
             base: StoredValue::new(base),
         }
     }
@@ -145,12 +152,8 @@ impl StreamRow {
         if self.is_inline() {
             return JobStream { weight, ..base };
         }
-        // Variables belong to the template they were set for.
-        let vars = if template_id == base.template_id {
-            base.vars
-        } else {
-            Default::default()
-        };
+        // Values are cleared when the template changes.
+        let vars = vars_to_send(&self.vars.get_untracked());
         JobStream {
             template_id,
             template: None,
@@ -339,6 +342,11 @@ pub(crate) fn JobForm(
                 .any(|r| validate::parse_positive(&r.weight.get()).is_err())
             {
                 Err("ui-jobs-bad-weight")
+            } else if s
+                .iter()
+                .any(|r| !r.is_inline() && !r.var_defs.with(|d| r.vars.with(|v| vars_ok(d, v))))
+            {
+                Err("ui-jobs-bad-vars")
             } else {
                 Ok(())
             }
@@ -506,7 +514,10 @@ pub(crate) fn JobForm(
                                                     <select
                                                         id=tid
                                                         class=INPUT
-                                                        on:change=move |ev| row.template.set(event_target_value(&ev))
+                                                        on:change=move |ev| {
+                                                            row.vars.set(VarValues::new());
+                                                            row.template.set(event_target_value(&ev));
+                                                        }
                                                     >
                                                         <option value="" selected=move || row.template.with(String::is_empty)>
                                                             {tr("ui-jobs-choose-template")}
@@ -537,7 +548,17 @@ pub(crate) fn JobForm(
                                                 }
                                                     .into_any()
                                             };
+                                            let var_fields = (!row.is_inline()).then(|| view! {
+                                                <VarFields
+                                                    id_prefix=format!("stream-var-{}", row.key)
+                                                    template=row.template
+                                                    defs=row.var_defs
+                                                    values=row.vars
+                                                    submitted=submitted
+                                                />
+                                            });
                                             view! {
+                                                <div>
                                                 <div class="flex flex-wrap items-end gap-2">
                                                     <div class="min-w-48 flex-1">{picker}</div>
                                                     <Show when=move || { streams.with(Vec::len) > 1 && mix.get() == "weighted" }>
@@ -566,6 +587,8 @@ pub(crate) fn JobForm(
                                                             <Icon name=IconName::Trash class="h-4 w-4" />
                                                         </button>
                                                     </Show>
+                                                </div>
+                                                {var_fields}
                                                 </div>
                                             }
                                         }

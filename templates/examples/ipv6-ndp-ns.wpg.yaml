@@ -10,6 +10,7 @@ meta:
 
 variables:
   - name: target
+    type: ipv6
     default: fe80::1
     description: Address being resolved (the multicast addresses below match fe80::1)
 

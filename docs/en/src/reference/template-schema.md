@@ -26,6 +26,24 @@ tx: { ... }                # optional
 
 Template arguments. Each entry has `name`, optional `default` (string, number or bool) and `description`. Use `${name}` anywhere inside a field value or generator. Override at run time with `--var name=value` (`wpg send`, `wpg render`), or in the GUI. A variable with no default and no override is an error, and so is a `${…}` that is not declared. Declared but unused variables give a warning.
 
+Optional keys constrain the value. Without them any text is accepted:
+
+| Key | Meaning |
+|---|---|
+| `type` | `uint`, `int`, `bool`, `string`, `ipv4`, `ipv6`, `mac` or `bytes`; values use the same notation as fields (`0x0800`, `0200.0000.0001`) |
+| `choices` | the allowed values |
+| `min`, `max` | inclusive range, for `uint` and `int` |
+| `required` | a value must be given at run time; the variable has no `default` |
+
+```yaml
+variables:
+  - { name: vlan_id, type: uint, min: 1, max: 4094, default: 100 }
+  - { name: target, type: ipv4, required: true }
+  - { name: proto, type: uint, choices: [6, 17], default: 17 }
+```
+
+`wpg template lint` checks the default and the choices. A run-time value that does not fit (`--var`, or `vars` in the job and render API) is a template error that names the variable and what was expected: the CLI exits with status 3 and the server answers 422 `invalid_template`. A `bool` accepts `true`, `false`, `1` and `0` and is substituted as `1` or `0`. The job form in the GUI shows a matching input for each variable.
+
 ## `layers`
 
 Each entry is `protocol` (an id from the catalog, see the [Protocol reference](protocols.md)), `fields` and `generators`.
@@ -371,6 +389,23 @@ How the stream is transmitted.
 | `duration_secs` | `number` \| `null` |   | Duration limit in seconds. |
 | `rate` | `string` \| `null` |   | Rate in human notation: `1000pps`, `1Mpps`, `10Gbps`, `50%`. |
 
+<a id="schema-vartype"></a>
+
+### `VarType`
+
+Value type of a template variable (the field-type names of the protocol catalog).
+
+| Value | Description |
+|---|---|
+| `"uint"` | Unsigned integer: `64`, `0x0800`, `0b101`. |
+| `"int"` | Signed integer: `-1`, `+5`, `0x10`. |
+| `"bool"` | `true` / `false` (or `1` / `0`); substituted as `1` / `0`. |
+| `"string"` | Any text. |
+| `"ipv4"` | IPv4 address. |
+| `"ipv6"` | IPv6 address. |
+| `"mac"` | MAC address. |
+| `"bytes"` | Octets in hex: `"00 01 02"`. |
+
 <a id="schema-variable"></a>
 
 ### `Variable`
@@ -379,7 +414,12 @@ A template argument (`${name}` placeholder) overridable at run time.
 
 | Key | Type | Required | Description |
 |---|---|---|---|
+| `choices` | [`Scalar`](#schema-scalar)`[]` |   | Allowed values; any other value is rejected. |
 | `default` | [`Scalar`](#schema-scalar) \| `null` |   | Default value (human notation; numbers and booleans are accepted too). |
 | `description` | `string` \| `null` |   | Description shown in the GUI / CLI. |
+| `max` | `integer` \| `null` |   | Largest allowed value (`type: uint` / `int` only). |
+| `min` | `integer` \| `null` |   | Smallest allowed value (`type: uint` / `int` only). |
 | `name` | `string` | yes | Placeholder name. |
+| `required` | `boolean` |   | A value must be given at run time; the variable has no `default`. |
+| `type` | [`VarType`](#schema-vartype) \| `null` |   | Value type; values (default, `--var`, job `vars`) are checked against it. Without a type any text is accepted. |
 <!-- wpg-docs-gen:end template-schema-keys -->

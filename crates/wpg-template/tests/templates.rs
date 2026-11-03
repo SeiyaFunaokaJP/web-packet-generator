@@ -626,3 +626,150 @@ stream: {stream}
         "{keys:#?}"
     );
 }
+
+const TYPED: &str = r#"
+schema: 1
+meta: { name: typed vars }
+variables:
+  - { name: vlan, type: uint, min: 1, max: 4094, default: 100 }
+  - { name: dst, type: ipv4, default: 192.0.2.1 }
+  - { name: mac, type: mac, default: "02:00:00:00:00:01" }
+  - { name: proto, type: uint, choices: [6, 17], default: 17 }
+  - { name: target, type: ipv4, required: true }
+layers:
+  - protocol: ethernet2
+    fields: { src: "${mac}" }
+  - protocol: dot1q
+    fields: { vid: "${vlan}" }
+  - protocol: ipv4
+    fields: { src: "${target}", dst: "${dst}", protocol: "${proto}" }
+"#;
+
+fn overrides(vars: &[(&str, &str)]) -> VarOverrides {
+    vars.iter()
+        .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+        .collect()
+}
+
+fn compile_err(t: &Template, vars: &[(&str, &str)]) -> Vec<wpg_template::LintIssue> {
+    match compile(t, &overrides(vars), catalog()) {
+        Err(TemplateError::Lint(issues)) => issues,
+        Err(e) => panic!("{e}"),
+        Ok(_) => panic!("compiled with {vars:?}"),
+    }
+}
+
+#[test]
+fn typed_variables_check_run_time_values() {
+    let t = yaml(TYPED);
+    // lint does not need the required value
+    let issues = lint(&t, catalog());
+    assert!(issues.is_empty(), "{issues:#?}");
+
+    // a required variable without a value: one clear error, not also "missing"
+    let issues = compile_err(&t, &[]);
+    let keys: Vec<&str> = issues.iter().map(|i| i.key.as_str()).collect();
+    assert_eq!(keys, ["lint-var-required"], "{issues:#?}");
+    assert_eq!(issues[0].args["name"], "target");
+
+    let c = compile(
+        &t,
+        &overrides(&[("target", "10.0.0.1"), ("vlan", "0xffe"), ("proto", "6")]),
+        catalog(),
+    )
+    .unwrap();
+    assert_eq!(c.packet.layers[1].fields["vid"], FieldValue::UInt(4094));
+    assert_eq!(c.packet.layers[2].fields["protocol"], FieldValue::UInt(6));
+
+    for (name, value, key, expected) in [
+        ("target", "10.0.0.300", "lint-var-bad-type", "ipv4"),
+        ("vlan", "4095", "lint-var-out-of-range", "1..4094"),
+        ("vlan", "abc", "lint-var-bad-type", "uint"),
+        ("mac", "02:00", "lint-var-bad-type", "mac"),
+        ("proto", "1", "lint-var-not-a-choice", "6, 17"),
+    ] {
+        let mut vars = vec![("target", "10.0.0.1")];
+        if name == "target" {
+            vars.clear();
+        }
+        vars.push((name, value));
+        let issues = compile_err(&t, &vars);
+        let i = issues
+            .iter()
+            .find(|i| i.key == key)
+            .unwrap_or_else(|| panic!("{name}={value}: {issues:#?}"));
+        assert_eq!(i.args["name"], name);
+        assert_eq!(i.args["value"], value);
+        assert_eq!(i.args["expected"], expected);
+        assert!(i.message.contains(name), "{}", i.message);
+    }
+}
+
+#[test]
+fn typed_variable_lint_cases() {
+    let head = "schema: 1\nmeta: { name: t }\nlayers:\n  - protocol: ipv4\n    fields: { ttl: \"${v}\" }\nvariables:\n";
+    let has = |var: &str, path: &str, key: &str| {
+        let got = issue_keys(&format!("{head}  - {var}\n"));
+        assert!(
+            got.contains(&(LintLevel::Error, path.to_owned(), key.to_owned())),
+            "expected {key} at {path} in {got:#?}"
+        );
+    };
+    has(
+        "{ name: v, type: uint, default: x }",
+        "variables[0].default",
+        "lint-var-bad-type",
+    );
+    has(
+        "{ name: v, type: uint, max: 255, default: 256 }",
+        "variables[0].default",
+        "lint-var-out-of-range",
+    );
+    has(
+        "{ name: v, type: uint, choices: [1, 2], default: 3 }",
+        "variables[0].default",
+        "lint-var-not-a-choice",
+    );
+    has(
+        "{ name: v, type: uint, choices: [1, x], default: 1 }",
+        "variables[0].choices[1]",
+        "lint-var-bad-type",
+    );
+    has(
+        "{ name: v, type: string, min: 1, default: a }",
+        "variables[0]",
+        "lint-var-range-type",
+    );
+    has(
+        "{ name: v, type: int, min: 5, max: 1, default: 1 }",
+        "variables[0]",
+        "lint-var-empty-range",
+    );
+    has(
+        "{ name: v, type: uint, required: true, default: 1 }",
+        "variables[0].default",
+        "lint-var-required-default",
+    );
+    // bool values are substituted as 1 / 0
+    let t = yaml(&format!(
+        "{head}  - {{ name: v, type: bool, default: true }}\n"
+    ));
+    let issues = lint(&t, catalog());
+    assert!(issues.is_empty(), "{issues:#?}");
+    let c = compile(&t, &no_vars(), catalog()).unwrap();
+    assert_eq!(c.packet.layers[0].fields["ttl"], FieldValue::UInt(1));
+    let c = compile(&t, &overrides(&[("v", "false")]), catalog()).unwrap();
+    assert_eq!(c.packet.layers[0].fields["ttl"], FieldValue::UInt(0));
+}
+
+#[test]
+fn typed_variables_round_trip() {
+    let t = yaml(TYPED);
+    let back = Template::from_yaml(&t.to_yaml().unwrap()).unwrap();
+    assert_eq!(back, t);
+    let v = &t.variables[0];
+    assert_eq!(v.kind, Some(wpg_template::VarType::Uint));
+    assert_eq!((v.min, v.max), (Some(1), Some(4094)));
+    assert_eq!(t.variables[3].choices, ["6", "17"]);
+    assert!(t.variables[4].required);
+}

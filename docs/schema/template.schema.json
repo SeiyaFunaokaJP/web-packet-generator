@@ -447,10 +447,62 @@
       },
       "type": "object"
     },
+    "VarType": {
+      "description": "Value type of a template variable (the field-type names of the protocol catalog).",
+      "oneOf": [
+        {
+          "const": "uint",
+          "description": "Unsigned integer: `64`, `0x0800`, `0b101`.",
+          "type": "string"
+        },
+        {
+          "const": "int",
+          "description": "Signed integer: `-1`, `+5`, `0x10`.",
+          "type": "string"
+        },
+        {
+          "const": "bool",
+          "description": "`true` / `false` (or `1` / `0`); substituted as `1` / `0`.",
+          "type": "string"
+        },
+        {
+          "const": "string",
+          "description": "Any text.",
+          "type": "string"
+        },
+        {
+          "const": "ipv4",
+          "description": "IPv4 address.",
+          "type": "string"
+        },
+        {
+          "const": "ipv6",
+          "description": "IPv6 address.",
+          "type": "string"
+        },
+        {
+          "const": "mac",
+          "description": "MAC address.",
+          "type": "string"
+        },
+        {
+          "const": "bytes",
+          "description": "Octets in hex: `\"00 01 02\"`.",
+          "type": "string"
+        }
+      ]
+    },
     "Variable": {
       "additionalProperties": false,
       "description": "A template argument (`${name}` placeholder) overridable at run time.",
       "properties": {
+        "choices": {
+          "description": "Allowed values; any other value is rejected.",
+          "items": {
+            "$ref": "#/$defs/Scalar"
+          },
+          "type": "array"
+        },
         "default": {
           "anyOf": [
             {
@@ -469,9 +521,40 @@
             "null"
           ]
         },
+        "max": {
+          "description": "Largest allowed value (`type: uint` / `int` only).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "min": {
+          "description": "Smallest allowed value (`type: uint` / `int` only).",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "name": {
           "description": "Placeholder name.",
           "type": "string"
+        },
+        "required": {
+          "description": "A value must be given at run time; the variable has no `default`.",
+          "type": "boolean"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VarType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Value type; values (default, `--var`, job `vars`) are checked against it.\nWithout a type any text is accepted."
         }
       },
       "required": [

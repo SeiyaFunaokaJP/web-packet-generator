@@ -453,6 +453,9 @@ mod tests {
                     "host",
                     "hop",
                     "via",
+                    // typed template variables
+                    "name",
+                    "max",
                 ] {
                     args.set(name, "1");
                 }

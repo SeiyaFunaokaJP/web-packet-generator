@@ -10,12 +10,16 @@ meta:
 
 variables:
   - name: src_mac
+    type: mac
     default: 02:00:00:00:00:01
   - name: src_ip
+    type: ipv4
     default: 192.168.1.10
   - name: first
+    type: ipv4
     default: 192.168.1.1
   - name: last
+    type: ipv4
     default: 192.168.1.254
 
 layers:
