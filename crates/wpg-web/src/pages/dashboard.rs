@@ -4,9 +4,10 @@ use std::time::Duration;
 
 use leptos::prelude::*;
 
-use crate::api::{self, Iface, JobBrief};
+use crate::api::{self, Iface, JobBrief, TemplateQuery, TemplateSummary};
 use crate::components::{
-    Empty, ErrorBox, Icon, IconName, Loading, PageHeader, Stat, StateBadge, BTN, CARD, TD, TH,
+    Empty, ErrorBox, Icon, IconName, Loading, PageHeader, Stat, StateBadge, BTN, BTN_PRIMARY, CARD,
+    TD, TH,
 };
 use crate::fmt;
 use crate::i18n::{tr, use_i18n};
@@ -15,6 +16,23 @@ use crate::ws::use_live;
 
 /// Refresh period of the overview (live rates come from the WebSocket).
 const OVERVIEW_EVERY: Duration = Duration::from_secs(5);
+
+/// Bundled templates offered as "send an example", best first.
+const EXAMPLES: [&str; 2] = ["examples-eth-ipv4-udp-range", "protocols-l4-udp"];
+
+/// The template a first-time user is offered to send: a preferred bundled
+/// example, else any library example, else nothing.
+fn example_template(list: &[TemplateSummary]) -> Option<&TemplateSummary> {
+    let ok = |t: &&TemplateSummary| t.error.is_none();
+    EXAMPLES
+        .iter()
+        .find_map(|id| list.iter().filter(ok).find(|t| t.id == *id))
+        .or_else(|| {
+            list.iter()
+                .filter(ok)
+                .find(|t| t.source == "library" && t.id.starts_with("examples-"))
+        })
+}
 
 #[component]
 pub(crate) fn DashboardPage() -> impl IntoView {
@@ -32,6 +50,12 @@ pub(crate) fn DashboardPage() -> impl IntoView {
     let ifaces_refresh = RwSignal::new(false);
     let ifaces = LocalResource::new(move || api::ifaces(ifaces_refresh.get()));
     let doctor = LocalResource::new(api::doctor);
+    let example = LocalResource::new(move || async move {
+        api::templates(TemplateQuery::default())
+            .await
+            .ok()
+            .and_then(|l| example_template(&l.templates).map(|t| t.id.clone()))
+    });
 
     // Totals: live WebSocket rates of the active jobs, else the overview's.
     let totals = move || {
@@ -81,6 +105,10 @@ pub(crate) fn DashboardPage() -> impl IntoView {
                 {move || match overview.get() {
                     None => view! { <Loading /> }.into_any(),
                     Some(Err(e)) => view! { <ErrorBox error=e /> }.into_any(),
+                    Some(Ok(o)) if o.jobs.is_empty() && o.history == 0 => {
+                        view! { <GetStarted example=Signal::derive(move || example.get().flatten()) /> }
+                            .into_any()
+                    }
                     Some(Ok(o)) if o.jobs.is_empty() => {
                         view! { <Empty text=tr("ui-dash-no-running") /> }.into_any()
                     }
@@ -179,6 +207,38 @@ pub(crate) fn DashboardPage() -> impl IntoView {
                 Some(Ok(list)) => view! { <IfaceTable list=list /> }.into_any(),
             }}
         </section>
+    }
+}
+
+/// First steps, shown until the first job has run.
+#[component]
+fn GetStarted(#[prop(into)] example: Signal<Option<String>>) -> impl IntoView {
+    view! {
+        <div class=CARD>
+            <h3 class="font-medium">{tr("ui-dash-get-started")}</h3>
+            <div class="mt-3 flex flex-wrap gap-2">
+                {move || {
+                    example
+                        .get()
+                        .map(|id| {
+                            view! {
+                                <a href=format!("/jobs?new={}", api::enc(&id)) class=format!("{BTN_PRIMARY} max-md:hidden")>
+                                    <Icon name=IconName::Play class="h-4 w-4" />
+                                    {tr("ui-dash-send-example")}
+                                </a>
+                            }
+                        })
+                }}
+                <a href="/builder" class=format!("{BTN} max-md:hidden")>
+                    <Icon name=IconName::Builder class="h-4 w-4" />
+                    {tr("ui-dash-build-packet")}
+                </a>
+                <a href="/templates" class=BTN>
+                    <Icon name=IconName::Templates class="h-4 w-4" />
+                    {tr("ui-dash-browse-templates")}
+                </a>
+            </div>
+        </div>
     }
 }
 
@@ -294,5 +354,37 @@ pub(crate) fn IfaceTable(list: Vec<Iface>) -> impl IntoView {
                 </tbody>
             </table>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tpl(id: &str, source: &str) -> TemplateSummary {
+        TemplateSummary {
+            id: id.to_owned(),
+            source: source.to_owned(),
+            ..TemplateSummary::default()
+        }
+    }
+
+    #[test]
+    fn picks_an_example() {
+        let list = [
+            tpl("mine", "user"),
+            tpl("examples-arp-sweep", "library"),
+            tpl("protocols-l4-udp", "library"),
+        ];
+        assert_eq!(
+            example_template(&list).map(|t| t.id.as_str()),
+            Some("protocols-l4-udp")
+        );
+        let list = [tpl("mine", "user"), tpl("examples-arp-sweep", "library")];
+        assert_eq!(
+            example_template(&list).map(|t| t.id.as_str()),
+            Some("examples-arp-sweep")
+        );
+        assert!(example_template(&[tpl("mine", "user")]).is_none());
     }
 }

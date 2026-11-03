@@ -959,9 +959,14 @@ Commands:
 
 Options:
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -982,9 +987,14 @@ Options:
           Output JSON
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -1009,9 +1019,14 @@ Options:
           Output the definition as JSON instead of YAML
 
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help
@@ -1035,9 +1050,14 @@ Arguments:
 
 Options:
       --protocols-dir <DIR>
-          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of `wpg serve`)
+          Directory of user-defined protocol files (`*.yaml`, repeatable; added to `[protocols] dirs` of the configuration)
 
           [env: WPG_PROTOCOLS_DIR]
+
+      --config <FILE>
+          Configuration file (default: `wpg.toml` in the working directory, if any). `wpg send` also takes its default backend and rate limit from `[tx]`
+
+          [env: WPG_CONFIG]
 
   -h, --help
           Print help (see a summary with '-h')

@@ -119,6 +119,33 @@ impl Live {
         }
     }
 
+    /// Appends a line to the logs panel (keeps the last [`LOG_CAP`]).
+    pub(crate) fn push_log(self, line: LogLine) {
+        let seq = self.log_seq.get_value() + 1;
+        self.log_seq.set_value(seq);
+        self.logs.update(|l| {
+            l.push_back(LogEntry { seq, line });
+            while l.len() > LOG_CAP {
+                l.pop_front();
+            }
+        });
+    }
+
+    /// Adds a line raised by the browser itself (target `web`) to the logs panel.
+    pub(crate) fn note(self, level: &str, message: String) {
+        #[cfg(target_arch = "wasm32")]
+        let ts = String::from(js_sys::Date::new_0().to_iso_string());
+        #[cfg(not(target_arch = "wasm32"))]
+        let ts = String::new();
+        self.push_log(LogLine {
+            ts,
+            level: level.to_owned(),
+            target: "web".to_owned(),
+            message,
+            fields: serde_json::Map::new(),
+        });
+    }
+
     /// Applies one server message.
     pub(crate) fn handle(self, text: &str) {
         let Ok(ev) = serde_json::from_str::<ServerEvent>(text) else {
@@ -135,16 +162,7 @@ impl Live {
                 });
                 self.jobs_rev.update(|r| *r += 1);
             }
-            ServerEvent::Log(line) => {
-                let seq = self.log_seq.get_value() + 1;
-                self.log_seq.set_value(seq);
-                self.logs.update(|l| {
-                    l.push_back(LogEntry { seq, line });
-                    while l.len() > LOG_CAP {
-                        l.pop_front();
-                    }
-                });
-            }
+            ServerEvent::Log(line) => self.push_log(line),
             ServerEvent::TemplatesChanged => self.templates_rev.update(|r| *r += 1),
             ServerEvent::RxStats {
                 capture_id,
@@ -324,6 +342,14 @@ mod tests {
             live.handle(r#"{"type":"log","level":"INFO","message":"m"}"#);
         }
         assert_eq!(live.logs.with_untracked(VecDeque::len), LOG_CAP);
+        live.note("ERROR", "local".to_owned());
+        assert_eq!(live.logs.with_untracked(VecDeque::len), LOG_CAP);
+        assert_eq!(
+            live.logs.with_untracked(|l| l
+                .back()
+                .map(|e| (e.line.level.clone(), e.line.target.clone()))),
+            Some(("ERROR".to_owned(), "web".to_owned()))
+        );
         live.handle(r#"{"type":"templates_changed"}"#);
         assert_eq!(live.templates_rev.get_untracked(), 1);
         live.handle(r#"{"type":"rx_stats","capture_id":"c","snapshot":{"matched":9}}"#);
