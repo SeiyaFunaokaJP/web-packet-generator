@@ -16,7 +16,7 @@ Status: M5 (実装済み: wpg-template) / 仕様 §2.4
 |---|---|---|
 | `schema` | 必須 | スキーマバージョン (整数) |
 | `meta` | 必須 | `name` / `description` / `descriptions` (`ja`, `en`) / `tags` / `author` / `created` |
-| `variables` | 任意 | テンプレ引数。`name` / `default` / `description` の配列 |
+| `variables` | 任意 | テンプレ引数。`name` / `default` / `description` / `type` / `choices` / `min` / `max` / `required` の配列 (「変数の型」参照) |
 | `layers` | 必須 | レイヤ配列 (`protocol` + `fields` + `generators`)。外側から内側の順 |
 | `packet` | 任意 | フレーム設定: `pad_to_min` (既定 true)、`fcs` (`auto` / `bad` / `none`、既定 `none`) |
 | `stream` | 任意 | ストリーム展開: `mode` (`zip` / `product` / `nested`)、`order`、`count`、`seed` |
@@ -31,6 +31,22 @@ Status: M5 (実装済み: wpg-template) / 仕様 §2.4
 - flags: **ビット名を `|` で連結** (`flags: syn|ack`, `flags: df`)。
 - TLV (TCP オプション等): 項目のリスト。`nop` / `{ mss: 1460 }` / `{ timestamps: { tsval: 1, tsecr: 0 } }` / 明示形 `{ type: 99, data: "01 02" }`, `{ name: mss, length: 4, fields: { value: 1 } }`。
 - 変数参照: `${name}` (文字列内の任意の位置)。値は `variables[].default`、実行時は `--vars-file` (YAML / JSON のマップ) と `--var name=value` で上書きする (優先順位は default < 変数ファイル < `--var`)。宣言のない変数 (変数ファイル中のものを含む)・値のない変数はエラー。
+
+### 変数の型 (`variables[]`)
+
+変数は型なし (従来どおり任意の文字列) のままでもよく、次のキーで値を制約できる。すべて任意で、schema は 1 のまま (追加のみ)。
+
+| キー | 内容 |
+|---|---|
+| `type` | `uint` / `int` / `bool` / `string` / `ipv4` / `ipv6` / `mac` / `bytes`。プロトコルのフィールド型と同じ名前と表記 (`0x0800`、`0200.0000.0001` など) |
+| `choices` | 許す値の一覧。`type` があれば型の値として比べる (`0x10` = `16`) |
+| `min` / `max` | 範囲 (両端を含む)。`type: uint` / `int` のときだけ |
+| `required` | `true` なら実行時に値が必須。`default` は書けない |
+
+- 型システムはフィールド型とは分ける。フィールド型はビット幅や enum 名を持ち、変数はそれを知らない (1 つの変数を複数のフィールドで使える) ため。値の書式だけを共通化し、最終的な検査はこれまでどおり代入先のフィールドで行う。
+- `bool` は `true` / `false` / `1` / `0` を受け付け、`1` / `0` として代入する。
+- `default` (lint 時) と、実行時の値 (`--var`、ジョブ API / render API の `vars`) を検査する。違反は lint エラーで、変数名と期待する型・範囲・選択肢を示す。CLI は終了コード 3、サーバは 422 `invalid_template` (`details` に lint 項目)。
+- GUI のジョブ作成フォームは宣言に合わせて入力欄を出す (`choices` / `bool` は選択、数値は min / max 付きの数値入力、アドレスはその場で検査、必須は `*`)。
 
 ### ジェネレータ (`layers[].generators`)
 
@@ -138,6 +154,9 @@ tx:
 | `lint-invalid-generator` | error | ジェネレータがフィールド型に合わない |
 | `lint-unknown-variable` / `lint-missing-variable` | error | 宣言のない変数 / 値のない変数 (compile 時) |
 | `lint-unused-variable` | warning | 使われていない変数 |
+| `lint-var-bad-type` / `lint-var-out-of-range` / `lint-var-not-a-choice` | error | 変数の `default` / `choices` / 実行時の値が `type` / `min`・`max` / `choices` に合わない |
+| `lint-var-required` | error | `required` の変数に値がない (compile 時) |
+| `lint-var-required-default` / `lint-var-range-type` / `lint-var-empty-range` | error | 宣言の矛盾 (`required` と `default`、数値型でない `min`/`max`、`min` > `max`) |
 | `lint-next-protocol-manual` | warning | 次レイヤが上位のバインディング表にない (next-protocol が Manual になる) |
 | `lint-field-and-generator` | warning | 同じフィールドに固定値とジェネレータ |
 | `diag-*` | error/warning | `Packet::build` の診断 (チェックサム不一致など) |
@@ -188,7 +207,7 @@ README.md                 生成される一覧 (情報用。読み込み時は�
 ## 未決事項 (Open questions)
 
 - `layers` 内の入れ子表現 (トンネルの内側パケット、TLV/list の記述形式)。
-- `variables` の型システム (プロトコルのフィールド型と共通化するか) と、実行時オーバーライドの文法。
+- 実行時オーバーライドの文法 (`variables` の型は「変数の型」で決定済み)。
 - 添付 pcap をテンプレートの `file` ジェネレータ等から参照する記法 (現状は同梱のみ)。
 - `wpg template migrate` コマンド (読み込み時変換は実装済み)。
 - Git ライブラリパスの競合 (同名テンプレート) の解決規則と、ホットリロードの検出方法。

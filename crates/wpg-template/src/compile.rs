@@ -11,7 +11,8 @@ use wpg_core::{
 
 use crate::input::numeric_operand;
 use crate::lint::{LintIssue, LintLevel};
-use crate::{FcsChoice, GeneratorSpec, StreamMode, Template, TemplateError, TxProfile};
+use crate::vars::{VarError, VarType};
+use crate::{FcsChoice, GeneratorSpec, StreamMode, Template, TemplateError, TxProfile, Variable};
 
 /// Run-time values of template variables (`--var name=value`).
 pub type VarOverrides = BTreeMap<String, String>;
@@ -138,6 +139,81 @@ fn var_issue(path: &str, e: &VarErr) -> LintIssue {
         )
         .arg("value", s),
     }
+}
+
+fn value_issue(path: &str, v: &Variable, value: &str, e: &VarError) -> LintIssue {
+    let message = match e {
+        VarError::Type(t) => format!("variable `{}`: `{value}` is not a valid {t}", v.name),
+        VarError::Range { .. } => format!(
+            "variable `{}`: {value} is outside the range {}",
+            v.name,
+            e.expected()
+        ),
+        VarError::Choice(_) => format!(
+            "variable `{}`: `{value}` is not one of {}",
+            v.name,
+            e.expected()
+        ),
+    };
+    LintIssue::error(path, e.key(), message)
+        .arg("name", &v.name)
+        .arg("value", value)
+        .arg("expected", e.expected())
+}
+
+/// Checks the declaration of a variable: constraints that fit its type, and a
+/// default / choices that satisfy them.
+fn check_declaration(v: &Variable, path: &str) -> Vec<LintIssue> {
+    let mut issues = Vec::new();
+    if (v.min.is_some() || v.max.is_some()) && !v.kind.is_some_and(VarType::is_numeric) {
+        issues.push(
+            LintIssue::error(
+                path,
+                "lint-var-range-type",
+                format!("variable `{}`: min / max need type uint or int", v.name),
+            )
+            .arg("name", &v.name),
+        );
+    }
+    if let (Some(min), Some(max)) = (v.min, v.max) {
+        if min > max {
+            issues.push(
+                LintIssue::error(
+                    path,
+                    "lint-var-empty-range",
+                    format!("variable `{}`: min {min} is greater than max {max}", v.name),
+                )
+                .arg("name", &v.name)
+                .arg("min", min)
+                .arg("max", max),
+            );
+        }
+    }
+    if let Some(t) = v.kind {
+        for (j, c) in v.choices.iter().enumerate() {
+            if let Err(e) = crate::vars::check_type(t, c) {
+                issues.push(value_issue(&format!("{path}.choices[{j}]"), v, c, &e));
+            }
+        }
+    }
+    if v.required && v.default.is_some() {
+        issues.push(
+            LintIssue::error(
+                format!("{path}.default"),
+                "lint-var-required-default",
+                format!(
+                    "variable `{}` is required, so it cannot have a default",
+                    v.name
+                ),
+            )
+            .arg("name", &v.name),
+        );
+    } else if let Some(d) = &v.default {
+        if let Err(e) = crate::vars::check_value(v, d) {
+            issues.push(value_issue(&format!("{path}.default"), v, d, &e));
+        }
+    }
+    issues
 }
 
 fn substitute_generator(g: &Generator, vars: &mut Vars) -> Result<Option<Generator>, VarErr> {
@@ -340,9 +416,27 @@ pub(crate) fn analyze(
             );
             continue;
         }
-        let value = overrides
-            .and_then(|o| o.get(&v.name).cloned())
-            .or_else(|| v.default.clone());
+        issues.extend(check_declaration(v, &path));
+        let given = overrides.and_then(|o| o.get(&v.name));
+        if let Some(value) = given {
+            if let Err(e) = crate::vars::check_value(v, value) {
+                issues.push(value_issue(&path, v, value, &e));
+            }
+        } else if v.required && overrides.is_some() {
+            issues.push(
+                LintIssue::error(
+                    &path,
+                    "lint-var-required",
+                    format!("variable `{}` is required; give it a value", v.name),
+                )
+                .arg("name", &v.name),
+            );
+        }
+        // A required variable has no default even if one is written.
+        let default = v.default.as_ref().filter(|_| !v.required);
+        let value = given
+            .or(default)
+            .map(|value| crate::vars::substitution(v, value));
         vars.values.insert(v.name.clone(), value);
     }
     if let Some(o) = overrides {
@@ -595,6 +689,17 @@ pub(crate) fn analyze(
         FcsChoice::Bad => Some(FcsMode::Bad),
         FcsChoice::None => None,
     };
+
+    // `lint-var-required` already names a required variable without a value.
+    let required: BTreeSet<String> = issues
+        .iter()
+        .filter(|i| i.key == "lint-var-required")
+        .filter_map(|i| i.args.get("name").cloned())
+        .collect();
+    issues.retain(|i| {
+        i.key != "lint-missing-variable"
+            || !i.args.get("value").is_some_and(|n| required.contains(n))
+    });
 
     let ok = !vars.skipped && !issues.iter().any(|i| i.level == LintLevel::Error);
     Analysis {

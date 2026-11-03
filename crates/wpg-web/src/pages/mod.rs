@@ -5,6 +5,7 @@ pub(crate) mod dashboard;
 pub(crate) mod dhcp;
 pub(crate) mod job_detail;
 pub(crate) mod job_form;
+pub(crate) mod job_vars;
 pub(crate) mod jobs;
 pub(crate) mod rx;
 pub(crate) mod settings;

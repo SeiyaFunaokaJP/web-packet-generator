@@ -317,6 +317,54 @@ async fn render_errors() {
         .expect_error(StatusCode::BAD_REQUEST, "bad_request");
 }
 
+/// Variable values that do not fit the declared type are rejected with a lint
+/// detail naming the variable and what was expected.
+#[tokio::test]
+async fn typed_vars_are_checked() {
+    let app = TestApp::new();
+    let job = |vars: Value| {
+        json!({
+            "streams": [{ "template_id": "examples-vlan-tcp-syn", "vars": vars }],
+            "backend": "null",
+            "count": 1,
+            "start": false,
+        })
+    };
+    for (vars, key, expected) in [
+        (
+            json!({ "vlan_id": "5000" }),
+            "lint-var-out-of-range",
+            "1..4094",
+        ),
+        (
+            json!({ "dst_ip": "198.51.100.300" }),
+            "lint-var-bad-type",
+            "ipv4",
+        ),
+    ] {
+        let j = app
+            .post("/api/jobs", job(vars.clone()))
+            .await
+            .expect_error(StatusCode::UNPROCESSABLE_ENTITY, "invalid_template");
+        let d = &j["error"]["details"][0];
+        assert_eq!(d["key"], key, "{j}");
+        assert_eq!(d["args"]["expected"], expected, "{j}");
+        let name = vars.as_object().unwrap().keys().next().unwrap().clone();
+        assert_eq!(d["args"]["name"], name.as_str(), "{j}");
+
+        let vlan = include_str!("../../../templates/examples/vlan-tcp-syn.wpg.yaml");
+        app.post(
+            "/api/render",
+            json!({ "template": vlan, "vars": vars, "count": 1 }),
+        )
+        .await
+        .expect_error(StatusCode::UNPROCESSABLE_ENTITY, "invalid_template");
+    }
+    app.post("/api/jobs", job(json!({ "vlan_id": "4094" })))
+        .await
+        .expect(StatusCode::CREATED);
+}
+
 #[tokio::test]
 async fn parse_round_trip() {
     let app = TestApp::new();

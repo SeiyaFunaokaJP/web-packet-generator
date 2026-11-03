@@ -26,6 +26,24 @@ tx: { ... }                # 任意
 
 テンプレート引数です。各項目は `name`、任意の `default` (文字列・数値・真偽値)、`description` を持ちます。フィールド値やジェネレータの中で `${name}` と書き、実行時に `--var name=value` (`wpg send`、`wpg render`) や GUI で上書きします。既定値も上書きも無い変数はエラーで、宣言の無い `${…}` もエラーです。宣言だけで使われていない変数は警告になります。
 
+次の任意のキーで値を制約できます。書かなければどんな文字列も受け付けます。
+
+| キー | 意味 |
+|---|---|
+| `type` | `uint`、`int`、`bool`、`string`、`ipv4`、`ipv6`、`mac`、`bytes`。値の書式はフィールドと同じです (`0x0800`、`0200.0000.0001`) |
+| `choices` | 許す値の一覧 |
+| `min`、`max` | 範囲 (両端を含む)。`uint` と `int` のみ |
+| `required` | 実行時に値の指定が必須。`default` は持てません |
+
+```yaml
+variables:
+  - { name: vlan_id, type: uint, min: 1, max: 4094, default: 100 }
+  - { name: target, type: ipv4, required: true }
+  - { name: proto, type: uint, choices: [6, 17], default: 17 }
+```
+
+`wpg template lint` は既定値と選択肢を検査します。実行時の値 (`--var`、ジョブ API と render API の `vars`) が合わなければテンプレートエラーになり、変数名と期待する値を示します。CLI は終了コード 3、サーバは 422 `invalid_template` を返します。`bool` は `true`、`false`、`1`、`0` を受け付け、`1` か `0` として代入されます。GUI のジョブ作成フォームは変数ごとに合った入力欄を表示します。
+
 ## `layers`
 
 各項目は `protocol` (カタログの ID。[プロトコルリファレンス](protocols.md) を参照)、`fields`、`generators` から成ります。
@@ -400,6 +418,23 @@ How the stream is transmitted.
 | `duration_secs` | `number` \| `null` |   | Duration limit in seconds. |
 | `rate` | `string` \| `null` |   | Rate in human notation: `1000pps`, `1Mpps`, `10Gbps`, `50%`. |
 
+<a id="schema-vartype"></a>
+
+### `VarType`
+
+Value type of a template variable (the field-type names of the protocol catalog).
+
+| 値 | 説明 |
+|---|---|
+| `"uint"` | Unsigned integer: `64`, `0x0800`, `0b101`. |
+| `"int"` | Signed integer: `-1`, `+5`, `0x10`. |
+| `"bool"` | `true` / `false` (or `1` / `0`); substituted as `1` / `0`. |
+| `"string"` | Any text. |
+| `"ipv4"` | IPv4 address. |
+| `"ipv6"` | IPv6 address. |
+| `"mac"` | MAC address. |
+| `"bytes"` | Octets in hex: `"00 01 02"`. |
+
 <a id="schema-variable"></a>
 
 ### `Variable`
@@ -408,7 +443,12 @@ A template argument (`${name}` placeholder) overridable at run time.
 
 | キー | 型 | 必須 | 説明 |
 |---|---|---|---|
+| `choices` | [`Scalar`](#schema-scalar)`[]` |   | Allowed values; any other value is rejected. |
 | `default` | [`Scalar`](#schema-scalar) \| `null` |   | Default value (human notation; numbers and booleans are accepted too). |
 | `description` | `string` \| `null` |   | Description shown in the GUI / CLI. |
+| `max` | `integer` \| `null` |   | Largest allowed value (`type: uint` / `int` only). |
+| `min` | `integer` \| `null` |   | Smallest allowed value (`type: uint` / `int` only). |
 | `name` | `string` | はい | Placeholder name. |
+| `required` | `boolean` |   | A value must be given at run time; the variable has no `default`. |
+| `type` | [`VarType`](#schema-vartype) \| `null` |   | Value type; values (default, `--var`, job `vars`) are checked against it. Without a type any text is accepted. |
 <!-- wpg-docs-gen:end template-schema-keys -->

@@ -13,9 +13,12 @@ meta:
 # Overridable at run time: wpg render / send --var dst_ip=10.1.2.3
 variables:
   - name: dst_ip
+    type: ipv4
     default: 10.0.0.1
     description: Destination IPv4 address
   - name: dst_port
+    type: uint
+    max: 65535
     default: 5001
     description: Destination UDP port
 
