@@ -151,7 +151,11 @@ pub(crate) fn banner(
 }
 
 /// Runs `wpg serve`.
-pub(crate) fn run(args: &crate::ServeArgs, protocols_dirs: &[PathBuf]) -> ExitCode {
+pub(crate) fn run(
+    args: &crate::ServeArgs,
+    config_file: Option<&Path>,
+    protocols_dirs: &[PathBuf],
+) -> ExitCode {
     let locale = cli_locale();
     if args.password.is_some() {
         eprintln!("{}", t(locale, "serve-password-arg-warning"));
@@ -164,7 +168,7 @@ pub(crate) fn run(args: &crate::ServeArgs, protocols_dirs: &[PathBuf]) -> ExitCo
         password_file: args.password_file.clone(),
         tls: args.tls,
     };
-    let config = match Config::load(args.config.as_deref(), &overrides) {
+    let config = match Config::load(config_file, &overrides) {
         Ok(c) => c,
         Err(e) => {
             eprintln!(
@@ -202,7 +206,7 @@ pub(crate) fn run(args: &crate::ServeArgs, protocols_dirs: &[PathBuf]) -> ExitCo
             return ExitCode::FAILURE;
         }
     };
-    let source = config_source(args.config.as_deref(), locale);
+    let source = config_source(config_file, locale);
     let opts = ServeOptions {
         dev: args.dev,
         watch: true,

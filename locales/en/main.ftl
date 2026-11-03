@@ -233,6 +233,8 @@ template-show-hex = Hex dump ({ $len } bytes)
 template-show-layout = Layout
 render-done = Wrote { $len } packets to { $value }.
 render-unbounded = The stream is unbounded; pass --count N.
+render-json-stdout = --json cannot be combined with -o - (both write to standard output).
+send-rate-over-limit = Rate { $rate } exceeds the configured limit tx.max_rate = { $max }.
 cli-bad-var = Invalid --var `{ $value }`; expected NAME=VALUE.
 
 ## wpg send / wpg bench (progress, summary, errors)

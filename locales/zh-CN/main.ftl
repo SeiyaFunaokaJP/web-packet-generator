@@ -233,6 +233,8 @@ template-show-hex = 十六进制转储 ({ $len } 字节)
 template-show-layout = 布局
 render-done = 已将 { $len } 个数据包写入 { $value }。
 render-unbounded = 流没有上限；请指定 --count N。
+render-json-stdout = --json 不能与 -o - 同时使用（两者都写入标准输出）。
+send-rate-over-limit = 速率 { $rate } 超过了配置的上限 tx.max_rate = { $max }。
 cli-bad-var = 无效的 --var `{ $value }`；应为 NAME=VALUE。
 
 ## wpg send / wpg bench (进度、摘要、错误)

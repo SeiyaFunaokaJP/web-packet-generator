@@ -233,6 +233,8 @@ template-show-hex = 十六進位傾印 ({ $len } 位元組)
 template-show-layout = 版面配置
 render-done = 已將 { $len } 個封包寫入 { $value }。
 render-unbounded = 串流沒有上限；請指定 --count N。
+render-json-stdout = --json 不能與 -o - 同時使用（兩者都寫入標準輸出）。
+send-rate-over-limit = 速率 { $rate } 超過了設定的上限 tx.max_rate = { $max }。
 cli-bad-var = 無效的 --var `{ $value }`；格式應為 NAME=VALUE。
 
 ## wpg send / wpg bench (進度、摘要、錯誤)

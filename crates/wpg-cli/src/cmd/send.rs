@@ -22,6 +22,9 @@ use wpg_tx::rate::{PacerConfig, WaitMode};
 use wpg_tx::source::{FrameSource, PreRendered, Rendered};
 use wpg_tx::{backend, pin, TxError, TxOptions, XdpMode};
 
+use wpg_server::config::TxConfig;
+use wpg_template::{apply_overrides, Compiled};
+
 use crate::cmd::cli_locale;
 use crate::cmd::template::load_compiled;
 
@@ -225,6 +228,8 @@ struct Resolved {
     backend: String,
     iface: String,
     rate: Rate,
+    /// Whether `--rate` or the template gave the rate.
+    rate_given: bool,
     count: Option<u64>,
     duration: Option<Duration>,
     burst: u32,
@@ -253,15 +258,18 @@ pub(crate) fn default_iface(
 fn resolve(
     args: &crate::SendArgs,
     tx: &wpg_template::TxProfile,
+    policy: &TxConfig,
     locale: Locale,
 ) -> Result<Resolved, String> {
     let err = |key: &str, e: String| tr(locale, key, &[("error", e)]);
     let backend = args
         .backend
         .clone()
+        .or_else(|| policy.default_backend.clone())
         .unwrap_or_else(|| backend::default_name().to_owned());
     let iface = default_iface(args.iface.as_ref(), &backend, locale)?;
     let rate_str = args.rate.clone().or_else(|| tx.rate.clone());
+    let rate_given = rate_str.is_some();
     let mut rate = match rate_str {
         Some(s) => Rate::parse(&s).map_err(|e| err("send-bad-rate", e.to_string()))?,
         None => Rate::Unlimited,
@@ -299,12 +307,69 @@ fn resolve(
         backend,
         iface,
         rate,
+        rate_given,
         count: args.count.or(tx.count),
         duration,
         burst: args.burst.or(tx.burst).unwrap_or(1).max(1),
         ramp_up,
         start_at,
     })
+}
+
+/// Applies `tx.max_rate` of the configuration as the server does: without a
+/// rate the job gets the limit, a faster rate is refused. The `null` and
+/// `pcapfile` backends are exempt. `frame_len` gives the frame length used to
+/// compare bit rates with frame rates.
+fn apply_max_rate(
+    r: &mut Resolved,
+    max: Option<&str>,
+    frame_len: impl FnOnce() -> usize,
+    locale: Locale,
+) -> Result<(), String> {
+    let Some(max_text) = max else {
+        return Ok(());
+    };
+    if matches!(r.backend.as_str(), "null" | "pcapfile") {
+        return Ok(());
+    }
+    let max = Rate::parse(max_text).map_err(|e| {
+        tr(
+            locale,
+            "config-load-error",
+            &[("error", format!("tx.max_rate: {e}"))],
+        )
+    })?;
+    if max.is_unlimited() {
+        return Ok(());
+    }
+    if !r.rate_given {
+        r.rate = max;
+        return Ok(());
+    }
+    let len = frame_len();
+    let want = r.rate.frames_per_second(len).unwrap_or(f64::INFINITY);
+    let limit = max.frames_per_second(len).unwrap_or(f64::INFINITY);
+    if want > limit * (1.0 + 1e-9) {
+        return Err(tr(
+            locale,
+            "send-rate-over-limit",
+            &[("rate", r.rate.to_string()), ("max", max_text.to_owned())],
+        ));
+    }
+    Ok(())
+}
+
+/// Length of the first frame of the stream (60 if it cannot be built).
+fn first_frame_len(c: &Compiled) -> usize {
+    let mut p = c.packet.clone();
+    if let Ok(exp) = Expansion::new(&c.stream, None) {
+        if !exp.is_empty() {
+            if let Ok(o) = exp.nth(0) {
+                let _ = apply_overrides(&mut p, &o);
+            }
+        }
+    }
+    p.build(catalog()).map_or(60, |b| b.bytes.len())
 }
 
 fn progress_line(h: &JobHandle, locale: Locale, start_at: Option<SystemTime>) -> String {
@@ -518,13 +583,22 @@ fn limit_text(r: &Resolved, remaining: Option<u64>, locale: Locale) -> String {
 /// Runs `wpg send`.
 #[allow(clippy::needless_pass_by_value)] // uniform `cmd::*::run(args)` dispatch
 #[allow(clippy::too_many_lines)]
-pub(crate) fn run(args: crate::SendArgs) -> ExitCode {
+pub(crate) fn run(args: crate::SendArgs, policy: &TxConfig) -> ExitCode {
     let locale = cli_locale();
     let (_, mut compiled) = match load_compiled(&args.template, &args.vars, locale) {
         Ok(v) => v,
         Err(code) => return code,
     };
-    let r = match resolve(&args, &compiled.tx, locale) {
+    let r = resolve(&args, &compiled.tx, policy, locale).and_then(|mut r| {
+        apply_max_rate(
+            &mut r,
+            policy.max_rate.as_deref(),
+            || first_frame_len(&compiled),
+            locale,
+        )?;
+        Ok(r)
+    });
+    let r = match r {
         Ok(r) => r,
         Err(m) => {
             eprintln!("{m}");
@@ -702,6 +776,48 @@ mod tests {
         assert_eq!(plan_hint("pre-render"), Some(PlanHint::PreRender));
         assert_eq!(plan_hint("on_the_fly"), Some(PlanHint::OnTheFly));
         assert_eq!(plan_hint("x"), None);
+    }
+
+    fn resolved(backend: &str, rate: Option<&str>) -> Resolved {
+        Resolved {
+            backend: backend.to_owned(),
+            iface: "eth0".to_owned(),
+            rate: rate.map_or(Rate::Unlimited, |r| Rate::parse(r).unwrap()),
+            rate_given: rate.is_some(),
+            count: None,
+            duration: None,
+            burst: 1,
+            ramp_up: None,
+            start_at: None,
+        }
+    }
+
+    #[test]
+    fn max_rate_is_the_default_and_the_limit() {
+        let mut r = resolved("pcap", None);
+        apply_max_rate(&mut r, Some("1kpps"), || 64, Locale::En).unwrap();
+        assert_eq!(r.rate, Rate::parse("1kpps").unwrap());
+
+        let mut r = resolved("pcap", Some("500pps"));
+        apply_max_rate(&mut r, Some("1kpps"), || 64, Locale::En).unwrap();
+        assert_eq!(r.rate, Rate::parse("500pps").unwrap());
+
+        let mut r = resolved("pcap", Some("2kpps"));
+        let e = apply_max_rate(&mut r, Some("1kpps"), || 64, Locale::En).unwrap_err();
+        assert!(e.contains("1kpps"), "{e}");
+        let mut r = resolved("pcap", Some("unlimited"));
+        assert!(apply_max_rate(&mut r, Some("1kpps"), || 64, Locale::En).is_err());
+
+        // Dry-run backends and an unlimited / missing limit are not restricted.
+        for backend in ["null", "pcapfile"] {
+            let mut r = resolved(backend, Some("2kpps"));
+            apply_max_rate(&mut r, Some("1kpps"), || 64, Locale::En).unwrap();
+        }
+        let mut r = resolved("pcap", Some("2kpps"));
+        apply_max_rate(&mut r, Some("unlimited"), || 64, Locale::En).unwrap();
+        apply_max_rate(&mut r, None, || 64, Locale::En).unwrap();
+        let mut r = resolved("pcap", None);
+        assert!(apply_max_rate(&mut r, Some("fast"), || 64, Locale::En).is_err());
     }
 
     #[test]

@@ -233,6 +233,8 @@ template-show-hex = Vidage hexadécimal ({ $len } octets)
 template-show-layout = Structure
 render-done = { $len } paquets écrits dans { $value }.
 render-unbounded = Le flux est illimité ; indiquez --count N.
+render-json-stdout = --json ne peut pas être combiné avec -o - (les deux écrivent sur la sortie standard).
+send-rate-over-limit = Le débit { $rate } dépasse la limite configurée tx.max_rate = { $max }.
 cli-bad-var = --var `{ $value }` invalide ; format attendu : NOM=VALEUR.
 
 ## wpg send / wpg bench (progression, résumé, erreurs)
