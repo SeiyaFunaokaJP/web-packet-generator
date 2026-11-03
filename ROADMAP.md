@@ -176,12 +176,12 @@ Wave 1 (done):
 - [x] Every CLI command reads `wpg.toml` (`--config`); `--json` for render and template commands; `-o -` for render; exit code 3 for template errors
 - [x] `wpg protocols list / show / check` and reloading user-defined protocols without restarting the server
 
-Wave 2 (in progress):
+Wave 2 (done):
 
-- [ ] API tokens for scripts (`Authorization: Bearer`) and `wpg remote` to drive a running server
-- [ ] Field overrides from the CLI (`--set LAYER.FIELD=VALUE`) and a variables file (`--vars-file`)
-- [ ] Typed template variables (type, choices, range, required) checked by lint and the GUI form
-- [ ] Configurable limits (pre-render thresholds, preview size, job history, ring size)
+- [x] API tokens for scripts (`Authorization: Bearer`) and `wpg remote` to drive a running server
+- [x] Field overrides from the CLI (`--set LAYER.FIELD=VALUE`) and a variables file (`--vars-file`)
+- [x] Typed template variables (type, choices, range, required) checked by lint and the GUI form
+- [x] Configurable limits (pre-render thresholds, preview size, job history, ring size)
 
 ## After 1.0
 

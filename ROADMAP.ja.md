@@ -174,12 +174,12 @@ DPDK、実機の CML2) は仮想環境以外で未確認で、macOS での pcap 
 - [x] すべての CLI コマンドが `wpg.toml` を読む (`--config`)、render とテンプレート系コマンドの `--json`、render の `-o -`、テンプレートエラー時の終了コード 3
 - [x] `wpg protocols list / show / check` と、サーバーを再起動しないユーザー定義プロトコルの再読み込み
 
-第 2 弾 (進行中):
+第 2 弾 (完了):
 
-- [ ] スクリプト用の API トークン (`Authorization: Bearer`) と、起動中のサーバーを操作する `wpg remote`
-- [ ] CLI からのフィールド上書き (`--set LAYER.FIELD=VALUE`) と変数ファイル (`--vars-file`)
-- [ ] 型付きのテンプレート変数 (型、選択肢、範囲、必須) を lint と GUI フォームで検査
-- [ ] 上限値の設定化 (事前展開のしきい値、プレビュー件数、ジョブ履歴、リングサイズ)
+- [x] スクリプト用の API トークン (`Authorization: Bearer`) と、起動中のサーバーを操作する `wpg remote`
+- [x] CLI からのフィールド上書き (`--set LAYER.FIELD=VALUE`) と変数ファイル (`--vars-file`)
+- [x] 型付きのテンプレート変数 (型、選択肢、範囲、必須) を lint と GUI フォームで検査
+- [x] 上限値の設定化 (事前展開のしきい値、プレビュー件数、ジョブ履歴、リングサイズ)
 
 ## 1.0 以降
 
