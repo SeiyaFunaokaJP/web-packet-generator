@@ -8,13 +8,47 @@ Proprietary or in-house protocols that are not built in can be added as YAML fil
 |---|---|
 | `wpg serve` | `[protocols] dirs = ["/etc/wpg/protocols.d"]` in `wpg.toml` plus `--protocols-dir <DIR>` (both are used) |
 | Other subcommands (`send` / `render` / `import` / `template lint` / `capture` ...) | `--protocols-dir <DIR>` (repeatable) or the `WPG_PROTOCOLS_DIR` environment variable |
-| Web UI | After login it fetches the server's definitions from `GET /api/protocols/extensions` and adds them to the in-browser catalog |
+| Web UI | After login it fetches the server's definitions from `GET /api/protocols/extensions` and adds them to the in-browser catalog (again after a reload) |
 
-The `*.yaml` / `*.yml` files directly in each directory are loaded in file name order (subdirectories are not read). They are read once at startup: restart `wpg serve` after changing them. On an invalid definition the command stops with exit status 2 and prints the file and the reason. `wpg config validate` checks `protocols.dirs` too.
+The `*.yaml` / `*.yml` files directly in each directory are loaded in file name order (subdirectories are not read). On an invalid definition the command stops with exit status 2 and prints the file and the reason. `wpg config validate` checks `protocols.dirs` too.
 
 ```sh
 wpg render examples/acme-telemetry.wpg.yaml -o acme.pcapng --protocols-dir examples/protocols.d
 wpg import acme.pcapng -o acme.wpg.yaml --protocols-dir examples/protocols.d
+```
+
+### Reloading a running server
+
+`wpg serve` reads the directories at startup. After adding, changing or removing files, reload them without a restart:
+
+- Web UI: **Settings → User-defined protocols → Reload**.
+- API: `POST /api/protocols/reload` (admin session and `X-CSRF-Token`, like other changes). The answer lists the directories and the files now in use; connected browsers get a `protocols_changed` event and fetch the definitions again.
+
+The same directories are read again (a changed `[protocols] dirs` in `wpg.toml` needs a restart). If a file does not load, the answer is `422 invalid_protocols` with `details.file` / `details.reason`, and the protocols in use stay as they were. Jobs that are already running keep the definitions they started with.
+
+Every distinct set of definitions that is loaded stays in memory until the server exits (running jobs may still use it); loading a set that was loaded before reuses it. This is small, but restart now and then if you reload very often during development.
+
+## Tools: `wpg protocols`
+
+| Command | What it does |
+|---|---|
+| `wpg protocols list [--json]` | Lists the protocols: id, name, layer and source (`built-in`, or the file of a user-defined one from `--protocols-dir`) |
+| `wpg protocols show <id> [--json]` | Prints a definition as an extension file (YAML), a starting point for a new protocol; `--json` prints the definition IR |
+| `wpg protocols check <file\|dir>...` | Checks extension files without loading them anywhere; exit status 1 on errors |
+
+`check` reads each file, then merges them with the built-in protocols and the other files of `--protocols-dir` (so files may refer to each other). Errors name the file and the place in it, for example:
+
+```text
+my.yaml: protocols[0].fields[2]: missing field `bits` at line 12 column 9
+acme.yaml: bind[0]: `udp.dst_port` value 4789 is already bound to `vxlan`
+```
+
+To start from an existing protocol:
+
+```sh
+wpg protocols show udp > protocols.d/my-proto.yaml
+# change `id` (and `name`), remove the `description_key` lines, edit the fields
+wpg protocols check protocols.d/my-proto.yaml
 ```
 
 ## File format
@@ -52,7 +86,7 @@ bind:
 
 ### Protocol definitions
 
-Each definition has the shape of the JSON returned by `GET /api/protocols/{id}`; the output of that API for an existing protocol can be turned into YAML as a starting point.
+Each definition has the shape of the JSON returned by `GET /api/protocols/{id}`; `wpg protocols show <id>` prints an existing protocol in this format as a starting point.
 
 - Field types (`type.kind`): `uint` / `int` (`bits`), `enum` (`bits`, `variants`), `flags` (`bits`, `flags`), `bytes` (`len`), `mac`, `ipv4`, `ipv6`, `nsap`, `cstring`, `tlv`, `list`, `padding`, `raw`.
 - Defaults (`default`) are single-key maps naming the value type: `{ uint: 1 }`, `{ bytes: [0, 1] }`.

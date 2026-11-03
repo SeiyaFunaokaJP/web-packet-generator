@@ -138,7 +138,7 @@ pub async fn render(
     if count == 0 || count > MAX_PREVIEW {
         return Err(ApiError::bad_request("api-error-count-range", count).arg("max", MAX_PREVIEW));
     }
-    let catalog = st.catalog;
+    let catalog = st.catalog();
     tokio::task::spawn_blocking(move || render_blocking(&req, count, catalog, locale))
         .await
         .map_err(ApiError::internal)?
@@ -239,13 +239,13 @@ pub async fn parse(
     let bytes =
         from_hex(&req.bytes_hex).map_err(|e| ApiError::bad_request("api-error-invalid-hex", e))?;
     let first = req.first_protocol.as_deref().unwrap_or("ethernet2");
-    if st.catalog.get(first).is_none() {
+    if st.catalog().get(first).is_none() {
         return Err(ApiError::not_found(format!("protocol {first}")));
     }
     let parsed = if req.fcs {
-        wpg_core::parse_with_fcs(&bytes, first, st.catalog)
+        wpg_core::parse_with_fcs(&bytes, first, st.catalog())
     } else {
-        wpg_core::parse(&bytes, first, st.catalog)
+        wpg_core::parse(&bytes, first, st.catalog())
     }
     .map_err(|e| {
         ApiError::new(
@@ -308,7 +308,7 @@ pub async fn lint_template(
         other => Template::from_json_str(&other.to_string()),
     };
     let issues: Vec<Value> = match t {
-        Ok(t) => lint(&t, st.catalog)
+        Ok(t) => lint(&t, st.catalog())
             .iter()
             .map(|i| lint_issue_json(i, locale))
             .collect(),

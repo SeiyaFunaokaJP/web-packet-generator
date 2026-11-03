@@ -70,7 +70,7 @@ fn localise(mut s: TemplateSummary, locale: Locale) -> TemplateSummary {
 
 fn detail(st: &AppState, id: &str, locale: Locale) -> ApiResult<TemplateDetail> {
     let (summary, template) = st.templates.get(id).map_err(store_error)?;
-    let issues = lint(&template, st.catalog)
+    let issues = lint(&template, st.catalog())
         .iter()
         .map(|i| lint_issue_json(i, locale))
         .collect();

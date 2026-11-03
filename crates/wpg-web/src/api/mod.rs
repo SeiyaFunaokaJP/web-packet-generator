@@ -432,6 +432,19 @@ pub(crate) async fn protocol_extensions(
     get("/api/protocols/extensions").await
 }
 
+/// `POST /api/protocols/reload`: the server reads its protocol directories
+/// again. Returns the number of user-defined protocols now loaded.
+pub(crate) async fn reload_protocols() -> Result<usize, ApiError> {
+    let v: Value = post("/api/protocols/reload", &serde_json::json!({})).await?;
+    Ok(v["files"].as_array().map_or(0, |files| {
+        files
+            .iter()
+            .filter_map(|f| f["protocols"].as_array())
+            .map(Vec::len)
+            .sum()
+    }))
+}
+
 /// `GET /api/templates/{id}` (loads a template into the builder).
 pub(crate) async fn template(id: &str) -> Result<TemplateDetail, ApiError> {
     get(&format!("/api/templates/{}", enc(id))).await
