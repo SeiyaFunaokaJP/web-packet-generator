@@ -47,7 +47,8 @@ pub(crate) fn App() -> impl IntoView {
     provide_context(ui);
     provide_context(auth);
     provide_context(live);
-    provide_context(Toasts::new());
+    let toasts = Toasts::new(live);
+    provide_context(toasts);
     // Terminal tabs outlive the terminal page.
     provide_context(crate::term::TermStore::new());
 
@@ -81,7 +82,7 @@ pub(crate) fn App() -> impl IntoView {
             // (preview, field editor, capture tree) once per page load.
             if !extensions_loaded.get_value() {
                 extensions_loaded.set_value(true);
-                leptos::task::spawn_local(load_protocol_extensions());
+                leptos::task::spawn_local(load_protocol_extensions(toasts, live, i18n));
             }
             if ws_started.get_value() {
                 ws::reconnect_now();
@@ -117,17 +118,24 @@ pub(crate) fn App() -> impl IntoView {
 }
 
 /// Fetches the server's user-defined protocols and installs them into
-/// [`wpg_protocols::catalog`].
-async fn load_protocol_extensions() {
-    match api::protocol_extensions().await {
-        Ok(exts) if exts.is_empty() => {}
-        Ok(exts) => {
-            if let Err(e) = wpg_protocols::extension::install(exts) {
-                leptos::logging::warn!("user-defined protocols: {e}");
-            }
-        }
-        Err(e) => leptos::logging::warn!("user-defined protocols: {e:?}"),
-    }
+/// [`wpg_protocols::catalog`]. A failure is shown as an error toast (the
+/// builder then offers the built-in protocols only), with the cause in the
+/// logs panel.
+async fn load_protocol_extensions(toasts: Toasts, live: Live, i18n: I18n) {
+    let cause = match api::protocol_extensions().await {
+        Ok(exts) if exts.is_empty() => return,
+        Ok(exts) => match wpg_protocols::extension::install(exts) {
+            Ok(_) => return,
+            Err(e) => e.to_string(),
+        },
+        Err(e) => e.message(i18n),
+    };
+    leptos::logging::warn!("user-defined protocols: {cause}");
+    live.note(
+        "WARN",
+        i18n.ta("ui-protocols-ext-failed-log", &[("error", cause)]),
+    );
+    toasts.error(i18n.t("ui-protocols-ext-failed"));
 }
 
 /// Sends the user to `/setup` / `/login` (or away from them) as the session

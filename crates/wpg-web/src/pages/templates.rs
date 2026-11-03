@@ -14,6 +14,11 @@ use crate::components::{
 use crate::i18n::{tr, use_i18n};
 use crate::ws::use_live;
 
+/// The builder with a template loaded.
+fn builder_url(id: &str) -> String {
+    format!("/builder?template={}", api::enc(id))
+}
+
 #[component]
 pub(crate) fn TemplatesPage() -> impl IntoView {
     let i18n = use_i18n();
@@ -64,6 +69,19 @@ pub(crate) fn TemplatesPage() -> impl IntoView {
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default()
+    };
+
+    let filtered = move || {
+        !q.with(|q| q.trim().is_empty())
+            || tag.with(Option::is_some)
+            || source.with(Option::is_some)
+            || favorites.get()
+    };
+    let clear_filters = move || {
+        q.set(String::new());
+        tag.set(None);
+        source.set(None);
+        favorites.set(false);
     };
 
     let editing = RwSignal::new(None::<TemplateSummary>);
@@ -230,15 +248,13 @@ pub(crate) fn TemplatesPage() -> impl IntoView {
                         recent()
                             .into_iter()
                             .map(|t| {
-                                let t2 = t.clone();
                                 view! {
-                                    <button
-                                        type="button"
+                                    <a
+                                        href=builder_url(&t.id)
                                         class="rounded border border-slate-200 px-1.5 py-0.5 hover:border-sky-500 dark:border-slate-700"
-                                        on:click=move |_| editing.set(Some(t2.clone()))
                                     >
                                         {t.name}
-                                    </button>
+                                    </a>
                                 }
                             })
                             .collect_view()
@@ -250,7 +266,31 @@ pub(crate) fn TemplatesPage() -> impl IntoView {
         {move || match list.get() {
             None => view! { <Loading /> }.into_any(),
             Some(Err(e)) => view! { <ErrorBox error=e /> }.into_any(),
-            Some(Ok(l)) if l.templates.is_empty() => view! { <Empty text=tr("ui-tpl-empty") /> }.into_any(),
+            Some(Ok(l)) if l.templates.is_empty() && filtered() => {
+                view! {
+                    <Empty text=tr("ui-tpl-empty")>
+                        <button type="button" class=BTN on:click=move |_| clear_filters()>
+                            {tr("ui-tpl-clear-filters")}
+                        </button>
+                    </Empty>
+                }
+                    .into_any()
+            }
+            Some(Ok(l)) if l.templates.is_empty() => {
+                view! {
+                    <Empty text=tr("ui-tpl-none-yet")>
+                        <label for="tpl-import" class=format!("{BTN} cursor-pointer max-md:hidden")>
+                            <Icon name=IconName::Upload class="h-4 w-4" />
+                            {tr("ui-tpl-import")}
+                        </label>
+                        <a href="/builder" class=format!("{BTN_PRIMARY} max-md:hidden")>
+                            <Icon name=IconName::Plus class="h-4 w-4" />
+                            {tr("ui-tpl-new")}
+                        </a>
+                    </Empty>
+                }
+                    .into_any()
+            }
             Some(Ok(l)) => {
                 view! {
                     <ul class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
@@ -282,7 +322,11 @@ pub(crate) fn TemplatesPage() -> impl IntoView {
                                                 <Icon name=IconName::Star filled=fav />
                                             </button>
                                             <div class="min-w-0 flex-1">
-                                                <h2 class="truncate font-medium">{t.name.clone()}</h2>
+                                                <h2 class="truncate font-medium">
+                                                    <a href=builder_url(&t.id) class="hover:text-sky-700 hover:underline dark:hover:text-sky-400">
+                                                        {t.name.clone()}
+                                                    </a>
+                                                </h2>
                                                 <p class="truncate font-mono text-xs text-slate-400">{t.path.clone()}</p>
                                             </div>
                                             <span class=format!("shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium {badge}")>
@@ -298,15 +342,17 @@ pub(crate) fn TemplatesPage() -> impl IntoView {
                                             {t.tags.iter().map(|g| view! { <span class="text-xs text-sky-700 dark:text-sky-400">{format!("#{g}")}</span> }).collect_view()}
                                         </div>
                                         <div class="mt-3 flex flex-wrap items-center gap-1 border-t border-slate-100 pt-2 dark:border-slate-800">
+                                            <a class=BTN href=format!("/jobs?new={}", api::enc(&t.id))>
+                                                <Icon name=IconName::Play class="h-4 w-4" />
+                                                {tr("ui-tpl-send")}
+                                            </a>
+                                            <a class=BTN href=builder_url(&t.id)>
+                                                <Icon name=IconName::Builder class="h-4 w-4" />
+                                                {tr("ui-tpl-open")}
+                                            </a>
                                             <button type="button" class=BTN_GHOST title=tr("ui-tpl-view") aria-label=tr("ui-tpl-view") on:click=move |_| editing.set(Some(t_edit.clone()))>
                                                 <Icon name=IconName::Edit class="h-4 w-4" />
                                             </button>
-                                            <a class=BTN_GHOST href=format!("/builder?template={}", api::enc(&t.id)) title=tr("ui-tpl-open-builder") aria-label=tr("ui-tpl-open-builder")>
-                                                <Icon name=IconName::Builder class="h-4 w-4" />
-                                            </a>
-                                            <a class=BTN_GHOST href=format!("/jobs?new={}", api::enc(&t.id)) title=tr("ui-tpl-new-job") aria-label=tr("ui-tpl-new-job")>
-                                                <Icon name=IconName::Play class="h-4 w-4" />
-                                            </a>
                                             <a class=BTN_GHOST href=api::export_url(&t.id) download="" rel="external" title=tr("ui-tpl-export") aria-label=tr("ui-tpl-export")>
                                                 <Icon name=IconName::Download class="h-4 w-4" />
                                             </a>

@@ -4,8 +4,10 @@ use std::time::Duration;
 
 use leptos::prelude::*;
 
+use super::{Icon, IconName};
 use crate::api::{ApiError, JobStatus};
 use crate::i18n::{tr, use_i18n};
+use crate::ws::Live;
 
 /// i18n key of a job state name.
 pub(crate) fn state_key(state: &str) -> &'static str {
@@ -111,13 +113,20 @@ pub(crate) fn Loading() -> impl IntoView {
     }
 }
 
-/// Muted "nothing here" text.
+/// Muted "nothing here" text, with optional actions (what to do next) below it.
 #[component]
-pub(crate) fn Empty(#[prop(into)] text: Signal<String>) -> impl IntoView {
+pub(crate) fn Empty(
+    #[prop(into)] text: Signal<String>,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
     view! {
-        <p class="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700">
-            {move || text.get()}
-        </p>
+        <div class="rounded-md border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700">
+            <p>{move || text.get()}</p>
+            {children
+                .map(|c| {
+                    view! { <div class="mt-3 flex flex-wrap items-center justify-center gap-2">{c()}</div> }
+                })}
+        </div>
     }
 }
 
@@ -172,33 +181,63 @@ pub(crate) struct Toast {
     id: u64,
     kind: ToastKind,
     text: String,
+    /// The display time ran out while the pointer was over the toast: it goes
+    /// once the pointer leaves.
+    due: bool,
 }
 
-/// Transient notifications (context).
+/// How long a toast stays: errors longer, so they can be read and acted on.
+fn ttl(kind: ToastKind) -> Duration {
+    Duration::from_millis(match kind {
+        ToastKind::Success => 4_000,
+        ToastKind::Error => 15_000,
+    })
+}
+
+/// Grace period after the pointer leaves a toast whose time ran out.
+const TOAST_GRACE: Duration = Duration::from_millis(2_000);
+
+/// Transient notifications (context). Errors are also written to the logs panel.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Toasts {
     items: RwSignal<Vec<Toast>>,
     next: StoredValue<u64>,
+    /// Toast under the pointer (its timer is held).
+    hovered: StoredValue<Option<u64>>,
+    live: Live,
 }
 
 impl Toasts {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(live: Live) -> Self {
         Self {
             items: RwSignal::new(Vec::new()),
             next: StoredValue::new(0),
+            hovered: StoredValue::new(None),
+            live,
         }
     }
 
     pub(crate) fn push(self, kind: ToastKind, text: String) {
+        let id = self.add(kind, text);
+        set_timeout(move || self.expire(id), ttl(kind));
+    }
+
+    /// Shows a toast (without its timer) and returns its id.
+    fn add(self, kind: ToastKind, text: String) -> u64 {
+        if kind == ToastKind::Error {
+            self.live.note("ERROR", text.clone());
+        }
         let id = self.next.get_value();
         self.next.set_value(id + 1);
-        self.items.update(|v| v.push(Toast { id, kind, text }));
-        let items = self.items;
-        let ttl = if kind == ToastKind::Error { 8000 } else { 4000 };
-        set_timeout(
-            move || items.update(|v| v.retain(|t| t.id != id)),
-            Duration::from_millis(ttl),
-        );
+        self.items.update(|v| {
+            v.push(Toast {
+                id,
+                kind,
+                text,
+                due: false,
+            });
+        });
+        id
     }
 
     pub(crate) fn ok(self, text: String) {
@@ -207,6 +246,43 @@ impl Toasts {
 
     pub(crate) fn error(self, text: String) {
         self.push(ToastKind::Error, text);
+    }
+
+    /// Removes a toast now.
+    pub(crate) fn dismiss(self, id: u64) {
+        if self.hovered.get_value() == Some(id) {
+            self.hovered.set_value(None);
+        }
+        self.items.update(|v| v.retain(|t| t.id != id));
+    }
+
+    /// The display time of a toast ran out: removes it unless the pointer is on it.
+    fn expire(self, id: u64) {
+        if self.hovered.get_value() == Some(id) {
+            self.items.update(|v| {
+                if let Some(t) = v.iter_mut().find(|t| t.id == id) {
+                    t.due = true;
+                }
+            });
+        } else {
+            self.dismiss(id);
+        }
+    }
+
+    fn enter(self, id: u64) {
+        self.hovered.set_value(Some(id));
+    }
+
+    fn leave(self, id: u64) {
+        if self.hovered.get_value() == Some(id) {
+            self.hovered.set_value(None);
+        }
+        let due = self
+            .items
+            .with_untracked(|v| v.iter().any(|t| t.id == id && t.due));
+        if due {
+            set_timeout(move || self.expire(id), TOAST_GRACE);
+        }
     }
 }
 
@@ -219,6 +295,7 @@ pub(crate) fn use_toasts() -> Toasts {
 #[component]
 pub(crate) fn ToastRegion() -> impl IntoView {
     let toasts = use_toasts();
+    let i18n = use_i18n();
     view! {
         <div
             class="pointer-events-none fixed right-4 bottom-4 z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"
@@ -234,12 +311,23 @@ pub(crate) fn ToastRegion() -> impl IntoView {
                         ToastKind::Error => "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100",
                     };
                     let role = if t.kind == ToastKind::Error { "alert" } else { "status" };
+                    let id = t.id;
                     view! {
                         <div
                             role=role
-                            class=format!("pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-lg {class}")
+                            class=format!("pointer-events-auto flex items-start gap-2 rounded-md border py-2 pr-1.5 pl-3 text-sm shadow-lg {class}")
+                            on:mouseenter=move |_| toasts.enter(id)
+                            on:mouseleave=move |_| toasts.leave(id)
                         >
-                            {t.text}
+                            <p class="min-w-0 flex-1 break-words">{t.text}</p>
+                            <button
+                                type="button"
+                                class="shrink-0 rounded p-0.5 opacity-60 hover:opacity-100"
+                                aria-label=move || i18n.t("ui-close")
+                                on:click=move |_| toasts.dismiss(id)
+                            >
+                                <Icon name=IconName::Close class="h-4 w-4" />
+                            </button>
                         </div>
                     }
                 }
@@ -251,6 +339,35 @@ pub(crate) fn ToastRegion() -> impl IntoView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn toasts_dismiss_and_mirror_errors() {
+        let owner = Owner::new();
+        owner.set();
+        let live = Live::new();
+        let toasts = Toasts::new(live);
+        toasts.add(ToastKind::Success, "saved".to_owned());
+        toasts.add(ToastKind::Error, "broken".to_owned());
+        assert_eq!(toasts.items.with_untracked(Vec::len), 2);
+        // Only the error reaches the logs panel.
+        assert_eq!(
+            live.logs.with_untracked(|l| l
+                .iter()
+                .map(|e| (e.line.level.clone(), e.line.message.clone()))
+                .collect::<Vec<_>>()),
+            vec![("ERROR".to_owned(), "broken".to_owned())]
+        );
+        // Time running out under the pointer only marks the toast.
+        toasts.enter(1);
+        toasts.expire(1);
+        assert!(toasts
+            .items
+            .with_untracked(|v| v.iter().any(|t| t.id == 1 && t.due)));
+        toasts.expire(0);
+        toasts.dismiss(1);
+        assert!(toasts.items.with_untracked(Vec::is_empty));
+        assert_eq!(toasts.hovered.get_value(), None);
+    }
 
     #[test]
     fn keys() {
