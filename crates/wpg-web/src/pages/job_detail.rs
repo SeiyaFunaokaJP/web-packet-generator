@@ -1,9 +1,12 @@
 //! Job detail drawer: state controls, live stats, per-stream / per-worker tables,
-//! pacing accuracy, report download.
+//! pacing accuracy, report download; "Run again" / "Edit as new job" for a fresh
+//! job with the same settings.
 
 use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
+use leptos_router::NavigateOptions;
 
-use crate::api::{self, JobAction, JobInfo, Stats};
+use crate::api::{self, CreateJob, JobAction, JobInfo, JobStatus, Stats};
 use crate::components::{
     reason_key, use_toasts, Confirm, Drawer, ErrorBox, Icon, IconName, Loading, Stat, StateBadge,
     BTN, BTN_DANGER, TD, TD_NUM, TH,
@@ -73,6 +76,7 @@ fn JobBody(
     let busy = RwSignal::new(false);
     let confirm_start = RwSignal::new(false);
     let confirm_delete = RwSignal::new(false);
+    let confirm_rerun = RwSignal::new(false);
 
     let act = move |action: JobAction| {
         busy.set(true);
@@ -103,6 +107,34 @@ fn JobBody(
         });
     };
     let offline = job.with_value(|j| is_offline_backend(&j.backend));
+    let navigate = use_navigate();
+    let open_job = Callback::new(move |id: String| {
+        navigate(
+            &format!("/jobs?job={}", api::enc(&id)),
+            NavigateOptions::default(),
+        );
+    });
+    // A new job with the same settings, started at once.
+    let rerun = move || {
+        busy.set(true);
+        let body = CreateJob {
+            spec: job.with_value(|j| j.spec.clone()),
+            start: true,
+        };
+        leptos::task::spawn_local(async move {
+            match api::create_job(&body).await {
+                Ok(new) => {
+                    live.jobs_rev.update(|r| *r += 1);
+                    toasts.ok(i18n.ta("ui-jobs-created", &[("id", new.name.clone())]));
+                    open_job.run(new.id);
+                }
+                Err(e) => toasts.error(e.message(i18n)),
+            }
+            busy.set(false);
+            confirm_rerun.set(false);
+        });
+    };
+    let edit_href = format!("/jobs?new=1&from={}", api::enc(&jid.get_value()));
 
     let control = move |action: JobAction, icon: IconName, key: &'static str| {
         view! {
@@ -149,6 +181,26 @@ fn JobBody(
                     {control(JobAction::Pause, IconName::Pause, "ui-job-pause")}
                     {control(JobAction::Resume, IconName::Play, "ui-job-resume")}
                     {control(JobAction::Stop, IconName::Stop, "ui-job-stop")}
+                    <Show when=move || status.with(JobStatus::is_terminal)>
+                        <button
+                            type="button"
+                            class=BTN
+                            disabled=move || busy.get()
+                            on:click=move |_| {
+                                if offline {
+                                    rerun();
+                                } else {
+                                    confirm_rerun.set(true);
+                                }
+                            }
+                        >
+                            <Icon name=IconName::Play class="h-4 w-4" />
+                            {tr("ui-job-run-again")}
+                        </button>
+                    </Show>
+                    <a class=BTN href=edit_href.clone()>
+                        {tr("ui-job-edit-as-new")}
+                    </a>
                     {raw_report
                         .clone()
                         .map(|r| {
@@ -215,10 +267,18 @@ fn JobBody(
                                 .iter()
                                 .enumerate()
                                 .map(|(i, s)| {
-                                    let name = s
-                                        .template_id
-                                        .clone()
-                                        .unwrap_or_else(|| i18n.t("ui-job-inline-template"));
+                                    let name = match s.template_id.clone() {
+                                        Some(t) => {
+                                            let href = format!("/builder?template={}", api::enc(&t));
+                                            view! {
+                                                <a class="text-sky-700 hover:underline dark:text-sky-400" href=href>
+                                                    {t}
+                                                </a>
+                                            }
+                                            .into_any()
+                                        }
+                                        None => i18n.t("ui-job-inline-template").into_any(),
+                                    };
                                     let cell = move |f: fn(&api::StreamStats) -> String| {
                                         move || {
                                             stats
@@ -334,14 +394,23 @@ fn JobBody(
             </section>
         </div>
 
-        <Show when=move || confirm_start.get()>
+        <Show when=move || confirm_start.get() || confirm_rerun.get()>
             <Confirm
                 title=tr("ui-confirm-send-title")
                 confirm_label=tr("ui-confirm-send")
                 danger=true
                 busy=busy
-                on_confirm=move || act(JobAction::Start)
-                on_cancel=move || confirm_start.set(false)
+                on_confirm=move || {
+                    if confirm_rerun.get_untracked() {
+                        rerun();
+                    } else {
+                        act(JobAction::Start);
+                    }
+                }
+                on_cancel=move || {
+                    confirm_start.set(false);
+                    confirm_rerun.set(false);
+                }
             >
                 <p>{tr("ui-confirm-send-body")}</p>
                 <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-md bg-slate-50 p-3 font-mono text-xs dark:bg-slate-800">
