@@ -173,6 +173,15 @@ Everything below is the initial development towards 1.0. No version has been tag
   `max_rate` in `send`); `--json` for `render` and `template lint / show / list`; `render -o -`; exit
   status 3 for template errors.
 - `wpg protocols list / show / check` and `POST /api/protocols/reload` with a Reload button in Settings.
+- API tokens for scripts (`Authorization: Bearer wpg_...`, stored as SHA-256 hashes, optional expiry,
+  managed in Settings, by `/api/tokens` and by `wpg config token`) and `wpg remote` to list, start, stop
+  and wait for jobs and to list and push templates on a running server.
+- `--set LAYER.FIELD=VALUE`, `--gen LAYER.FIELD=GEN` and `--vars-file` on `send`, `render`, `bench` and
+  `template show`.
+- Typed template variables (`type`, `choices`, `min` / `max`, `required`) checked by lint, the CLI, the
+  API and typed inputs in the job form.
+- Configurable limits: `[tx] prerender_max_bytes`, `prerender_max_packets`, `ring_bytes` and `[server]
+  preview_max`, `job_history`, `job_history_db`, with matching `send` / `bench` options.
 
 #### Documentation
 
