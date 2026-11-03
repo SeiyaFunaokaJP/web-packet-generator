@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Build wpg: frontend (trunk, WASM) first, then the backend workspace.
+  Build wpg: frontend (trunk, WASM) first, then the wpg binary (crate wpg-cli).
 .PARAMETER Release
   Optimised build.
 .PARAMETER Features
-  Extra cargo features for the workspace. "pcap" (the Npcap backend, the only way to send
+  Extra cargo features for wpg-cli. "pcap" (the Npcap backend, the only way to send
   on Windows) is added automatically when the Npcap SDK is found; it needs the SDK at build
   time (C:\Npcap-SDK, C:\npcap-sdk-<version>, NPCAP_SDK or LIBPCAP_LIBDIR), and wpg.exe
   then delay-loads wpcap.dll at run time.
@@ -45,14 +45,12 @@ if ($Dpdk) {
 if (-not (Test-Command rustup)) { throw "rustup not found. Install from https://rustup.rs" }
 if (-not (Test-Command cargo)) { throw "cargo not found. Install from https://rustup.rs" }
 
-$targets = & rustup target list --installed
-if ($targets -notcontains "wasm32-unknown-unknown") {
-    throw "wasm32-unknown-unknown target missing. Run: rustup target add wasm32-unknown-unknown"
-}
-
 $haveTrunk = Test-Command trunk
 if (-not $haveTrunk) {
-    Write-Warning "trunk not found; the frontend build will be skipped. Install: cargo install trunk --locked"
+    Write-Warning "trunk not found; the frontend build will be skipped. Run: .\scripts\setup.ps1"
+} elseif ((& rustup target list --installed) -notcontains "wasm32-unknown-unknown") {
+    $haveTrunk = $false
+    Write-Warning "wasm32-unknown-unknown target missing; the frontend build will be skipped. Run: .\scripts\setup.ps1"
 }
 
 # Npcap runtime: needed to transmit (not to build). `wpg doctor` checks it in detail.
@@ -92,7 +90,7 @@ if (-not $wantPcap -and -not $NoPcap -and $env:SystemRoot) {
         if ($Features) { $Features = "$Features,pcap" } else { $Features = "pcap" }
         $wantPcap = $true
     } else {
-        Write-Warning "Npcap SDK not found: building without the pcap backend, so this wpg.exe cannot send. Unpack the SDK (https://npcap.com/#download) to C:\Npcap-SDK (or set NPCAP_SDK to the directory you unpacked it to) and build again."
+        Write-Warning "Npcap SDK not found: building without the pcap backend, so this wpg.exe cannot send. Run .\scripts\setup.ps1 (or unpack the SDK from https://npcap.com/#download to C:\Npcap-SDK) and build again."
     }
 }
 if ($wantPcap) {
@@ -117,7 +115,9 @@ if ($haveTrunk) {
 }
 
 # ---- backend ----------------------------------------------------------------
-$cargoArgs = @("build", "--workspace")
+# Only the binary: --workspace would also compile the web UI natively, dpdk-sys and the
+# test crates.
+$cargoArgs = @("build", "-p", "wpg-cli")
 if ($Release) { $cargoArgs += "--release" }
 if ($Features) { $cargoArgs += @("--features", $Features) }
 Write-Host "==> building backend (cargo $($cargoArgs -join ' '))"

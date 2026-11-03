@@ -7,18 +7,19 @@ Supported: macOS 12 or later. Release binaries are not published yet, so you bui
 ```sh
 xcode-select --install                     # compiler and linker
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup target add wasm32-unknown-unknown
-cargo install trunk --locked
-cargo install just --locked                # optional task runner
 brew install wireshark                     # optional: tshark, and ChmodBPF (see below)
+
+git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
+cd web-packet-generator
+./scripts/setup.sh                         # add --just to also install the just task runner
 ```
+
+`scripts/setup.sh` installs the Rust toolchain pinned in `rust-toolchain.toml` with the WASM target, and a prebuilt `trunk` at the version pinned in `scripts/versions.env`.
 
 ## 2. Build
 
 ```sh
-git clone https://github.com/SeiyaFunaokaJP/web-packet-generator.git
-cd web-packet-generator
-just release                # or: ./scripts/build.sh --release
+./scripts/build.sh --release        # or: just release
 ```
 
 The last line printed is `==> done: target/release/wpg`.
