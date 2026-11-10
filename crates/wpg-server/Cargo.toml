@@ -63,7 +63,7 @@ base64 = "0.23"
 getrandom = "0.4"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 rcgen = { version = "0.14", default-features = false, features = ["crypto", "pem", "ring"] }
-axum-server = { version = "0.8", features = ["tls-rustls-no-provider"] }
+axum-server = { version = "0.9", features = ["tls-rustls-no-provider"] }
 # Web terminal (ADR-0011): pure-Rust SSH client on the ring crypto backend (no
 # aws-lc / C toolchain beyond cc, like rustls above).
 russh = { version = "0.65", default-features = false, features = ["ring", "rsa"] }
