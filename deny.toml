@@ -27,6 +27,9 @@ ignore = [
     # (public-key operation) and signs once per login with a user's RSA key, which gives
     # no timing oracle to repeat. Revisit when RustCrypto/RSA#626 is fixed.
     { id = "RUSTSEC-2023-0071", reason = "rsa: Marvin timing attack; only SSH client signing / verification (web terminal), no RSA decryption" },
+    # chrono: "unmaintained" only, no known vulnerability. Pulled in by russh-util (russh,
+    # web terminal); wpg itself does not use it. Revisit when russh moves to jiff or time.
+    { id = "RUSTSEC-2026-0543", reason = "chrono: unmaintained, transitive via russh-util (web terminal)" },
 ]
 
 [licenses]

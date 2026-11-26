@@ -1338,7 +1338,7 @@ run_multi() {
     logdir="${XDG_STATE_HOME:-$HOME/.local/state}/wpg/deploy-$(date +%Y%m%d-%H%M%S)"
     [ "$check_config" -eq 1 ] || mkdir -p "$logdir"
     local pids=() names=() logs=() running=0 total="${#entries[@]}"
-    # shellcheck disable=SC2317 # called from the INT / TERM trap
+    # shellcheck disable=SC2317,SC2329 # called from the INT / TERM trap
     kill_children() {
         local c
         for c in "${pids[@]}"; do [ -z "$c" ] || kill "$c" 2>/dev/null || true; done
