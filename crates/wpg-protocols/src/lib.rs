@@ -341,11 +341,13 @@ mod tests {
     fn bindings_point_to_known_or_planned_protocols() {
         // Planned ids that are referenced before they exist (still on the roadmap).
         const PLANNED: &[&str] = &[];
-        for def in catalog().iter() {
+        // One snapshot: other tests install and reload extensions concurrently.
+        let catalog = catalog();
+        for def in catalog.iter() {
             let peeks = def.next.iter().flat_map(|b| b.peek.iter());
             for d in peeks.clone().filter_map(|p| p.default.as_ref()) {
                 assert!(
-                    catalog().get(d).is_some(),
+                    catalog.get(d).is_some(),
                     "{} peeks to unknown `{d}`",
                     def.id
                 );
@@ -353,7 +355,7 @@ mod tests {
             let peeked = peeks.flat_map(|p| &p.table);
             for e in def.next.iter().flat_map(|b| &b.table).chain(peeked) {
                 assert!(
-                    catalog().get(&e.protocol).is_some() || PLANNED.contains(&e.protocol.as_str()),
+                    catalog.get(&e.protocol).is_some() || PLANNED.contains(&e.protocol.as_str()),
                     "{} binds to unknown `{}`",
                     def.id,
                     e.protocol

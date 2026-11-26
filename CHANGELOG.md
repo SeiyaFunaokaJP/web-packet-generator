@@ -210,6 +210,10 @@ Everything below is the initial development towards 1.0. No version has been tag
 
 - RUSTSEC-2023-0071 (`rsa`, Marvin attack; pulled in by `russh` for the web terminal) is ignored in
   `deny.toml` / `.cargo/audit.toml`: wpg only signs with and verifies RSA keys and never decrypts.
+- Dependency updates: `quinn-proto` 0.11.19 (RUSTSEC-2026-0523, 0524), `quinn-udp` 0.5.16 (RUSTSEC-2026-0538),
+  `rustix` 1.1.6 (RUSTSEC-2026-0486), `cookie` 0.18.3 (RUSTSEC-2026-0594) and `url` 2.5.9 (RUSTSEC-2026-0592).
+- RUSTSEC-2026-0543 (`chrono` is unmaintained; pulled in by `russh` for the web terminal) is ignored in
+  `deny.toml` / `.cargo/audit.toml`: no vulnerability is known, and wpg itself does not use `chrono`.
 
 ### Known limitations
 

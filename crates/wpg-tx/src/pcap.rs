@@ -72,6 +72,8 @@ fn message_is_permission(msg: &str) -> bool {
         "permission",
         "access is denied",
         "access denied",
+        // libpcap 1.10.5+: "Attempt to create packet socket failed - CAP_NET_RAW may be required"
+        "cap_net_raw",
     ]
     .iter()
     .any(|p| m.contains(p))
